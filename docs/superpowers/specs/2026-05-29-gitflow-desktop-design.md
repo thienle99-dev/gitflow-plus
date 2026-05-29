@@ -240,6 +240,54 @@ type Branch = {
 
 ---
 
+## UI/UX Design Decisions
+
+**Visual style: IDE-style dense + macOS native feel**
+- Nền tối mặc định, viền mỏng, compact layout
+- Information-dense: hiện nhiều data cùng lúc (graph + files + diff)
+- Tham khảo: Xcode, SF Symbols aesthetic, GitKraken density
+- Font: `-apple-system` / SF Pro cho UI text, SF Mono / monospace cho code/hash
+- Spacing: 4-8px gaps, 28-32px row height cho lists (macOS standard row height)
+- Colors: muted palette, accent colors cho branch lanes + status indicators
+- **macOS-inspired elements:**
+  - Sidebar: Xcode/Finder style — translucent background, grouped sections với disclosure triangles
+  - Vibrancy effect: sidebar và toolbar dùng `backdrop-filter: blur()` (như NSVisualEffectView)
+  - Window controls: traffic light buttons tích hợp vào titlebar (Tauri custom titlebar)
+  - Border radius: 6-8px cho cards/panels (macOS standard), 4px cho buttons
+  - Segmented controls thay vì tabs (cho split/unified toggle, staged/unstaged filter)
+  - Toolbar: unified titlebar + toolbar style (như Xcode/Finder toolbar)
+  - Hover states: subtle background fill (không outline) — giống macOS list selection
+  - Selection: accent color fill với white text (system accent color aware)
+
+**Interaction pattern: Toolbar + Context menu**
+- Top toolbar: common actions (pull, push, fetch, commit, branch)
+- Right-click context menu: trên commits, branches, files, tags
+- Keyboard shortcuts cho power users (nhưng không bắt buộc command palette cho MVP)
+- Toolbar icons + text labels (có thể collapse thành icon-only khi window nhỏ)
+
+**Information display: All-in-one view**
+- 3-panel layout luôn visible (sidebar + graph + detail)
+- Không dùng tabs hay drill-down cho core workflow
+- Diff viewer mở inline trong right panel (hoặc expand full-width khi cần)
+- Bottom bar cho logs/progress — collapse khi idle
+
+**Motion: Subtle transitions**
+- Panel resize: 150ms ease-out
+- State changes (select commit, toggle staged): 100-150ms fade
+- List expand/collapse: 200ms slide
+- Không dùng spring/bounce — giữ snappy
+- Respect `prefers-reduced-motion` OS setting
+
+**Component patterns:**
+- Buttons: ghost style (transparent bg, border on hover) cho toolbar
+- Lists: hover highlight, selected = accent bg
+- Inputs: minimal border, focus ring
+- Modals: backdrop blur, centered, max-width 500px
+- Toast notifications: bottom-right, auto-dismiss 5s
+- Context menu: native-feeling (sharp corners, compact padding)
+
+---
+
 ## Cross-cutting Concerns
 
 **Error handling:** Rust returns `Result<T, String>`, frontend shows toast via TanStack Query `onError`. Critical errors → modal.
