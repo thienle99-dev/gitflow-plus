@@ -33,13 +33,21 @@ export function useGitBranches(repoPath: string | null) {
   });
 }
 
-export function useGitDiff(repoPath: string | null, filePath: string | null, commitHash?: string | null) {
+export function useGitDiff(
+  repoPath: string | null,
+  filePath: string | null,
+  commitHash?: string | null,
+  staged?: boolean,
+) {
   return useQuery<string>({
-    queryKey: ["git", repoPath, "diff", commitHash || "working", filePath],
+    queryKey: ["git", repoPath, "diff", commitHash || (staged ? "staged" : "working"), filePath],
     queryFn: () => {
       if (!repoPath || !filePath) return "";
       if (commitHash) {
         return api.diff.commit(repoPath, commitHash, filePath);
+      }
+      if (staged) {
+        return api.diff.staged(repoPath, filePath);
       }
       return api.diff.file(repoPath, filePath);
     },

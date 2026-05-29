@@ -61,6 +61,73 @@ pub fn unstage_all(path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+pub fn discard_file(path: String, file_path: String) -> Result<String, String> {
+    let restore = Command::new("git")
+        .args([
+            "--no-pager",
+            "-C",
+            &path,
+            "restore",
+            "--staged",
+            "--worktree",
+            "--",
+            &file_path,
+        ])
+        .output()
+        .map_err(|e| format!("Failed to run git restore: {}", e))?;
+
+    let clean = Command::new("git")
+        .args(["--no-pager", "-C", &path, "clean", "-fd", "--", &file_path])
+        .output()
+        .map_err(|e| format!("Failed to run git clean: {}", e))?;
+
+    if restore.status.success() || clean.status.success() {
+        Ok(format!("Discarded '{}'", file_path))
+    } else {
+        let restore_stderr = String::from_utf8_lossy(&restore.stderr);
+        let clean_stderr = String::from_utf8_lossy(&clean.stderr);
+        Err(format!(
+            "Failed to discard: {} {}",
+            restore_stderr.trim(),
+            clean_stderr.trim()
+        ))
+    }
+}
+
+#[tauri::command]
+pub fn discard_all(path: String) -> Result<String, String> {
+    let restore = Command::new("git")
+        .args([
+            "--no-pager",
+            "-C",
+            &path,
+            "restore",
+            "--staged",
+            "--worktree",
+            ".",
+        ])
+        .output()
+        .map_err(|e| format!("Failed to run git restore: {}", e))?;
+
+    let clean = Command::new("git")
+        .args(["--no-pager", "-C", &path, "clean", "-fd", "."])
+        .output()
+        .map_err(|e| format!("Failed to run git clean: {}", e))?;
+
+    if restore.status.success() || clean.status.success() {
+        Ok("Discarded all changes".to_string())
+    } else {
+        let restore_stderr = String::from_utf8_lossy(&restore.stderr);
+        let clean_stderr = String::from_utf8_lossy(&clean.stderr);
+        Err(format!(
+            "Failed to discard all: {} {}",
+            restore_stderr.trim(),
+            clean_stderr.trim()
+        ))
+    }
+}
+
+#[tauri::command]
 pub fn commit_changes(
     path: String,
     message: String,

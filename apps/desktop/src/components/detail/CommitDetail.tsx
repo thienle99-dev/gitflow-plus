@@ -105,17 +105,25 @@ export default function CommitDetail() {
                 ? `${getFolder(file.old_path)} -> ${getFolder(file.path)}`
                 : getFolder(file.path);
               return (
-                <button
+                <div
                   key={`${file.status}:${file.old_path || ""}:${file.path}`}
-                  className="list-item w-full grid grid-cols-[18px_minmax(0,1fr)] items-center gap-2 px-2 py-1.5 text-left"
+                  className="tree-item w-full grid grid-cols-[16px_minmax(0,1fr)] items-center gap-2 px-2 py-1.5 text-left transition-all border-b border-border/10 last:border-b-0"
                   onClick={() => selectFile(file.path)}
                   title={`${statusText(file.status)}: ${displayPath}`}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      selectFile(file.path);
+                    }
+                  }}
                 >
-                  <span className="flex h-5 w-5 items-center justify-center">
+                  <span className="flex h-4 w-4 items-center justify-center shrink-0">
                     {fileIcon(file.path, file.status)}
                   </span>
                   <span className="min-w-0">
-                    <span className="block text-xs text-text-primary truncate leading-4">
+                    <span className="block text-xs font-medium text-text-primary truncate leading-4">
                       {fileName}
                     </span>
                     {folder && (
@@ -124,7 +132,7 @@ export default function CommitDetail() {
                       </span>
                     )}
                   </span>
-                </button>
+                </div>
               );
             })}
           </div>

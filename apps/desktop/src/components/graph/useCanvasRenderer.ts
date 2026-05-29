@@ -7,6 +7,11 @@ const MAX_GRAPH_COLUMN_WIDTH = 260;
 const BUFFER_ROWS = 10;
 const GRAPH_LEFT_PADDING = 18;
 const BADGE_GAP = 8;
+const HASH_COLUMN_WIDTH = 72;
+const AUTHOR_COLUMN_WIDTH = 150;
+const DATE_COLUMN_WIDTH = 116;
+const COLUMN_GAP = 16;
+const RIGHT_PADDING = 18;
 
 interface RenderParams {
   canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -47,7 +52,11 @@ export function useCanvasRenderer({
     const offsetY = -scrollTop;
     const graphRight = getVisibleGraphRight(layout, visible, commitByHash, offsetY, height, laneWidth);
     const messageX = Math.max(84, graphRight + 24);
-    const width = Math.max(containerWidth, messageX + 360);
+    const width = Math.max(
+      containerWidth,
+      messageX + 360 + HASH_COLUMN_WIDTH + AUTHOR_COLUMN_WIDTH + DATE_COLUMN_WIDTH + COLUMN_GAP * 3 + RIGHT_PADDING,
+    );
+    const columns = getColumns(width, messageX);
 
     const pixelWidth = Math.ceil(width * dpr);
     const pixelHeight = Math.ceil(height * dpr);
@@ -136,7 +145,7 @@ export function useCanvasRenderer({
       ctx.stroke();
     }
 
-    // Labels + ref badges
+    // Labels + metadata columns
     ctx.font = "12px -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
     ctx.textBaseline = "middle";
 
@@ -155,43 +164,66 @@ export function useCanvasRenderer({
       });
       const badgeWidths = refs.map((_, index) => badgeLabels[index].length * 7 + 10);
       const totalBadgeWidth = badgeWidths.reduce((sum, badgeW) => sum + badgeW + 4, 0);
-      const badgeStartX = refs.length > 0
-        ? Math.max(messageX + 120, width - totalBadgeWidth - 18)
-        : width - 18;
-      const maxTextWidth = Math.max(80, badgeStartX - messageX - BADGE_GAP);
+      const maxTextWidth = Math.max(80, columns.hashX - messageX - BADGE_GAP);
       const msg = truncateText(ctx, commit.message, maxTextWidth);
       ctx.fillText(msg, messageX, cy);
 
       // Ref badges
-      let badgeX = badgeStartX;
-      for (let i = 0; i < refs.length; i++) {
-        const ref = refs[i];
-        const truncated = badgeLabels[i];
-        const badgeW = badgeWidths[i];
-        const badgeColor =
-          ref.ref_type === "head" ? "#ff9f0a"
-          : ref.ref_type === "tag" ? "#bf5af2"
-          : ref.ref_type === "remote" ? "#636366"
-          : "#0a84ff";
+      if (refs.length > 0 && totalBadgeWidth > 0) {
+        const messageWidth = Math.min(ctx.measureText(msg).width, maxTextWidth);
+        let badgeX = messageX + messageWidth + BADGE_GAP;
 
-        ctx.fillStyle = badgeColor;
-        if (ctx.roundRect) {
-          ctx.beginPath();
-          ctx.roundRect(badgeX, cy - 7, badgeW, 14, 3);
-          ctx.fill();
-        } else {
-          ctx.fillRect(badgeX, cy - 7, badgeW, 14);
+        if (badgeX > messageX + 40 && badgeX + totalBadgeWidth < columns.hashX - BADGE_GAP) {
+          for (let i = 0; i < refs.length; i++) {
+            const ref = refs[i];
+            const truncated = badgeLabels[i];
+            const badgeW = badgeWidths[i];
+            const badgeColor =
+              ref.ref_type === "head" ? "#ff9f0a"
+              : ref.ref_type === "tag" ? "#bf5af2"
+              : ref.ref_type === "remote" ? "#636366"
+              : "#0a84ff";
+
+            ctx.fillStyle = badgeColor;
+            if (ctx.roundRect) {
+              ctx.beginPath();
+              ctx.roundRect(badgeX, cy - 7, badgeW, 14, 3);
+              ctx.fill();
+            } else {
+              ctx.fillRect(badgeX, cy - 7, badgeW, 14);
+            }
+
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 9px -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
+            ctx.fillText(truncated, badgeX + 5, cy);
+            ctx.font = "12px -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
+
+            badgeX += badgeW + 4;
+          }
         }
-
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "bold 9px -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
-        ctx.fillText(truncated, badgeX + 5, cy);
-        ctx.font = "12px -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
-
-        badgeX += badgeW + 4;
       }
+
+      ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+      ctx.fillStyle = isSelected ? "#0a84ff" : "#a1a1a6";
+      ctx.fillText(commit.hash.slice(0, 7), columns.hashX, cy);
+
+      ctx.font = "11px -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
+      ctx.fillStyle = "#a1a1a6";
+      ctx.fillText(truncateText(ctx, commit.author || "Unknown", AUTHOR_COLUMN_WIDTH - 8), columns.authorX, cy);
+      ctx.fillText(truncateText(ctx, formatCommitDate(commit.date), DATE_COLUMN_WIDTH - 8), columns.dateX, cy);
     }
   }, [canvasRef, layout, scrollTop, containerHeight, containerWidth, selectedCommit, hoveredLane, totalLanes]);
+}
+
+function getColumns(width: number, messageX: number) {
+  const dateX = Math.max(
+    messageX + 360 + HASH_COLUMN_WIDTH + AUTHOR_COLUMN_WIDTH + COLUMN_GAP * 3,
+    width - DATE_COLUMN_WIDTH - RIGHT_PADDING,
+  );
+  const authorX = dateX - AUTHOR_COLUMN_WIDTH - COLUMN_GAP;
+  const hashX = authorX - HASH_COLUMN_WIDTH - COLUMN_GAP;
+
+  return { hashX, authorX, dateX };
 }
 
 function laneXFor(lane: number, laneWidth: number) {
@@ -246,4 +278,21 @@ function truncateText(ctx: CanvasRenderingContext2D, text: string, maxWidth: num
     }
   }
   return text.slice(0, lo) + ellipsis;
+}
+
+function formatCommitDate(date: string) {
+  const normalized = date.replace(
+    /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) ([+-]\d{2})(\d{2})$/,
+    "$1T$2$3:$4",
+  );
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    return date.slice(0, 16);
+  }
+  return parsed.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }

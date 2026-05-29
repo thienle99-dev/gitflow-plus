@@ -129,6 +129,10 @@ export const api = {
       invoke<string>("stage_all", { path }),
     unstageAll: (path: string) =>
       invoke<string>("unstage_all", { path }),
+    discard: (path: string, filePath: string) =>
+      invoke<string>("discard_file", { path, filePath }),
+    discardAll: (path: string) =>
+      invoke<string>("discard_all", { path }),
     commit: (path: string, message: string, amend?: boolean) =>
       invoke<string>("commit_changes", { path, message, amend: amend ?? false }),
   },
@@ -142,6 +146,8 @@ export const api = {
       invoke<CommitFileChange[]>("commit_changed_files", { path, commitHash }),
     staged: (path: string, filePath?: string) =>
       invoke<string>("staged_diff", { path, filePath: filePath ?? null }),
+    applyHunk: (path: string, patch: string, action: "stage" | "unstage" | "discard") =>
+      invoke<string>("apply_diff_hunk", { path, patch, action }),
   },
 
   remote: {

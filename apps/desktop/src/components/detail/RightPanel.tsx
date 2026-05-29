@@ -1,6 +1,7 @@
 import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
 import { useGitStatus, useGitDiff } from "@/queries/useGitLog";
+import { useQueryClient } from "@tanstack/react-query";
 import WorkingTree from "./WorkingTree";
 import CommitDetail from "./CommitDetail";
 import DiffViewer from "@/components/diff/DiffViewer";
@@ -24,10 +25,25 @@ function DiffViewerPanel() {
   const repoPath = useRepoStore((s) => s.repoPath);
   const selectedFile = useUIStore((s) => s.selectedFile);
   const selectedCommit = useUIStore((s) => s.selectedCommit);
-  const { data: diff, isLoading } = useGitDiff(repoPath, selectedFile, selectedCommit);
+  const selectedFileStage = useUIStore((s) => s.selectedFileStage);
+  const { data: diff, isLoading } = useGitDiff(
+    repoPath,
+    selectedFile,
+    selectedCommit,
+    !selectedCommit && selectedFileStage === "staged",
+  );
   const diffViewMode = useUIStore((s) => s.diffViewMode);
   const setDiffViewMode = useUIStore((s) => s.setDiffViewMode);
   const selectFile = useUIStore((s) => s.selectFile);
+  const queryClient = useQueryClient();
+  const diffSource = selectedCommit
+    ? "commit"
+    : selectedFileStage === "staged"
+      ? "staged"
+      : "working";
+  const refreshDiff = () => {
+    queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
+  };
 
   return (
     <div className="h-full flex flex-col bg-surface-0">
@@ -55,7 +71,12 @@ function DiffViewerPanel() {
           Loading diff...
         </div>
       ) : diff ? (
-        <DiffViewer diff={diff} filePath={selectedFile || ""} />
+        <DiffViewer
+          diff={diff}
+          filePath={selectedFile || ""}
+          source={diffSource}
+          onPatchApplied={refreshDiff}
+        />
       ) : (
         <div className="flex-1 flex items-center justify-center text-text-muted text-sm">
           No changes

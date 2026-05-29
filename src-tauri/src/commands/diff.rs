@@ -1,4 +1,5 @@
-use std::process::Command;
+use std::io::Write;
+use std::process::{Command, Stdio};
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct CommitFileChange {
@@ -154,5 +155,56 @@ pub fn staged_diff(path: String, file_path: Option<String>) -> Result<String, St
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
         Err(format!("Diff failed: {}", stderr.trim()))
+    }
+}
+
+#[tauri::command]
+pub fn apply_diff_hunk(path: String, patch: String, action: String) -> Result<String, String> {
+    let mut args = vec![
+        "--no-pager",
+        "-C",
+        &path,
+        "apply",
+        "--recount",
+        "--whitespace=nowarn",
+    ];
+
+    match action.as_str() {
+        "stage" => {
+            args.push("--cached");
+        }
+        "unstage" => {
+            args.push("--cached");
+            args.push("--reverse");
+        }
+        "discard" => {
+            args.push("--reverse");
+        }
+        _ => return Err(format!("Unsupported hunk action: {}", action)),
+    }
+
+    let mut child = Command::new("git")
+        .args(args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("Failed to run git apply: {}", e))?;
+
+    if let Some(stdin) = child.stdin.as_mut() {
+        stdin
+            .write_all(patch.as_bytes())
+            .map_err(|e| format!("Failed to write patch: {}", e))?;
+    }
+
+    let output = child
+        .wait_with_output()
+        .map_err(|e| format!("Failed to wait for git apply: {}", e))?;
+
+    if output.status.success() {
+        Ok(format!("Applied hunk action '{}'", action))
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Apply hunk failed: {}", stderr.trim()))
     }
 }

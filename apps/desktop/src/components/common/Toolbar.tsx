@@ -2,6 +2,8 @@ import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { api } from "@/api/tauri";
 import { useGitBranches, useGitStatus } from "@/queries/useGitLog";
+import { useMergeStatus } from "@/queries/useGitMerge";
+import { useUndoLast } from "@/queries/useGitReflog";
 import { useState } from "react";
 import {
   GitPullRequest,
@@ -12,6 +14,11 @@ import {
   RefreshCw,
   Moon,
   Sun,
+  Search,
+  Sparkles,
+  RotateCcw,
+  ArrowLeftRight,
+  Archive,
 } from "lucide-react";
 import CreateBranchDialog from "./CreateBranchDialog";
 
@@ -21,8 +28,11 @@ export default function Toolbar() {
   const toggleTheme = useRepoStore((s) => s.toggleTheme);
   const selectCommit = useUIStore((s) => s.selectCommit);
   const selectFile = useUIStore((s) => s.selectFile);
+  const openDialog = useUIStore((s) => s.openDialog);
   const { data: branches } = useGitBranches(repoPath);
   const { data: changes } = useGitStatus(repoPath);
+  const { data: mergeStatus } = useMergeStatus(repoPath);
+  const undoLast = useUndoLast(repoPath);
   const [loading, setLoading] = useState<string | null>(null);
   const [showBranchDialog, setShowBranchDialog] = useState(false);
 
@@ -43,6 +53,8 @@ export default function Toolbar() {
     selectCommit(null);
     selectFile(null);
   };
+
+  const inMerge = mergeStatus?.merging;
 
   return (
     <>
@@ -66,13 +78,55 @@ export default function Toolbar() {
           <RefreshCw size={14} className={loading === "fetch" ? "animate-spin" : ""} /> Fetch
         </button>
         <div className="w-[1px] h-4 bg-border mx-1" />
+
+        {/* Branch */}
         <button className="ghost text-xs" onClick={() => setShowBranchDialog(true)}>
           <GitBranchPlus size={14} /> Branch
         </button>
-        <button className="ghost text-xs" disabled title="Coming in Phase 3">
+
+        {/* Merge — highlight if in merge state */}
+        <button
+          className={`ghost text-xs ${inMerge ? "text-[#ff9f0a]" : ""}`}
+          onClick={() => openDialog("merge")}
+          title={inMerge ? "Merge in progress — resolve conflicts" : "Merge branch"}
+        >
+          <ArrowLeftRight size={14} /> {inMerge ? "Merge →" : "Merge"}
+        </button>
+
+        {/* Stash */}
+        <button className="ghost text-xs" onClick={() => openDialog("stash")}>
+          <Archive size={14} /> Stash
+        </button>
+
+        <div className="w-[1px] h-4 bg-border mx-1" />
+
+        {/* Search */}
+        <button className="ghost text-xs" onClick={() => openDialog("search")}>
+          <Search size={14} /> Search
+        </button>
+
+        {/* Undo */}
+        <button
+          className="ghost text-xs"
+          onClick={() => doAction("undo", () => undoLast.mutateAsync())}
+          disabled={undoLast.isPending}
+        >
+          <RotateCcw size={14} /> Undo
+        </button>
+
+        {/* AI */}
+        <button className="ghost text-xs" onClick={() => openDialog("ai-settings")}>
+          <Sparkles size={14} /> AI
+        </button>
+
+        <div className="flex-1" />
+
+        {/* PR (Phase 3) */}
+        <button className="ghost text-xs" disabled title="Coming soon">
           <GitPullRequest size={14} /> PR
         </button>
-        <div className="flex-1" />
+
+        {/* Theme toggle */}
         <button className="ghost" onClick={toggleTheme}>
           {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
         </button>

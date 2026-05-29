@@ -2,12 +2,35 @@ import { useState, useRef, useEffect } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useGitStatus } from "@/queries/useGitLog";
-import { api } from "@/api/tauri";
+import { api, type FileChange } from "@/api/tauri";
 import { useQueryClient } from "@tanstack/react-query";
-import { FilePlus, FileMinus, FileEdit, RotateCcw, SquareArrowOutUpRight } from "lucide-react";
+import ContextMenu, { type ContextMenuItem } from "@/components/common/ContextMenu";
+import {
+  Braces,
+  Check,
+  ChevronDown,
+  Database,
+  File,
+  FileArchive,
+  FileCode,
+  FileCog,
+  FileImage,
+  FileJson,
+  FileMinus,
+  FilePlus,
+  FileSpreadsheet,
+  FileTerminal,
+  FileText,
+  GitCommit,
+  MoreHorizontal,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
 
 export default function WorkingTree() {
   const repoPath = useRepoStore((s) => s.repoPath);
+  const selectedFile = useUIStore((s) => s.selectedFile);
+  const selectedFileStage = useUIStore((s) => s.selectedFileStage);
   const selectFile = useUIStore((s) => s.selectFile);
   const { data: changes } = useGitStatus(repoPath);
   const queryClient = useQueryClient();
@@ -15,6 +38,9 @@ export default function WorkingTree() {
   const [amend, setAmend] = useState(false);
   const [committing, setCommitting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [stagedOpen, setStagedOpen] = useState(true);
+  const [unstagedOpen, setUnstagedOpen] = useState(true);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; file: FileChange; stage: "staged" | "unstaged" } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const staged = changes?.filter((c) => c.staged) || [];
@@ -32,6 +58,7 @@ export default function WorkingTree() {
   const handleStage = async (filePath: string) => {
     try {
       await api.commit.stage(repoPath!, filePath);
+      selectFile(filePath, "staged");
       invalidate();
     } catch (e: any) {
       showToast(`Error: ${e}`);
@@ -41,6 +68,7 @@ export default function WorkingTree() {
   const handleUnstage = async (filePath: string) => {
     try {
       await api.commit.unstage(repoPath!, filePath);
+      selectFile(filePath, "unstaged");
       invalidate();
     } catch (e: any) {
       showToast(`Error: ${e}`);
@@ -59,6 +87,30 @@ export default function WorkingTree() {
   const handleUnstageAll = async () => {
     try {
       await api.commit.unstageAll(repoPath!);
+      invalidate();
+    } catch (e: any) {
+      showToast(`Error: ${e}`);
+    }
+  };
+
+  const handleDiscard = async (filePath: string) => {
+    if (!confirm(`Discard all changes in ${filePath}?`)) return;
+    try {
+      await api.commit.discard(repoPath!, filePath);
+      if (selectedFile === filePath) {
+        selectFile(null);
+      }
+      invalidate();
+    } catch (e: any) {
+      showToast(`Error: ${e}`);
+    }
+  };
+
+  const handleDiscardAll = async () => {
+    if (!confirm("Discard all working tree changes, including untracked files?")) return;
+    try {
+      await api.commit.discardAll(repoPath!);
+      selectFile(null);
       invalidate();
     } catch (e: any) {
       showToast(`Error: ${e}`);
@@ -91,124 +143,119 @@ export default function WorkingTree() {
     return () => window.removeEventListener("keydown", handleKey);
   }, [commitMessage, repoPath]);
 
-  const statusIcon = (status: string) => {
-    switch (status) {
-      case "added": return <FilePlus size={12} className="text-[#30d158]" />;
-      case "deleted": return <FileMinus size={12} className="text-[#ff375f]" />;
-      case "untracked": return <FilePlus size={12} className="text-text-muted" />;
-      default: return <FileEdit size={12} className="text-[#ff9f0a]" />;
-    }
-  };
-
-  const statusLabel = (status: string) => {
-    switch (status) {
-      case "modified": return "M";
-      case "added": return "A";
-      case "deleted": return "D";
-      case "renamed": return "R";
-      case "untracked": return "?";
-      default: return status.charAt(0).toUpperCase();
-    }
-  };
+  const ctxItems: ContextMenuItem[] = ctxMenu
+    ? [
+        {
+          label: "View diff",
+          action: () => selectFile(ctxMenu.file.path, ctxMenu.stage),
+        },
+        {
+          label: ctxMenu.stage === "staged" ? "Unstage file" : "Stage file",
+          icon: <Check size={13} />,
+          action: () =>
+            ctxMenu.stage === "staged"
+              ? handleUnstage(ctxMenu.file.path)
+              : handleStage(ctxMenu.file.path),
+        },
+        {
+          label: "Discard changes",
+          icon: <Trash2 size={13} />,
+          action: () => handleDiscard(ctxMenu.file.path),
+        },
+      ]
+    : [];
 
   return (
     <div className="h-full flex flex-col bg-surface-0">
-      <div className="px-3 py-1.5 border-b border-border flex items-center justify-between">
-        <div className="text-xs font-medium text-text-primary">Working Tree</div>
+      <div className="h-8 px-3 border-b border-border flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2 text-xs font-medium text-text-primary">
+          <GitCommit size={13} className="text-text-secondary" />
+          Working Tree
+        </div>
         <div className="text-2xs text-text-muted">
           {staged.length} staged · {unstaged.length} unstaged
         </div>
       </div>
 
-      {/* Staged */}
-      <div className="px-3 py-1.5 border-b border-border">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-xs font-medium text-text-primary">
-            Staged Changes ({staged.length})
-          </span>
-          {staged.length > 0 && (
-            <button className="ghost text-2xs" onClick={handleUnstageAll}>
-              Unstage All
-            </button>
-          )}
-        </div>
-        <div className="space-y-[1px] max-h-[120px] overflow-y-auto">
-          {staged.length === 0 && (
-            <div className="text-xs text-text-muted py-1">No staged changes</div>
-          )}
-          {staged.map((f) => (
-            <div
-              key={f.path}
-              className="list-item flex items-center gap-2 px-2 py-[2px]"
-              onClick={() => selectFile(f.path)}
-            >
-              <div className="w-4 text-center text-2xs font-mono text-[#30d158]">{statusLabel(f.status)}</div>
-              <span className="text-xs truncate flex-1">{f.path}</span>
-              <button
-                className="ghost p-0.5 opacity-50 hover:opacity-100"
-                onClick={(e) => { e.stopPropagation(); handleUnstage(f.path); }}
-                title="Unstage"
-              >
-                <RotateCcw size={10} />
-              </button>
-            </div>
-          ))}
-        </div>
+      <div className="h-8 px-3 border-b border-border flex items-center gap-1 shrink-0">
+        <button className="ghost p-1" onClick={invalidate} title="Refresh changes">
+          <RefreshCw size={13} />
+        </button>
+        <button
+          className="ghost text-2xs px-2"
+          onClick={handleStageAll}
+          disabled={unstaged.length === 0}
+          title="Stage all"
+        >
+          Stage all
+        </button>
+        <button
+          className="ghost text-2xs px-2"
+          onClick={handleUnstageAll}
+          disabled={staged.length === 0}
+          title="Unstage all"
+        >
+          Unstage all
+        </button>
+        <button
+          className="ghost p-1 ml-auto hover:text-[#ff375f]"
+          onClick={handleDiscardAll}
+          disabled={(changes?.length || 0) === 0}
+          title="Discard all changes"
+        >
+          <Trash2 size={13} />
+        </button>
       </div>
 
-      {/* Unstaged */}
-      <div className="px-3 py-1.5 border-b border-border flex-1 overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-xs font-medium text-text-primary">
-            Changes ({unstaged.length})
-          </span>
-          {unstaged.length > 0 && (
-            <button className="ghost text-2xs" onClick={handleStageAll}>
-              Stage All
-            </button>
-          )}
-        </div>
-        <div className="space-y-[1px] flex-1 overflow-y-auto">
-          {unstaged.length === 0 && (
-            <div className="text-xs text-text-muted py-1">No changes</div>
-          )}
-          {unstaged.map((f) => (
-            <div
-              key={f.path}
-              className="list-item flex items-center gap-2 px-2 py-[2px]"
-              onClick={() => selectFile(f.path)}
-            >
-              <div className={`w-4 text-center text-2xs font-mono ${f.status === 'untracked' ? 'text-text-muted' : 'text-[#ff9f0a]'}`}>
-                {statusLabel(f.status)}
-              </div>
-              <span className="text-xs truncate flex-1">{f.path}</span>
-              <button
-                className="ghost p-0.5 opacity-50 hover:opacity-100"
-                onClick={(e) => { e.stopPropagation(); handleStage(f.path); }}
-                title="Stage"
-              >
-                <SquareArrowOutUpRight size={10} />
-              </button>
-            </div>
-          ))}
-        </div>
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+        <ChangeSection
+          title="Staged files"
+          checked
+          open={stagedOpen}
+          files={staged}
+          empty="No staged changes"
+          selectedFile={selectedFile}
+          selectedStage={selectedFileStage}
+          stage="staged"
+          onToggleAll={handleUnstageAll}
+          onToggleFile={handleUnstage}
+          onSelect={(path) => selectFile(path, "staged")}
+          onToggleOpen={() => setStagedOpen((open) => !open)}
+          onMenu={(x, y, file) => setCtxMenu({ x, y, file, stage: "staged" })}
+        />
+        <ChangeSection
+          title="Unstaged files"
+          checked={false}
+          open={unstagedOpen}
+          files={unstaged}
+          empty="No unstaged changes"
+          selectedFile={selectedFile}
+          selectedStage={selectedFileStage}
+          stage="unstaged"
+          onToggleAll={handleStageAll}
+          onToggleFile={handleStage}
+          onSelect={(path) => selectFile(path, "unstaged")}
+          onToggleOpen={() => setUnstagedOpen((open) => !open)}
+          onMenu={(x, y, file) => setCtxMenu({ x, y, file, stage: "unstaged" })}
+          grow
+        />
       </div>
 
-      {/* Commit form */}
-      <div className="px-3 py-2 border-t border-border space-y-2">
+      <div className="px-3 py-2 border-t border-border space-y-2 shrink-0">
         <textarea
           ref={textareaRef}
           value={commitMessage}
           onChange={(e) => setCommitMessage(e.target.value)}
-          placeholder="Commit message (Cmd+Enter to commit)"
-          className="w-full h-[60px] text-xs bg-surface-1 border border-border rounded-mac px-2 py-1.5 text-text-primary placeholder:text-text-muted resize-none outline-none focus:border-accent transition-colors"
+          placeholder="Commit message"
+          className="w-full h-[64px] text-xs bg-surface-1 border border-border rounded-mac px-2 py-1.5 text-text-primary placeholder:text-text-muted resize-none outline-none focus:border-accent transition-colors"
         />
         <div className="flex items-center gap-2">
           <button
             onClick={handleCommit}
-            disabled={!commitMessage.trim() || committing}
-            className="flex-1 px-3 py-1.5 bg-accent text-accent-fg text-xs font-medium rounded-mac disabled:opacity-40 hover:opacity-90 transition-opacity"
+            disabled={!commitMessage.trim() || committing || staged.length === 0}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-accent text-accent-fg text-xs font-medium rounded-mac disabled:opacity-40 hover:opacity-90 transition-opacity"
           >
+            <Check size={13} />
             {committing ? "Committing..." : "Commit"}
           </button>
           <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer">
@@ -223,8 +270,338 @@ export default function WorkingTree() {
         </div>
       </div>
 
-      {/* Toast */}
       {toast && <div className="toast">{toast}</div>}
+      {ctxMenu && (
+        <ContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          items={ctxItems}
+          onClose={() => setCtxMenu(null)}
+        />
+      )}
     </div>
   );
+}
+
+interface ChangeSectionProps {
+  title: string;
+  checked: boolean;
+  open: boolean;
+  files: FileChange[];
+  empty: string;
+  selectedFile: string | null;
+  selectedStage: "staged" | "unstaged" | null;
+  stage: "staged" | "unstaged";
+  onToggleAll: () => void;
+  onToggleFile: (path: string) => void;
+  onSelect: (path: string) => void;
+  onToggleOpen: () => void;
+  onMenu: (x: number, y: number, file: FileChange) => void;
+  grow?: boolean;
+}
+
+function ChangeSection({
+  title,
+  checked,
+  open,
+  files,
+  empty,
+  selectedFile,
+  selectedStage,
+  stage,
+  onToggleAll,
+  onToggleFile,
+  onSelect,
+  onToggleOpen,
+  onMenu,
+  grow,
+}: ChangeSectionProps) {
+  return (
+    <div className={`border-b border-border min-h-0 flex flex-col ${grow && open ? "flex-1" : "shrink-0"} ${!grow && open ? "max-h-[42%]" : ""}`}>
+      <div className="h-8 px-3 flex items-center gap-2 bg-surface-1 shrink-0">
+        <button
+          className="ghost p-0.5 text-text-muted hover:text-text-primary transition-colors"
+          onClick={onToggleOpen}
+          title={open ? "Collapse" : "Expand"}
+        >
+          <ChevronDown size={13} className={`transition-transform duration-150 ${open ? "" : "-rotate-90"}`} />
+        </button>
+        <button
+          className={`h-3.5 w-3.5 rounded-[4px] border flex items-center justify-center transition-all ${
+            checked
+              ? "bg-accent border-accent text-accent-fg"
+              : "border-border text-transparent hover:border-text-secondary hover:bg-surface-2"
+          }`}
+          onClick={onToggleAll}
+          title={checked ? "Unstage all" : "Stage all"}
+          disabled={files.length === 0}
+        >
+          {checked && <Check size={9} strokeWidth={3.5} />}
+        </button>
+        <div className="flex-1 text-xs font-semibold text-text-primary">
+          {title} ({files.length})
+        </div>
+        {files.length > 0 && (
+          <button className="ghost text-2xs font-medium" onClick={onToggleAll}>
+            {checked ? "Unstage all" : "Stage all"}
+          </button>
+        )}
+      </div>
+
+      {open && (
+      <div className="flex-1 overflow-y-auto py-1">
+        {files.length === 0 ? (
+          <div className="px-3 py-2 text-xs text-text-muted">{empty}</div>
+        ) : (
+          files.map((file) => (
+            <ChangeRow
+              key={`${stage}:${file.path}`}
+              file={file}
+              checked={checked}
+              selected={selectedFile === file.path && selectedStage === stage}
+              onSelect={() => onSelect(file.path)}
+              onToggle={() => onToggleFile(file.path)}
+              onMenu={(x, y) => onMenu(x, y, file)}
+            />
+          ))
+        )}
+      </div>
+      )}
+    </div>
+  );
+}
+
+interface ChangeRowProps {
+  file: FileChange;
+  checked: boolean;
+  selected: boolean;
+  onSelect: () => void;
+  onToggle: () => void;
+  onMenu: (x: number, y: number) => void;
+}
+
+function StatusBadge({ status, selected }: { status: string; selected: boolean }) {
+  const label = statusLabel(status);
+  
+  let badgeClass = "";
+  if (selected) {
+    badgeClass = "bg-accent-fg/20 text-accent-fg border border-accent-fg/30";
+  } else {
+    switch (status) {
+      case "added":
+        badgeClass = "bg-[#30d158]/10 text-[#30d158] border border-[#30d158]/20";
+        break;
+      case "deleted":
+        badgeClass = "bg-[#ff375f]/10 text-[#ff375f] border border-[#ff375f]/20";
+        break;
+      case "renamed":
+      case "copied":
+        badgeClass = "bg-[#64d2ff]/10 text-[#64d2ff] border border-[#64d2ff]/20";
+        break;
+      case "untracked":
+        badgeClass = "bg-text-muted/10 text-text-muted border border-text-muted/15";
+        break;
+      default: // modified
+        badgeClass = "bg-[#ff9f0a]/10 text-[#ff9f0a] border border-[#ff9f0a]/20";
+        break;
+    }
+  }
+
+  return (
+    <span className={`inline-flex items-center justify-center h-4 min-w-[15px] px-1 rounded-[3px] text-[9px] font-mono font-bold leading-none select-none ${badgeClass}`}>
+      {label}
+    </span>
+  );
+}
+
+function ChangeRow({ file, checked, selected, onSelect, onToggle, onMenu }: ChangeRowProps) {
+  const fileName = getFileName(file.path);
+  const folder = getFolder(file.path);
+
+  return (
+    <div
+      className={`tree-item group w-full grid grid-cols-[14px_16px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5 text-left border-b border-border/10 last:border-b-0 ${
+        selected ? "selected" : ""
+      }`}
+      onClick={onSelect}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onMenu(e.clientX, e.clientY);
+      }}
+      title={file.path}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
+    >
+      <span
+        className={`h-3.5 w-3.5 rounded-[4px] border flex items-center justify-center transition-all cursor-pointer ${
+          checked
+            ? "bg-accent border-accent text-accent-fg"
+            : selected
+              ? "border-accent-fg/50 hover:border-accent-fg hover:bg-accent-fg/10 text-transparent"
+              : "border-border hover:border-text-secondary hover:bg-surface-2 text-transparent"
+        }`}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle();
+        }}
+      >
+        {checked && <Check size={9} strokeWidth={3.5} />}
+      </span>
+      <span className="h-4 w-4 flex items-center justify-center shrink-0">
+        {fileIcon(file.path, file.status)}
+      </span>
+      <span className="min-w-0 flex flex-col justify-center">
+        <span className={`block text-xs font-medium text-current truncate leading-4 ${file.status === "deleted" ? "line-through opacity-60" : ""}`}>
+          {fileName}
+        </span>
+        {folder && (
+          <span className={`block text-[10px] truncate leading-3 ${selected ? "text-accent-fg opacity-75" : "text-text-muted"}`}>
+            {folder}
+          </span>
+        )}
+      </span>
+      <span className="flex items-center justify-end gap-1.5 min-w-[48px]">
+        <StatusBadge status={file.status} selected={selected} />
+        <span
+          className={`h-5 w-5 flex items-center justify-center rounded transition-all cursor-pointer opacity-0 group-hover:opacity-100 ${
+            selected ? "hover:bg-accent-fg/20 text-accent-fg" : "text-text-muted hover:bg-surface-2"
+          }`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onMenu(e.clientX, e.clientY);
+          }}
+        >
+          <MoreHorizontal size={13} className="text-current" />
+        </span>
+      </span>
+    </div>
+  );
+}
+
+function fileIcon(path: string, status: string) {
+  const className = statusColor(status);
+  const ext = getExtension(path);
+  const fileName = getFileName(path).toLowerCase();
+  const size = 14;
+
+  if (["package.json", "tsconfig.json", "vite.config.ts", "tailwind.config.ts"].includes(fileName)) {
+    return <FileCog size={size} className={className} />;
+  }
+
+  switch (ext) {
+    case "js":
+    case "jsx":
+    case "ts":
+    case "tsx":
+    case "java":
+    case "kt":
+    case "rs":
+    case "go":
+    case "py":
+    case "rb":
+    case "php":
+    case "c":
+    case "cpp":
+    case "h":
+    case "hpp":
+      return <FileCode size={size} className={className} />;
+    case "json":
+    case "jsonc":
+    case "lock":
+      return <FileJson size={size} className={className} />;
+    case "yml":
+    case "yaml":
+    case "toml":
+    case "ini":
+    case "env":
+      return <FileCog size={size} className={className} />;
+    case "css":
+    case "scss":
+    case "sass":
+    case "less":
+    case "html":
+    case "xml":
+    case "svg":
+      return <Braces size={size} className={className} />;
+    case "sql":
+    case "db":
+    case "sqlite":
+      return <Database size={size} className={className} />;
+    case "md":
+    case "mdx":
+    case "txt":
+    case "rst":
+      return <FileText size={size} className={className} />;
+    case "png":
+    case "jpg":
+    case "jpeg":
+    case "gif":
+    case "webp":
+    case "ico":
+      return <FileImage size={size} className={className} />;
+    case "zip":
+    case "gz":
+    case "tar":
+    case "rar":
+    case "7z":
+      return <FileArchive size={size} className={className} />;
+    case "csv":
+    case "tsv":
+    case "xls":
+    case "xlsx":
+      return <FileSpreadsheet size={size} className={className} />;
+    case "sh":
+    case "bash":
+    case "zsh":
+    case "ps1":
+      return <FileTerminal size={size} className={className} />;
+    default:
+      if (status === "added" || status === "untracked") return <FilePlus size={size} className={className} />;
+      if (status === "deleted") return <FileMinus size={size} className={className} />;
+      return <File size={size} className={className} />;
+  }
+}
+
+function statusLabel(status: string) {
+  switch (status) {
+    case "modified": return "M";
+    case "added": return "A";
+    case "deleted": return "D";
+    case "renamed": return "R";
+    case "untracked": return "?";
+    default: return status.charAt(0).toUpperCase();
+  }
+}
+
+function statusColor(status: string) {
+  switch (status) {
+    case "added": return "text-[#30d158]";
+    case "deleted": return "text-[#ff375f]";
+    case "renamed":
+    case "copied": return "text-[#64d2ff]";
+    case "untracked": return "text-text-muted";
+    default: return "text-[#ff9f0a]";
+  }
+}
+
+function getFileName(path: string) {
+  return path.split("/").pop() || path;
+}
+
+function getExtension(path: string) {
+  const fileName = getFileName(path).toLowerCase();
+  const index = fileName.lastIndexOf(".");
+  return index > -1 ? fileName.slice(index + 1) : fileName;
+}
+
+function getFolder(path: string) {
+  const parts = path.split("/");
+  parts.pop();
+  return parts.join("/");
 }

@@ -81,17 +81,17 @@ body {
 }
 
 /* macOS-style list selection */
-.list-item {
+.tree-item {
   cursor: pointer;
   border-radius: 4px;
   transition: background-color 100ms ease;
 }
 
-.list-item:hover {
+.tree-item:hover {
   background-color: var(--surface-2);
 }
 
-.list-item.selected {
+.tree-item.selected {
   background-color: var(--accent);
   color: var(--accent-fg);
 }

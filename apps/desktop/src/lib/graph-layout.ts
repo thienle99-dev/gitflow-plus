@@ -11,6 +11,8 @@ const GRAPH_LEFT_PADDING = 18;
 export interface LayoutCommit {
   hash: string;
   message: string;
+  author: string;
+  date: string;
   refs: Ref[];
   lane: number;
   y: number;
@@ -68,6 +70,8 @@ export function computeGraphLayout(
     newCommits.push({
       hash: commit.hash,
       message: commit.message,
+      author: commit.author,
+      date: commit.date,
       refs: commit.refs || [],
       lane,
       y,

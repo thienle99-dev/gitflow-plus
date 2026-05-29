@@ -1,14 +1,25 @@
 import { useState } from "react";
 import { useRepoStore } from "@/stores/repo";
+import { useUIStore } from "@/stores/ui";
 import { useGitBranches } from "@/queries/useGitLog";
+import { useTagList } from "@/queries/useGitTag";
 import { api } from "@/api/tauri";
-import { ChevronRight, GitBranch, Tag } from "lucide-react";
+import {
+  ChevronRight,
+  GitBranch,
+  Tag,
+  Package,
+  Search,
+  Archive,
+} from "lucide-react";
 
 export default function Sidebar() {
   const repoPath = useRepoStore((s) => s.repoPath);
   const selectedRef = useRepoStore((s) => s.selectedRef);
   const selectRef = useRepoStore((s) => s.selectRef);
+  const openDialog = useUIStore((s) => s.openDialog);
   const { data: branches } = useGitBranches(repoPath);
+  const { data: tags } = useTagList(repoPath);
   const [branchesOpen, setBranchesOpen] = useState(true);
   const [remotesOpen, setRemotesOpen] = useState(true);
   const [tagsOpen, setTagsOpen] = useState(true);
@@ -34,7 +45,7 @@ export default function Sidebar() {
       {branchesOpen && (
         <div className="space-y-[1px]">
           <div
-            className={`list-item flex items-center gap-2 px-3 py-[3px] mx-1 ${!selectedRef ? "selected" : ""}`}
+            className={`tree-item flex items-center gap-2 px-3 py-[3px] mx-1 ${!selectedRef ? "selected" : ""}`}
             onClick={() => selectRef(null)}
           >
             <GitBranch size={12} className={!selectedRef ? "text-accent-fg" : "text-accent"} />
@@ -43,7 +54,7 @@ export default function Sidebar() {
           {localBranches.map((b) => (
             <div
               key={b.name}
-              className={`list-item flex items-center gap-2 px-3 py-[3px] mx-1 ${selectedRef === b.name ? "selected" : ""}`}
+              className={`tree-item flex items-center gap-2 px-3 py-[3px] mx-1 ${selectedRef === b.name ? "selected" : ""}`}
               onClick={() => selectRef(b.name)}
               onDoubleClick={() => handleCheckout(b.name)}
             >
@@ -66,7 +77,7 @@ export default function Sidebar() {
           {remoteBranches.map((b) => (
             <div
               key={b.name}
-              className={`list-item flex items-center gap-2 px-3 py-[3px] mx-1 ${selectedRef === b.name ? "selected" : ""}`}
+              className={`tree-item flex items-center gap-2 px-3 py-[3px] mx-1 ${selectedRef === b.name ? "selected" : ""}`}
               onClick={() => selectRef(b.name)}
               onDoubleClick={() => handleCheckout(b.name)}
             >
@@ -81,12 +92,59 @@ export default function Sidebar() {
       <SectionHeader title="Tags" open={tagsOpen} onToggle={() => setTagsOpen(!tagsOpen)} />
       {tagsOpen && (
         <div className="space-y-[1px]">
-          <div className="flex items-center gap-2 px-3 py-[3px] mx-1 text-text-muted">
-            <Tag size={12} />
-            <span className="text-xs">No tags</span>
-          </div>
+          {tags && tags.length > 0 ? (
+            tags.map((t) => (
+              <div
+                key={t.name}
+                className="tree-item flex items-center gap-2 px-3 py-[3px] mx-1 cursor-pointer"
+                onClick={() => selectRef(t.name)}
+              >
+                <Tag size={12} className="text-purple-400" />
+                <span className="min-w-0 flex-1 truncate text-xs">{t.name}</span>
+                {t.annotated && (
+                  <span className="shrink-0 rounded bg-surface-3 px-1 py-0.5 text-[9px] text-text-muted">
+                    A
+                  </span>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="flex items-center gap-2 px-3 py-[3px] mx-1 text-text-muted">
+              <Tag size={12} />
+              <span className="text-xs">No tags</span>
+            </div>
+          )}
         </div>
       )}
+
+      {/* Quick actions spacer */}
+      <div className="my-1 mx-2 border-t border-border" />
+
+      {/* Quick actions */}
+      <SectionHeader title="Actions" open={true} onToggle={() => {}} />
+      <div className="space-y-[1px] px-2">
+        <button
+          className="tree-item w-full flex items-center gap-2 px-2 py-[3px]"
+          onClick={() => openDialog("search")}
+        >
+          <Search size={12} className="text-text-muted" />
+          <span className="text-xs text-text-secondary">Search Commits</span>
+        </button>
+        <button
+          className="tree-item w-full flex items-center gap-2 px-2 py-[3px]"
+          onClick={() => openDialog("stash")}
+        >
+          <Archive size={12} className="text-text-muted" />
+          <span className="text-xs text-text-secondary">Stash</span>
+        </button>
+        <button
+          className="tree-item w-full flex items-center gap-2 px-2 py-[3px]"
+          onClick={() => openDialog("tag")}
+        >
+          <Package size={12} className="text-text-muted" />
+          <span className="text-xs text-text-secondary">Manage Tags</span>
+        </button>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
+import { api } from "@/api/tauri";
 import { EditorView, basicSetup } from "codemirror";
 import { EditorState } from "@codemirror/state";
 import { keymap } from "@codemirror/view";
@@ -46,11 +47,21 @@ function getLang(ext: string) {
 interface DiffViewerProps {
   diff: string;
   filePath: string;
+  source?: "working" | "staged" | "commit";
+  onPatchApplied?: () => void;
 }
 
-export default function DiffViewer({ diff, filePath }: DiffViewerProps) {
+export default function DiffViewer({
+  diff,
+  filePath,
+  source = "commit",
+  onPatchApplied,
+}: DiffViewerProps) {
   const diffViewMode = useUIStore((s) => s.diffViewMode);
+  const repoPath = useRepoStore((s) => s.repoPath);
   const appTheme = useRepoStore((s) => s.theme);
+  const [applying, setApplying] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const leftRef = useRef<HTMLDivElement>(null);
   const rightRef = useRef<HTMLDivElement>(null);
   const unifiedRef = useRef<HTMLDivElement>(null);
@@ -78,6 +89,24 @@ export default function DiffViewer({ diff, filePath }: DiffViewerProps) {
     () => hunks.reduce((s, h) => s + h.lines.filter(l => l.type === "add").length, 0),
     [hunks],
   );
+  const patchPrefix = useMemo(() => getPatchPrefix(diff), [diff]);
+  const canPatch = source === "working" || source === "staged";
+
+  const applyHunk = async (hunk: DiffHunk, index: number, action: "stage" | "unstage" | "discard") => {
+    if (!repoPath) return;
+    if (action === "discard" && !confirm("Discard this hunk from the working tree?")) return;
+
+    setApplying(index);
+    setError(null);
+    try {
+      await api.diff.applyHunk(repoPath, buildHunkPatch(patchPrefix, hunk), action);
+      onPatchApplied?.();
+    } catch (e: any) {
+      setError(String(e));
+    } finally {
+      setApplying(null);
+    }
+  };
 
   // Destroy editors on unmount
   useEffect(() => {
@@ -148,7 +177,61 @@ export default function DiffViewer({ diff, filePath }: DiffViewerProps) {
         <span>{filePath}</span>
         <span className="text-[#ff375f]">-{deletedCount}</span>
         <span className="text-[#30d158]">+{addedCount}</span>
+        {source !== "commit" && (
+          <span className="ml-auto capitalize">{source} diff</span>
+        )}
       </div>
+      {canPatch && hunks.length > 0 && (
+        <div className="border-b border-border bg-surface-1 max-h-[120px] overflow-y-auto">
+          {hunks.map((hunk, index) => {
+            const add = hunk.lines.filter((line) => line.type === "add").length;
+            const del = hunk.lines.filter((line) => line.type === "delete").length;
+            return (
+              <div
+                key={`${hunk.header}:${index}`}
+                className="min-h-7 px-3 py-1 flex items-center gap-2 border-b border-border/60 last:border-b-0"
+              >
+                <span className="min-w-0 flex-1 truncate font-mono text-2xs text-text-muted">
+                  {hunk.header}
+                </span>
+                <span className="text-2xs text-[#ff375f]">-{del}</span>
+                <span className="text-2xs text-[#30d158]">+{add}</span>
+                {source === "working" ? (
+                  <>
+                    <button
+                      className="ghost text-2xs px-2"
+                      onClick={() => applyHunk(hunk, index, "stage")}
+                      disabled={applying !== null}
+                    >
+                      {applying === index ? "Applying..." : "Stage hunk"}
+                    </button>
+                    <button
+                      className="ghost text-2xs px-2 hover:text-[#ff375f]"
+                      onClick={() => applyHunk(hunk, index, "discard")}
+                      disabled={applying !== null}
+                    >
+                      Discard
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    className="ghost text-2xs px-2"
+                    onClick={() => applyHunk(hunk, index, "unstage")}
+                    disabled={applying !== null}
+                  >
+                    {applying === index ? "Applying..." : "Unstage hunk"}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {error && (
+        <div className="border-b border-border px-3 py-1 text-2xs text-[#ff375f] bg-surface-1">
+          {error}
+        </div>
+      )}
       {diffViewMode === "split" ? (
         <div className="flex-1 flex overflow-hidden">
           <div ref={leftRef} className="flex-1 overflow-auto border-r border-border" />
@@ -198,4 +281,16 @@ function buildSideContent(hunks: DiffHunk[], side: "old" | "new"): string {
 
 function buildUnifiedContent(hunks: DiffHunk[]): string {
   return hunks.map((h) => h.lines.map((l) => l.content).join("\n")).join("\n");
+}
+
+function getPatchPrefix(diff: string) {
+  const lines = diff.split("\n");
+  const firstHunkIndex = lines.findIndex((line) => line.startsWith("@@"));
+  if (firstHunkIndex <= 0) return "";
+  return lines.slice(0, firstHunkIndex).join("\n");
+}
+
+function buildHunkPatch(prefix: string, hunk: DiffHunk) {
+  const hunkLines = hunk.lines.map((line) => line.content).join("\n");
+  return `${prefix}\n${hunkLines}\n`;
 }
