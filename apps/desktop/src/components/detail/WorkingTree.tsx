@@ -113,6 +113,13 @@ export default function WorkingTree() {
 
   return (
     <div className="h-full flex flex-col bg-surface-0">
+      <div className="px-3 py-1.5 border-b border-border flex items-center justify-between">
+        <div className="text-xs font-medium text-text-primary">Working Tree</div>
+        <div className="text-2xs text-text-muted">
+          {staged.length} staged · {unstaged.length} unstaged
+        </div>
+      </div>
+
       {/* Staged */}
       <div className="px-3 py-1.5 border-b border-border">
         <div className="flex items-center justify-between mb-1">

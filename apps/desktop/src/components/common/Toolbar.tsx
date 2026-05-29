@@ -1,10 +1,12 @@
 import { useRepoStore } from "@/stores/repo";
+import { useUIStore } from "@/stores/ui";
 import { api } from "@/api/tauri";
-import { useGitBranches } from "@/queries/useGitLog";
+import { useGitBranches, useGitStatus } from "@/queries/useGitLog";
 import { useState } from "react";
 import {
   GitPullRequest,
   GitBranchPlus,
+  FileDiff,
   ArrowUpFromLine,
   ArrowDownToLine,
   RefreshCw,
@@ -17,7 +19,10 @@ export default function Toolbar() {
   const repoPath = useRepoStore((s) => s.repoPath);
   const theme = useRepoStore((s) => s.theme);
   const toggleTheme = useRepoStore((s) => s.toggleTheme);
+  const selectCommit = useUIStore((s) => s.selectCommit);
+  const selectFile = useUIStore((s) => s.selectFile);
   const { data: branches } = useGitBranches(repoPath);
+  const { data: changes } = useGitStatus(repoPath);
   const [loading, setLoading] = useState<string | null>(null);
   const [showBranchDialog, setShowBranchDialog] = useState(false);
 
@@ -34,9 +39,23 @@ export default function Toolbar() {
     }
   };
 
+  const showChanges = () => {
+    selectCommit(null);
+    selectFile(null);
+  };
+
   return (
     <>
       <div className="vibrancy h-[38px] border-b border-border flex items-center px-3 gap-1 select-none">
+        <button className="ghost text-xs" onClick={showChanges} title="Show current changes">
+          <FileDiff size={14} /> Changes
+          {!!changes?.length && (
+            <span className="ml-0.5 rounded bg-surface-3 px-1 text-[10px] font-semibold text-text-secondary">
+              {changes.length}
+            </span>
+          )}
+        </button>
+        <div className="w-[1px] h-4 bg-border mx-1" />
         <button className="ghost text-xs" onClick={() => doAction("pull", () => api.remote.pull(repoPath!))} disabled={!!loading}>
           <ArrowDownToLine size={14} /> Pull
         </button>
