@@ -6,12 +6,13 @@ import { computeGraphLayout, type LayoutState } from "@/lib/graph-layout";
 import { api } from "@/api/tauri";
 import { useQueryClient } from "@tanstack/react-query";
 import ContextMenu, { type ContextMenuItem } from "@/components/common/ContextMenu";
-import { useCanvasRenderer } from "./useCanvasRenderer";
+import { useCanvasRenderer, type GraphEdgeSegment, type GraphRenderIndex } from "./useCanvasRenderer";
 import { useHitTest } from "./useHitTest";
 import CommitTooltip from "./CommitTooltip";
 
 const ROW_HEIGHT = 28;
 const LOAD_MORE_THRESHOLD = 200; // px from bottom
+const EDGE_BLOCK_SIZE = 128;
 
 export default function CommitGraph() {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -57,6 +58,7 @@ export default function CommitGraph() {
     return nextLayout;
   }, [data]);
   const commits = layout.commits;
+  const graphIndex = useMemo(() => buildGraphRenderIndex(layout), [layout]);
 
   const totalHeight = layout.commits.length * ROW_HEIGHT;
   const scrollHeight = Math.max(totalHeight, containerHeight);
@@ -95,6 +97,7 @@ export default function CommitGraph() {
   useCanvasRenderer({
     canvasRef,
     layout,
+    graphIndex,
     scrollTop,
     containerHeight,
     containerWidth,
@@ -299,6 +302,37 @@ export default function CommitGraph() {
       )}
     </div>
   );
+}
+
+function buildGraphRenderIndex(layout: LayoutState): GraphRenderIndex {
+  const commitByHash = new Map(layout.commits.map((commit) => [commit.hash, commit]));
+  const rowByHash = new Map(layout.commits.map((commit, row) => [commit.hash, row]));
+  const blockCount = Math.max(1, Math.ceil(Math.max(1, layout.commits.length) / EDGE_BLOCK_SIZE));
+  const edgeBlocks: GraphEdgeSegment[][] = Array.from({ length: blockCount }, () => []);
+  let edgeId = 0;
+
+  layout.commits.forEach((commit, row) => {
+    commit.parents.forEach((parentHash, parentIndex) => {
+      const parentRow = rowByHash.get(parentHash) ?? layout.commits.length;
+      if (parentRow <= row) return;
+
+      const edge: GraphEdgeSegment = {
+        id: edgeId++,
+        fromRow: row,
+        toRow: parentRow,
+        fromLane: commit.lane,
+        toLane: commit.parentLanes[parentIndex] ?? commit.lane,
+        color: commit.color,
+      };
+      const startBlock = Math.max(0, Math.floor(edge.fromRow / EDGE_BLOCK_SIZE));
+      const endBlock = Math.min(edgeBlocks.length - 1, Math.floor(edge.toRow / EDGE_BLOCK_SIZE));
+      for (let block = startBlock; block <= endBlock; block++) {
+        edgeBlocks[block].push(edge);
+      }
+    });
+  });
+
+  return { commitByHash, edgeBlocks, blockSize: EDGE_BLOCK_SIZE };
 }
 
 function CopyIcon() {
