@@ -22,6 +22,7 @@ pub fn git_log(
     path: String,
     page: Option<usize>,
     per_page: Option<usize>,
+    ref_name: Option<String>,
 ) -> Result<Vec<Commit>, String> {
     let limit = per_page.unwrap_or(200);
     let skip = page.unwrap_or(0) * limit;
@@ -32,11 +33,15 @@ pub fn git_log(
         path.clone(),
         "log".to_string(),
         format!("--max-count={}", limit),
-        "--all".to_string(),
         "--topo-order".to_string(),
         // %D = ref names (same as --decorate but inline, empty if none)
         "--pretty=format:%H|%P|%an|%ae|%ai|%D|%s".to_string(),
     ];
+    if let Some(ref_name) = ref_name.filter(|name| !name.trim().is_empty()) {
+        args.push(ref_name);
+    } else {
+        args.push("--all".to_string());
+    }
     if skip > 0 {
         args.push(format!("--skip={}", skip));
     }

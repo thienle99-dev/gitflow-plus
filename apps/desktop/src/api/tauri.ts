@@ -98,8 +98,13 @@ export const api = {
       invoke<RepoInfo>("get_repo_info", { path }),
   },
 
-  log: (path: string, page?: number, perPage?: number) =>
-    invoke<Commit[]>("git_log", { path, page: page ?? 0, perPage: perPage ?? 200 }),
+  log: (path: string, page?: number, perPage?: number, refName?: string | null) =>
+    invoke<Commit[]>("git_log", {
+      path,
+      page: page ?? 0,
+      perPage: perPage ?? 200,
+      refName: refName ?? null,
+    }),
 
   status: (path: string) =>
     invoke<FileChange[]>("git_status", { path }),

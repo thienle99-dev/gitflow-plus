@@ -15,9 +15,10 @@ const LOAD_MORE_THRESHOLD = 200; // px from bottom
 
 export default function CommitGraph() {
   const repoPath = useRepoStore((s) => s.repoPath);
+  const selectedRef = useRepoStore((s) => s.selectedRef);
   const selectCommit = useUIStore((s) => s.selectCommit);
   const selectedCommit = useUIStore((s) => s.selectedCommit);
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useGitLog(repoPath);
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useGitLog(repoPath, selectedRef);
   const queryClient = useQueryClient();
 
   const [containerHeight, setContainerHeight] = useState(600);
@@ -198,7 +199,9 @@ export default function CommitGraph() {
         <div className="flex items-center gap-1">
           {repoPath?.split("/").pop()}
           <span className="text-text-muted">—</span>
-          <span className="text-text-secondary">{commits.length} commits</span>
+          <span className="text-text-secondary">
+            {selectedRef || "All Branches"} — {commits.length} commits
+          </span>
         </div>
       </div>
 

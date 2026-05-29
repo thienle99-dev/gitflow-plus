@@ -4,15 +4,18 @@ type Theme = "dark" | "light";
 
 interface RepoState {
   repoPath: string | null;
+  selectedRef: string | null;
   recentRepos: string[];
   theme: Theme;
   openRepo: (path: string) => void;
   closeRepo: () => void;
+  selectRef: (ref: string | null) => void;
   toggleTheme: () => void;
 }
 
 export const useRepoStore = create<RepoState>((set) => ({
   repoPath: null,
+  selectedRef: null,
   recentRepos: JSON.parse(localStorage.getItem("recentRepos") || "[]"),
   theme: (localStorage.getItem("theme") as Theme) || "dark",
 
@@ -23,10 +26,12 @@ export const useRepoStore = create<RepoState>((set) => ({
         ...state.recentRepos.filter((r) => r !== path),
       ].slice(0, 10);
       localStorage.setItem("recentRepos", JSON.stringify(recent));
-      return { repoPath: path, recentRepos: recent };
+      return { repoPath: path, selectedRef: null, recentRepos: recent };
     }),
 
-  closeRepo: () => set({ repoPath: null }),
+  closeRepo: () => set({ repoPath: null, selectedRef: null }),
+
+  selectRef: (ref) => set({ selectedRef: ref }),
 
   toggleTheme: () =>
     set((state) => {

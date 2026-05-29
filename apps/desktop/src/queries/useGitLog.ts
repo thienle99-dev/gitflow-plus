@@ -3,10 +3,10 @@ import { api, type Commit, type CommitFileChange, type FileChange, type Branch, 
 
 const PAGE_SIZE = 50;
 
-export function useGitLog(repoPath: string | null) {
+export function useGitLog(repoPath: string | null, refName?: string | null) {
   return useInfiniteQuery<Commit[]>({
-    queryKey: ["git", repoPath, "log"],
-    queryFn: ({ pageParam }) => api.log(repoPath!, pageParam as number, PAGE_SIZE),
+    queryKey: ["git", repoPath, "log", refName || "all"],
+    queryFn: ({ pageParam }) => api.log(repoPath!, pageParam as number, PAGE_SIZE, refName),
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) =>
       lastPage.length === PAGE_SIZE ? allPages.length : undefined,
