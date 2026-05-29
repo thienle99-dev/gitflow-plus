@@ -1,6 +1,6 @@
-use std::process::Command;
+use serde::{Deserialize, Serialize};
 use std::io::Write;
-use serde::{Serialize, Deserialize};
+use std::process::Command;
 
 #[derive(Serialize, Clone, Debug)]
 pub struct RebaseResult {
@@ -18,13 +18,18 @@ pub struct RebaseTodo {
 
 /// Start interactive rebase using GIT_SEQUENCE_EDITOR
 /// Writes a shell script that copies the todo list into the rebase todo file
-pub fn git_rebase_interactive(path: &str, base: &str, todos: &[RebaseTodo]) -> Result<RebaseResult, String> {
+pub fn git_rebase_interactive(
+    path: &str,
+    base: &str,
+    todos: &[RebaseTodo],
+) -> Result<RebaseResult, String> {
     if todos.is_empty() {
         return Err("No rebase todo items provided".to_string());
     }
 
     // Generate the todo file content that our fake editor will write
-    let todo_content = todos.iter()
+    let todo_content = todos
+        .iter()
         .map(|t| format!("{} {} {}", t.action, t.commit_hash, t.message))
         .collect::<Vec<_>>()
         .join("\n");
@@ -48,12 +53,14 @@ pub fn git_rebase_interactive(path: &str, base: &str, todos: &[RebaseTodo]) -> R
 
     // Make executable
     use std::os::unix::fs::PermissionsExt;
-    std::fs::set_permissions(&script_path, std::fs::Permissions::from_mode(0o755))
-        .ok();
+    std::fs::set_permissions(&script_path, std::fs::Permissions::from_mode(0o755)).ok();
 
     let output = Command::new("git")
         .args(["--no-pager", "-C", path, "rebase", "-i", base, "--no-edit"])
-        .env("GIT_SEQUENCE_EDITOR", script_path.to_str().unwrap_or("/bin/true"))
+        .env(
+            "GIT_SEQUENCE_EDITOR",
+            script_path.to_str().unwrap_or("/bin/true"),
+        )
         .output()
         .map_err(|e| format!("Failed to run rebase: {}", e))?;
 
@@ -69,7 +76,11 @@ pub fn git_rebase_interactive(path: &str, base: &str, todos: &[RebaseTodo]) -> R
         let conflicted = parse_rebase_conflicts(&stderr);
         Ok(RebaseResult {
             success: !conflicted.is_empty(),
-            message: if conflicted.is_empty() { stderr.trim().to_string() } else { "Rebase paused due to conflicts".to_string() },
+            message: if conflicted.is_empty() {
+                stderr.trim().to_string()
+            } else {
+                "Rebase paused due to conflicts".to_string()
+            },
             conflicted_files: conflicted,
         })
     }
@@ -77,7 +88,14 @@ pub fn git_rebase_interactive(path: &str, base: &str, todos: &[RebaseTodo]) -> R
 
 pub fn git_rebase_continue(path: &str) -> Result<String, String> {
     let output = Command::new("git")
-        .args(["--no-pager", "-C", path, "rebase", "--continue", "--no-edit"])
+        .args([
+            "--no-pager",
+            "-C",
+            path,
+            "rebase",
+            "--continue",
+            "--no-edit",
+        ])
         .output()
         .map_err(|e| format!("Failed to continue rebase: {}", e))?;
 
@@ -120,7 +138,9 @@ pub fn git_rebase_status(path: &str) -> Result<(bool, Vec<String>), String> {
         .output()
         .map_err(|e| format!("Git error: {}", e))?;
 
-    let git_dir = String::from_utf8_lossy(&git_dir_output.stdout).trim().to_string();
+    let git_dir = String::from_utf8_lossy(&git_dir_output.stdout)
+        .trim()
+        .to_string();
     let rebase_apply = format!("{}/rebase-apply", git_dir);
     let rebase_merge = format!("{}/rebase-merge", git_dir);
 
@@ -130,7 +150,14 @@ pub fn git_rebase_status(path: &str) -> Result<(bool, Vec<String>), String> {
     let mut conflicts = vec![];
     if in_progress {
         if let Ok(status_output) = Command::new("git")
-            .args(["--no-pager", "-C", path, "status", "--porcelain", "--untracked-files=no"])
+            .args([
+                "--no-pager",
+                "-C",
+                path,
+                "status",
+                "--porcelain",
+                "--untracked-files=no",
+            ])
             .output()
         {
             for line in String::from_utf8_lossy(&status_output.stdout).lines() {
@@ -149,9 +176,15 @@ pub fn git_rebase_status(path: &str) -> Result<(bool, Vec<String>), String> {
 /// Get commits between base..HEAD for building the todo list
 pub fn git_rebase_todo_range(path: &str, base: &str) -> Result<Vec<RebaseTodo>, String> {
     let output = Command::new("git")
-        .args(["--no-pager", "-C", path, "log",
-               "--reverse", "--pretty=format:%H|%s",
-               format!("{}..HEAD", base).as_str()])
+        .args([
+            "--no-pager",
+            "-C",
+            path,
+            "log",
+            "--reverse",
+            "--pretty=format:%H|%s",
+            format!("{}..HEAD", base).as_str(),
+        ])
         .output()
         .map_err(|e| format!("Failed to list commits: {}", e))?;
 
@@ -160,7 +193,8 @@ pub fn git_rebase_todo_range(path: &str, base: &str) -> Result<Vec<RebaseTodo>, 
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let todos = stdout.lines()
+    let todos = stdout
+        .lines()
         .filter(|l| !l.is_empty())
         .filter_map(|line| {
             let parts: Vec<&str> = line.splitn(2, '|').collect();
@@ -193,7 +227,11 @@ fn parse_rebase_conflicts(stderr: &str) -> Vec<String> {
 
 // Tauri commands
 #[tauri::command]
-pub fn rebase_start(path: String, base: String, todos: Vec<RebaseTodo>) -> Result<RebaseResult, String> {
+pub fn rebase_start(
+    path: String,
+    base: String,
+    todos: Vec<RebaseTodo>,
+) -> Result<RebaseResult, String> {
     git_rebase_interactive(&path, &base, &todos)
 }
 

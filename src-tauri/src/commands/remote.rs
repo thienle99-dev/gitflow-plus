@@ -1,7 +1,11 @@
 use std::process::Command;
 
 #[tauri::command]
-pub fn git_pull(path: String, remote: Option<String>, branch: Option<String>) -> Result<String, String> {
+pub fn git_pull(
+    path: String,
+    remote: Option<String>,
+    branch: Option<String>,
+) -> Result<String, String> {
     let mut args = vec![
         "--no-pager".to_string(),
         "-C".to_string(),
@@ -31,7 +35,11 @@ pub fn git_pull(path: String, remote: Option<String>, branch: Option<String>) ->
 }
 
 #[tauri::command]
-pub fn git_push(path: String, remote: Option<String>, branch: Option<String>) -> Result<String, String> {
+pub fn git_push(
+    path: String,
+    remote: Option<String>,
+    branch: Option<String>,
+) -> Result<String, String> {
     let mut args = vec![
         "--no-pager".to_string(),
         "-C".to_string(),

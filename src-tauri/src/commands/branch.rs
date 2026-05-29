@@ -10,12 +10,7 @@ pub struct BranchInfo {
 #[tauri::command]
 pub fn list_branches(path: String) -> Result<Vec<BranchInfo>, String> {
     let output = Command::new("git")
-        .args([
-            "--no-pager",
-            "-C", &path,
-            "branch",
-            "-a",
-        ])
+        .args(["--no-pager", "-C", &path, "branch", "-a"])
         .output()
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
@@ -45,7 +40,11 @@ pub fn list_branches(path: String) -> Result<Vec<BranchInfo>, String> {
         branches.push(BranchInfo {
             name: clean_name,
             current,
-            remote: if is_remote { Some("origin".to_string()) } else { None },
+            remote: if is_remote {
+                Some("origin".to_string())
+            } else {
+                None
+            },
         });
     }
 
@@ -53,8 +52,18 @@ pub fn list_branches(path: String) -> Result<Vec<BranchInfo>, String> {
 }
 
 #[tauri::command]
-pub fn create_branch(path: String, name: String, base_ref: Option<String>) -> Result<String, String> {
-    let mut args = vec!["--no-pager".to_string(), "-C".to_string(), path, "branch".to_string(), name];
+pub fn create_branch(
+    path: String,
+    name: String,
+    base_ref: Option<String>,
+) -> Result<String, String> {
+    let mut args = vec![
+        "--no-pager".to_string(),
+        "-C".to_string(),
+        path,
+        "branch".to_string(),
+        name,
+    ];
     if let Some(base) = base_ref {
         args.push(base);
     }
@@ -74,7 +83,13 @@ pub fn create_branch(path: String, name: String, base_ref: Option<String>) -> Re
 
 #[tauri::command]
 pub fn checkout_branch(path: String, name: String) -> Result<String, String> {
-    let mut args = vec!["--no-pager".to_string(), "-C".to_string(), path, "checkout".to_string(), name.clone()];
+    let mut args = vec![
+        "--no-pager".to_string(),
+        "-C".to_string(),
+        path,
+        "checkout".to_string(),
+        name.clone(),
+    ];
 
     // Check if it's a remote branch
     if name.contains('/') && !name.starts_with("remotes/") {
@@ -120,13 +135,7 @@ pub fn checkout_branch(path: String, name: String) -> Result<String, String> {
 pub fn delete_branch(path: String, name: String, force: Option<bool>) -> Result<String, String> {
     let flag = if force.unwrap_or(false) { "-D" } else { "-d" };
     let output = Command::new("git")
-        .args([
-            "--no-pager",
-            "-C", &path,
-            "branch",
-            flag,
-            &name,
-        ])
+        .args(["--no-pager", "-C", &path, "branch", flag, &name])
         .output()
         .map_err(|e| format!("Failed to run git: {}", e))?;
 

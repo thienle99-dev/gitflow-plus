@@ -104,11 +104,7 @@ impl RepoWatcher {
 }
 
 fn classify_event(event: &Event, git_dir: &str) -> &'static str {
-    let path_str = event
-        .paths
-        .first()
-        .and_then(|p| p.to_str())
-        .unwrap_or("");
+    let path_str = event.paths.first().and_then(|p| p.to_str()).unwrap_or("");
 
     // Skip noise: .git/objects, .git/logs (internal git bookkeeping)
     if path_str.contains(".git/objects") || path_str.contains(".git/logs") {

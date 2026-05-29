@@ -18,7 +18,11 @@ pub struct Ref {
 }
 
 #[tauri::command]
-pub fn git_log(path: String, page: Option<usize>, per_page: Option<usize>) -> Result<Vec<Commit>, String> {
+pub fn git_log(
+    path: String,
+    page: Option<usize>,
+    per_page: Option<usize>,
+) -> Result<Vec<Commit>, String> {
     let limit = per_page.unwrap_or(200);
     let skip = page.unwrap_or(0) * limit;
 

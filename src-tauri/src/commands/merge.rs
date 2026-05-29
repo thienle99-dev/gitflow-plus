@@ -1,5 +1,5 @@
-use std::process::Command;
 use serde::Serialize;
+use std::process::Command;
 
 #[derive(Serialize)]
 pub struct MergeResult {
@@ -15,7 +15,12 @@ pub struct MergeStatus {
     pub stage_entries: Vec<String>,
 }
 
-pub fn git_merge(path: &str, branch: &str, squash: bool, no_ff: bool) -> Result<MergeResult, String> {
+pub fn git_merge(
+    path: &str,
+    branch: &str,
+    squash: bool,
+    no_ff: bool,
+) -> Result<MergeResult, String> {
     let mut args = vec!["--no-pager", "-C", path, "merge", branch];
     if squash {
         args.push("--squash");
@@ -125,7 +130,14 @@ pub fn git_merge_status(path: &str) -> Result<MergeStatus, String> {
 
     // Also check for unmerged paths in status
     let status_output = Command::new("git")
-        .args(["--no-pager", "-C", path, "status", "--porcelain", "--untracked-files=no"])
+        .args([
+            "--no-pager",
+            "-C",
+            path,
+            "status",
+            "--porcelain",
+            "--untracked-files=no",
+        ])
         .output()
         .map_err(|e| format!("Git error: {}", e))?;
 
@@ -163,8 +175,18 @@ fn parse_conflicted_files(stderr: &str) -> Vec<String> {
 }
 
 #[tauri::command]
-pub fn merge_branch(path: String, branch: String, squash: Option<bool>, no_ff: Option<bool>) -> Result<MergeResult, String> {
-    git_merge(&path, &branch, squash.unwrap_or(false), no_ff.unwrap_or(false))
+pub fn merge_branch(
+    path: String,
+    branch: String,
+    squash: Option<bool>,
+    no_ff: Option<bool>,
+) -> Result<MergeResult, String> {
+    git_merge(
+        &path,
+        &branch,
+        squash.unwrap_or(false),
+        no_ff.unwrap_or(false),
+    )
 }
 
 #[tauri::command]

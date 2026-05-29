@@ -1,5 +1,5 @@
-use std::process::Command;
 use serde::Serialize;
+use std::process::Command;
 
 #[derive(Serialize)]
 pub struct StashEntry {
@@ -10,7 +10,14 @@ pub struct StashEntry {
 
 pub fn git_stash_list(path: &str) -> Result<Vec<StashEntry>, String> {
     let output = Command::new("git")
-        .args(["--no-pager", "-C", path, "stash", "list", "--pretty=format:%gd|%gs|%an"])
+        .args([
+            "--no-pager",
+            "-C",
+            path,
+            "stash",
+            "list",
+            "--pretty=format:%gd|%gs|%an",
+        ])
         .output()
         .map_err(|e| format!("Failed to list stashes: {}", e))?;
 
@@ -24,15 +31,18 @@ pub fn git_stash_list(path: &str) -> Result<Vec<StashEntry>, String> {
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let entries = stdout.lines()
+    let entries = stdout
+        .lines()
         .filter(|l| !l.is_empty())
         .filter_map(|line| {
             let parts: Vec<&str> = line.splitn(3, '|').collect();
             if parts.len() >= 2 {
                 let ref_name = parts[0].trim();
-                let index = ref_name.trim_start_matches("stash@{")
+                let index = ref_name
+                    .trim_start_matches("stash@{")
                     .trim_end_matches('}')
-                    .parse::<u32>().unwrap_or(0);
+                    .parse::<u32>()
+                    .unwrap_or(0);
                 Some(StashEntry {
                     index,
                     message: parts[1].trim().to_string(),
@@ -47,7 +57,11 @@ pub fn git_stash_list(path: &str) -> Result<Vec<StashEntry>, String> {
     Ok(entries)
 }
 
-pub fn git_stash_push(path: &str, message: Option<&str>, include_untracked: bool) -> Result<String, String> {
+pub fn git_stash_push(
+    path: &str,
+    message: Option<&str>,
+    include_untracked: bool,
+) -> Result<String, String> {
     let mut args = vec!["--no-pager", "-C", path, "stash", "push"];
     if include_untracked {
         args.push("--include-untracked");
@@ -73,7 +87,9 @@ pub fn git_stash_push(path: &str, message: Option<&str>, include_untracked: bool
 pub fn git_stash_pop(path: &str, index: Option<u32>) -> Result<String, String> {
     let stash_ref = index.map(|idx| format!("stash@{{{}}}", idx));
     let mut args = vec!["--no-pager", "-C", path, "stash", "pop"];
-    if let Some(ref s) = stash_ref { args.push(s); }
+    if let Some(ref s) = stash_ref {
+        args.push(s);
+    }
 
     let output = Command::new("git")
         .args(&args)
@@ -90,7 +106,9 @@ pub fn git_stash_pop(path: &str, index: Option<u32>) -> Result<String, String> {
 pub fn git_stash_apply(path: &str, index: Option<u32>) -> Result<String, String> {
     let stash_ref = index.map(|idx| format!("stash@{{{}}}", idx));
     let mut args = vec!["--no-pager", "-C", path, "stash", "apply"];
-    if let Some(ref s) = stash_ref { args.push(s); }
+    if let Some(ref s) = stash_ref {
+        args.push(s);
+    }
 
     let output = Command::new("git")
         .args(&args)
@@ -107,7 +125,9 @@ pub fn git_stash_apply(path: &str, index: Option<u32>) -> Result<String, String>
 pub fn git_stash_drop(path: &str, index: Option<u32>) -> Result<String, String> {
     let stash_ref = index.map(|idx| format!("stash@{{{}}}", idx));
     let mut args = vec!["--no-pager", "-C", path, "stash", "drop"];
-    if let Some(ref s) = stash_ref { args.push(s); }
+    if let Some(ref s) = stash_ref {
+        args.push(s);
+    }
 
     let output = Command::new("git")
         .args(&args)
@@ -128,8 +148,16 @@ pub fn stash_list(path: String) -> Result<Vec<StashEntry>, String> {
 }
 
 #[tauri::command]
-pub fn stash_push(path: String, message: Option<String>, include_untracked: Option<bool>) -> Result<String, String> {
-    git_stash_push(&path, message.as_deref(), include_untracked.unwrap_or(false))
+pub fn stash_push(
+    path: String,
+    message: Option<String>,
+    include_untracked: Option<bool>,
+) -> Result<String, String> {
+    git_stash_push(
+        &path,
+        message.as_deref(),
+        include_untracked.unwrap_or(false),
+    )
 }
 
 #[tauri::command]

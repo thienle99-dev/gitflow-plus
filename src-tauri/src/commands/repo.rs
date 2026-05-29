@@ -26,9 +26,11 @@ fn get_repo_info_inner(path: &str) -> Result<RepoInfo, String> {
     let output = Command::new("git")
         .args([
             "--no-pager",
-            "-C", path,
+            "-C",
+            path,
             "rev-parse",
-            "--abbrev-ref", "HEAD",
+            "--abbrev-ref",
+            "HEAD",
             "--show-toplevel",
         ])
         .output()
@@ -49,14 +51,13 @@ fn get_repo_info_inner(path: &str) -> Result<RepoInfo, String> {
         .args(["--no-pager", "-C", path, "remote", "get-url", "origin"])
         .output()
         .ok();
-    let remote = remote_output
-        .and_then(|o| {
-            if o.status.success() {
-                Some(String::from_utf8_lossy(&o.stdout).trim().to_string())
-            } else {
-                None
-            }
-        });
+    let remote = remote_output.and_then(|o| {
+        if o.status.success() {
+            Some(String::from_utf8_lossy(&o.stdout).trim().to_string())
+        } else {
+            None
+        }
+    });
 
     Ok(RepoInfo {
         path: root,

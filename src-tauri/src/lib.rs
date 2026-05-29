@@ -36,6 +36,7 @@ pub fn run() {
             commands::diff::file_diff,
             commands::diff::commit_diff,
             commands::diff::staged_diff,
+            commands::diff::commit_changed_files,
             commands::remote::git_pull,
             commands::remote::git_push,
             commands::remote::git_fetch,

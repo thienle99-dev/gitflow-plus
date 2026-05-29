@@ -1,6 +1,6 @@
-use std::process::Command;
-use serde::Serialize;
 use crate::commands::log::Commit;
+use serde::Serialize;
+use std::process::Command;
 
 #[derive(Serialize)]
 pub struct SearchOptions {
@@ -15,7 +15,10 @@ pub struct SearchOptions {
 
 pub fn git_log_search(path: &str, opts: &SearchOptions) -> Result<Vec<Commit>, String> {
     let mut args = vec![
-        "--no-pager", "-C", path, "log",
+        "--no-pager",
+        "-C",
+        path,
+        "log",
         "--all",
         "--pretty=format:%H|%P|%an|%ae|%ai|%D|%s",
     ];
@@ -57,7 +60,9 @@ pub fn git_log_search(path: &str, opts: &SearchOptions) -> Result<Vec<Commit>, S
     }
 
     let max_str = opts.max_count.map(|max| format!("--max-count={}", max));
-    if let Some(ref s) = max_str { args.push(s); }
+    if let Some(ref s) = max_str {
+        args.push(s);
+    }
 
     if let Some(branch) = &opts.branch {
         if !branch.is_empty() {
@@ -77,7 +82,8 @@ pub fn git_log_search(path: &str, opts: &SearchOptions) -> Result<Vec<Commit>, S
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let commits = stdout.lines()
+    let commits = stdout
+        .lines()
         .filter(|l| !l.is_empty())
         .filter_map(|line| {
             let parts: Vec<&str> = line.splitn(7, '|').collect();
@@ -105,9 +111,16 @@ pub fn git_log_search(path: &str, opts: &SearchOptions) -> Result<Vec<Commit>, S
 }
 
 #[tauri::command]
-pub fn search_commits(path: String, query: Option<String>, author: Option<String>,
-                       file: Option<String>, since: Option<String>, until: Option<String>,
-                       max_count: Option<u32>, branch: Option<String>) -> Result<Vec<Commit>, String> {
+pub fn search_commits(
+    path: String,
+    query: Option<String>,
+    author: Option<String>,
+    file: Option<String>,
+    since: Option<String>,
+    until: Option<String>,
+    max_count: Option<u32>,
+    branch: Option<String>,
+) -> Result<Vec<Commit>, String> {
     let opts = SearchOptions {
         query,
         author,

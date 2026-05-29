@@ -1,15 +1,16 @@
 use std::process::Command;
 
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct CommitFileChange {
+    pub path: String,
+    pub old_path: Option<String>,
+    pub status: String,
+}
+
 #[tauri::command]
 pub fn file_diff(path: String, file_path: String) -> Result<String, String> {
     let output = Command::new("git")
-        .args([
-            "--no-pager",
-            "-C", &path,
-            "diff",
-            "--no-color",
-            &file_path,
-        ])
+        .args(["--no-pager", "-C", &path, "diff", "--no-color", &file_path])
         .output()
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
@@ -23,20 +24,20 @@ pub fn file_diff(path: String, file_path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn commit_diff(path: String, commit_hash: String, file_path: Option<String>) -> Result<String, String> {
-    let diff_target = if commit_hash == "HEAD" {
-        "HEAD~1..HEAD".to_string()
-    } else {
-        format!("{}~1..{}", commit_hash, commit_hash)
-    };
-
+pub fn commit_diff(
+    path: String,
+    commit_hash: String,
+    file_path: Option<String>,
+) -> Result<String, String> {
     let mut args = vec![
         "--no-pager".to_string(),
         "-C".to_string(),
         path,
-        "diff".to_string(),
+        "show".to_string(),
+        "--format=".to_string(),
         "--no-color".to_string(),
-        diff_target,
+        "--find-renames".to_string(),
+        commit_hash,
     ];
 
     if let Some(fp) = file_path {
@@ -56,6 +57,74 @@ pub fn commit_diff(path: String, commit_hash: String, file_path: Option<String>)
         let stderr = String::from_utf8_lossy(&output.stderr);
         Err(format!("Diff failed: {}", stderr.trim()))
     }
+}
+
+#[tauri::command]
+pub fn commit_changed_files(
+    path: String,
+    commit_hash: String,
+) -> Result<Vec<CommitFileChange>, String> {
+    let output = Command::new("git")
+        .args([
+            "--no-pager",
+            "-C",
+            &path,
+            "diff-tree",
+            "--root",
+            "--no-commit-id",
+            "--name-status",
+            "-r",
+            "--find-renames",
+            &commit_hash,
+        ])
+        .output()
+        .map_err(|e| format!("Failed to run git: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Changed files failed: {}", stderr.trim()));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let files = stdout.lines().filter_map(parse_name_status_line).collect();
+
+    Ok(files)
+}
+
+fn parse_name_status_line(line: &str) -> Option<CommitFileChange> {
+    let parts: Vec<&str> = line.split('\t').collect();
+    if parts.len() < 2 {
+        return None;
+    }
+
+    let raw_status = parts[0];
+    let status = match raw_status.chars().next().unwrap_or('M') {
+        'A' => "added",
+        'D' => "deleted",
+        'R' => "renamed",
+        'C' => "copied",
+        'M' => "modified",
+        'T' => "typechange",
+        'U' => "unmerged",
+        _ => "modified",
+    };
+
+    if raw_status.starts_with('R') || raw_status.starts_with('C') {
+        if parts.len() < 3 {
+            return None;
+        }
+        return Some(CommitFileChange {
+            path: parts[2].to_string(),
+            old_path: Some(parts[1].to_string()),
+            status: status.to_string(),
+        });
+    }
+
+    Some(CommitFileChange {
+        path: parts[1].to_string(),
+        old_path: None,
+        status: status.to_string(),
+    })
 }
 
 #[tauri::command]

@@ -1,5 +1,5 @@
-use std::process::Command;
 use serde::Serialize;
+use std::process::Command;
 
 #[derive(Serialize)]
 pub struct Tag {
@@ -24,7 +24,8 @@ pub fn git_tag_list(path: &str) -> Result<Vec<Tag>, String> {
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let tags = stdout.lines()
+    let tags = stdout
+        .lines()
         .filter(|l| !l.is_empty())
         .filter_map(|line| {
             let parts: Vec<&str> = line.splitn(6, '|').collect();
@@ -46,7 +47,12 @@ pub fn git_tag_list(path: &str) -> Result<Vec<Tag>, String> {
     Ok(tags)
 }
 
-pub fn git_tag_create(path: &str, name: &str, target: Option<&str>, message: Option<&str>) -> Result<String, String> {
+pub fn git_tag_create(
+    path: &str,
+    name: &str,
+    target: Option<&str>,
+    message: Option<&str>,
+) -> Result<String, String> {
     let mut args = vec!["--no-pager", "-C", path, "tag"];
 
     if let Some(msg) = message {
@@ -110,7 +116,12 @@ pub fn tag_list(path: String) -> Result<Vec<Tag>, String> {
 }
 
 #[tauri::command]
-pub fn tag_create(path: String, name: String, target: Option<String>, message: Option<String>) -> Result<String, String> {
+pub fn tag_create(
+    path: String,
+    name: String,
+    target: Option<String>,
+    message: Option<String>,
+) -> Result<String, String> {
     git_tag_create(&path, &name, target.as_deref(), message.as_deref())
 }
 

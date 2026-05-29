@@ -12,7 +12,8 @@ pub fn git_status(path: String) -> Result<Vec<StatusEntry>, String> {
     let output = Command::new("git")
         .args([
             "--no-pager",
-            "-C", &path,
+            "-C",
+            &path,
             "status",
             "--porcelain",
             "--untracked-files=normal",

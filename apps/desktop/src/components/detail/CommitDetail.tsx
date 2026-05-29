@@ -1,13 +1,16 @@
 import { useMemo } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
-import { useGitLog } from "@/queries/useGitLog";
-import { GitCommit, User, Clock, ArrowRight } from "lucide-react";
+import { useCommitChangedFiles, useGitLog } from "@/queries/useGitLog";
+import { GitCommit, User, Clock, ArrowRight, FilePlus, FileMinus, FileEdit, Shuffle } from "lucide-react";
 
 export default function CommitDetail() {
   const repoPath = useRepoStore((s) => s.repoPath);
   const selectedCommit = useUIStore((s) => s.selectedCommit);
+  const selectFile = useUIStore((s) => s.selectFile);
   const { data } = useGitLog(repoPath);
+  const { data: changedFiles, isLoading: filesLoading, error: filesError } =
+    useCommitChangedFiles(repoPath, selectedCommit);
 
   const commit = useMemo(
     () => data?.pages.flat().find((c) => c.hash === selectedCommit),
@@ -69,15 +72,69 @@ export default function CommitDetail() {
         )}
       </div>
 
-      {/* Changed files placeholder — would come from diff-tree */}
       <div className="flex-1 px-3 py-2">
         <div className="text-xs font-medium text-text-primary mb-1">
-          Changed Files
+          Changed Files{changedFiles ? ` (${changedFiles.length})` : ""}
         </div>
-        <div className="text-2xs text-text-muted">
-          Select a file to view its diff
-        </div>
+        {filesLoading ? (
+          <div className="text-2xs text-text-muted">Loading files...</div>
+        ) : filesError ? (
+          <div className="text-2xs text-[#ff375f]">Unable to load changed files</div>
+        ) : changedFiles && changedFiles.length > 0 ? (
+          <div className="space-y-[1px]">
+            {changedFiles.map((file) => (
+              <button
+                key={`${file.status}:${file.old_path || ""}:${file.path}`}
+                className="list-item w-full flex items-center gap-2 px-2 py-[3px] text-left"
+                onClick={() => selectFile(file.path)}
+                title={file.old_path ? `${file.old_path} -> ${file.path}` : file.path}
+              >
+                {statusIcon(file.status)}
+                <span className={`w-4 text-center text-2xs font-mono ${statusColor(file.status)}`}>
+                  {statusLabel(file.status)}
+                </span>
+                <span className="text-xs truncate flex-1">
+                  {file.old_path ? `${file.old_path} -> ${file.path}` : file.path}
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="text-2xs text-text-muted">No changed files</div>
+        )}
       </div>
     </div>
   );
+}
+
+function statusIcon(status: string) {
+  switch (status) {
+    case "added": return <FilePlus size={12} className="text-[#30d158]" />;
+    case "deleted": return <FileMinus size={12} className="text-[#ff375f]" />;
+    case "renamed":
+    case "copied": return <Shuffle size={12} className="text-[#64d2ff]" />;
+    default: return <FileEdit size={12} className="text-[#ff9f0a]" />;
+  }
+}
+
+function statusLabel(status: string) {
+  switch (status) {
+    case "added": return "A";
+    case "deleted": return "D";
+    case "renamed": return "R";
+    case "copied": return "C";
+    case "typechange": return "T";
+    case "unmerged": return "U";
+    default: return "M";
+  }
+}
+
+function statusColor(status: string) {
+  switch (status) {
+    case "added": return "text-[#30d158]";
+    case "deleted": return "text-[#ff375f]";
+    case "renamed":
+    case "copied": return "text-[#64d2ff]";
+    default: return "text-[#ff9f0a]";
+  }
 }

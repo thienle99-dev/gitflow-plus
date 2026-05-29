@@ -1,5 +1,5 @@
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
-import { api, type Commit, type FileChange, type Branch, type RepoInfo } from "@/api/tauri";
+import { api, type Commit, type CommitFileChange, type FileChange, type Branch, type RepoInfo } from "@/api/tauri";
 
 const PAGE_SIZE = 50;
 
@@ -45,6 +45,15 @@ export function useGitDiff(repoPath: string | null, filePath: string | null, com
     },
     enabled: !!repoPath && !!filePath,
     staleTime: 15_000,
+  });
+}
+
+export function useCommitChangedFiles(repoPath: string | null, commitHash: string | null) {
+  return useQuery<CommitFileChange[]>({
+    queryKey: ["git", repoPath, "commit-files", commitHash],
+    queryFn: () => api.diff.commitFiles(repoPath!, commitHash!),
+    enabled: !!repoPath && !!commitHash,
+    staleTime: 30_000,
   });
 }
 

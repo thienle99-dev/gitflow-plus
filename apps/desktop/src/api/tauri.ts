@@ -22,6 +22,12 @@ export interface FileChange {
   status: string;
 }
 
+export interface CommitFileChange {
+  path: string;
+  old_path: string | null;
+  status: string;
+}
+
 export interface Branch {
   name: string;
   current: boolean;
@@ -127,6 +133,8 @@ export const api = {
       invoke<string>("file_diff", { path, filePath }),
     commit: (path: string, commitHash: string, filePath?: string) =>
       invoke<string>("commit_diff", { path, commitHash, filePath: filePath ?? null }),
+    commitFiles: (path: string, commitHash: string) =>
+      invoke<CommitFileChange[]>("commit_changed_files", { path, commitHash }),
     staged: (path: string, filePath?: string) =>
       invoke<string>("staged_diff", { path, filePath: filePath ?? null }),
   },

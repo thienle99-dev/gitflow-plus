@@ -1,5 +1,5 @@
-use std::process::Command;
 use serde::Serialize;
+use std::process::Command;
 
 #[derive(Serialize)]
 pub struct ReflogEntry {
@@ -13,10 +13,15 @@ pub struct ReflogEntry {
 pub fn git_reflog(path: &str, max_count: Option<u32>) -> Result<Vec<ReflogEntry>, String> {
     let count_str = max_count.map(|max| format!("-{}", max));
     let mut args = vec![
-        "--no-pager", "-C", path, "reflog",
+        "--no-pager",
+        "-C",
+        path,
+        "reflog",
         "--pretty=format:%gd|%H|%gs|%ci",
     ];
-    if let Some(ref s) = count_str { args.push(s); }
+    if let Some(ref s) = count_str {
+        args.push(s);
+    }
 
     let output = Command::new("git")
         .args(&args)
@@ -28,14 +33,14 @@ pub fn git_reflog(path: &str, max_count: Option<u32>) -> Result<Vec<ReflogEntry>
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let entries = stdout.lines()
+    let entries = stdout
+        .lines()
         .filter(|l| !l.is_empty())
         .filter_map(|line| {
             let parts: Vec<&str> = line.splitn(4, '|').collect();
             if parts.len() >= 3 {
                 let ref_name = parts[0].trim();
-                let index_str = ref_name.trim_start_matches("HEAD@{")
-                    .trim_end_matches('}');
+                let index_str = ref_name.trim_start_matches("HEAD@{").trim_end_matches('}');
                 let index: u32 = index_str.parse().unwrap_or(0);
                 let action = classify_reflog_action(parts[2]);
                 Some(ReflogEntry {

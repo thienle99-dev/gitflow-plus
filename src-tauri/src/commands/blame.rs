@@ -1,5 +1,5 @@
-use std::process::Command;
 use serde::Serialize;
+use std::process::Command;
 
 #[derive(Serialize)]
 pub struct BlameLine {
@@ -12,8 +12,15 @@ pub struct BlameLine {
 
 pub fn git_blame(path: &str, file_path: &str) -> Result<Vec<BlameLine>, String> {
     let output = Command::new("git")
-        .args(["--no-pager", "-C", path, "blame",
-               "--porcelain", "--", file_path])
+        .args([
+            "--no-pager",
+            "-C",
+            path,
+            "blame",
+            "--porcelain",
+            "--",
+            file_path,
+        ])
         .output()
         .map_err(|e| format!("Failed to blame file: {}", e))?;
 

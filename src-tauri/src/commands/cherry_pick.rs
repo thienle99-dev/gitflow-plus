@@ -1,5 +1,5 @@
-use std::process::Command;
 use serde::Serialize;
+use std::process::Command;
 
 #[derive(Serialize)]
 pub struct CherryPickResult {
@@ -8,7 +8,11 @@ pub struct CherryPickResult {
     pub conflicted_files: Vec<String>,
 }
 
-pub fn git_cherry_pick(path: &str, commit_hash: &str, no_commit: bool) -> Result<CherryPickResult, String> {
+pub fn git_cherry_pick(
+    path: &str,
+    commit_hash: &str,
+    no_commit: bool,
+) -> Result<CherryPickResult, String> {
     let mut args = vec!["--no-pager", "-C", path, "cherry-pick"];
 
     if no_commit {
@@ -66,7 +70,11 @@ fn parse_cherry_pick_conflicts(stderr: &str) -> Vec<String> {
 
 // Tauri commands
 #[tauri::command]
-pub fn cherry_pick(path: String, commit_hash: String, no_commit: Option<bool>) -> Result<CherryPickResult, String> {
+pub fn cherry_pick(
+    path: String,
+    commit_hash: String,
+    no_commit: Option<bool>,
+) -> Result<CherryPickResult, String> {
     git_cherry_pick(&path, &commit_hash, no_commit.unwrap_or(false))
 }
 
