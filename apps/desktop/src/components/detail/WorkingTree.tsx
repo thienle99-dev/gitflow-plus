@@ -177,24 +177,22 @@ ${diff.slice(0, 8000)}`;
 
       if (model.startsWith("claude-")) {
         const endpoint = customUrl ? customUrl : "https://api.anthropic.com/v1/messages";
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": apiKey,
-            "anthropic-version": "2023-06-01"
-          },
-          body: JSON.stringify({
-            model: model,
-            max_tokens: limit,
-            messages: [{ role: "user", content: prompt }]
-          })
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01"
+        };
+        const body = JSON.stringify({
+          model: model,
+          max_tokens: limit,
+          messages: [{ role: "user", content: prompt }]
         });
 
-        if (!response.ok) {
-          throw new Error(`API Error: ${response.statusText}`);
+        const res = await api.ai.request(endpoint, "POST", headers, body);
+        if (res.status < 200 || res.status >= 300) {
+          throw new Error(`API Error: ${res.status}`);
         }
-        const data = await response.json();
+        const data = JSON.parse(res.body);
         message = data.content?.[0]?.text || "";
       } else {
         // OpenAI / Ollama / llama.cpp format
@@ -213,21 +211,17 @@ ${diff.slice(0, 8000)}`;
         if (apiKey) {
           headers["Authorization"] = `Bearer ${apiKey}`;
         }
-
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers,
-          body: JSON.stringify({
-            model: model === "ollama" ? "llama3" : model === "llama.cpp" ? "local-model" : model,
-            messages: [{ role: "user", content: prompt }],
-            max_tokens: limit
-          })
+        const body = JSON.stringify({
+          model: model === "ollama" ? "llama3" : model === "llama.cpp" ? "local-model" : model,
+          messages: [{ role: "user", content: prompt }],
+          max_tokens: limit
         });
 
-        if (!response.ok) {
-          throw new Error(`API Error: ${response.statusText}`);
+        const res = await api.ai.request(endpoint, "POST", headers, body);
+        if (res.status < 200 || res.status >= 300) {
+          throw new Error(`API Error: ${res.status}`);
         }
-        const data = await response.json();
+        const data = JSON.parse(res.body);
         message = data.choices?.[0]?.message?.content || "";
       }
 
@@ -324,7 +318,7 @@ ${diff.slice(0, 8000)}`;
           <button 
             className={`ghost p-1 rounded hover:bg-surface-2 transition-colors ${generatingMessage ? "animate-pulse text-accent" : ""}`}
             onClick={handleGenerateCommit}
-            disabled={staged.length === 0 || generatingMessage}
+            disabled={generatingMessage}
             title={generatingMessage ? "Generating message..." : "Generate commit message (AI)"}
           >
             <Sparkles size={13} />
@@ -399,7 +393,7 @@ ${diff.slice(0, 8000)}`;
           <button
             className={`absolute right-1.5 top-1.5 ghost p-1 ${generatingMessage ? "animate-pulse text-accent" : ""}`}
             onClick={handleGenerateCommit}
-            disabled={staged.length === 0 || generatingMessage}
+            disabled={generatingMessage}
             title={generatingMessage ? "Generating..." : "Generate commit message"}
           >
             <Sparkles size={14} />

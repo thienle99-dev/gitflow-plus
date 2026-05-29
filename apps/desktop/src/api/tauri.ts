@@ -253,4 +253,10 @@ export const api = {
     todoList: (path: string, base: string) =>
       invoke<{ action: string; commit_hash: string; message: string }[]>("rebase_todo_list", { path, base }),
   },
+  ai: {
+    request: (url: string, method: string, headers: Record<string, string>, body?: string) =>
+      invoke<{ status: number; body: string }>("ai_http_request", {
+        request: { url, method, headers, body: body ?? null }
+      }),
+  },
 };

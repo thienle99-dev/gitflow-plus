@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Sparkles, Eye, EyeOff, Settings, ShieldAlert, Sliders, Sun, Moon, RefreshCw } from "lucide-react";
 import { useRepoStore } from "@/stores/repo";
+import { api } from "@/api/tauri";
 
 const LS_KEY_API_KEY = "gitflowAiApiKey";
 const LS_KEY_API_URL = "gitflowAiApiUrl";
@@ -117,7 +118,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
     try {
       let modelsList: { id: string; label: string }[] = [];
 
-      // 1. Try standard OpenAI /v1/models endpoint
+      // 1. Try standard OpenAI /v1/models endpoint via backend proxy
       const baseUrl = apiUrl.replace(/\/+$/, "");
       const headers: Record<string, string> = {
         "Content-Type": "application/json"
@@ -127,13 +128,9 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       }
 
       try {
-        const response = await fetch(`${baseUrl}/models`, {
-          method: "GET",
-          headers
-        });
-
-        if (response.ok) {
-          const data = await response.json();
+        const res = await api.ai.request(`${baseUrl}/models`, "GET", headers);
+        if (res.status >= 200 && res.status < 300) {
+          const data = JSON.parse(res.body);
           if (Array.isArray(data.data)) {
             modelsList = data.data.map((m: any) => ({
               id: m.id,
@@ -145,7 +142,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
         // ignore and fallback
       }
 
-      // 2. If empty, try Ollama /api/tags endpoint
+      // 2. If empty, try Ollama /api/tags endpoint via backend proxy
       if (modelsList.length === 0) {
         const possibleEndpoints = [
           `${baseUrl}/api/tags`,
@@ -154,9 +151,9 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
 
         for (const endpoint of possibleEndpoints) {
           try {
-            const response = await fetch(endpoint, { method: "GET" });
-            if (response.ok) {
-              const data = await response.json();
+            const res = await api.ai.request(endpoint, "GET", {});
+            if (res.status >= 200 && res.status < 300) {
+              const data = JSON.parse(res.body);
               if (Array.isArray(data.models)) {
                 modelsList = data.models.map((m: any) => ({
                   id: m.name,
