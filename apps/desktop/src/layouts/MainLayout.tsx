@@ -155,9 +155,9 @@ export default function MainLayout() {
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full min-h-0 flex flex-col">
       <Toolbar />
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden">
         <PanelGroup direction="horizontal" autoSaveId="main-layout">
           {sidebarOpen && (
             <>
@@ -170,7 +170,7 @@ export default function MainLayout() {
             </>
           )}
           <Panel defaultSize={sidebarOpen ? 50 : 70} minSize={30}>
-            <div className="h-full overflow-hidden bg-surface-0">
+            <div className="h-full min-h-0 overflow-hidden bg-surface-0">
               <CommitGraph />
             </div>
           </Panel>

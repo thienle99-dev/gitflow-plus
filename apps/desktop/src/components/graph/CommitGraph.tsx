@@ -69,13 +69,22 @@ export default function CommitGraph() {
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const observer = new ResizeObserver((entries) => {
-      const { height, width } = entries[0].contentRect;
-      setContainerHeight(height);
-      setContainerWidth(width);
-    });
+
+    const measure = () => {
+      setContainerHeight(el.clientHeight);
+      setContainerWidth(el.clientWidth);
+    };
+
+    measure();
+    const frame = requestAnimationFrame(measure);
+    const observer = new ResizeObserver(measure);
     observer.observe(el);
-    return () => observer.disconnect();
+    window.addEventListener("resize", measure);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
   }, []);
 
   // Hit-test hook — hover state + event handlers
@@ -233,7 +242,7 @@ export default function CommitGraph() {
     : [];
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full min-h-0 flex flex-col">
       {/* Header */}
       <div className="h-[28px] flex items-center px-3 border-b border-border text-xs text-text-muted font-medium shrink-0">
         <div className="flex items-center gap-1">
@@ -248,7 +257,7 @@ export default function CommitGraph() {
       {/* Scrollable graph area */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-auto"
+        className="flex-1 min-h-0 overflow-auto"
         onScroll={handleScroll}
       >
         {/* Tall div establishes the virtual scroll height */}

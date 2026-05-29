@@ -711,6 +711,7 @@ function ChangeRow({ file, checked, selected, onSelect, onToggle, onMenu }: Chan
           e.stopPropagation();
           onToggle();
         }}
+        onMouseDown={(e) => e.stopPropagation()}
       >
         {checked && <Check size={9} strokeWidth={3.5} />}
       </span>

@@ -13,10 +13,7 @@ import {
   ArrowUpFromLine,
   ArrowDownToLine,
   RefreshCw,
-  Moon,
-  Sun,
   Search,
-  Sparkles,
   RotateCcw,
   ArrowLeftRight,
   Archive,
@@ -25,6 +22,7 @@ import {
 } from "lucide-react";
 import CreateBranchDialog from "./CreateBranchDialog";
 import { useErrorReporter } from "@/lib/ErrorContext";
+import ThemePicker from "./ThemePicker";
 
 export default function Toolbar() {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -151,10 +149,8 @@ export default function Toolbar() {
           <GitPullRequest size={14} /> PR
         </button>
 
-        {/* Theme toggle */}
-        <button className="ghost" onClick={toggleTheme}>
-          {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
-        </button>
+        {/* Theme picker */}
+        <ThemePicker />
       </div>
 
       {showBranchDialog && (
