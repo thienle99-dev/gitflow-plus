@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "identifier": "com.gitflow.desktop",
   "build": {
-    "beforeDevCommand": "npm run dev",
+    "beforeDevCommand": "pnpm --filter @gitflow-desktop/desktop dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "pnpm --filter @gitflow-desktop/desktop build",
     "frontendDist": "../apps/desktop/dist"
   },
   "app": {

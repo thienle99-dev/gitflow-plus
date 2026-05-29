@@ -1,4 +1,11 @@
 {
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  },
   "pnpm": {
     "onlyBuiltDependencies": ["esbuild"]
   }
