@@ -4,12 +4,19 @@ import { useUIStore } from "@/stores/ui";
 import { useCommitChangedFiles, useGitLog } from "@/queries/useGitLog";
 import {
   ArrowRight,
+  Braces,
   Clock,
-  FileDiff,
-  FileMinus,
-  FilePlus,
+  Database,
+  File,
+  FileArchive,
+  FileCode,
+  FileCog,
+  FileImage,
+  FileJson,
+  FileSpreadsheet,
+  FileTerminal,
+  FileText,
   GitCommit,
-  Shuffle,
   User,
 } from "lucide-react";
 
@@ -105,7 +112,7 @@ export default function CommitDetail() {
                   title={`${statusText(file.status)}: ${displayPath}`}
                 >
                   <span className="flex h-5 w-5 items-center justify-center">
-                    {statusIcon(file.status)}
+                    {fileIcon(file.path, file.status)}
                   </span>
                   <span className="min-w-0">
                     <span className="block text-xs text-text-primary truncate leading-4">
@@ -129,14 +136,85 @@ export default function CommitDetail() {
   );
 }
 
-function statusIcon(status: string) {
+function fileIcon(path: string, status: string) {
   const className = statusColor(status);
-  switch (status) {
-    case "added": return <FilePlus size={13} className={className} />;
-    case "deleted": return <FileMinus size={13} className={className} />;
-    case "renamed":
-    case "copied": return <Shuffle size={13} className={className} />;
-    default: return <FileDiff size={13} className={className} />;
+  const ext = getExtension(path);
+  const fileName = getFileName(path).toLowerCase();
+  const size = 14;
+
+  if (["package.json", "tsconfig.json", "vite.config.ts", "tailwind.config.ts"].includes(fileName)) {
+    return <FileCog size={size} className={className} />;
+  }
+
+  switch (ext) {
+    case "js":
+    case "jsx":
+    case "ts":
+    case "tsx":
+    case "java":
+    case "kt":
+    case "rs":
+    case "go":
+    case "py":
+    case "rb":
+    case "php":
+    case "c":
+    case "cpp":
+    case "h":
+    case "hpp":
+      return <FileCode size={size} className={className} />;
+    case "json":
+    case "jsonc":
+    case "lock":
+      return <FileJson size={size} className={className} />;
+    case "yml":
+    case "yaml":
+    case "toml":
+    case "ini":
+    case "env":
+      return <FileCog size={size} className={className} />;
+    case "css":
+    case "scss":
+    case "sass":
+    case "less":
+    case "html":
+    case "xml":
+    case "svg":
+      return <Braces size={size} className={className} />;
+    case "sql":
+    case "db":
+    case "sqlite":
+      return <Database size={size} className={className} />;
+    case "md":
+    case "mdx":
+    case "txt":
+    case "rst":
+      return <FileText size={size} className={className} />;
+    case "png":
+    case "jpg":
+    case "jpeg":
+    case "gif":
+    case "webp":
+    case "ico":
+      return <FileImage size={size} className={className} />;
+    case "zip":
+    case "gz":
+    case "tar":
+    case "rar":
+    case "7z":
+      return <FileArchive size={size} className={className} />;
+    case "csv":
+    case "tsv":
+    case "xls":
+    case "xlsx":
+      return <FileSpreadsheet size={size} className={className} />;
+    case "sh":
+    case "bash":
+    case "zsh":
+    case "ps1":
+      return <FileTerminal size={size} className={className} />;
+    default:
+      return <File size={size} className={className} />;
   }
 }
 
@@ -164,6 +242,12 @@ function statusColor(status: string) {
 
 function getFileName(path: string) {
   return path.split("/").pop() || path;
+}
+
+function getExtension(path: string) {
+  const fileName = getFileName(path).toLowerCase();
+  const index = fileName.lastIndexOf(".");
+  return index > -1 ? fileName.slice(index + 1) : fileName;
 }
 
 function getFolder(path: string) {
