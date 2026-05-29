@@ -29,8 +29,9 @@ interface GraphLayout {
 }
 
 export function computeGraphLayout(commits: Commit[]): GraphLayout {
-  // Build DAG: find which lane each commit sits in
-  const laneMap = new Map<string, number>(); // hash -> lane
+  // Commits arrive newest-first. A commit inherits the lane reserved by a child;
+  // then it reserves that lane for its first parent to keep linear history vertical.
+  const laneMap = new Map<string, number>(); // hash -> reserved lane
   const laneColors = new Map<number, string>();
   let nextLane = 0;
 
@@ -40,27 +41,22 @@ export function computeGraphLayout(commits: Commit[]): GraphLayout {
   // Process in reverse chronological (commits already from git log = newest first)
   for (let i = 0; i < totalCommits; i++) {
     const commit = commits[i];
-    const y = i * 32; // row height
+    const y = i * 32 + 16; // row center
 
-    // Try to keep commit on same lane as its first parent
-    let lane: number;
-    if (commit.parents.length > 0 && laneMap.has(commit.parents[0])) {
-      lane = laneMap.get(commit.parents[0])!;
-    } else {
-      lane = nextLane++;
-    }
-
-    // Record this commit's lane
+    const lane = laneMap.get(commit.hash) ?? nextLane++;
     laneMap.set(commit.hash, lane);
 
     if (!laneColors.has(lane)) {
       laneColors.set(lane, COLORS[lane % COLORS.length]);
     }
 
-    // Get parent lanes for drawing edges
-    const parentLanes = commit.parents
-      .map((p) => laneMap.get(p))
-      .filter((l): l is number => l !== undefined);
+    const parentLanes = commit.parents.map((parent, parentIndex) => {
+      const parentLane = parentIndex === 0
+        ? lane
+        : laneMap.get(parent) ?? nextLane++;
+      laneMap.set(parent, parentLane);
+      return parentLane;
+    });
 
     result.push({
       hash: commit.hash,

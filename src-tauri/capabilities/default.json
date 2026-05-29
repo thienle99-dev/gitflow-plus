@@ -1,14 +1,18 @@
 {
-  "identifier": "default",
-  "description": "Default capability set for GitFlow Desktop",
-  "windows": ["main"],
-  "permissions": [
-    "core:default",
-    "core:event:default",
-    "core:event:allow-listen",
-    "core:event:allow-emit",
-    "dialog:default",
-    "dialog:allow-open",
-    "window-state:default"
+  "capabilities": [
+    {
+      "identifier": "default",
+      "description": "Default capability set for GitFlow Desktop",
+      "windows": ["main"],
+      "permissions": [
+        "core:default",
+        "core:event:default",
+        "core:event:allow-listen",
+        "core:event:allow-emit",
+        "dialog:default",
+        "dialog:allow-open",
+        "window-state:default"
+      ]
+    }
   ]
 }
