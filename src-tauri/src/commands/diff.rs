@@ -12,7 +12,15 @@ pub struct CommitFileChange {
 pub fn file_diff(path: String, file_path: String, context: Option<u32>) -> Result<String, String> {
     let context_arg = format!("-U{}", context.unwrap_or(3));
     let output = Command::new("git")
-        .args(["--no-pager", "-C", &path, "diff", &context_arg, "--no-color", &file_path])
+        .args([
+            "--no-pager",
+            "-C",
+            &path,
+            "diff",
+            &context_arg,
+            "--no-color",
+            &file_path,
+        ])
         .output()
         .map_err(|e| format!("Failed to run git: {}", e))?;
 

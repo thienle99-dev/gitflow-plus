@@ -24,7 +24,7 @@ pub fn git_log(
     per_page: Option<usize>,
     ref_name: Option<String>,
 ) -> Result<Vec<Commit>, String> {
-    let limit = per_page.unwrap_or(200);
+    let limit = per_page.unwrap_or(200).clamp(1, 500);
     let skip = page.unwrap_or(0) * limit;
 
     let mut args = vec![
@@ -32,8 +32,9 @@ pub fn git_log(
         "-C".to_string(),
         path.clone(),
         "log".to_string(),
-        format!("--max-count={}", limit),
         "--topo-order".to_string(),
+        format!("--skip={}", skip),
+        format!("--max-count={}", limit),
         // %D = ref names (same as --decorate but inline, empty if none)
         "--pretty=format:%H|%P|%an|%ae|%ai|%D|%s".to_string(),
     ];
@@ -42,10 +43,6 @@ pub fn git_log(
     } else {
         args.push("--all".to_string());
     }
-    if skip > 0 {
-        args.push(format!("--skip={}", skip));
-    }
-
     let output = Command::new("git")
         .args(&args)
         .output()

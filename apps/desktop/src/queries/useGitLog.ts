@@ -1,7 +1,7 @@
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { api, type Commit, type CommitFileChange, type FileChange, type Branch, type RepoInfo, type SyncStatus } from "@/api/tauri";
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 200;
 
 export function useGitLog(repoPath: string | null, refName?: string | null) {
   return useInfiniteQuery<Commit[]>({

@@ -1,3 +1,4 @@
+pub mod ai;
 pub mod blame;
 pub mod branch;
 pub mod cherry_pick;
@@ -12,7 +13,6 @@ pub mod repo;
 pub mod search;
 pub mod stash;
 pub mod status;
+pub mod submodule;
 pub mod tag;
 pub mod watcher;
-pub mod ai;
-pub mod submodule;

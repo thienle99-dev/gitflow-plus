@@ -119,7 +119,10 @@ pub fn get_sync_status(path: String) -> Result<SyncStatus, String> {
 
     if !output.status.success() {
         // If there's no upstream branch, we return 0, 0
-        return Ok(SyncStatus { ahead: 0, behind: 0 });
+        return Ok(SyncStatus {
+            ahead: 0,
+            behind: 0,
+        });
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -129,7 +132,9 @@ pub fn get_sync_status(path: String) -> Result<SyncStatus, String> {
         let behind = parts[1].parse::<usize>().unwrap_or(0);
         Ok(SyncStatus { ahead, behind })
     } else {
-        Ok(SyncStatus { ahead: 0, behind: 0 })
+        Ok(SyncStatus {
+            ahead: 0,
+            behind: 0,
+        })
     }
 }
-

@@ -43,7 +43,7 @@ pub fn submodule_list(path: String) -> Result<Vec<SubmoduleInfo>, String> {
         // 'U' if there are merge conflicts
         let mut chars = line.chars();
         let prefix = chars.next().unwrap_or(' ');
-        
+
         let status = match prefix {
             '-' => "not_initialized".to_string(),
             '+' => "modified".to_string(),
@@ -52,7 +52,8 @@ pub fn submodule_list(path: String) -> Result<Vec<SubmoduleInfo>, String> {
         };
 
         // Reconstruct remaining string
-        let remaining: String = if prefix == ' ' || prefix == '+' || prefix == '-' || prefix == 'U' {
+        let remaining: String = if prefix == ' ' || prefix == '+' || prefix == '-' || prefix == 'U'
+        {
             chars.collect()
         } else {
             line.to_string()
@@ -77,7 +78,12 @@ pub fn submodule_list(path: String) -> Result<Vec<SubmoduleInfo>, String> {
         };
 
         // Extract folder name as display name
-        let name = sub_path.split('/').filter(|s| !s.is_empty()).last().unwrap_or(&sub_path).to_string();
+        let name = sub_path
+            .split('/')
+            .filter(|s| !s.is_empty())
+            .last()
+            .unwrap_or(&sub_path)
+            .to_string();
 
         list.push(SubmoduleInfo {
             name,
@@ -93,7 +99,13 @@ pub fn submodule_list(path: String) -> Result<Vec<SubmoduleInfo>, String> {
 
 #[tauri::command]
 pub fn submodule_init(path: String, submodule_path: Option<String>) -> Result<String, String> {
-    let mut args = vec!["--no-pager".to_string(), "-C".to_string(), path, "submodule".to_string(), "init".to_string()];
+    let mut args = vec![
+        "--no-pager".to_string(),
+        "-C".to_string(),
+        path,
+        "submodule".to_string(),
+        "init".to_string(),
+    ];
     if let Some(sub_path) = submodule_path {
         args.push(sub_path);
     }

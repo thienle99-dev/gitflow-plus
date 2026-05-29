@@ -1,7 +1,7 @@
 use std::sync::Mutex;
-use tauri::Manager;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::Emitter;
+use tauri::Manager;
 
 mod commands;
 mod watcher;
@@ -119,31 +119,29 @@ pub fn run() {
             let _ = window.set_decorations(true);
             Ok(())
         })
-        .on_menu_event(|app_handle, event| {
-            match event.id.0.as_str() {
-                "open_settings" => {
-                    let _ = app_handle.emit("menu-action", "open-settings");
-                }
-                "open_repo" => {
-                    let _ = app_handle.emit("menu-action", "open-repo");
-                }
-                "close_repo" => {
-                    let _ = app_handle.emit("menu-action", "close-repo");
-                }
-                "toggle_sidebar" => {
-                    let _ = app_handle.emit("menu-action", "toggle-sidebar");
-                }
-                "refresh" => {
-                    let _ = app_handle.emit("menu-action", "refresh");
-                }
-                "toggle_theme" => {
-                    let _ = app_handle.emit("menu-action", "toggle-theme");
-                }
-                "help_docs" => {
-                    let _ = app_handle.emit("menu-action", "help-docs");
-                }
-                _ => {}
+        .on_menu_event(|app_handle, event| match event.id.0.as_str() {
+            "open_settings" => {
+                let _ = app_handle.emit("menu-action", "open-settings");
             }
+            "open_repo" => {
+                let _ = app_handle.emit("menu-action", "open-repo");
+            }
+            "close_repo" => {
+                let _ = app_handle.emit("menu-action", "close-repo");
+            }
+            "toggle_sidebar" => {
+                let _ = app_handle.emit("menu-action", "toggle-sidebar");
+            }
+            "refresh" => {
+                let _ = app_handle.emit("menu-action", "refresh");
+            }
+            "toggle_theme" => {
+                let _ = app_handle.emit("menu-action", "toggle-theme");
+            }
+            "help_docs" => {
+                let _ = app_handle.emit("menu-action", "help-docs");
+            }
+            _ => {}
         })
         .invoke_handler(tauri::generate_handler![
             commands::repo::open_repo,
