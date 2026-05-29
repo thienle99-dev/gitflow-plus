@@ -37,7 +37,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
   const [activeTab, setActiveTab] = useState<"general" | "ai">("general");
   
   // General Tab States
-  const [theme, setSelectedTheme] = useState<"light" | "dark">(currentTheme);
+  const [theme, setSelectedTheme] = useState<typeof currentTheme>(currentTheme);
   const [defaultDiffMode, setDefaultDiffMode] = useState<"split" | "unified">("split");
   const [autoFetch, setAutoFetch] = useState(true);
 
@@ -277,7 +277,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
               <label className="text-xs font-semibold text-text-primary">Color Theme</label>
               <select
                 value={theme}
-                onChange={(e) => setSelectedTheme(e.target.value as "light" | "dark")}
+                onChange={(e) => setSelectedTheme(e.target.value as any)}
                 className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer"
               >
                 <option value="light">Light Mode</option>

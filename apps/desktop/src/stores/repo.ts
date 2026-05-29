@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-type Theme = "dark" | "light";
+export type Theme = "dark" | "light" | "gruvbox-dark" | "gruvbox-dark-soft" | "gruvbox-dark-hard" | "gruvbox-light" | "gruvbox-light-soft";
 
 interface RepoState {
   repoPath: string | null;
@@ -36,12 +36,13 @@ export const useRepoStore = create<RepoState>((set) => ({
 
   toggleTheme: () =>
     set((state) => {
+      // Cycle: dark → light → dark for toggle
       const next = state.theme === "dark" ? "light" : "dark";
       localStorage.setItem("theme", next);
       return { theme: next };
     }),
 
-  setTheme: (theme) => {
+  setTheme: (theme: Theme) => {
     localStorage.setItem("theme", theme);
     set({ theme });
   },

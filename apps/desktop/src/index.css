@@ -28,6 +28,76 @@
   --text-muted: #636366;
 }
 
+/* Gruvbox Dark Medium */
+.gruvbox-dark {
+  --surface-0: #282828;
+  --surface-1: #3c3836;
+  --surface-2: #504945;
+  --surface-3: #665c54;
+  --accent: #d79921;
+  --accent-fg: #1d2021;
+  --border: #504945;
+  --text-primary: #ebdbb2;
+  --text-secondary: #d5c4a1;
+  --text-muted: #a89984;
+}
+
+/* Gruvbox Dark Soft (slightly lighter bg) */
+.gruvbox-dark-soft {
+  --surface-0: #32302f;
+  --surface-1: #3c3836;
+  --surface-2: #504945;
+  --surface-3: #665c54;
+  --accent: #d79921;
+  --accent-fg: #1d2021;
+  --border: #504945;
+  --text-primary: #ebdbb2;
+  --text-secondary: #d5c4a1;
+  --text-muted: #a89984;
+}
+
+/* Gruvbox Dark Hard (darker bg) */
+.gruvbox-dark-hard {
+  --surface-0: #1d2021;
+  --surface-1: #282828;
+  --surface-2: #3c3836;
+  --surface-3: #504945;
+  --accent: #d79921;
+  --accent-fg: #1d2021;
+  --border: #3c3836;
+  --text-primary: #ebdbb2;
+  --text-secondary: #d5c4a1;
+  --text-muted: #a89984;
+}
+
+/* Gruvbox Light Medium */
+.gruvbox-light {
+  --surface-0: #fbf1c7;
+  --surface-1: #ebdbb2;
+  --surface-2: #d5c4a1;
+  --surface-3: #bdae93;
+  --accent: #b57614;
+  --accent-fg: #fbf1c7;
+  --border: #bdae93;
+  --text-primary: #3c3836;
+  --text-secondary: #504945;
+  --text-muted: #7c6f64;
+}
+
+/* Gruvbox Light Soft (softer bg) */
+.gruvbox-light-soft {
+  --surface-0: #f2e5bc;
+  --surface-1: #ebdbb2;
+  --surface-2: #d5c4a1;
+  --surface-3: #bdae93;
+  --accent: #b57614;
+  --accent-fg: #f2e5bc;
+  --border: #bdae93;
+  --text-primary: #3c3836;
+  --text-secondary: #504945;
+  --text-muted: #7c6f64;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -309,4 +379,22 @@ button.ghost:active {
 .diff-gutter-actions {
   border-right: 1px solid var(--border);
   background-color: var(--surface-1);
+}
+
+/* Hatched background for empty placeholder lines in Split View */
+.cm-line.diff-line-placeholder {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--surface-1),
+    var(--surface-1) 4px,
+    var(--surface-2) 4px,
+    var(--surface-2) 8px
+  ) !important;
+  opacity: 0.5;
+  user-select: none;
+  pointer-events: none;
+}
+
+.diff-prefix-widget.placeholder {
+  color: transparent;
 }

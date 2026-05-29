@@ -14,7 +14,7 @@ import BottomBar from "@/components/common/BottomBar";
 import SearchDialog from "@/components/phase2/SearchDialog";
 import StashPanel from "@/components/phase2/StashPanel";
 import TagPanel from "@/components/phase2/TagPanel";
-import { CherryPickDialog, SettingsDialog, AnalyticsDialog } from "@/components/phase2";
+import { CherryPickDialog, SettingsDialog, AnalyticsDialog, CreateBranchDialog } from "@/components/phase2";
 
 export default function MainLayout() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
@@ -150,6 +150,7 @@ export default function MainLayout() {
         onClose={closeDialog}
       />
     ),
+    "create-branch": <CreateBranchDialog open={true} onClose={closeDialog} />,
     analytics: <AnalyticsDialog open={true} onClose={closeDialog} />,
   };
 

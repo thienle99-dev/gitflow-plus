@@ -136,7 +136,20 @@ export default function Sidebar() {
       </div>
 
       {/* Branches */}
-      <SectionHeader title="Branches" open={branchesOpen} onToggle={() => setBranchesOpen(!branchesOpen)} />
+      <SectionHeader 
+        title="Branches" 
+        open={branchesOpen} 
+        onToggle={() => setBranchesOpen(!branchesOpen)} 
+        action={
+          <button 
+            className="ghost p-0.5 hover:bg-surface-3 rounded"
+            onClick={() => openDialogState("create-branch")}
+            title="Create New Branch"
+          >
+            <Plus size={12} className="text-text-secondary hover:text-text-primary" />
+          </button>
+        }
+      />
 
       {branchesOpen && (
         <div className="space-y-[1px]">
@@ -249,23 +262,32 @@ function SectionHeader({
   title,
   open,
   onToggle,
+  action,
 }: {
   title: string;
   open: boolean;
   onToggle: () => void;
+  action?: React.ReactNode;
 }) {
   return (
     <div
-      className="flex items-center gap-1 px-2 py-1 cursor-pointer hover:bg-surface-2 select-none"
+      className="flex items-center justify-between px-2 py-1 cursor-pointer hover:bg-surface-2 select-none group"
       onClick={onToggle}
     >
-      <ChevronRight
-        size={10}
-        className={`disclosure ${open ? "open" : ""} text-text-muted`}
-      />
-      <span className="text-xs font-medium text-text-muted uppercase tracking-wider">
-        {title}
-      </span>
+      <div className="flex items-center gap-1">
+        <ChevronRight
+          size={10}
+          className={`disclosure ${open ? "open" : ""} text-text-muted`}
+        />
+        <span className="text-xs font-medium text-text-muted uppercase tracking-wider">
+          {title}
+        </span>
+      </div>
+      {action && (
+        <div onClick={(e) => e.stopPropagation()} className="opacity-0 group-hover:opacity-100 transition-opacity">
+          {action}
+        </div>
+      )}
     </div>
   );
 }

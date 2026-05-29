@@ -71,18 +71,18 @@
 ### Step 9: Diff Viewer
 - [x] `components/diff/DiffViewer.tsx` — wrapper component
 - [x] `lib/parse-diff.ts` — unified diff parser
-- [ ] Split view mode (CodeMirror 6 × 2, scroll sync)
-- [ ] Unified view mode (single CodeMirror)
+- [x] Split view mode (CodeMirror 6 × 2, scroll sync)
+- [x] Unified view mode (single CodeMirror)
 - [x] Segmented control toggle (split/unified)
-- [ ] Syntax highlight auto-detect by extension
-- [ ] Edge cases: binary, large file, new/deleted
+- [x] Syntax highlight auto-detect by extension
+- [x] Edge cases: binary, large file, new/deleted
 
 ### Step 10: Git Actions
 - [x] Pull button → invoke git_pull → refresh queries
 - [x] Push button → invoke git_push → show result toast
 - [x] Fetch button → invoke git_fetch → refresh branches
 - [x] Checkout branch (from sidebar double-click + context menu)
-- [ ] Create branch dialog (name input + base ref selector)
+- [x] Create branch dialog (name input + base ref selector)
 - [x] Error handling: toast notifications, auth prompts
 
 ### Step 11: File Watcher
@@ -103,7 +103,7 @@
 - [x] Empty states (no repo open, no commits)
 - [ ] Git credentials handling (HTTPS auth prompt, SSH key detection)
 - [x] Error UX phân loại: network error / auth error / conflict error → UX riêng
-- [ ] Undo last commit (git reset --soft HEAD~1) button
+- [x] Undo last commit (git reset --soft HEAD~1) button
 - [ ] Performance logging (measure open repo, render graph, status refresh)
 
 ---

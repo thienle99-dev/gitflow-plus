@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
 import { useGitStatus, useGitDiff } from "@/queries/useGitLog";
 import { useQueryClient } from "@tanstack/react-query";
-import { Eye } from "lucide-react";
+import { Eye, Maximize2, Minimize2 } from "lucide-react";
 import WorkingTree from "./WorkingTree";
 import CommitDetail from "./CommitDetail";
 import DiffViewer from "@/components/diff/DiffViewer";
@@ -40,6 +40,7 @@ function DiffViewerPanel() {
   const selectedCommit = useUIStore((s) => s.selectedCommit);
   const selectedFileStage = useUIStore((s) => s.selectedFileStage);
   const [showFullContext, setShowFullContext] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
   
   const { data: diff, isLoading } = useGitDiff(
     repoPath,
@@ -61,11 +62,36 @@ function DiffViewerPanel() {
     queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
   };
 
-  return (
-    <div className="h-full flex flex-col bg-surface-0">
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-border">
-        <button className="ghost text-xs" onClick={() => selectFile(null)}>
-          ← Back
+  // Close full screen on Escape key
+  useEffect(() => {
+    if (!isFullScreen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsFullScreen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isFullScreen]);
+
+  const content = (
+    <div className={`flex flex-col bg-surface-0 ${
+      isFullScreen
+        ? "w-[94%] h-[90%] rounded-mac border border-border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+        : "h-full"
+    }`}>
+      <div className="flex items-center justify-between px-3 py-1.5 border-b border-border shrink-0 bg-surface-1/40">
+        <button
+          className="ghost text-xs"
+          onClick={() => {
+            if (isFullScreen) {
+              setIsFullScreen(false);
+            } else {
+              selectFile(null);
+            }
+          }}
+        >
+          ← {isFullScreen ? "Close Full Screen" : "Back"}
         </button>
         <div className="flex items-center gap-2">
           <button
@@ -80,6 +106,7 @@ function DiffViewerPanel() {
             <Eye size={12} />
             {showFullContext ? "Compact Diff" : "Show Full File"}
           </button>
+          
           <div className="segmented-control">
             <button
               className={diffViewMode === "split" ? "active" : ""}
@@ -94,10 +121,19 @@ function DiffViewerPanel() {
               Unified
             </button>
           </div>
+
+          <button
+            className="ghost text-2xs px-2.5 py-1 hover:bg-surface-2 border border-border/40 rounded flex items-center gap-1 transition-colors"
+            onClick={() => setIsFullScreen(!isFullScreen)}
+            title={isFullScreen ? "Exit Full Screen" : "Open Full Screen"}
+          >
+            {isFullScreen ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+            <span>{isFullScreen ? "Exit Full Screen" : "Full Screen"}</span>
+          </button>
         </div>
       </div>
       {isLoading ? (
-        <div className="flex-1 flex items-center justify-center text-text-muted text-sm">
+        <div className="flex-1 flex items-center justify-center text-text-muted text-xs">
           Loading diff...
         </div>
       ) : diff ? (
@@ -108,10 +144,20 @@ function DiffViewerPanel() {
           onPatchApplied={refreshDiff}
         />
       ) : (
-        <div className="flex-1 flex items-center justify-center text-text-muted text-sm">
+        <div className="flex-1 flex items-center justify-center text-text-muted text-xs">
           No changes
         </div>
       )}
     </div>
   );
+
+  if (isFullScreen) {
+    return (
+      <div className="fixed inset-0 bg-[#000000]/65 backdrop-blur-md z-[9998] flex items-center justify-center p-6 animate-in fade-in duration-200">
+        {content}
+      </div>
+    );
+  }
+
+  return content;
 }

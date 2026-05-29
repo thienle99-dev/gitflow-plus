@@ -277,6 +277,9 @@ ${diff.slice(0, 8000)}`;
 
     if (!leftRef.current || !rightRef.current) return;
 
+    const oldLines = oldContent.split("\n");
+    const newLines = newContent.split("\n");
+
     leftView.current = createEditor(
       leftRef.current,
       oldContent,
@@ -285,6 +288,9 @@ ${diff.slice(0, 8000)}`;
       hunks,
       source,
       applyHunk,
+      "old",
+      oldLines,
+      newLines,
     );
     rightView.current = createEditor(
       rightRef.current,
@@ -294,6 +300,9 @@ ${diff.slice(0, 8000)}`;
       hunks,
       source,
       applyHunk,
+      "new",
+      oldLines,
+      newLines,
     );
 
     return () => {
@@ -542,9 +551,9 @@ class PrefixWidget extends WidgetType {
 
   toDOM() {
     const span = document.createElement("span");
-    span.textContent = this.char;
+    span.textContent = this.char === "~" ? "" : this.char;
     span.className = `diff-prefix-widget ${
-      this.char === "+" ? "added" : this.char === "-" ? "deleted" : "empty"
+      this.char === "+" ? "added" : this.char === "-" ? "deleted" : this.char === "~" ? "placeholder" : "empty"
     }`;
     return span;
   }
@@ -642,6 +651,9 @@ function getDiffHighlightExtension(
   hunks: DiffHunk[],
   source: "working" | "staged" | "commit",
   onAction: (hunk: DiffHunk, index: number, action: "stage" | "unstage" | "discard") => void,
+  side?: "old" | "new",
+  oldLines?: string[],
+  newLines?: string[],
 ) {
   return StateField.define<DecorationSet>({
     create(state) {
@@ -667,6 +679,23 @@ function getDiffHighlightExtension(
             line.from + 1,
             Decoration.replace({ widget: new PrefixWidget("+") }),
           );
+
+          // Inline highlight for side-by-side split view
+          if (side === "new" && oldLines && newLines && i <= oldLines.length) {
+            const oldText = oldLines[i - 1];
+            if (oldText && oldText.startsWith("-")) {
+              const { prefixLen, suffixLen } = computeMismatch(oldText, text);
+              const fromNew = line.from + prefixLen;
+              const toNew = line.to - suffixLen;
+              if (toNew > fromNew) {
+                builder.add(
+                  fromNew,
+                  toNew,
+                  Decoration.mark({ class: "diff-inline-added" }),
+                );
+              }
+            }
+          }
         } else if (text.startsWith("-")) {
           // Line decoration
           builder.add(
@@ -682,12 +711,26 @@ function getDiffHighlightExtension(
             Decoration.replace({ widget: new PrefixWidget("-") }),
           );
           
-          // Check if next line is an added line to pair for inline highlights
-          if (i < doc.lines) {
+          // Inline highlight for side-by-side split view
+          if (side === "old" && oldLines && newLines && i <= newLines.length) {
+            const newText = newLines[i - 1];
+            if (newText && newText.startsWith("+")) {
+              const { prefixLen, suffixLen } = computeMismatch(text, newText);
+              const fromOld = line.from + prefixLen;
+              const toOld = line.to - suffixLen;
+              if (toOld > fromOld) {
+                builder.add(
+                  fromOld,
+                  toOld,
+                  Decoration.mark({ class: "diff-inline-deleted" }),
+                );
+              }
+            }
+          } else if (!side && i < doc.lines) {
+            // Check if next line is an added line to pair for inline highlights (Unified mode)
             const nextLine = doc.line(i + 1);
             if (nextLine.text.startsWith("+")) {
               const { prefixLen, suffixLen } = computeMismatch(text, nextLine.text);
-              
               const fromOld = line.from + prefixLen;
               const toOld = line.to - suffixLen;
               if (toOld > fromOld) {
@@ -699,6 +742,19 @@ function getDiffHighlightExtension(
               }
             }
           }
+        } else if (text.startsWith("~")) {
+          // Placeholder line decoration for Split View
+          builder.add(
+            line.from,
+            line.from,
+            Decoration.line({ attributes: { class: "diff-line-placeholder" } }),
+          );
+          
+          builder.add(
+            line.from,
+            line.from + 1,
+            Decoration.replace({ widget: new PrefixWidget("~") }),
+          );
         } else if (text.startsWith(" ")) {
           // Hide leading space for perfect code alignment
           builder.add(
@@ -728,12 +784,11 @@ function getDiffHighlightExtension(
           hunkIndex++;
         }
         
-        // Check if previous line is a deleted line to pair for inline highlights
-        if (text.startsWith("+") && i > 1) {
+        // Check if previous line is a deleted line to pair for inline highlights (Unified mode)
+        if (!side && text.startsWith("+") && i > 1) {
           const prevLine = doc.line(i - 1);
           if (prevLine.text.startsWith("-")) {
             const { prefixLen, suffixLen } = computeMismatch(prevLine.text, text);
-            
             const fromNew = line.from + prefixLen;
             const toNew = line.to - suffixLen;
             if (toNew > fromNew) {
@@ -820,32 +875,45 @@ function getDiffGutterExtension(
   return gutter({
     class: "diff-gutter-actions",
     lineMarker(view, line) {
-      const text = view.state.doc.lineAt(line.from).text;
+      const lineObj = view.state.doc.lineAt(line.from);
+      const text = lineObj.text;
       if (!text.startsWith("+") && !text.startsWith("-")) return null;
 
-      let currentLine = 1;
-      let hunkIndex = 0;
-      for (const hunk of hunks) {
-        const headerStart = currentLine;
-        currentLine++;
-        
-        const isFirstChangedLineOfHunk = view.state.doc.line(headerStart + 1).from === line.from;
-            
-        if (isFirstChangedLineOfHunk) {
-          return new DiffGutterMarker(
-            source === "working" ? "stage" : "unstage",
-            hunk,
-            hunkIndex,
-            onAction
-          );
+      // Count @@ headers before this line to get the hunkIndex
+      let hunkIndex = -1;
+      let isFirstChanged = false;
+      
+      const doc = view.state.doc;
+      for (let i = 1; i < lineObj.number; i++) {
+        if (doc.line(i).text.startsWith("@@")) {
+          hunkIndex++;
         }
-
-        for (const l of hunk.lines) {
-          if (l.type === "header") continue;
-          currentLine++;
-        }
-        hunkIndex++;
       }
+      
+      // Check if this is the first changed line of the hunk (ignoring empty placeholder lines)
+      let prevLineNum = lineObj.number - 1;
+      while (prevLineNum >= 1) {
+        const prevText = doc.line(prevLineNum).text;
+        if (prevText.startsWith("@@")) {
+          isFirstChanged = true;
+          break;
+        }
+        if (!prevText.startsWith("~")) {
+          break;
+        }
+        prevLineNum--;
+      }
+      
+      const hunk = hunks[hunkIndex];
+      if (isFirstChanged && hunk) {
+        return new DiffGutterMarker(
+          source === "working" ? "stage" : "unstage",
+          hunk,
+          hunkIndex,
+          onAction
+        );
+      }
+      
       return null;
     }
   });
@@ -859,6 +927,9 @@ function createEditor(
   hunks: DiffHunk[],
   source: "working" | "staged" | "commit",
   onAction: (hunk: DiffHunk, index: number, action: "stage" | "unstage" | "discard") => void,
+  side?: "old" | "new",
+  oldLines?: string[],
+  newLines?: string[],
 ): EditorView {
   const state = EditorState.create({
     doc: content,
@@ -866,7 +937,7 @@ function createEditor(
       basicSetup,
       lang,
       ...theme,
-      getDiffHighlightExtension(hunks, source, onAction),
+      getDiffHighlightExtension(hunks, source, onAction, side, oldLines, newLines),
       getDiffGutterExtension(hunks, source, onAction),
       EditorView.editable.of(false),
       EditorView.lineWrapping,
@@ -878,14 +949,51 @@ function createEditor(
 
 function buildSideContent(hunks: DiffHunk[], side: "old" | "new"): string {
   const lines: string[] = [];
+  
   for (const hunk of hunks) {
     lines.push(hunk.header);
-    for (const line of hunk.lines) {
-      if (line.type === "header") continue;
-      if (side === "old" && line.type === "add") continue;
-      if (side === "new" && line.type === "delete") continue;
-      const prefix = line.type === "add" ? "+" : line.type === "delete" ? "-" : " ";
-      lines.push(prefix + line.content.slice(1));
+    
+    const hunkLines = hunk.lines.filter((line) => line.type !== "header");
+    let i = 0;
+    while (i < hunkLines.length) {
+      // Collect consecutive deletes
+      const deletes: string[] = [];
+      while (i < hunkLines.length && hunkLines[i].type === "delete") {
+        deletes.push(hunkLines[i].content);
+        i++;
+      }
+      
+      // Collect consecutive adds
+      const adds: string[] = [];
+      while (i < hunkLines.length && hunkLines[i].type === "add") {
+        adds.push(hunkLines[i].content);
+        i++;
+      }
+      
+      if (deletes.length > 0 || adds.length > 0) {
+        const maxLen = Math.max(deletes.length, adds.length);
+        for (let j = 0; j < maxLen; j++) {
+          if (side === "old") {
+            if (j < deletes.length) {
+              lines.push("-" + deletes[j].slice(1));
+            } else {
+              lines.push("~");
+            }
+          } else {
+            if (j < adds.length) {
+              lines.push("+" + adds[j].slice(1));
+            } else {
+              lines.push("~");
+            }
+          }
+        }
+      } else {
+        // Unchanged line
+        const line = hunkLines[i];
+        const prefix = line.type === "add" ? "+" : line.type === "delete" ? "-" : " ";
+        lines.push(prefix + line.content.slice(1));
+        i++;
+      }
     }
   }
   return lines.join("\n");

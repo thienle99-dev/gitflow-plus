@@ -5,6 +5,7 @@ import { useGitStatus } from "@/queries/useGitLog";
 import { api, type FileChange, type Branch } from "@/api/tauri";
 import { useQueryClient } from "@tanstack/react-query";
 import ContextMenu, { type ContextMenuItem } from "@/components/common/ContextMenu";
+import UndoButton from "@/components/phase2/UndoButton";
 import {
   Braces,
   Check,
@@ -515,14 +516,15 @@ ${diff.slice(0, 8000)}`;
             <Check size={13} />
             {committing ? "Committing..." : "Commit"}
           </button>
-          <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer">
+          <UndoButton onUndoComplete={invalidate} />
+          <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer shrink-0 select-none">
             <input
               type="checkbox"
               checked={amend}
               onChange={(e) => setAmend(e.target.checked)}
               className="rounded"
             />
-            Amend
+            <span>Amend</span>
           </label>
         </div>
       </div>

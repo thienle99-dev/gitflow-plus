@@ -15,3 +15,4 @@ pub mod status;
 pub mod tag;
 pub mod watcher;
 pub mod ai;
+pub mod submodule;
