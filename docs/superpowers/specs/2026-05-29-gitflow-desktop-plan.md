@@ -3,104 +3,104 @@
 ## Phase 1: Core Git Workflow (MVP)
 
 ### Step 1: Project Scaffold
-- [ ] Init root `package.json` (workspace)
-- [ ] Create `apps/desktop/` with Vite + React + TypeScript
-- [ ] Add Tailwind CSS config (dark mode class strategy)
-- [ ] Init Tauri 2 (`src-tauri/`)
-- [ ] Configure custom titlebar (macOS traffic lights)
-- [ ] Verify `cargo tauri dev` launches blank window
+- [x] Init root `package.json` (workspace)
+- [x] Create `apps/desktop/` with Vite + React + TypeScript
+- [x] Add Tailwind CSS config (dark mode class strategy)
+- [x] Init Tauri 2 (`src-tauri/`)
+- [x] Configure custom titlebar (macOS traffic lights)
+- [x] Verify `cargo tauri dev` launches blank window
 
 ### Step 2: Rust Git Commands
-- [ ] `commands/mod.rs` — register all commands
-- [ ] `commands/repo.rs` — open_repo, get_repo_info, validate path
-- [ ] `commands/log.rs` — git_log (paginated, 200/page)
-- [ ] `commands/status.rs` — git_status (porcelain parse)
-- [ ] `commands/branch.rs` — list, create, checkout, delete
-- [ ] `commands/commit.rs` — stage, unstage, commit, amend
-- [ ] `commands/diff.rs` — file diff, commit diff, staged diff
-- [ ] `commands/remote.rs` — pull, push, fetch
+- [x] `commands/mod.rs` — register all commands
+- [x] `commands/repo.rs` — open_repo, get_repo_info, validate path
+- [x] `commands/log.rs` — git_log (paginated, 200/page)
+- [x] `commands/status.rs` — git_status (porcelain parse)
+- [x] `commands/branch.rs` — list, create, checkout, delete
+- [x] `commands/commit.rs` — stage, unstage, commit, amend
+- [x] `commands/diff.rs` — file diff, commit diff, staged diff
+- [x] `commands/remote.rs` — pull, push, fetch
 - [ ] Unit tests for output parsing
 
 ### Step 3: API Layer (Frontend)
-- [ ] `api/tauri.ts` — typed invoke wrappers for all commands
-- [ ] `queries/useGitLog.ts` — paginated, queryKey: ["git", repoPath, "log"]
-- [ ] `queries/useGitStatus.ts` — staleTime: 0
-- [ ] `queries/useGitBranches.ts`
-- [ ] `queries/useGitDiff.ts`
-- [ ] TanStack Query provider setup
+- [x] `api/tauri.ts` — typed invoke wrappers for all commands
+- [x] `queries/useGitLog.ts` — paginated, queryKey: ["git", repoPath, "log"]
+- [x] `queries/useGitStatus.ts` — staleTime: 0
+- [x] `queries/useGitBranches.ts`
+- [x] `queries/useGitDiff.ts`
+- [x] TanStack Query provider setup
 
 ### Step 4: Layout Shell
-- [ ] `layouts/MainLayout.tsx` — 3-panel + bottom bar
-- [ ] `react-resizable-panels` integration
-- [ ] Custom titlebar component (macOS vibrancy style)
-- [ ] Toolbar component (pull/push/fetch/commit/branch buttons)
-- [ ] Dark/light theme toggle (Tailwind class + localStorage)
+- [x] `layouts/MainLayout.tsx` — 3-panel + bottom bar
+- [x] `react-resizable-panels` integration
+- [x] Custom titlebar component (macOS vibrancy style)
+- [x] Toolbar component (pull/push/fetch/commit/branch buttons)
+- [x] Dark/light theme toggle (Tailwind class + localStorage)
 
 ### Step 5: Sidebar
-- [ ] `components/sidebar/BranchList.tsx` — disclosure triangles, grouped
-- [ ] `components/sidebar/RemoteList.tsx`
-- [ ] `components/sidebar/TagList.tsx`
-- [ ] Double-click branch → checkout
-- [ ] Current branch highlight
-- [ ] Sidebar collapse (Cmd+B)
+- [x] `components/sidebar/BranchList.tsx` — disclosure triangles, grouped
+- [x] `components/sidebar/RemoteList.tsx`
+- [x] `components/sidebar/TagList.tsx`
+- [x] Double-click branch → checkout
+- [x] Current branch highlight
+- [x] Sidebar collapse (Cmd+B)
 
 ### Step 6: Commit Graph
-- [ ] `lib/graph-layout.ts` — DAG builder, lane assignment algorithm
-- [ ] `components/graph/CommitGraph.tsx` — SVG container + virtual scroll
-- [ ] `components/graph/CommitNode.tsx` — circle + ref badges
-- [ ] `components/graph/GraphEdge.tsx` — lines + bezier curves
-- [ ] Branch coloring (8-10 color palette)
-- [ ] Click → select commit
+- [x] `lib/graph-layout.ts` — DAG builder, lane assignment algorithm
+- [x] `components/graph/CommitGraph.tsx` — SVG container + virtual scroll
+- [x] `components/graph/CommitNode.tsx` — circle + ref badges
+- [x] `components/graph/GraphEdge.tsx` — lines + bezier curves
+- [x] Branch coloring (8-10 color palette)
+- [x] Click → select commit
 - [ ] Right-click → context menu
-- [ ] Pagination: load more on scroll bottom
+- [x] Pagination: load more on scroll bottom
 - [ ] Unit tests for layout algorithm
 
 ### Step 7: Right Panel
-- [ ] `components/detail/CommitDetail.tsx` — hash, author, date, message
-- [ ] `components/detail/FileChangedList.tsx` — click file → show diff
-- [ ] State switching: no selection → working tree, selected → commit detail
+- [x] `components/detail/CommitDetail.tsx` — hash, author, date, message
+- [x] `components/detail/FileChangedList.tsx` — click file → show diff
+- [x] State switching: no selection → working tree, selected → commit detail
 
 ### Step 8: Working Tree (Stage/Commit)
-- [ ] `components/detail/WorkingTree.tsx` — staged + unstaged sections
-- [ ] Stage/unstage per file (checkbox click)
-- [ ] Bulk stage/unstage all
-- [ ] Commit message textarea
-- [ ] Commit button (Cmd+Enter shortcut)
-- [ ] Amend toggle
+- [x] `components/detail/WorkingTree.tsx` — staged + unstaged sections
+- [x] Stage/unstage per file (checkbox click)
+- [x] Bulk stage/unstage all
+- [x] Commit message textarea
+- [x] Commit button (Cmd+Enter shortcut)
+- [x] Amend toggle
 
 ### Step 9: Diff Viewer
-- [ ] `components/diff/DiffViewer.tsx` — wrapper component
-- [ ] `lib/parse-diff.ts` — unified diff parser
+- [x] `components/diff/DiffViewer.tsx` — wrapper component
+- [x] `lib/parse-diff.ts` — unified diff parser
 - [ ] Split view mode (CodeMirror 6 × 2, scroll sync)
 - [ ] Unified view mode (single CodeMirror)
-- [ ] Segmented control toggle (split/unified)
+- [x] Segmented control toggle (split/unified)
 - [ ] Syntax highlight auto-detect by extension
 - [ ] Edge cases: binary, large file, new/deleted
 
 ### Step 10: Git Actions
-- [ ] Pull button → invoke git_pull → refresh queries
-- [ ] Push button → invoke git_push → show result toast
-- [ ] Fetch button → invoke git_fetch → refresh branches
-- [ ] Checkout branch (from sidebar double-click + context menu)
+- [x] Pull button → invoke git_pull → refresh queries
+- [x] Push button → invoke git_push → show result toast
+- [x] Fetch button → invoke git_fetch → refresh branches
+- [x] Checkout branch (from sidebar double-click + context menu)
 - [ ] Create branch dialog (name input + base ref selector)
-- [ ] Error handling: toast notifications, auth prompts
+- [x] Error handling: toast notifications, auth prompts
 
 ### Step 11: File Watcher
-- [ ] `watcher/fs_watcher.rs` — notify crate setup
-- [ ] Debounce 300ms
-- [ ] Classify events: worktree / refs / HEAD
-- [ ] Emit Tauri events per type
-- [ ] Frontend listener → invalidate relevant queries
-- [ ] Start/stop watcher on repo open/close
+- [x] `watcher/fs_watcher.rs` — notify crate setup
+- [x] Debounce 300ms
+- [x] Classify events: worktree / refs / HEAD
+- [x] Emit Tauri events per type
+- [x] Frontend listener → invalidate relevant queries
+- [x] Start/stop watcher on repo open/close
 
 ### Step 12: Polish
-- [ ] Dark/light theme complete (all components)
-- [ ] Keyboard shortcuts (Cmd+B sidebar, Cmd+Enter commit, etc.)
-- [ ] Recent repos list (localStorage)
-- [ ] Open repo via file picker dialog
-- [ ] Window state persistence (tauri-plugin-window-state)
-- [ ] Loading states + skeleton UI
-- [ ] Empty states (no repo open, no commits)
+- [x] Dark/light theme complete (all components)
+- [x] Keyboard shortcuts (Cmd+B sidebar, Cmd+Enter commit, etc.)
+- [x] Recent repos list (localStorage)
+- [x] Open repo via file picker dialog
+- [x] Window state persistence (tauri-plugin-window-state)
+- [x] Loading states + skeleton UI
+- [x] Empty states (no repo open, no commits)
 - [ ] Git credentials handling (HTTPS auth prompt, SSH key detection)
 - [ ] Error UX phân loại: network error / auth error / conflict error → UX riêng
 - [ ] Undo last commit (git reset --soft HEAD~1) button
