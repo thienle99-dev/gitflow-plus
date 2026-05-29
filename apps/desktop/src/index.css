@@ -179,3 +179,35 @@ button.ghost:hover {
 button.ghost:active {
   background: var(--surface-3);
 }
+
+/* CodeMirror Diff Highlighting */
+.cm-line.diff-line-added {
+  background-color: rgba(48, 209, 88, 0.12) !important;
+  border-left: 3px solid #30d158;
+}
+
+.cm-line.diff-line-deleted {
+  background-color: rgba(255, 55, 95, 0.12) !important;
+  border-left: 3px solid #ff375f;
+}
+
+.cm-line.diff-line-header {
+  background-color: rgba(10, 132, 255, 0.08) !important;
+  color: #0a84ff !important;
+  font-weight: 600;
+}
+
+/* Inline Word/Character Diff Highlighting */
+.diff-inline-added {
+  background-color: rgba(48, 209, 88, 0.28) !important;
+  border-radius: 2px;
+  font-weight: 500;
+}
+
+.diff-inline-deleted {
+  background-color: rgba(255, 55, 95, 0.28) !important;
+  border-radius: 2px;
+  font-weight: 500;
+  text-decoration: line-through;
+  opacity: 0.85;
+}

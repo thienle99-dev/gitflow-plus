@@ -26,6 +26,8 @@ import {
   RefreshCw,
   Sparkles,
   Trash2,
+  Plus,
+  Undo2,
 } from "lucide-react";
 
 export default function WorkingTree() {
@@ -174,46 +176,72 @@ export default function WorkingTree() {
       ]
     : [];
 
+  const totalChanges = staged.length + unstaged.length;
+  const isAllOpen = stagedOpen || unstagedOpen;
+  
+  const handleToggleAllSections = () => {
+    if (isAllOpen) {
+      setStagedOpen(false);
+      setUnstagedOpen(false);
+    } else {
+      setStagedOpen(true);
+      setUnstagedOpen(true);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col bg-surface-0">
-      <div className="h-8 px-3 border-b border-border flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2 text-xs font-medium text-text-primary">
-          <GitCommit size={13} className="text-text-secondary" />
-          Working Tree
+      {/* Master Changes Header */}
+      <div className="h-9 px-3 border-b border-border flex items-center justify-between shrink-0 bg-surface-1/40 hover:bg-surface-1/70 transition-colors">
+        <div 
+          className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-text-primary uppercase tracking-wider select-none"
+          onClick={handleToggleAllSections}
+          title={isAllOpen ? "Collapse all" : "Expand all"}
+        >
+          <ChevronDown 
+            size={13} 
+            className={`text-text-secondary transition-transform duration-150 ${isAllOpen ? "" : "-rotate-90"}`} 
+          />
+          Changes
         </div>
-        <div className="text-2xs text-text-muted">
-          {staged.length} staged · {unstaged.length} unstaged
+        <div className="flex items-center gap-1">
+          <button 
+            className="ghost p-1 rounded hover:bg-surface-2 transition-colors" 
+            onClick={invalidate} 
+            title="Refresh changes"
+          >
+            <RefreshCw size={13} />
+          </button>
+          <button 
+            className="ghost p-1 rounded hover:bg-surface-2 transition-colors"
+            onClick={handleGenerateCommit}
+            disabled={staged.length === 0}
+            title="Generate commit message (AI)"
+          >
+            <Sparkles size={13} />
+          </button>
+          <button 
+            className="ghost p-1 rounded hover:bg-surface-2 transition-colors text-text-secondary hover:text-accent disabled:opacity-40"
+            onClick={handleStageAll}
+            disabled={unstaged.length === 0}
+            title="Stage all changes"
+          >
+            <Plus size={13} />
+          </button>
+          <button 
+            className="ghost p-1 rounded hover:bg-surface-2 transition-colors text-text-secondary hover:text-[#ff375f] disabled:opacity-40"
+            onClick={handleDiscardAll}
+            disabled={totalChanges === 0}
+            title="Discard all changes"
+          >
+            <Undo2 size={13} />
+          </button>
+          {totalChanges > 0 && (
+            <span className="ml-1.5 flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-[#bf5af2]/15 text-[#bf5af2] dark:text-[#da8fff] text-[10px] font-bold px-1 select-none">
+              {totalChanges}
+            </span>
+          )}
         </div>
-      </div>
-
-      <div className="h-8 px-3 border-b border-border flex items-center gap-1 shrink-0">
-        <button className="ghost p-1" onClick={invalidate} title="Refresh changes">
-          <RefreshCw size={13} />
-        </button>
-        <button
-          className="ghost text-2xs px-2"
-          onClick={handleStageAll}
-          disabled={unstaged.length === 0}
-          title="Stage all"
-        >
-          Stage all
-        </button>
-        <button
-          className="ghost text-2xs px-2"
-          onClick={handleUnstageAll}
-          disabled={staged.length === 0}
-          title="Unstage all"
-        >
-          Unstage all
-        </button>
-        <button
-          className="ghost p-1 ml-auto hover:text-[#ff375f]"
-          onClick={handleDiscardAll}
-          disabled={(changes?.length || 0) === 0}
-          title="Discard all changes"
-        >
-          <Trash2 size={13} />
-        </button>
       </div>
 
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col">

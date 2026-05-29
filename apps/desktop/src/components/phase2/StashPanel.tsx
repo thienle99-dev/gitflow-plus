@@ -3,7 +3,7 @@ import { useRepoStore } from "@/stores/repo";
 import { useStashList, useStashPush, useStashPop, useStashApply, useStashDrop } from "@/queries/useGitStash";
 import { GitBranch, Download, Upload, Trash2, Play, Plus, X } from "lucide-react";
 
-export default function StashPanel() {
+export default function StashPanel({ onClose }: { onClose?: () => void }) {
   const repoPath = useRepoStore((s) => s.repoPath);
   const { data: stashes, isLoading } = useStashList(repoPath);
   const stashPush = useStashPush(repoPath);

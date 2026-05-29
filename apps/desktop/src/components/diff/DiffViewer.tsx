@@ -3,8 +3,8 @@ import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
 import { api } from "@/api/tauri";
 import { EditorView, basicSetup } from "codemirror";
-import { EditorState } from "@codemirror/state";
-import { keymap } from "@codemirror/view";
+import { EditorState, RangeSetBuilder, StateField } from "@codemirror/state";
+import { keymap, Decoration, type DecorationSet } from "@codemirror/view";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { javascript } from "@codemirror/lang-javascript";
 import { python } from "@codemirror/lang-python";
@@ -171,6 +171,48 @@ export default function DiffViewer({
     };
   }, [diffViewMode, unifiedContent, lang, theme]);
 
+  // Synchronized scrolling for Split View
+  useEffect(() => {
+    if (diffViewMode !== "split" || !leftRef.current || !rightRef.current) return;
+
+    const leftEl = leftRef.current;
+    const rightEl = rightRef.current;
+
+    let activeScroll: "left" | "right" | null = null;
+    let timeoutId: any = null;
+
+    const handleLeftScroll = () => {
+      if (activeScroll === "right") return;
+      activeScroll = "left";
+      
+      rightEl.scrollTop = leftEl.scrollTop;
+      rightEl.scrollLeft = leftEl.scrollLeft;
+      
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => { activeScroll = null; }, 50);
+    };
+
+    const handleRightScroll = () => {
+      if (activeScroll === "left") return;
+      activeScroll = "right";
+      
+      leftEl.scrollTop = rightEl.scrollTop;
+      leftEl.scrollLeft = rightEl.scrollLeft;
+      
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => { activeScroll = null; }, 50);
+    };
+
+    leftEl.addEventListener("scroll", handleLeftScroll, { passive: true });
+    rightEl.addEventListener("scroll", handleRightScroll, { passive: true });
+
+    return () => {
+      leftEl.removeEventListener("scroll", handleLeftScroll);
+      rightEl.removeEventListener("scroll", handleRightScroll);
+      clearTimeout(timeoutId);
+    };
+  }, [diffViewMode, oldContent, newContent]);
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-surface-0">
       <div className="border-b border-border px-3 py-1 text-2xs text-text-muted flex items-center gap-3">
@@ -244,6 +286,109 @@ export default function DiffViewer({
   );
 }
 
+function computeMismatch(oldStr: string, newStr: string) {
+  // Skip first char (+ or -)
+  const oldText = oldStr.slice(1);
+  const newText = newStr.slice(1);
+  
+  let prefixLen = 0;
+  const minLen = Math.min(oldText.length, newText.length);
+  while (prefixLen < minLen && oldText[prefixLen] === newText[prefixLen]) {
+    prefixLen++;
+  }
+  
+  let suffixLen = 0;
+  const maxSuffix = minLen - prefixLen;
+  while (
+    suffixLen < maxSuffix && 
+    oldText[oldText.length - 1 - suffixLen] === newText[newText.length - 1 - suffixLen]
+  ) {
+    suffixLen++;
+  }
+  
+  // Return character offset (adding 1 back to account for the leading + or - character)
+  return {
+    prefixLen: prefixLen + 1,
+    suffixLen: suffixLen,
+  };
+}
+
+const diffHighlightExtension = StateField.define<DecorationSet>({
+  create(state) {
+    const builder = new RangeSetBuilder<Decoration>();
+    const doc = state.doc;
+    
+    for (let i = 1; i <= doc.lines; i++) {
+      const line = doc.line(i);
+      const text = line.text;
+      
+      if (text.startsWith("+")) {
+        // Line decoration
+        builder.add(
+          line.from,
+          line.from,
+          Decoration.line({ attributes: { class: "diff-line-added" } }),
+        );
+      } else if (text.startsWith("-")) {
+        // Line decoration
+        builder.add(
+          line.from,
+          line.from,
+          Decoration.line({ attributes: { class: "diff-line-deleted" } }),
+        );
+        
+        // Check if next line is an added line to pair for inline highlights
+        if (i < doc.lines) {
+          const nextLine = doc.line(i + 1);
+          if (nextLine.text.startsWith("+")) {
+            const { prefixLen, suffixLen } = computeMismatch(text, nextLine.text);
+            
+            const fromOld = line.from + prefixLen;
+            const toOld = line.to - suffixLen;
+            if (toOld > fromOld) {
+              builder.add(
+                fromOld,
+                toOld,
+                Decoration.mark({ class: "diff-inline-deleted" }),
+              );
+            }
+          }
+        }
+      } else if (text.startsWith("@@")) {
+        builder.add(
+          line.from,
+          line.from,
+          Decoration.line({ attributes: { class: "diff-line-header" } }),
+        );
+      }
+      
+      // Check if previous line is a deleted line to pair for inline highlights
+      if (text.startsWith("+") && i > 1) {
+        const prevLine = doc.line(i - 1);
+        if (prevLine.text.startsWith("-")) {
+          const { prefixLen, suffixLen } = computeMismatch(prevLine.text, text);
+          
+          const fromNew = line.from + prefixLen;
+          const toNew = line.to - suffixLen;
+          if (toNew > fromNew) {
+            builder.add(
+              fromNew,
+              toNew,
+              Decoration.mark({ class: "diff-inline-added" }),
+            );
+          }
+        }
+      }
+    }
+    
+    return builder.finish();
+  },
+  update(decorations, transaction) {
+    return decorations.map(transaction.changes);
+  },
+  provide: (f) => EditorView.decorations.from(f),
+});
+
 function createEditor(
   parent: HTMLDivElement,
   content: string,
@@ -256,6 +401,7 @@ function createEditor(
       basicSetup,
       lang,
       ...theme,
+      diffHighlightExtension,
       EditorView.editable.of(false),
       EditorView.lineWrapping,
       keymap.of([]),

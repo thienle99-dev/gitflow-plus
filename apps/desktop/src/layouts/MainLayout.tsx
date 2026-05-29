@@ -12,6 +12,12 @@ import CommitGraph from "@/components/graph/CommitGraph";
 import RightPanel from "@/components/detail/RightPanel";
 import BottomBar from "@/components/common/BottomBar";
 import SearchDialog from "@/components/phase2/SearchDialog";
+import StashPanel from "@/components/phase2/StashPanel";
+import TagPanel from "@/components/phase2/TagPanel";
+import CherryPickDialog from "@/components/phase2/CherryPickDialog";
+import UndoButton from "@/components/phase2/UndoButton";
+import ConflictResolver from "@/components/phase2/ConflictResolver";
+import AISettings from "@/components/phase2/AISettings";
 
 export default function MainLayout() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
@@ -55,8 +61,13 @@ export default function MainLayout() {
         e.preventDefault();
         toggleSidebar();
       }
+      // Escape closes dialogs
+      if (e.key === "Escape" && activeDialog) {
+        e.preventDefault();
+        closeDialog();
+      }
     },
-    [toggleSidebar],
+    [toggleSidebar, activeDialog, closeDialog],
   );
 
   useEffect(() => {
@@ -67,6 +78,20 @@ export default function MainLayout() {
   if (!repoPath) {
     return <WelcomeScreen />;
   }
+
+  // Dialog overlay components
+  const dialogComponents: Record<string, React.ReactNode> = {
+    search: <SearchDialog open={true} onClose={closeDialog} />,
+    stash: <StashPanel onClose={closeDialog} />,
+    tag: <TagPanel onClose={closeDialog} />,
+    "ai-settings": <AISettings onClose={closeDialog} />,
+    "cherry-pick": (
+      <CherryPickDialog
+        open={true}
+        onClose={closeDialog}
+      />
+    ),
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -95,7 +120,20 @@ export default function MainLayout() {
         </PanelGroup>
       </div>
       <BottomBar />
-      <SearchDialog open={activeDialog === "search"} onClose={closeDialog} />
+
+      {/* Dialog overlays */}
+      {activeDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-surface-0 rounded-mac shadow-xl border border-border min-w-[480px] max-w-[600px] max-h-[80vh] overflow-hidden">
+            {dialogComponents[activeDialog] || (
+              <div className="p-4 text-text-muted text-sm">
+                Unknown dialog: {activeDialog}
+                <button className="ghost text-xs ml-4" onClick={closeDialog}>Close</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
