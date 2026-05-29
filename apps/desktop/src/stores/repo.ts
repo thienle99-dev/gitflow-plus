@@ -11,6 +11,7 @@ interface RepoState {
   closeRepo: () => void;
   selectRef: (ref: string | null) => void;
   toggleTheme: () => void;
+  setTheme: (theme: Theme) => void;
 }
 
 export const useRepoStore = create<RepoState>((set) => ({
@@ -39,4 +40,9 @@ export const useRepoStore = create<RepoState>((set) => ({
       localStorage.setItem("theme", next);
       return { theme: next };
     }),
+
+  setTheme: (theme) => {
+    localStorage.setItem("theme", theme);
+    set({ theme });
+  },
 }));

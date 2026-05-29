@@ -40,6 +40,7 @@ export default function WorkingTree() {
   const [commitMessage, setCommitMessage] = useState("");
   const [amend, setAmend] = useState(false);
   const [committing, setCommitting] = useState(false);
+  const [generatingMessage, setGeneratingMessage] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [stagedOpen, setStagedOpen] = useState(true);
   const [unstagedOpen, setUnstagedOpen] = useState(true);
@@ -134,14 +135,122 @@ export default function WorkingTree() {
     }
   };
 
-  const handleGenerateCommit = () => {
+  const handleGenerateCommit = async () => {
     if (staged.length === 0) {
       showToast("Stage changes before generating a commit message");
       return;
     }
 
-    setCommitMessage(generateCommitMessage(staged));
-    requestAnimationFrame(() => textareaRef.current?.focus());
+    const apiKey = localStorage.getItem("gitflowAiApiKey") || "";
+    const model = localStorage.getItem("gitflowAiModel") || "claude-sonnet-4-20250514";
+    const customUrl = localStorage.getItem("gitflowAiApiUrl") || "";
+    const limit = Number(localStorage.getItem("gitflowAiTokenLimit") || "4096");
+
+    if (!apiKey && !["ollama", "llama.cpp"].includes(model)) {
+      // Offline fallback
+      setCommitMessage(generateCommitMessage(staged));
+      showToast("Generated message using local templates (Configure API key in settings for real AI)");
+      requestAnimationFrame(() => textareaRef.current?.focus());
+      return;
+    }
+
+    setGeneratingMessage(true);
+    showToast("AI is generating commit message...");
+
+    try {
+      // Get staged diff
+      const diff = await api.diff.staged(repoPath!);
+      if (!diff || diff.trim().length === 0) {
+        setCommitMessage(generateCommitMessage(staged));
+        showToast("Diff is empty, fell back to local template");
+        return;
+      }
+
+      const prompt = `Write a clean, concise Git commit message following Conventional Commits format based on the following staged diff.
+Keep the first line under 50 characters, starting with feat:, fix:, refactor:, chore:, or docs:.
+Do not add any markdown formatting, code blocks, or extra text. Just return the raw commit message.
+
+Staged diff:
+${diff.slice(0, 8000)}`;
+
+      let message = "";
+
+      if (model.startsWith("claude-")) {
+        const endpoint = customUrl ? customUrl : "https://api.anthropic.com/v1/messages";
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01"
+          },
+          body: JSON.stringify({
+            model: model,
+            max_tokens: limit,
+            messages: [{ role: "user", content: prompt }]
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`API Error: ${response.statusText}`);
+        }
+        const data = await response.json();
+        message = data.content?.[0]?.text || "";
+      } else {
+        // OpenAI / Ollama / llama.cpp format
+        let endpoint = "";
+        if (model === "ollama") {
+          endpoint = customUrl ? customUrl : "http://localhost:11434/v1/chat/completions";
+        } else if (model === "llama.cpp") {
+          endpoint = customUrl ? customUrl : "http://localhost:8080/v1/chat/completions";
+        } else {
+          endpoint = customUrl ? customUrl : "https://api.openai.com/v1/chat/completions";
+        }
+
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json"
+        };
+        if (apiKey) {
+          headers["Authorization"] = `Bearer ${apiKey}`;
+        }
+
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            model: model === "ollama" ? "llama3" : model === "llama.cpp" ? "local-model" : model,
+            messages: [{ role: "user", content: prompt }],
+            max_tokens: limit
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`API Error: ${response.statusText}`);
+        }
+        const data = await response.json();
+        message = data.choices?.[0]?.message?.content || "";
+      }
+
+      if (message.trim()) {
+        // Strip markdown backticks if present
+        let cleanMsg = message.trim();
+        if (cleanMsg.startsWith("```")) {
+          cleanMsg = cleanMsg.replace(/^```[a-zA-Z]*\n/, "").replace(/\n```$/, "");
+        }
+        setCommitMessage(cleanMsg);
+        showToast("AI Commit Message generated!");
+      } else {
+        throw new Error("Empty response from AI");
+      }
+    } catch (err: any) {
+      console.error(err);
+      // Fallback
+      setCommitMessage(generateCommitMessage(staged));
+      showToast(`AI Failed: ${err.message || err}. Used local fallback.`);
+    } finally {
+      setGeneratingMessage(false);
+      requestAnimationFrame(() => textareaRef.current?.focus());
+    }
   };
 
   useEffect(() => {
@@ -213,10 +322,10 @@ export default function WorkingTree() {
             <RefreshCw size={13} />
           </button>
           <button 
-            className="ghost p-1 rounded hover:bg-surface-2 transition-colors"
+            className={`ghost p-1 rounded hover:bg-surface-2 transition-colors ${generatingMessage ? "animate-pulse text-accent" : ""}`}
             onClick={handleGenerateCommit}
-            disabled={staged.length === 0}
-            title="Generate commit message (AI)"
+            disabled={staged.length === 0 || generatingMessage}
+            title={generatingMessage ? "Generating message..." : "Generate commit message (AI)"}
           >
             <Sparkles size={13} />
           </button>
@@ -288,10 +397,10 @@ export default function WorkingTree() {
             className="w-full h-[64px] text-xs bg-surface-1 border border-border rounded-mac pl-2 pr-9 py-1.5 text-text-primary placeholder:text-text-muted resize-none outline-none focus:border-accent transition-colors"
           />
           <button
-            className="absolute right-1.5 top-1.5 ghost p-1"
+            className={`absolute right-1.5 top-1.5 ghost p-1 ${generatingMessage ? "animate-pulse text-accent" : ""}`}
             onClick={handleGenerateCommit}
-            disabled={staged.length === 0}
-            title="Generate commit message"
+            disabled={staged.length === 0 || generatingMessage}
+            title={generatingMessage ? "Generating..." : "Generate commit message"}
           >
             <Sparkles size={14} />
           </button>

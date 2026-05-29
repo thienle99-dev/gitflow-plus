@@ -19,6 +19,7 @@ import {
   RotateCcw,
   ArrowLeftRight,
   Archive,
+  Settings,
 } from "lucide-react";
 import CreateBranchDialog from "./CreateBranchDialog";
 
@@ -114,9 +115,9 @@ export default function Toolbar() {
           <RotateCcw size={14} /> Undo
         </button>
 
-        {/* AI */}
-        <button className="ghost text-xs" onClick={() => openDialog("ai-settings")}>
-          <Sparkles size={14} /> AI
+        {/* Settings */}
+        <button className="ghost text-xs" onClick={() => openDialog("settings")} title="Application settings">
+          <Settings size={14} /> Settings
         </button>
 
         <div className="flex-1" />

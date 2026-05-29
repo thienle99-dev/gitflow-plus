@@ -14,8 +14,7 @@ import BottomBar from "@/components/common/BottomBar";
 import SearchDialog from "@/components/phase2/SearchDialog";
 import StashPanel from "@/components/phase2/StashPanel";
 import TagPanel from "@/components/phase2/TagPanel";
-import AISettings from "@/components/phase2/AISettings";
-import { CherryPickDialog } from "@/components/phase2";
+import { CherryPickDialog, SettingsDialog } from "@/components/phase2";
 
 export default function MainLayout() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
@@ -83,7 +82,8 @@ export default function MainLayout() {
     search: <SearchDialog open={true} onClose={closeDialog} />,
     stash: <StashPanel onClose={closeDialog} />,
     tag: <TagPanel onClose={closeDialog} />,
-    "ai-settings": <AISettings onClose={closeDialog} />,
+    settings: <SettingsDialog onClose={closeDialog} />,
+    "ai-settings": <SettingsDialog onClose={closeDialog} />,
     "cherry-pick": (
       <CherryPickDialog
         open={true}

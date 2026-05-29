@@ -23,6 +23,7 @@ import {
 export default function CommitDetail() {
   const repoPath = useRepoStore((s) => s.repoPath);
   const selectedCommit = useUIStore((s) => s.selectedCommit);
+  const selectedFile = useUIStore((s) => s.selectedFile);
   const selectFile = useUIStore((s) => s.selectFile);
   const { data } = useGitLog(repoPath);
   const { data: changedFiles, isLoading: filesLoading, error: filesError } =
@@ -89,7 +90,7 @@ export default function CommitDetail() {
       </div>
 
       <div className="flex-1 px-3 py-2">
-        <div className="text-xs font-medium text-text-primary mb-1">
+        <div className="text-xs font-semibold text-text-primary mb-2">
           Changed Files{changedFiles ? ` (${changedFiles.length})` : ""}
         </div>
         {filesLoading ? (
@@ -104,10 +105,14 @@ export default function CommitDetail() {
               const folder = file.old_path
                 ? `${getFolder(file.old_path)} -> ${getFolder(file.path)}`
                 : getFolder(file.path);
+              const isSelected = selectedFile === file.path;
+
               return (
                 <div
                   key={`${file.status}:${file.old_path || ""}:${file.path}`}
-                  className="tree-item w-full grid grid-cols-[16px_minmax(0,1fr)] items-center gap-2 px-2 py-1.5 text-left transition-all border-b border-border/10 last:border-b-0"
+                  className={`tree-item w-full grid grid-cols-[16px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5 text-left transition-all ${
+                    isSelected ? "selected" : ""
+                  }`}
                   onClick={() => selectFile(file.path)}
                   title={`${statusText(file.status)}: ${displayPath}`}
                   role="button"
@@ -119,18 +124,21 @@ export default function CommitDetail() {
                     }
                   }}
                 >
-                  <span className="flex h-4 w-4 items-center justify-center shrink-0">
+                  <span className="h-4 w-4 flex items-center justify-center shrink-0">
                     {fileIcon(file.path, file.status)}
                   </span>
-                  <span className="min-w-0">
-                    <span className="block text-xs font-medium text-text-primary truncate leading-4">
+                  <span className="min-w-0 flex flex-col justify-center">
+                    <span className={`block text-xs font-medium text-current truncate leading-4 ${file.status === "deleted" ? "line-through opacity-60" : ""}`}>
                       {fileName}
                     </span>
                     {folder && (
-                      <span className="block text-[10px] text-text-muted truncate leading-3">
+                      <span className={`block text-[10px] truncate leading-3 ${isSelected ? "text-accent-fg opacity-75" : "text-text-muted"}`}>
                         {folder}
                       </span>
                     )}
+                  </span>
+                  <span className="flex items-center justify-end min-w-[20px]">
+                    <StatusBadge status={file.status} selected={isSelected} />
                   </span>
                 </div>
               );
@@ -142,6 +150,47 @@ export default function CommitDetail() {
       </div>
     </div>
   );
+}
+
+function StatusBadge({ status, selected }: { status: string; selected: boolean }) {
+  const label = statusLabel(status);
+  
+  let badgeClass = "";
+  if (selected) {
+    badgeClass = "text-accent-fg opacity-90";
+  } else {
+    switch (status) {
+      case "added":
+        badgeClass = "text-[#30d158]";
+        break;
+      case "deleted":
+        badgeClass = "text-[#ff375f]";
+        break;
+      case "renamed":
+      case "copied":
+        badgeClass = "text-[#64d2ff]";
+        break;
+      default: // modified
+        badgeClass = "text-[#ff9f0a]";
+        break;
+    }
+  }
+
+  return (
+    <span className={`inline-flex items-center justify-center font-mono text-[10px] font-bold select-none px-1 leading-none ${badgeClass}`}>
+      {label}
+    </span>
+  );
+}
+
+function statusLabel(status: string) {
+  switch (status) {
+    case "modified": return "M";
+    case "added": return "A";
+    case "deleted": return "D";
+    case "renamed": return "R";
+    default: return status.charAt(0).toUpperCase();
+  }
 }
 
 function fileIcon(path: string, status: string) {
