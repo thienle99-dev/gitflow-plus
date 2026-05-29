@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useQueryClient } from "@tanstack/react-query";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
@@ -98,8 +99,7 @@ function WelcomeScreen() {
 
   const handleOpenRepo = async () => {
     try {
-      const { open } = await import("@tauri-apps/plugin-dialog");
-      const selected = await open({ directory: true, multiple: false });
+      const selected = await openDialog({ directory: true, multiple: false });
       if (selected) {
         openRepo(selected as string);
       }
