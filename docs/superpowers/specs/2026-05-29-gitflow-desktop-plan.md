@@ -101,17 +101,27 @@
 - [ ] Window state persistence (tauri-plugin-window-state)
 - [ ] Loading states + skeleton UI
 - [ ] Empty states (no repo open, no commits)
+- [ ] Git credentials handling (HTTPS auth prompt, SSH key detection)
+- [ ] Error UX phân loại: network error / auth error / conflict error → UX riêng
+- [ ] Undo last commit (git reset --soft HEAD~1) button
+- [ ] Performance logging (measure open repo, render graph, status refresh)
 
 ---
 
 ## Phase 2: Advanced Git + AI Features (after Phase 1 ships)
 
+### Git Advanced
 - [ ] Merge branch + detect conflict state
 - [ ] Conflict resolver UI (3-panel CodeMirror)
 - [ ] Interactive rebase (GIT_SEQUENCE_EDITOR approach)
 - [ ] Stash management
 - [ ] Tag CRUD
 - [ ] Git log search/filter
+- [ ] Cherry-pick (pick commit từ branch khác)
+- [ ] Blame view (inline trong diff viewer — ai viết dòng nào)
+- [ ] Submodule support (hiển thị status, init/update)
+- [ ] Git hooks visibility (show active hooks, --no-verify option)
+- [ ] Undo stack (reflog-based, undo last commit/stage/checkout)
 
 ### AI Features (Cloud LLM API)
 - [ ] Settings UI: API key input (Claude/OpenAI), model selector, token limit
@@ -121,6 +131,9 @@
 - [ ] **AI Commit Message** — phân tích staged diff, generate conventional commit (type: subject + body)
 - [ ] **AI Explain Changes** — giải thích commit/diff bằng ngôn ngữ tự nhiên
 - [ ] **AI Code Review Assist** — flag bugs, suggest improvements, đề xuất test cases
+- [ ] **AI Commit Scope Suggestion** — gợi ý tách commit nếu staged changes quá lớn/không liên quan
+- [ ] **AI Branch Naming** — suggest branch name từ description
+- [ ] Context-aware prompts — gửi kèm project conventions (.cursorrules, CLAUDE.md) nếu có
 - [ ] Rate limiting + response caching cho cùng diff
 - [ ] Fallback: API fail → toast error, manual workflow vẫn hoạt động bình thường
 
@@ -128,9 +141,32 @@
 
 - [ ] GitHub/GitLab OAuth flow
 - [ ] PR list view
-- [ ] Create PR form
+- [ ] Create PR form (+ draft PR support)
+- [ ] PR templates — detect `.github/pull_request_template.md`, pre-fill
+- [ ] PR Review inline — xem review comments trực tiếp trong diff viewer
+- [ ] CI/CD status — show pipeline status per commit/PR (GitHub Actions, GitLab CI)
+- [ ] Issue linking — link commits/PRs tới issues, show trong commit detail
 - [ ] Workspace (multi-repo)
 - [ ] Bulk fetch/pull
+
+## Phase 4: Productivity & Collaboration (after Phase 3)
+
+- [ ] Git bisect UI — visual binary search cho bug introduction
+- [ ] Worktree management — tạo/switch/delete git worktrees
+- [ ] Diff bookmarks — đánh dấu files/hunks để review sau
+- [ ] Commit signing — GPG/SSH signing support + verification badges
+- [ ] Custom aliases — user define git aliases, show trong toolbar/menu
+- [ ] Commit message templates per project (snippets)
+- [ ] Activity heatmap — contribution graph (như GitHub profile)
+- [ ] Branch comparison — so sánh 2 branches side-by-side (ahead/behind + diff)
+
+## Phase 5: Plugin System & Extensibility (future)
+
+- [ ] Plugin API — cho phép community build extensions (custom panels, commands)
+- [ ] Theme marketplace — custom color themes
+- [ ] Custom graph layouts — user chọn style (compact, expanded, timeline)
+- [ ] Scripting — Lua/JS scripting cho automation (batch operations)
+- [ ] Webhook integration — trigger actions on events (commit → notify Slack)
 
 ---
 
