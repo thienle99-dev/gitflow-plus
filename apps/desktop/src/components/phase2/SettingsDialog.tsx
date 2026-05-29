@@ -10,6 +10,7 @@ const LS_KEY_TOKEN_LIMIT = "gitflowAiTokenLimit";
 const LS_KEY_DIFF_MODE = "gitflowDefaultDiffViewMode";
 const LS_KEY_AUTO_FETCH = "gitflowAutoFetch";
 const LS_KEY_FETCHED_MODELS = "gitflowAiFetchedModels";
+const LS_KEY_AI_DETAIL_LEVEL = "gitflowAiDetailLevel";
 
 interface SettingsDialogProps {
   onClose?: () => void;
@@ -47,6 +48,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
   const [tokenLimit, setTokenLimit] = useState(4096);
   const [fetchedModels, setFetchedModels] = useState<{ id: string; label: string }[]>([]);
   const [fetchingModels, setFetchingModels] = useState(false);
+  const [aiDetailLevel, setAiDetailLevel] = useState<"minimal" | "medium" | "detailed">("medium");
 
   const [hasChanges, setHasChanges] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -66,6 +68,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       const savedModel = localStorage.getItem(LS_KEY_MODEL);
       const savedLimit = localStorage.getItem(LS_KEY_TOKEN_LIMIT);
       const savedFetched = localStorage.getItem(LS_KEY_FETCHED_MODELS);
+      const savedDetailLevel = localStorage.getItem(LS_KEY_AI_DETAIL_LEVEL) as "minimal" | "medium" | "detailed";
 
       if (savedDiffMode) setDefaultDiffMode(savedDiffMode);
       if (savedAutoFetch !== null) setAutoFetch(savedAutoFetch === "true");
@@ -78,6 +81,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
           setFetchedModels(JSON.parse(savedFetched));
         } catch {}
       }
+      if (savedDetailLevel) setAiDetailLevel(savedDetailLevel);
       setSelectedTheme(currentTheme);
     } catch {
       // localStorage is not available
@@ -93,6 +97,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
     const storedModel = localStorage.getItem(LS_KEY_MODEL) || "claude-sonnet-4-20250514";
     const storedLimit = localStorage.getItem(LS_KEY_TOKEN_LIMIT) || "4096";
     const storedFetched = localStorage.getItem(LS_KEY_FETCHED_MODELS) || "[]";
+    const storedDetailLevel = (localStorage.getItem(LS_KEY_AI_DETAIL_LEVEL) as "minimal" | "medium" | "detailed") || "medium";
 
     setHasChanges(
       theme !== currentTheme ||
@@ -102,9 +107,10 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       apiUrl !== storedApiUrl ||
       model !== storedModel ||
       tokenLimit !== Number(storedLimit) ||
-      JSON.stringify(fetchedModels) !== storedFetched
+      JSON.stringify(fetchedModels) !== storedFetched ||
+      aiDetailLevel !== storedDetailLevel
     );
-  }, [theme, currentTheme, defaultDiffMode, autoFetch, apiKey, apiUrl, model, tokenLimit, fetchedModels]);
+  }, [theme, currentTheme, defaultDiffMode, autoFetch, apiKey, apiUrl, model, tokenLimit, fetchedModels, aiDetailLevel]);
 
   const handleFetchModels = async () => {
     if (!apiUrl) {
@@ -195,6 +201,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       localStorage.setItem(LS_KEY_MODEL, model);
       localStorage.setItem(LS_KEY_TOKEN_LIMIT, String(tokenLimit));
       localStorage.setItem(LS_KEY_FETCHED_MODELS, JSON.stringify(fetchedModels));
+      localStorage.setItem(LS_KEY_AI_DETAIL_LEVEL, aiDetailLevel);
       
       setHasChanges(false);
       showToast("Settings saved successfully");
@@ -409,6 +416,20 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
                 <span>4,096 (Default)</span>
                 <span>32,768</span>
               </div>
+            </div>
+
+            {/* Commit Message Detail Level */}
+            <div className="space-y-1 pt-2">
+              <label className="text-xs font-semibold text-text-primary">Commit Message Style</label>
+              <select
+                value={aiDetailLevel}
+                onChange={(e) => setAiDetailLevel(e.target.value as any)}
+                className="w-full h-7 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary focus:border-accent outline-none"
+              >
+                <option value="minimal">Minimal (Subject only, max 50 chars)</option>
+                <option value="medium">Standard (Subject + brief change list)</option>
+                <option value="detailed">Detailed (Comprehensive conventional format)</option>
+              </select>
             </div>
           </div>
         )}

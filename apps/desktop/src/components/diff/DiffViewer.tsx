@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
 import { api } from "@/api/tauri";
+import { Sparkles, RefreshCw } from "lucide-react";
 import { EditorView, basicSetup } from "codemirror";
 import { EditorState, RangeSetBuilder, StateField } from "@codemirror/state";
 import { keymap, Decoration, type DecorationSet, WidgetType } from "@codemirror/view";
@@ -62,6 +63,154 @@ export default function DiffViewer({
   const appTheme = useRepoStore((s) => s.theme);
   const [applying, setApplying] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [showReview, setShowReview] = useState(false);
+  const [loadingReview, setLoadingReview] = useState(false);
+  const [reviewResult, setReviewResult] = useState<string>("");
+  const [reviewError, setReviewError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setReviewResult("");
+    setShowReview(false);
+    setReviewError(null);
+    setLoadingReview(false);
+  }, [filePath, diff]);
+
+  const handleToggleAiReview = async () => {
+    if (showReview) {
+      setShowReview(false);
+      return;
+    }
+    
+    setShowReview(true);
+    if (reviewResult) return;
+    
+    setLoadingReview(true);
+    setReviewError(null);
+    
+    try {
+      const apiKey = localStorage.getItem("gitflowAiApiKey") || "";
+      const model = localStorage.getItem("gitflowAiModel") || "claude-sonnet-4-20250514";
+      const customUrl = localStorage.getItem("gitflowAiApiUrl") || "";
+      const limit = Number(localStorage.getItem("gitflowAiTokenLimit") || "4096");
+
+      const prompt = `You are a world-class senior software architect. Analyze the git diff below for the file "${filePath}" and provide two structured sections:
+1. 💡 CODE EXPLANATION: A clear, high-level summary of WHAT was changed and WHY (keep it accessible and neat).
+2. 🔍 CODE REVIEW & SUGGESTIONS: Inspect the code changes for potential bugs, security issues, performance optimization opportunities, or style improvements. If everything looks perfect, explicitly praise it.
+
+Be professional, direct, constructive, and use markdown styling.
+
+Staged diff:
+${diff.slice(0, 8000)}`;
+
+      let endpoint = "";
+      let message = "";
+
+      if (model.startsWith("claude-")) {
+        endpoint = customUrl ? customUrl.trim() : "https://api.anthropic.com/v1/messages";
+        if (customUrl && !endpoint.endsWith("/messages")) {
+          endpoint = endpoint.replace(/\/+$/, "") + "/messages";
+        }
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01"
+        };
+        const body = JSON.stringify({
+          model: model,
+          max_tokens: limit,
+          messages: [{ role: "user", content: prompt }],
+          stream: false
+        });
+
+        const res = await api.ai.request(endpoint, "POST", headers, body);
+        if (res.status < 200 || res.status >= 300) {
+          throw new Error(`API Error: ${res.status}`);
+        }
+        let data: any;
+        const trimmedBody = res.body.trim();
+        if (trimmedBody.startsWith("data:")) {
+          let contentAccumulator = "";
+          const lines = trimmedBody.split("\n");
+          for (const line of lines) {
+            const cleaned = line.trim();
+            if (cleaned.startsWith("data:") && cleaned !== "data: [DONE]") {
+              try {
+                const chunkStr = cleaned.slice(5).trim();
+                const chunkJson = JSON.parse(chunkStr);
+                contentAccumulator += chunkJson.choices?.[0]?.delta?.content || chunkJson.delta?.content || "";
+              } catch {}
+            }
+          }
+          data = { content: [{ text: contentAccumulator }] };
+        } else {
+          data = JSON.parse(res.body);
+        }
+        message = data.content?.[0]?.text || "";
+      } else {
+        if (model === "ollama") {
+          endpoint = customUrl ? customUrl.trim() : "http://localhost:11434/v1/chat/completions";
+        } else if (model === "llama.cpp") {
+          endpoint = customUrl ? customUrl.trim() : "http://localhost:8080/v1/chat/completions";
+        } else {
+          endpoint = customUrl ? customUrl.trim() : "https://api.openai.com/v1/chat/completions";
+        }
+
+        if (customUrl && !endpoint.endsWith("/chat/completions") && !endpoint.endsWith("/completions")) {
+          endpoint = endpoint.replace(/\/+$/, "") + "/chat/completions";
+        }
+
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json"
+        };
+        if (apiKey) {
+          headers["Authorization"] = `Bearer ${apiKey}`;
+        }
+        const body = JSON.stringify({
+          model: model === "ollama" ? "llama3" : model === "llama.cpp" ? "local-model" : model,
+          messages: [{ role: "user", content: prompt }],
+          max_tokens: limit,
+          stream: false
+        });
+
+        const res = await api.ai.request(endpoint, "POST", headers, body);
+        if (res.status < 200 || res.status >= 300) {
+          throw new Error(`API Error: ${res.status}`);
+        }
+        let data: any;
+        const trimmedBody = res.body.trim();
+        if (trimmedBody.startsWith("data:")) {
+          let contentAccumulator = "";
+          const lines = trimmedBody.split("\n");
+          for (const line of lines) {
+            const cleaned = line.trim();
+            if (cleaned.startsWith("data:") && cleaned !== "data: [DONE]") {
+              try {
+                const chunkStr = cleaned.slice(5).trim();
+                const chunkJson = JSON.parse(chunkStr);
+                contentAccumulator += chunkJson.choices?.[0]?.delta?.content || chunkJson.choices?.[0]?.text || "";
+              } catch {}
+            }
+          }
+          data = { choices: [{ message: { content: contentAccumulator } }] };
+        } else {
+          data = JSON.parse(res.body);
+        }
+        message = data.choices?.[0]?.message?.content || "";
+      }
+
+      if (message.trim()) {
+        setReviewResult(message.trim());
+      } else {
+        throw new Error("Empty response from AI Reviewer");
+      }
+    } catch (e: any) {
+      console.error(e);
+      setReviewError(e.message || String(e));
+    } finally {
+      setLoadingReview(false);
+    }
+  };
   const leftRef = useRef<HTMLDivElement>(null);
   const rightRef = useRef<HTMLDivElement>(null);
   const unifiedRef = useRef<HTMLDivElement>(null);
@@ -223,73 +372,160 @@ export default function DiffViewer({
   }, [diffViewMode, oldContent, newContent]);
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-surface-0">
-      <div className="border-b border-border px-3 py-1 text-2xs text-text-muted flex items-center gap-3">
-        <span>{filePath}</span>
-        <span className="text-[#ff375f]">-{deletedCount}</span>
-        <span className="text-[#30d158]">+{addedCount}</span>
-        {source !== "commit" && (
-          <span className="ml-auto capitalize">{source} diff</span>
-        )}
-      </div>
-      {canPatch && hunks.length > 0 && (
-        <div className="border-b border-border bg-surface-1 max-h-[120px] overflow-y-auto">
-          {hunks.map((hunk, index) => {
-            const add = hunk.lines.filter((line) => line.type === "add").length;
-            const del = hunk.lines.filter((line) => line.type === "delete").length;
-            return (
-              <div
-                key={`${hunk.header}:${index}`}
-                className="min-h-7 px-3 py-1 flex items-center gap-2 border-b border-border/60 last:border-b-0"
-              >
-                <span className="min-w-0 flex-1 truncate font-mono text-2xs text-text-muted">
-                  {hunk.header}
-                </span>
-                <span className="text-2xs text-[#ff375f]">-{del}</span>
-                <span className="text-2xs text-[#30d158]">+{add}</span>
-                {source === "working" ? (
-                  <>
+    <div className="flex-1 flex overflow-hidden bg-surface-0">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="border-b border-border px-3 py-1 text-2xs text-text-muted flex items-center gap-3 bg-surface-1/40 shrink-0">
+          <span>{filePath}</span>
+          <span className="text-[#ff375f]">-{deletedCount}</span>
+          <span className="text-[#30d158]">+{addedCount}</span>
+          {source !== "commit" && (
+            <span className="capitalize">{source} diff</span>
+          )}
+          <button
+            onClick={handleToggleAiReview}
+            disabled={loadingReview}
+            className={`ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-surface-2 transition-all text-accent hover:text-accent-hover ${
+              loadingReview ? "opacity-60 cursor-not-allowed" : ""
+            }`}
+            title="Analyze and explain code changes with AI"
+          >
+            {loadingReview ? (
+              <RefreshCw size={11} className="animate-spin text-accent" />
+            ) : (
+              <Sparkles size={11} />
+            )}
+            <span>AI Explain & Review</span>
+          </button>
+        </div>
+        {canPatch && hunks.length > 0 && (
+          <div className="border-b border-border bg-surface-1 max-h-[120px] overflow-y-auto">
+            {hunks.map((hunk, index) => {
+              const add = hunk.lines.filter((line) => line.type === "add").length;
+              const del = hunk.lines.filter((line) => line.type === "delete").length;
+              return (
+                <div
+                  key={`${hunk.header}:${index}`}
+                  className="min-h-7 px-3 py-1 flex items-center gap-2 border-b border-border/60 last:border-b-0"
+                >
+                  <span className="min-w-0 flex-1 truncate font-mono text-2xs text-text-muted">
+                    {hunk.header}
+                  </span>
+                  <span className="text-2xs text-[#ff375f]">-{del}</span>
+                  <span className="text-2xs text-[#30d158]">+{add}</span>
+                  {source === "working" ? (
+                    <>
+                      <button
+                        className="ghost text-2xs px-2"
+                        onClick={() => applyHunk(hunk, index, "stage")}
+                        disabled={applying !== null}
+                      >
+                        {applying === index ? "Applying..." : "Stage hunk"}
+                      </button>
+                      <button
+                        className="ghost text-2xs px-2 hover:text-[#ff375f]"
+                        onClick={() => applyHunk(hunk, index, "discard")}
+                        disabled={applying !== null}
+                      >
+                        Discard
+                      </button>
+                    </>
+                  ) : (
                     <button
                       className="ghost text-2xs px-2"
-                      onClick={() => applyHunk(hunk, index, "stage")}
+                      onClick={() => applyHunk(hunk, index, "unstage")}
                       disabled={applying !== null}
                     >
-                      {applying === index ? "Applying..." : "Stage hunk"}
+                      {applying === index ? "Applying..." : "Unstage hunk"}
                     </button>
-                    <button
-                      className="ghost text-2xs px-2 hover:text-[#ff375f]"
-                      onClick={() => applyHunk(hunk, index, "discard")}
-                      disabled={applying !== null}
-                    >
-                      Discard
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    className="ghost text-2xs px-2"
-                    onClick={() => applyHunk(hunk, index, "unstage")}
-                    disabled={applying !== null}
-                  >
-                    {applying === index ? "Applying..." : "Unstage hunk"}
-                  </button>
-                )}
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {error && (
+          <div className="border-b border-border px-3 py-1 text-2xs text-[#ff375f] bg-surface-1">
+            {error}
+          </div>
+        )}
+        {diffViewMode === "split" ? (
+          <div className="flex-1 flex overflow-hidden">
+            <div ref={leftRef} className="flex-1 overflow-auto border-r border-border" />
+            <div ref={rightRef} className="flex-1 overflow-auto" />
+          </div>
+        ) : (
+          <div ref={unifiedRef} className="flex-1 overflow-auto" />
+        )}
+      </div>
+
+      {/* Right Drawer AI Review Panel */}
+      {showReview && (
+        <div className="w-[360px] border-l border-border flex flex-col bg-surface-1 overflow-hidden shrink-0 animate-in slide-in-from-right duration-200">
+          <div className="h-9 px-3 border-b border-border flex items-center justify-between bg-surface-2 shrink-0">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
+              <Sparkles size={13} className="text-accent" />
+              <span>AI Code Review</span>
+            </div>
+            <button
+              onClick={() => setShowReview(false)}
+              className="text-2xs text-text-muted hover:text-text-primary px-1.5 py-0.5 rounded hover:bg-surface-3 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 select-text">
+            {loadingReview ? (
+              <div className="flex flex-col items-center justify-center h-full space-y-3 text-text-muted py-10">
+                <RefreshCw size={24} className="animate-spin text-accent" />
+                <span className="text-xs">Analyzing and reviewing changes...</span>
               </div>
-            );
-          })}
+            ) : reviewError ? (
+              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-mac space-y-2">
+                <div className="text-xs font-semibold text-[#ff453a]">Review Failed</div>
+                <div className="text-2xs text-text-secondary break-words whitespace-pre-wrap">{reviewError}</div>
+                <button
+                  onClick={() => { setReviewResult(""); handleToggleAiReview(); }}
+                  className="text-2xs text-accent underline block"
+                >
+                  Retry Analysis
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="prose prose-invert max-w-none text-xs leading-relaxed space-y-3 text-text-primary">
+                  {reviewResult.split("\n").map((line, idx) => {
+                    const cleanLine = line.trim();
+                    if (cleanLine.startsWith("# ")) {
+                      return <h3 key={idx} className="text-sm font-bold text-text-primary pt-2 border-b border-border pb-1">{cleanLine.slice(2)}</h3>;
+                    }
+                    if (cleanLine.startsWith("## ")) {
+                      return <h4 key={idx} className="text-xs font-bold text-accent pt-1">{cleanLine.slice(3)}</h4>;
+                    }
+                    if (cleanLine.startsWith("### ")) {
+                      return <h5 key={idx} className="text-xs font-bold text-text-primary">{cleanLine.slice(4)}</h5>;
+                    }
+                    if (cleanLine.startsWith("- ") || cleanLine.startsWith("* ")) {
+                      return <li key={idx} className="ml-4 list-disc text-text-secondary">{cleanLine.slice(2)}</li>;
+                    }
+                    if (cleanLine.startsWith("1. ")) {
+                      return <li key={idx} className="ml-4 list-decimal text-text-secondary">{cleanLine.slice(3)}</li>;
+                    }
+                    if (line.includes("**")) {
+                      const parts = line.split("**");
+                      return (
+                        <p key={idx} className="text-text-secondary">
+                          {parts.map((part, pIdx) => pIdx % 2 === 1 ? <strong key={pIdx} className="text-text-primary font-semibold">{part}</strong> : part)}
+                        </p>
+                      );
+                    }
+                    return line ? <p key={idx} className="text-text-secondary">{line}</p> : <div key={idx} className="h-2" />;
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      )}
-      {error && (
-        <div className="border-b border-border px-3 py-1 text-2xs text-[#ff375f] bg-surface-1">
-          {error}
-        </div>
-      )}
-      {diffViewMode === "split" ? (
-        <div className="flex-1 flex overflow-hidden">
-          <div ref={leftRef} className="flex-1 overflow-auto border-r border-border" />
-          <div ref={rightRef} className="flex-1 overflow-auto" />
-        </div>
-      ) : (
-        <div ref={unifiedRef} className="flex-1 overflow-auto" />
       )}
     </div>
   );

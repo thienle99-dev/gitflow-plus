@@ -136,6 +136,7 @@ export default function WorkingTree() {
   };
 
   const handleGenerateCommit = async () => {
+    if (generatingMessage) return;
     if (staged.length === 0) {
       showToast("Stage changes before generating a commit message");
       return;
@@ -145,6 +146,7 @@ export default function WorkingTree() {
     const model = localStorage.getItem("gitflowAiModel") || "claude-sonnet-4-20250514";
     const customUrl = localStorage.getItem("gitflowAiApiUrl") || "";
     const limit = Number(localStorage.getItem("gitflowAiTokenLimit") || "4096");
+    const detailLevel = localStorage.getItem("gitflowAiDetailLevel") || "medium";
 
     if (!apiKey && !["ollama", "llama.cpp"].includes(model)) {
       // Offline fallback
@@ -166,9 +168,25 @@ export default function WorkingTree() {
         return;
       }
 
-      const prompt = `Write a clean, concise Git commit message following Conventional Commits format based on the following staged diff.
-Keep the first line under 50 characters, starting with feat:, fix:, refactor:, chore:, or docs:.
-Do not add any markdown formatting, code blocks, or extra text. Just return the raw commit message.
+      let styleInstruction = "";
+      if (detailLevel === "minimal") {
+        styleInstruction = "3. Return ONLY a single line (the subject line). Do NOT add any body, description paragraphs, bullet points, or list of changes.";
+      } else if (detailLevel === "detailed") {
+        styleInstruction = "3. Write a highly detailed commit message. Always include a comprehensive body with bullet points listing each modified file and detailing exactly what was added, removed, or refactored.";
+      } else {
+        styleInstruction = "3. If the changes are complex, add a blank line after the subject line, followed by a bulleted body explaining WHAT changed and WHY (keep bullet lines short, concise, and professional).";
+      }
+
+      const prompt = `You are an expert developer. Generate a professional, clean, and concise Git commit message following the Conventional Commits specification based on the staged diff below.
+
+CRITICAL INSTRUCTIONS:
+1. Format must be: <type>(<optional-scope>): <description in imperative mood, lowercase, no period>
+   - Example types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert.
+   - Example: feat(ai): implement native proxy to bypass CORS
+2. Keep the first line (subject) strictly under 50 characters.
+${styleInstruction}
+4. ABSOLUTELY NO markdown code blocks (do NOT wrap in \`\`\`), no prefixing with "Here is...", no introductory/explanatory text, and no quotes. Return ONLY the raw commit message text.
+5. Use English for the commit message.
 
 Staged diff:
 ${diff.slice(0, 8000)}`;
@@ -188,7 +206,8 @@ ${diff.slice(0, 8000)}`;
         const body = JSON.stringify({
           model: model,
           max_tokens: limit,
-          messages: [{ role: "user", content: prompt }]
+          messages: [{ role: "user", content: prompt }],
+          stream: false
         });
 
         const res = await api.ai.request(endpoint, "POST", headers, body);
@@ -197,7 +216,26 @@ ${diff.slice(0, 8000)}`;
         }
         let data: any;
         try {
-          data = JSON.parse(res.body);
+          const trimmedBody = res.body.trim();
+          if (trimmedBody.startsWith("data:")) {
+            // It's a stream! Parse and concatenate all chunks
+            let contentAccumulator = "";
+            const lines = trimmedBody.split("\n");
+            for (const line of lines) {
+              const cleaned = line.trim();
+              if (cleaned.startsWith("data:") && cleaned !== "data: [DONE]") {
+                try {
+                  const chunkStr = cleaned.slice(5).trim();
+                  const chunkJson = JSON.parse(chunkStr);
+                  const content = chunkJson.choices?.[0]?.delta?.content || chunkJson.delta?.content || "";
+                  contentAccumulator += content;
+                } catch {}
+              }
+            }
+            data = { content: [{ text: contentAccumulator }] };
+          } else {
+            data = JSON.parse(res.body);
+          }
         } catch (parseErr) {
           console.error("JSON parse error:", parseErr, "Body:", res.body);
           throw new Error(`Invalid response format (not JSON). Received:\n${res.body.trim().slice(0, 150)}...`);
@@ -227,7 +265,8 @@ ${diff.slice(0, 8000)}`;
         const body = JSON.stringify({
           model: model === "ollama" ? "llama3" : model === "llama.cpp" ? "local-model" : model,
           messages: [{ role: "user", content: prompt }],
-          max_tokens: limit
+          max_tokens: limit,
+          stream: false
         });
 
         const res = await api.ai.request(endpoint, "POST", headers, body);
@@ -236,7 +275,26 @@ ${diff.slice(0, 8000)}`;
         }
         let data: any;
         try {
-          data = JSON.parse(res.body);
+          const trimmedBody = res.body.trim();
+          if (trimmedBody.startsWith("data:")) {
+            // It's a stream! Parse and concatenate all chunks
+            let contentAccumulator = "";
+            const lines = trimmedBody.split("\n");
+            for (const line of lines) {
+              const cleaned = line.trim();
+              if (cleaned.startsWith("data:") && cleaned !== "data: [DONE]") {
+                try {
+                  const chunkStr = cleaned.slice(5).trim();
+                  const chunkJson = JSON.parse(chunkStr);
+                  const content = chunkJson.choices?.[0]?.delta?.content || chunkJson.choices?.[0]?.text || "";
+                  contentAccumulator += content;
+                } catch {}
+              }
+            }
+            data = { choices: [{ message: { content: contentAccumulator } }] };
+          } else {
+            data = JSON.parse(res.body);
+          }
         } catch (parseErr) {
           console.error("JSON parse error:", parseErr, "Body:", res.body);
           throw new Error(`Invalid response format (not JSON). Received:\n${res.body.trim().slice(0, 150)}...`);
@@ -335,12 +393,16 @@ ${diff.slice(0, 8000)}`;
             <RefreshCw size={13} />
           </button>
           <button 
-            className={`ghost p-1 rounded hover:bg-surface-2 transition-colors ${generatingMessage ? "animate-pulse text-accent" : ""}`}
+            className={`ghost p-1 rounded hover:bg-surface-2 transition-colors ${generatingMessage ? "opacity-50 cursor-not-allowed text-accent" : ""}`}
             onClick={handleGenerateCommit}
             disabled={generatingMessage}
             title={generatingMessage ? "Generating message..." : "Generate commit message (AI)"}
           >
-            <Sparkles size={13} />
+            {generatingMessage ? (
+              <RefreshCw size={13} className="animate-spin" />
+            ) : (
+              <Sparkles size={13} />
+            )}
           </button>
           <button 
             className="ghost p-1 rounded hover:bg-surface-2 transition-colors text-text-secondary hover:text-accent disabled:opacity-40"
@@ -410,12 +472,16 @@ ${diff.slice(0, 8000)}`;
             className="w-full h-[64px] text-xs bg-surface-1 border border-border rounded-mac pl-2 pr-9 py-1.5 text-text-primary placeholder:text-text-muted resize-none outline-none focus:border-accent transition-colors"
           />
           <button
-            className={`absolute right-1.5 top-1.5 ghost p-1 ${generatingMessage ? "animate-pulse text-accent" : ""}`}
+            className={`absolute right-1.5 top-1.5 ghost p-1 ${generatingMessage ? "opacity-50 cursor-not-allowed text-accent" : ""}`}
             onClick={handleGenerateCommit}
             disabled={generatingMessage}
             title={generatingMessage ? "Generating..." : "Generate commit message"}
           >
-            <Sparkles size={14} />
+            {generatingMessage ? (
+              <RefreshCw size={14} className="animate-spin" />
+            ) : (
+              <Sparkles size={14} />
+            )}
           </button>
         </div>
         <div className="flex items-center gap-2">
