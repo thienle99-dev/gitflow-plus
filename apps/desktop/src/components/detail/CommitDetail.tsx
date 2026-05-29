@@ -91,19 +91,35 @@ export default function CommitDetail() {
           <div className="text-2xs text-[#ff375f]">Unable to load changed files</div>
         ) : changedFiles && changedFiles.length > 0 ? (
           <div className="space-y-[1px]">
-            {changedFiles.map((file) => (
-              <button
-                key={`${file.status}:${file.old_path || ""}:${file.path}`}
-                className="list-item w-full grid grid-cols-[16px_minmax(0,1fr)] items-center gap-2 px-2 py-1 text-left"
-                onClick={() => selectFile(file.path)}
-                title={`${statusText(file.status)}: ${file.old_path ? `${file.old_path} -> ${file.path}` : file.path}`}
-              >
-                {statusIcon(file.status)}
-                <span className="text-xs truncate flex-1">
-                  {file.old_path ? `${file.old_path} -> ${file.path}` : file.path}
-                </span>
-              </button>
-            ))}
+            {changedFiles.map((file) => {
+              const displayPath = file.old_path ? `${file.old_path} -> ${file.path}` : file.path;
+              const fileName = getFileName(file.path);
+              const folder = file.old_path
+                ? `${getFolder(file.old_path)} -> ${getFolder(file.path)}`
+                : getFolder(file.path);
+              return (
+                <button
+                  key={`${file.status}:${file.old_path || ""}:${file.path}`}
+                  className="list-item w-full grid grid-cols-[18px_minmax(0,1fr)] items-center gap-2 px-2 py-1.5 text-left"
+                  onClick={() => selectFile(file.path)}
+                  title={`${statusText(file.status)}: ${displayPath}`}
+                >
+                  <span className="flex h-5 w-5 items-center justify-center">
+                    {statusIcon(file.status)}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-xs text-text-primary truncate leading-4">
+                      {fileName}
+                    </span>
+                    {folder && (
+                      <span className="block text-[10px] text-text-muted truncate leading-3">
+                        {folder}
+                      </span>
+                    )}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         ) : (
           <div className="text-2xs text-text-muted">No changed files</div>
@@ -144,4 +160,14 @@ function statusColor(status: string) {
     case "copied": return "text-[#64d2ff]";
     default: return "text-[#ff9f0a]";
   }
+}
+
+function getFileName(path: string) {
+  return path.split("/").pop() || path;
+}
+
+function getFolder(path: string) {
+  const parts = path.split("/");
+  parts.pop();
+  return parts.join("/");
 }
