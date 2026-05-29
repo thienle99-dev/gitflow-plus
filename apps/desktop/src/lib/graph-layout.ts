@@ -4,8 +4,9 @@ const COLORS = [
   "#0a84ff", "#30d158", "#ff9f0a", "#bf5af2", "#ff375f",
   "#64d2ff", "#ffd60a", "#5e5ce6", "#ff6482", "#00c7be",
 ];
-const LANE_WIDTH = 16;
-const GRAPH_LEFT_PADDING = 28;
+const ROW_HEIGHT = 28;
+const LANE_WIDTH = 12;
+const GRAPH_LEFT_PADDING = 18;
 
 export interface LayoutCommit {
   hash: string;
@@ -33,13 +34,13 @@ export function computeGraphLayout(
   const laneMap = prev ? new Map(prev.laneMap) : new Map<string, number>();
   const laneColors = prev ? new Map(prev.laneColors) : new Map<number, string>();
   let nextLane = prev?.nextLane ?? 0;
-  const yOffset = prev ? prev.commits.length * 32 : 0;
+  const yOffset = prev ? prev.commits.length * ROW_HEIGHT : 0;
 
   const newCommits: LayoutCommit[] = [];
 
   for (let i = 0; i < commits.length; i++) {
     const commit = commits[i];
-    const y = yOffset + i * 32 + 16;
+    const y = yOffset + i * ROW_HEIGHT + ROW_HEIGHT / 2;
 
     // Inherit first parent's lane if already known (incremental append case),
     // otherwise use a pre-reserved lane for this commit, or allocate a new one.

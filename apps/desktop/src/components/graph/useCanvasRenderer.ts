@@ -1,12 +1,12 @@
 import { useEffect } from "react";
 import type { LayoutState } from "@/lib/graph-layout";
 
-const ROW_HEIGHT = 32;
-const NODE_RADIUS = 4;
-const LANE_WIDTH = 16;
+const ROW_HEIGHT = 28;
+const NODE_RADIUS = 3.5;
+const MAX_GRAPH_COLUMN_WIDTH = 260;
 const LABEL_OFFSET = 12;
 const BUFFER_ROWS = 10;
-const GRAPH_LEFT_PADDING = 28;
+const GRAPH_LEFT_PADDING = 18;
 const BADGE_GAP = 8;
 
 interface RenderParams {
@@ -35,7 +35,8 @@ export function useCanvasRenderer({
     if (!canvas || !layout || layout.commits.length === 0) return;
 
     const dpr = window.devicePixelRatio || 1;
-    const width = Math.max(containerWidth, totalLanes * LANE_WIDTH + LABEL_OFFSET + 320);
+    const laneWidth = getLaneWidth(totalLanes);
+    const width = Math.max(containerWidth, MAX_GRAPH_COLUMN_WIDTH + 320);
     const height = containerHeight;
 
     const pixelWidth = Math.ceil(width * dpr);
@@ -67,14 +68,19 @@ export function useCanvasRenderer({
     const visible = layout.commits.slice(startRow, endRow);
     const commitByHash = new Map(layout.commits.map((commit) => [commit.hash, commit]));
     const offsetY = -scrollTop;
-    const graphColumnWidth = totalLanes * LANE_WIDTH + GRAPH_LEFT_PADDING + 18;
-    const messageX = graphColumnWidth + 14;
+    const visibleMaxLane = visible.reduce((max, commit) => Math.max(max, commit.lane), 0);
+    const visibleGraphWidth = visibleMaxLane * laneWidth + GRAPH_LEFT_PADDING + 18;
+    const graphColumnWidth = Math.min(
+      MAX_GRAPH_COLUMN_WIDTH,
+      visibleGraphWidth,
+    );
+    const messageX = Math.max(84, graphColumnWidth + 22);
 
     // Hover lane highlight
     if (hoveredLane !== null) {
       ctx.fillStyle = "rgba(255,255,255,0.035)";
-      const laneX = laneXFor(hoveredLane);
-      ctx.fillRect(laneX - 10, 0, LANE_WIDTH + 4, height);
+      const laneX = laneXFor(hoveredLane, laneWidth);
+      ctx.fillRect(laneX - 6, 0, laneWidth + 3, height);
     }
 
     const selected = selectedCommit
@@ -105,13 +111,15 @@ export function useCanvasRenderer({
         ctx.globalAlpha = 0.72;
         ctx.lineWidth = 1.35;
         if (parentLane === commit.lane) {
-          ctx.moveTo(commit.x, cy);
-          ctx.lineTo(commit.x, py);
+          const x = laneXFor(commit.lane, laneWidth);
+          ctx.moveTo(x, cy);
+          ctx.lineTo(x, py);
         } else {
-          const px = laneXFor(parentLane);
+          const x = laneXFor(commit.lane, laneWidth);
+          const px = laneXFor(parentLane, laneWidth);
           const bendY = Math.min(py, cy + ROW_HEIGHT * 0.58);
-          ctx.moveTo(commit.x, cy);
-          ctx.bezierCurveTo(commit.x, bendY, px, bendY, px, bendY);
+          ctx.moveTo(x, cy);
+          ctx.bezierCurveTo(x, bendY, px, bendY, px, bendY);
           ctx.lineTo(px, py);
         }
         ctx.stroke();
@@ -124,9 +132,10 @@ export function useCanvasRenderer({
     for (const commit of visible) {
       const cy = commit.y + offsetY;
       const isSelected = commit.hash === selectedCommit;
+      const x = laneXFor(commit.lane, laneWidth);
 
       ctx.beginPath();
-      ctx.arc(commit.x, cy, NODE_RADIUS, 0, Math.PI * 2);
+      ctx.arc(x, cy, NODE_RADIUS, 0, Math.PI * 2);
       ctx.fillStyle = isSelected ? "#ffffff" : commit.color;
       ctx.fill();
       ctx.strokeStyle = commit.color;
@@ -192,8 +201,14 @@ export function useCanvasRenderer({
   }, [canvasRef, layout, scrollTop, containerHeight, containerWidth, selectedCommit, hoveredLane, totalLanes]);
 }
 
-function laneXFor(lane: number) {
-  return lane * LANE_WIDTH + GRAPH_LEFT_PADDING;
+function laneXFor(lane: number, laneWidth: number) {
+  return lane * laneWidth + GRAPH_LEFT_PADDING;
+}
+
+function getLaneWidth(totalLanes: number) {
+  if (totalLanes <= 1) return 12;
+  const available = MAX_GRAPH_COLUMN_WIDTH - GRAPH_LEFT_PADDING - 16;
+  return Math.max(8, Math.min(12, available / Math.max(1, totalLanes - 1)));
 }
 
 function truncateText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {

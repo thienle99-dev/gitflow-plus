@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { LayoutState, LayoutCommit } from "@/lib/graph-layout";
 
-const ROW_HEIGHT = 32;
+const ROW_HEIGHT = 28;
 
 export interface HoverState {
   commit: LayoutCommit | null;

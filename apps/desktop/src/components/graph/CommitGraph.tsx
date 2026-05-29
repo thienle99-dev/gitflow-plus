@@ -10,7 +10,7 @@ import { useCanvasRenderer } from "./useCanvasRenderer";
 import { useHitTest } from "./useHitTest";
 import CommitTooltip from "./CommitTooltip";
 
-const ROW_HEIGHT = 32;
+const ROW_HEIGHT = 28;
 const LOAD_MORE_THRESHOLD = 200; // px from bottom
 
 export default function CommitGraph() {
