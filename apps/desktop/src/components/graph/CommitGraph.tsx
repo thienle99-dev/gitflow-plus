@@ -2,7 +2,7 @@ import { useRef, useEffect, useMemo, useState, useCallback } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useGitLog } from "@/queries/useGitLog";
-import { computeGraphLayout } from "@/lib/graph-layout";
+import { computeGraphLayout, type LayoutState } from "@/lib/graph-layout";
 import { api } from "@/api/tauri";
 import { useQueryClient } from "@tanstack/react-query";
 import ContextMenu, { type ContextMenuItem } from "@/components/common/ContextMenu";
@@ -24,13 +24,39 @@ export default function CommitGraph() {
   const [scrollTop, setScrollTop] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const layoutCacheRef = useRef<{
+    pages: NonNullable<typeof data>["pages"];
+    layout: LayoutState;
+  } | null>(null);
 
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; hash: string } | null>(null);
 
-  const commits = useMemo(() => data?.pages.flat() ?? [], [data]);
-  const layout = useMemo(() => computeGraphLayout(commits), [commits]);
+  const layout = useMemo(() => {
+    const pages = data?.pages ?? [];
+    const cache = layoutCacheRef.current;
+    let layout: LayoutState | null = null;
+    let startPage = 0;
 
-  const totalHeight = layout ? layout.commits.length * ROW_HEIGHT : 0;
+    if (
+      cache &&
+      cache.pages.length <= pages.length &&
+      cache.pages.every((page, index) => page === pages[index])
+    ) {
+      layout = cache.layout;
+      startPage = cache.pages.length;
+    }
+
+    for (let i = startPage; i < pages.length; i++) {
+      layout = computeGraphLayout(pages[i], layout ?? undefined);
+    }
+
+    const nextLayout = layout ?? computeGraphLayout([]);
+    layoutCacheRef.current = { pages: [...pages], layout: nextLayout };
+    return nextLayout;
+  }, [data]);
+  const commits = layout.commits;
+
+  const totalHeight = layout.commits.length * ROW_HEIGHT;
   const totalLanes = useMemo(
     () => layout.commits.reduce((max, c) => Math.max(max, c.lane + 1), 1),
     [layout],

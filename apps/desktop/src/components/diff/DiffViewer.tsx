@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useUIStore } from "@/stores/ui";
+import { useRepoStore } from "@/stores/repo";
 import { EditorView, basicSetup } from "codemirror";
 import { EditorState } from "@codemirror/state";
 import { keymap } from "@codemirror/view";
@@ -49,6 +50,7 @@ interface DiffViewerProps {
 
 export default function DiffViewer({ diff, filePath }: DiffViewerProps) {
   const diffViewMode = useUIStore((s) => s.diffViewMode);
+  const appTheme = useRepoStore((s) => s.theme);
   const leftRef = useRef<HTMLDivElement>(null);
   const rightRef = useRef<HTMLDivElement>(null);
   const unifiedRef = useRef<HTMLDivElement>(null);
@@ -56,15 +58,26 @@ export default function DiffViewer({ diff, filePath }: DiffViewerProps) {
   const rightView = useRef<EditorView | null>(null);
   const unifiedView = useRef<EditorView | null>(null);
 
-  const ext = filePath.split(".").pop() || "";
-  const lang = getLang(ext);
-  const theme = document.documentElement.classList.contains("dark") ? [oneDark] : [];
+  const ext = useMemo(() => filePath.split(".").pop() || "", [filePath]);
+  const lang = useMemo(() => getLang(ext), [ext]);
+  const theme = useMemo(
+    () => appTheme === "dark" ? [oneDark] : [],
+    [appTheme],
+  );
 
   // Determine old/new content from diff
-  const hunks = parseDiff(diff);
-  const oldContent = buildSideContent(hunks, "old");
-  const newContent = buildSideContent(hunks, "new");
-  const unifiedContent = buildUnifiedContent(hunks);
+  const hunks = useMemo(() => parseDiff(diff), [diff]);
+  const oldContent = useMemo(() => buildSideContent(hunks, "old"), [hunks]);
+  const newContent = useMemo(() => buildSideContent(hunks, "new"), [hunks]);
+  const unifiedContent = useMemo(() => buildUnifiedContent(hunks), [hunks]);
+  const deletedCount = useMemo(
+    () => hunks.reduce((s, h) => s + h.lines.filter(l => l.type === "delete").length, 0),
+    [hunks],
+  );
+  const addedCount = useMemo(
+    () => hunks.reduce((s, h) => s + h.lines.filter(l => l.type === "add").length, 0),
+    [hunks],
+  );
 
   // Destroy editors on unmount
   useEffect(() => {
@@ -99,22 +112,13 @@ export default function DiffViewer({ diff, filePath }: DiffViewerProps) {
       theme,
     );
 
-    // Scroll sync
-    const onScroll = () => {
-      const left = leftView.current;
-      const right = rightView.current;
-      if (left && right) {
-        left.dispatch({ effects: EditorView.scrollIntoView(0) });
-      }
-    };
-    const el = leftRef.current;
-    el?.addEventListener("scroll", onScroll);
-
     return () => {
       leftView.current?.destroy();
       rightView.current?.destroy();
+      leftView.current = null;
+      rightView.current = null;
     };
-  }, [diffViewMode, diff, filePath]);
+  }, [diffViewMode, oldContent, newContent, lang, theme]);
 
   // Mount unified view editor
   useEffect(() => {
@@ -134,15 +138,16 @@ export default function DiffViewer({ diff, filePath }: DiffViewerProps) {
 
     return () => {
       unifiedView.current?.destroy();
+      unifiedView.current = null;
     };
-  }, [diffViewMode, diff, filePath]);
+  }, [diffViewMode, unifiedContent, lang, theme]);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-surface-0">
       <div className="border-b border-border px-3 py-1 text-2xs text-text-muted flex items-center gap-3">
         <span>{filePath}</span>
-        <span className="text-[#ff375f]">-{hunks.reduce((s, h) => s + h.lines.filter(l => l.type === "delete").length, 0)}</span>
-        <span className="text-[#30d158]">+{hunks.reduce((s, h) => s + h.lines.filter(l => l.type === "add").length, 0)}</span>
+        <span className="text-[#ff375f]">-{deletedCount}</span>
+        <span className="text-[#30d158]">+{addedCount}</span>
       </div>
       {diffViewMode === "split" ? (
         <div className="flex-1 flex overflow-hidden">
