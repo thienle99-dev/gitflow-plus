@@ -21,6 +21,7 @@ export default function CommitGraph() {
   const queryClient = useQueryClient();
 
   const [containerHeight, setContainerHeight] = useState(600);
+  const [containerWidth, setContainerWidth] = useState(800);
   const [scrollTop, setScrollTop] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -57,6 +58,7 @@ export default function CommitGraph() {
   const commits = layout.commits;
 
   const totalHeight = layout.commits.length * ROW_HEIGHT;
+  const scrollHeight = Math.max(totalHeight, containerHeight);
   const totalLanes = useMemo(
     () => layout.commits.reduce((max, c) => Math.max(max, c.lane + 1), 1),
     [layout],
@@ -67,7 +69,9 @@ export default function CommitGraph() {
     const el = containerRef.current;
     if (!el) return;
     const observer = new ResizeObserver((entries) => {
-      setContainerHeight(entries[0].contentRect.height);
+      const { height, width } = entries[0].contentRect;
+      setContainerHeight(height);
+      setContainerWidth(width);
     });
     observer.observe(el);
     return () => observer.disconnect();
@@ -83,6 +87,7 @@ export default function CommitGraph() {
     layout,
     scrollTop,
     containerHeight,
+    containerWidth,
     selectedCommit,
     hoveredLane: hover.lane,
     totalLanes,
@@ -204,7 +209,7 @@ export default function CommitGraph() {
         onScroll={handleScroll}
       >
         {/* Tall div establishes the virtual scroll height */}
-        <div style={{ height: totalHeight, position: "relative" }}>
+        <div style={{ minHeight: "100%", height: scrollHeight, position: "relative" }}>
           {/* Canvas is sticky so it stays in view while the div scrolls behind it */}
           <canvas
             ref={canvasRef}

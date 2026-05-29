@@ -2,7 +2,16 @@ import { useMemo } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useCommitChangedFiles, useGitLog } from "@/queries/useGitLog";
-import { GitCommit, User, Clock, ArrowRight, FilePlus, FileMinus, FileEdit, Shuffle } from "lucide-react";
+import {
+  ArrowRight,
+  Clock,
+  FileDiff,
+  FileMinus,
+  FilePlus,
+  GitCommit,
+  Shuffle,
+  User,
+} from "lucide-react";
 
 export default function CommitDetail() {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -85,14 +94,11 @@ export default function CommitDetail() {
             {changedFiles.map((file) => (
               <button
                 key={`${file.status}:${file.old_path || ""}:${file.path}`}
-                className="list-item w-full flex items-center gap-2 px-2 py-[3px] text-left"
+                className="list-item w-full grid grid-cols-[16px_minmax(0,1fr)] items-center gap-2 px-2 py-1 text-left"
                 onClick={() => selectFile(file.path)}
-                title={file.old_path ? `${file.old_path} -> ${file.path}` : file.path}
+                title={`${statusText(file.status)}: ${file.old_path ? `${file.old_path} -> ${file.path}` : file.path}`}
               >
                 {statusIcon(file.status)}
-                <span className={`w-4 text-center text-2xs font-mono ${statusColor(file.status)}`}>
-                  {statusLabel(file.status)}
-                </span>
                 <span className="text-xs truncate flex-1">
                   {file.old_path ? `${file.old_path} -> ${file.path}` : file.path}
                 </span>
@@ -108,24 +114,25 @@ export default function CommitDetail() {
 }
 
 function statusIcon(status: string) {
+  const className = statusColor(status);
   switch (status) {
-    case "added": return <FilePlus size={12} className="text-[#30d158]" />;
-    case "deleted": return <FileMinus size={12} className="text-[#ff375f]" />;
+    case "added": return <FilePlus size={13} className={className} />;
+    case "deleted": return <FileMinus size={13} className={className} />;
     case "renamed":
-    case "copied": return <Shuffle size={12} className="text-[#64d2ff]" />;
-    default: return <FileEdit size={12} className="text-[#ff9f0a]" />;
+    case "copied": return <Shuffle size={13} className={className} />;
+    default: return <FileDiff size={13} className={className} />;
   }
 }
 
-function statusLabel(status: string) {
+function statusText(status: string) {
   switch (status) {
-    case "added": return "A";
-    case "deleted": return "D";
-    case "renamed": return "R";
-    case "copied": return "C";
-    case "typechange": return "T";
-    case "unmerged": return "U";
-    default: return "M";
+    case "added": return "Added";
+    case "deleted": return "Deleted";
+    case "renamed": return "Renamed";
+    case "copied": return "Copied";
+    case "typechange": return "Type changed";
+    case "unmerged": return "Unmerged";
+    default: return "Modified";
   }
 }
 

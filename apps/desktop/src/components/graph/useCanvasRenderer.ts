@@ -6,12 +6,15 @@ const NODE_RADIUS = 5;
 const LANE_WIDTH = 24;
 const LABEL_OFFSET = 12;
 const BUFFER_ROWS = 10;
+const GRAPH_LEFT_PADDING = 24;
+const BADGE_GAP = 8;
 
 interface RenderParams {
   canvasRef: React.RefObject<HTMLCanvasElement>;
   layout: LayoutState | null;
   scrollTop: number;
   containerHeight: number;
+  containerWidth: number;
   selectedCommit: string | null;
   hoveredLane: number | null;
   totalLanes: number;
@@ -22,6 +25,7 @@ export function useCanvasRenderer({
   layout,
   scrollTop,
   containerHeight,
+  containerWidth,
   selectedCommit,
   hoveredLane,
   totalLanes,
@@ -31,7 +35,7 @@ export function useCanvasRenderer({
     if (!canvas || !layout || layout.commits.length === 0) return;
 
     const dpr = window.devicePixelRatio || 1;
-    const width = totalLanes * LANE_WIDTH + LABEL_OFFSET + 400;
+    const width = Math.max(containerWidth, totalLanes * LANE_WIDTH + LABEL_OFFSET + 320);
     const height = containerHeight;
 
     const pixelWidth = Math.ceil(width * dpr);
@@ -48,6 +52,9 @@ export function useCanvasRenderer({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    const styles = getComputedStyle(document.documentElement);
+    const textPrimary = styles.getPropertyValue("--text-primary").trim() || "#e5e5e5";
+
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, width, height);
 
@@ -62,9 +69,18 @@ export function useCanvasRenderer({
 
     // Hover lane highlight
     if (hoveredLane !== null) {
-      ctx.fillStyle = "rgba(255,255,255,0.04)";
-      const laneX = hoveredLane * LANE_WIDTH + LABEL_OFFSET;
-      ctx.fillRect(laneX - 8, 0, LANE_WIDTH, height);
+      ctx.fillStyle = "rgba(255,255,255,0.035)";
+      const laneX = hoveredLane * LANE_WIDTH + GRAPH_LEFT_PADDING;
+      ctx.fillRect(laneX - 10, 0, LANE_WIDTH + 4, height);
+    }
+
+    const selected = selectedCommit
+      ? visible.find((commit) => commit.hash === selectedCommit)
+      : null;
+    if (selected) {
+      const cy = selected.y + offsetY;
+      ctx.fillStyle = "rgba(10,132,255,0.10)";
+      ctx.fillRect(0, cy - ROW_HEIGHT / 2, width, ROW_HEIGHT);
     }
 
     // Edges
@@ -80,7 +96,7 @@ export function useCanvasRenderer({
           ctx.moveTo(commit.x, cy);
           ctx.lineTo(commit.x, py);
         } else {
-          const px = parentLane * LANE_WIDTH + LANE_WIDTH / 2 + LABEL_OFFSET;
+          const px = parentLane * LANE_WIDTH + GRAPH_LEFT_PADDING;
           ctx.moveTo(commit.x, cy);
           ctx.bezierCurveTo(commit.x, cy + ROW_HEIGHT * 0.5, px, py - ROW_HEIGHT * 0.5, px, py);
         }
@@ -100,7 +116,7 @@ export function useCanvasRenderer({
       ctx.fillStyle = isSelected ? "#ffffff" : commit.color;
       ctx.fill();
       ctx.strokeStyle = commit.color;
-      ctx.lineWidth = isSelected ? 2 : 1;
+      ctx.lineWidth = isSelected ? 2 : 1.25;
       ctx.stroke();
     }
 
@@ -111,23 +127,32 @@ export function useCanvasRenderer({
     for (const commit of visible) {
       const cy = commit.y + offsetY;
       const labelX = commit.x + LABEL_OFFSET + 8;
+      const isSelected = commit.hash === selectedCommit;
 
-      const msg = commit.message.length > 60
-        ? commit.message.slice(0, 60) + "…"
-        : commit.message;
-
-      ctx.fillStyle = "var(--text-primary, #e5e5e5)";
-      ctx.fillText(msg, labelX, cy);
-
-      // Ref badges
-      let badgeX = labelX + Math.min(commit.message.length, 60) * 6.5 + 8;
-      for (const ref of commit.refs) {
+      ctx.font = `${isSelected ? "600 " : ""}12px -apple-system, BlinkMacSystemFont, system-ui, sans-serif`;
+      ctx.fillStyle = isSelected ? "#0a84ff" : textPrimary;
+      const refs = commit.refs.slice(0, 3);
+      const badgeLabels = refs.map((ref) => {
         const label = ref.ref_type === "remote"
           ? ref.name.split("/").slice(1).join("/")
           : ref.name;
-        const truncated = label.length > 12 ? label.slice(0, 11) + "…" : label;
-        const badgeW = truncated.length * 7 + 8;
+        return label.length > 12 ? label.slice(0, 11) + "…" : label;
+      });
+      const badgeWidths = refs.map((_, index) => badgeLabels[index].length * 7 + 10);
+      const totalBadgeWidth = badgeWidths.reduce((sum, badgeW) => sum + badgeW + 4, 0);
+      const badgeStartX = refs.length > 0
+        ? Math.max(labelX + 120, width - totalBadgeWidth - 18)
+        : width - 18;
+      const maxTextWidth = Math.max(80, badgeStartX - labelX - BADGE_GAP);
+      const msg = truncateText(ctx, commit.message, maxTextWidth);
+      ctx.fillText(msg, labelX, cy);
 
+      // Ref badges
+      let badgeX = badgeStartX;
+      for (let i = 0; i < refs.length; i++) {
+        const ref = refs[i];
+        const truncated = badgeLabels[i];
+        const badgeW = badgeWidths[i];
         const badgeColor =
           ref.ref_type === "head" ? "#ff9f0a"
           : ref.ref_type === "tag" ? "#bf5af2"
@@ -145,11 +170,27 @@ export function useCanvasRenderer({
 
         ctx.fillStyle = "#ffffff";
         ctx.font = "bold 9px -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
-        ctx.fillText(truncated, badgeX + 4, cy);
+        ctx.fillText(truncated, badgeX + 5, cy);
         ctx.font = "12px -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
 
         badgeX += badgeW + 4;
       }
     }
-  }, [canvasRef, layout, scrollTop, containerHeight, selectedCommit, hoveredLane, totalLanes]);
+  }, [canvasRef, layout, scrollTop, containerHeight, containerWidth, selectedCommit, hoveredLane, totalLanes]);
+}
+
+function truncateText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {
+  if (ctx.measureText(text).width <= maxWidth) return text;
+  const ellipsis = "…";
+  let lo = 0;
+  let hi = text.length;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (ctx.measureText(text.slice(0, mid) + ellipsis).width <= maxWidth) {
+      lo = mid;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  return text.slice(0, lo) + ellipsis;
 }
