@@ -1,0 +1,118 @@
+import { useEffect, useCallback } from "react";
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import { useUIStore } from "@/stores/ui";
+import { useRepoStore } from "@/stores/repo";
+import Toolbar from "@/components/common/Toolbar";
+import Sidebar from "@/components/sidebar/Sidebar";
+import CommitGraph from "@/components/graph/CommitGraph";
+import RightPanel from "@/components/detail/RightPanel";
+import BottomBar from "@/components/common/BottomBar";
+
+export default function MainLayout() {
+  const sidebarOpen = useUIStore((s) => s.sidebarOpen);
+  const toggleSidebar = useUIStore((s) => s.toggleSidebar);
+  const repoPath = useRepoStore((s) => s.repoPath);
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "b") {
+        e.preventDefault();
+        toggleSidebar();
+      }
+    },
+    [toggleSidebar],
+  );
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
+
+  if (!repoPath) {
+    return <WelcomeScreen />;
+  }
+
+  return (
+    <div className="h-full flex flex-col">
+      <Toolbar />
+      <div className="flex-1 overflow-hidden">
+        <PanelGroup direction="horizontal" autoSaveId="main-layout">
+          {sidebarOpen && (
+            <>
+              <Panel defaultSize={20} minSize={15} maxSize={35}>
+                <div className="vibrancy h-full border-r border-border overflow-hidden">
+                  <Sidebar />
+                </div>
+              </Panel>
+              <PanelResizeHandle className="w-[3px] bg-transparent hover:bg-accent transition-colors cursor-col-resize" />
+            </>
+          )}
+          <Panel defaultSize={sidebarOpen ? 50 : 70} minSize={30}>
+            <div className="h-full overflow-hidden bg-surface-0">
+              <CommitGraph />
+            </div>
+          </Panel>
+          <PanelResizeHandle className="w-[3px] bg-transparent hover:bg-accent transition-colors cursor-col-resize" />
+          <Panel defaultSize={30} minSize={20} maxSize={45}>
+            <RightPanel />
+          </Panel>
+        </PanelGroup>
+      </div>
+      <BottomBar />
+    </div>
+  );
+}
+
+function WelcomeScreen() {
+  const openRepo = useRepoStore((s) => s.openRepo);
+  const recentRepos = useRepoStore((s) => s.recentRepos);
+
+  const handleOpenRepo = async () => {
+    try {
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const selected = await open({ directory: true, multiple: false });
+      if (selected) {
+        openRepo(selected as string);
+      }
+    } catch (e) {
+      // Fallback: prompt path
+      const path = prompt("Enter repository path:");
+      if (path) openRepo(path);
+    }
+  };
+
+  return (
+    <div className="h-full flex items-center justify-center bg-surface-0">
+      <div className="text-center space-y-6 max-w-md">
+        <div className="text-4xl font-semibold text-text-secondary">GitFlow Desktop</div>
+        <p className="text-text-muted text-sm">
+          Open a local Git repository to get started
+        </p>
+        <button
+          onClick={handleOpenRepo}
+          className="px-6 py-2 bg-accent text-accent-fg rounded-mac text-sm font-medium hover:opacity-90 transition-opacity"
+        >
+          Open Repository
+        </button>
+        {recentRepos.length > 0 && (
+          <div className="mt-8">
+            <div className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">
+              Recent Repositories
+            </div>
+            <div className="space-y-1">
+              {recentRepos.map((repo) => (
+                <button
+                  key={repo}
+                  onClick={() => openRepo(repo)}
+                  className="w-full text-left px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-2 rounded-mac transition-colors"
+                >
+                  {repo}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

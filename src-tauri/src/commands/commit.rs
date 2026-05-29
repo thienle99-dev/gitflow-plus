@@ -1,0 +1,113 @@
+use std::process::Command;
+
+#[tauri::command]
+pub fn stage_file(path: String, file_path: String) -> Result<String, String> {
+    let output = Command::new("git")
+        .args([
+            "--no-pager",
+            "-C", &path,
+            "add",
+            &file_path,
+        ])
+        .output()
+        .map_err(|e| format!("Failed to run git: {}", e))?;
+
+    if output.status.success() {
+        Ok(format!("Staged '{}'", file_path))
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Failed to stage: {}", stderr.trim()))
+    }
+}
+
+#[tauri::command]
+pub fn unstage_file(path: String, file_path: String) -> Result<String, String> {
+    let output = Command::new("git")
+        .args([
+            "--no-pager",
+            "-C", &path,
+            "restore",
+            "--staged",
+            &file_path,
+        ])
+        .output()
+        .map_err(|e| format!("Failed to run git: {}", e))?;
+
+    if output.status.success() {
+        Ok(format!("Unstaged '{}'", file_path))
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Failed to unstage: {}", stderr.trim()))
+    }
+}
+
+#[tauri::command]
+pub fn stage_all(path: String) -> Result<String, String> {
+    let output = Command::new("git")
+        .args([
+            "--no-pager",
+            "-C", &path,
+            "add",
+            "-A",
+        ])
+        .output()
+        .map_err(|e| format!("Failed to run git: {}", e))?;
+
+    if output.status.success() {
+        Ok("Staged all changes".to_string())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Failed to stage all: {}", stderr.trim()))
+    }
+}
+
+#[tauri::command]
+pub fn unstage_all(path: String) -> Result<String, String> {
+    let output = Command::new("git")
+        .args([
+            "--no-pager",
+            "-C", &path,
+            "restore",
+            "--staged",
+            ".",
+        ])
+        .output()
+        .map_err(|e| format!("Failed to run git: {}", e))?;
+
+    if output.status.success() {
+        Ok("Unstaged all changes".to_string())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Failed to unstage all: {}", stderr.trim()))
+    }
+}
+
+#[tauri::command]
+pub fn commit_changes(path: String, message: String, amend: Option<bool>) -> Result<String, String> {
+    let mut args = vec![
+        "--no-pager".to_string(),
+        "-C".to_string(),
+        path,
+        "commit".to_string(),
+        "-m".to_string(),
+        message,
+    ];
+
+    if amend.unwrap_or(false) {
+        args.push("--amend".to_string());
+    }
+
+    let output = Command::new("git")
+        .args(&args)
+        .output()
+        .map_err(|e| format!("Failed to run git: {}", e))?;
+
+    if output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let short = stdout.lines().last().unwrap_or("Committed").trim().to_string();
+        Ok(short)
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Commit failed: {}", stderr.trim()))
+    }
+}
