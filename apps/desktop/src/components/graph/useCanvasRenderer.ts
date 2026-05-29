@@ -4,7 +4,6 @@ import type { LayoutState } from "@/lib/graph-layout";
 const ROW_HEIGHT = 28;
 const NODE_RADIUS = 3.5;
 const MAX_GRAPH_COLUMN_WIDTH = 260;
-const LABEL_OFFSET = 12;
 const BUFFER_ROWS = 10;
 const GRAPH_LEFT_PADDING = 18;
 const BADGE_GAP = 8;
@@ -36,8 +35,19 @@ export function useCanvasRenderer({
 
     const dpr = window.devicePixelRatio || 1;
     const laneWidth = getLaneWidth(totalLanes);
-    const width = Math.max(containerWidth, MAX_GRAPH_COLUMN_WIDTH + 320);
     const height = containerHeight;
+    const startRow = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER_ROWS);
+    const endRow = Math.min(
+      layout.commits.length,
+      Math.ceil((scrollTop + containerHeight) / ROW_HEIGHT) + BUFFER_ROWS,
+    );
+
+    const visible = layout.commits.slice(startRow, endRow);
+    const commitByHash = new Map(layout.commits.map((commit) => [commit.hash, commit]));
+    const offsetY = -scrollTop;
+    const graphRight = getVisibleGraphRight(layout, visible, commitByHash, offsetY, height, laneWidth);
+    const messageX = Math.max(84, graphRight + 24);
+    const width = Math.max(containerWidth, messageX + 360);
 
     const pixelWidth = Math.ceil(width * dpr);
     const pixelHeight = Math.ceil(height * dpr);
@@ -58,23 +68,6 @@ export function useCanvasRenderer({
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, width, height);
-
-    const startRow = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER_ROWS);
-    const endRow = Math.min(
-      layout.commits.length,
-      Math.ceil((scrollTop + containerHeight) / ROW_HEIGHT) + BUFFER_ROWS,
-    );
-
-    const visible = layout.commits.slice(startRow, endRow);
-    const commitByHash = new Map(layout.commits.map((commit) => [commit.hash, commit]));
-    const offsetY = -scrollTop;
-    const visibleMaxLane = visible.reduce((max, commit) => Math.max(max, commit.lane), 0);
-    const visibleGraphWidth = visibleMaxLane * laneWidth + GRAPH_LEFT_PADDING + 18;
-    const graphColumnWidth = Math.min(
-      MAX_GRAPH_COLUMN_WIDTH,
-      visibleGraphWidth,
-    );
-    const messageX = Math.max(84, graphColumnWidth + 22);
 
     // Hover lane highlight
     if (hoveredLane !== null) {
@@ -205,10 +198,38 @@ function laneXFor(lane: number, laneWidth: number) {
   return lane * laneWidth + GRAPH_LEFT_PADDING;
 }
 
+function getVisibleGraphRight(
+  layout: LayoutState,
+  visible: LayoutState["commits"],
+  commitByHash: Map<string, LayoutState["commits"][number]>,
+  offsetY: number,
+  height: number,
+  laneWidth: number,
+) {
+  let maxLane = visible.reduce((max, commit) => Math.max(max, commit.lane), 0);
+
+  for (const commit of layout.commits) {
+    const cy = commit.y + offsetY;
+    for (let i = 0; i < commit.parentLanes.length; i++) {
+      const parent = commitByHash.get(commit.parents[i]);
+      if (parent && parent.y <= commit.y) {
+        continue;
+      }
+      const py = parent ? parent.y + offsetY : cy + ROW_HEIGHT;
+      if (Math.max(cy, py) < -ROW_HEIGHT || Math.min(cy, py) > height + ROW_HEIGHT) {
+        continue;
+      }
+      maxLane = Math.max(maxLane, commit.lane, commit.parentLanes[i]);
+    }
+  }
+
+  return laneXFor(maxLane, laneWidth) + NODE_RADIUS;
+}
+
 function getLaneWidth(totalLanes: number) {
   if (totalLanes <= 1) return 12;
   const available = MAX_GRAPH_COLUMN_WIDTH - GRAPH_LEFT_PADDING - 16;
-  return Math.max(8, Math.min(12, available / Math.max(1, totalLanes - 1)));
+  return Math.max(5, Math.min(12, available / Math.max(1, totalLanes - 1)));
 }
 
 function truncateText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {
