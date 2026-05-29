@@ -72,20 +72,39 @@ export default function CommitGraph() {
     const el = containerRef.current;
     if (!el) return;
 
+    let frame: number | null = null;
+    let lastWidth = 0;
+    let lastHeight = 0;
+
     const measure = () => {
-      setContainerHeight(el.clientHeight);
-      setContainerWidth(el.clientWidth);
+      const width = el.clientWidth;
+      const height = el.clientHeight;
+      if (width === lastWidth && height === lastHeight) return;
+      lastWidth = width;
+      lastHeight = height;
+      setContainerWidth(width);
+      setContainerHeight(height);
+    };
+
+    const scheduleMeasure = () => {
+      if (frame !== null) return;
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        measure();
+      });
     };
 
     measure();
-    const frame = requestAnimationFrame(measure);
-    const observer = new ResizeObserver(measure);
+    scheduleMeasure();
+    const observer = new ResizeObserver(scheduleMeasure);
     observer.observe(el);
-    window.addEventListener("resize", measure);
+    window.addEventListener("resize", scheduleMeasure);
     return () => {
-      cancelAnimationFrame(frame);
+      if (frame !== null) {
+        cancelAnimationFrame(frame);
+      }
       observer.disconnect();
-      window.removeEventListener("resize", measure);
+      window.removeEventListener("resize", scheduleMeasure);
     };
   }, []);
 
