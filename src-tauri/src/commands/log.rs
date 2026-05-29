@@ -33,6 +33,7 @@ pub fn git_log(
         "log".to_string(),
         format!("--max-count={}", limit),
         "--all".to_string(),
+        "--topo-order".to_string(),
         // %D = ref names (same as --decorate but inline, empty if none)
         "--pretty=format:%H|%P|%an|%ae|%ai|%D|%s".to_string(),
     ];

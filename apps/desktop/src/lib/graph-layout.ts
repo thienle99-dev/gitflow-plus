@@ -12,6 +12,7 @@ export interface LayoutCommit {
   lane: number;
   y: number;
   x: number;
+  parents: string[];
   parentLanes: number[];
   color: string;
 }
@@ -68,6 +69,7 @@ export function computeGraphLayout(
       lane,
       y,
       x: lane * 24 + 24,
+      parents: commit.parents,
       parentLanes,
       color: laneColors.get(lane) || COLORS[0],
     });

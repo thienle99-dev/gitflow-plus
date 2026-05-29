@@ -161,7 +161,7 @@ pub fn git_rebase_status(path: &str) -> Result<(bool, Vec<String>), String> {
             .output()
         {
             for line in String::from_utf8_lossy(&status_output.stdout).lines() {
-                if (line.starts_with("UU") || line.starts_with("AA") || line.starts_with("DD")) {
+                if line.starts_with("UU") || line.starts_with("AA") || line.starts_with("DD")  {
                     if let Some(file) = line.get(3..) {
                         conflicts.push(file.trim().to_string());
                     }

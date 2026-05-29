@@ -65,7 +65,10 @@ export function useCanvasRenderer({
     );
 
     const visible = layout.commits.slice(startRow, endRow);
+    const commitByHash = new Map(layout.commits.map((commit) => [commit.hash, commit]));
     const offsetY = -scrollTop;
+    const graphColumnWidth = totalLanes * LANE_WIDTH + GRAPH_LEFT_PADDING + 16;
+    const messageX = graphColumnWidth + 12;
 
     // Hover lane highlight
     if (hoveredLane !== null) {
@@ -86,8 +89,16 @@ export function useCanvasRenderer({
     // Edges
     for (const commit of visible) {
       const cy = commit.y + offsetY;
-      for (const parentLane of commit.parentLanes) {
-        const py = cy + ROW_HEIGHT;
+      for (let i = 0; i < commit.parentLanes.length; i++) {
+        const parentLane = commit.parentLanes[i];
+        const parent = commitByHash.get(commit.parents[i]);
+        if (parent && parent.y <= commit.y) {
+          continue;
+        }
+        const py = parent ? parent.y + offsetY : cy + ROW_HEIGHT;
+        if (py < -ROW_HEIGHT || cy > height + ROW_HEIGHT) {
+          continue;
+        }
         ctx.beginPath();
         ctx.strokeStyle = commit.color;
         ctx.globalAlpha = 0.5;
@@ -126,7 +137,6 @@ export function useCanvasRenderer({
 
     for (const commit of visible) {
       const cy = commit.y + offsetY;
-      const labelX = commit.x + LABEL_OFFSET + 8;
       const isSelected = commit.hash === selectedCommit;
 
       ctx.font = `${isSelected ? "600 " : ""}12px -apple-system, BlinkMacSystemFont, system-ui, sans-serif`;
@@ -141,11 +151,11 @@ export function useCanvasRenderer({
       const badgeWidths = refs.map((_, index) => badgeLabels[index].length * 7 + 10);
       const totalBadgeWidth = badgeWidths.reduce((sum, badgeW) => sum + badgeW + 4, 0);
       const badgeStartX = refs.length > 0
-        ? Math.max(labelX + 120, width - totalBadgeWidth - 18)
+        ? Math.max(messageX + 120, width - totalBadgeWidth - 18)
         : width - 18;
-      const maxTextWidth = Math.max(80, badgeStartX - labelX - BADGE_GAP);
+      const maxTextWidth = Math.max(80, badgeStartX - messageX - BADGE_GAP);
       const msg = truncateText(ctx, commit.message, maxTextWidth);
-      ctx.fillText(msg, labelX, cy);
+      ctx.fillText(msg, messageX, cy);
 
       // Ref badges
       let badgeX = badgeStartX;

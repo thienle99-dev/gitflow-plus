@@ -51,7 +51,7 @@ pub fn git_blame(path: &str, file_path: &str) -> Result<Vec<BlameLine>, String> 
                 current_author = line[6..].to_string();
             } else if line.starts_with("author-time ") {
                 let ts: i64 = line[12..].trim().parse().unwrap_or(0);
-                use chrono::{DateTime, Utc};
+                use chrono::DateTime;
                 let dt = DateTime::from_timestamp(ts, 0)
                     .map(|d| d.format("%Y-%m-%d %H:%M:%S").to_string())
                     .unwrap_or_else(|| "unknown".to_string());
