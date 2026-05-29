@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import type { LayoutState } from "@/lib/graph-layout";
+import type { Theme } from "@/stores/repo";
 
 const ROW_HEIGHT = 28;
 const NODE_RADIUS = 3.5;
@@ -38,6 +39,7 @@ interface RenderParams {
   selectedCommit: string | null;
   hoveredLane: number | null;
   totalLanes: number;
+  theme: Theme;
 }
 
 export function useCanvasRenderer({
@@ -50,6 +52,7 @@ export function useCanvasRenderer({
   selectedCommit,
   hoveredLane,
   totalLanes,
+  theme,
 }: RenderParams) {
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -90,11 +93,14 @@ export function useCanvasRenderer({
     if (!ctx) return;
 
     const styles = getComputedStyle(document.body);
+    const surface0 = styles.getPropertyValue("--surface-0").trim() || "#1c1c1e";
     const textPrimary = styles.getPropertyValue("--text-primary").trim() || "#e5e5e5";
     const textSecondary = styles.getPropertyValue("--text-secondary").trim() || "#a1a1a6";
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = surface0;
+    ctx.fillRect(0, 0, width, height);
 
     // Hover lane highlight
     if (hoveredLane !== null) {
@@ -223,7 +229,7 @@ export function useCanvasRenderer({
       ctx.fillText(truncateText(ctx, commit.author || "Unknown", AUTHOR_COLUMN_WIDTH - 8), columns.authorX, cy);
       ctx.fillText(truncateText(ctx, formatCommitDate(commit.date), DATE_COLUMN_WIDTH - 8), columns.dateX, cy);
     }
-  }, [canvasRef, layout, graphIndex, scrollTop, containerHeight, containerWidth, selectedCommit, hoveredLane, totalLanes]);
+  }, [canvasRef, layout, graphIndex, scrollTop, containerHeight, containerWidth, selectedCommit, hoveredLane, totalLanes, theme]);
 }
 
 function getColumns(width: number, messageX: number) {

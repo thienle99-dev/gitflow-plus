@@ -17,6 +17,7 @@ const EDGE_BLOCK_SIZE = 128;
 export default function CommitGraph() {
   const repoPath = useRepoStore((s) => s.repoPath);
   const selectedRef = useRepoStore((s) => s.selectedRef);
+  const theme = useRepoStore((s) => s.theme);
   const selectCommit = useUIStore((s) => s.selectCommit);
   const selectedCommit = useUIStore((s) => s.selectedCommit);
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useGitLog(repoPath, selectedRef);
@@ -123,6 +124,7 @@ export default function CommitGraph() {
     selectedCommit,
     hoveredLane: hover.lane,
     totalLanes,
+    theme,
   });
 
   const handleScroll = useCallback(
