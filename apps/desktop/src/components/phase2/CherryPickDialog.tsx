@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useCherryPick, useCherryPickAbort } from "@/queries/useGitCherryPick";
-import { GitCommit, AlertTriangle, Check, X, Copy } from "lucide-react";
+import { GitCommit, AlertTriangle, X, Copy } from "lucide-react";
 
 interface CherryPickDialogProps {
   open: boolean;

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { api } from "@/api/tauri";
-import { Check, X, Combine, ArrowLeft } from "lucide-react";
+import { Check, Combine, ArrowLeft } from "lucide-react";
 import { EditorView, basicSetup } from "codemirror";
 import { EditorState } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
@@ -12,12 +12,6 @@ interface ConflictResolverProps {
   filePath: string;
   onComplete: () => void;
   onCancel: () => void;
-}
-
-interface ConflictHunk {
-  ours: string;
-  theirs: string;
-  resolved: string | null;
 }
 
 export default function ConflictResolver({ filePath, onComplete, onCancel }: ConflictResolverProps) {
@@ -38,14 +32,12 @@ export default function ConflictResolver({ filePath, onComplete, onCancel }: Con
     setTimeout(() => setToast(null), 3000);
   };
 
-  // Fetch conflicted file content (ours / theirs from stage 2/3)
+  // Fetch conflicted file content (ours / theirs from conflict markers in the working tree)
   useEffect(() => {
     if (!repoPath) return;
     (async () => {
       try {
-        // Get the merge conflict diff for context — ours/theirs from commit diff
         const rawDiff = await api.diff.file(repoPath, filePath);
-        // Parse conflict markers to separate ours and theirs
         const lines = rawDiff.split("\n");
         const ours: string[] = [];
         const theirs: string[] = [];
@@ -72,6 +64,7 @@ export default function ConflictResolver({ filePath, onComplete, onCancel }: Con
 
         setOursContent(ours.join("\n"));
         setTheirsContent(theirs.join("\n"));
+        // Default result is OURS
         setResultContent(ours.join("\n"));
       } catch (e: any) {
         showToast(`Error loading conflict: ${e}`);
@@ -83,7 +76,12 @@ export default function ConflictResolver({ filePath, onComplete, onCancel }: Con
   useEffect(() => {
     if (!oursRef.current || !theirsRef.current || !resultRef.current) return;
 
-    const readOnlyExtensions = [basicSetup, oneDark, javascript(), EditorView.editable.of(false)];
+    const readOnlyExtensions = [
+      basicSetup,
+      oneDark,
+      javascript(),
+      EditorView.editable.of(false),
+    ];
 
     const oursView = new EditorView({
       state: EditorState.create({ doc: oursContent, extensions: readOnlyExtensions }),
@@ -118,9 +116,7 @@ export default function ConflictResolver({ filePath, onComplete, onCancel }: Con
     if (!repoPath) return;
     setResolving(true);
     try {
-      // Write resolved content back using the merge continue
-      // Stage the resolved file
-      const tmpPath = `${filePath}.resolved`;
+      // Stage the resolved file so the merge machinery picks it up
       await api.commit.stage(repoPath, filePath);
       await api.merge.continue(repoPath);
       queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
@@ -145,7 +141,7 @@ export default function ConflictResolver({ filePath, onComplete, onCancel }: Con
         </span>
       </div>
 
-      {/* 3-panel content */}
+      {/* 3-panel content area */}
       <div className="flex-1 grid grid-rows-[1fr_1fr_1fr] gap-0 overflow-hidden">
         {/* OURS panel */}
         <div className="flex flex-col border-b border-border overflow-hidden">

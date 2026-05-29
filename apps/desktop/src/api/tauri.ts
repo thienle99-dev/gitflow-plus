@@ -219,4 +219,19 @@ export const api = {
     undo: (path: string) =>
       invoke<string>("undo_last", { path }),
   },
+
+  rebase: {
+    start: (path: string, base: string, todos: { action: string; commit_hash: string; message: string }[]) =>
+      invoke<{ success: boolean; message: string; conflicted_files: string[] }>("rebase_start", { path, base, todos }),
+    continue: (path: string) =>
+      invoke<string>("rebase_continue", { path }),
+    skip: (path: string) =>
+      invoke<string>("rebase_skip", { path }),
+    abort: (path: string) =>
+      invoke<string>("rebase_abort", { path }),
+    status: (path: string) =>
+      invoke<[boolean, string[]]>("rebase_status", { path }),
+    todoList: (path: string, base: string) =>
+      invoke<{ action: string; commit_hash: string; message: string }[]>("rebase_todo_list", { path, base }),
+  },
 };
