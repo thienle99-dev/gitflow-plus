@@ -15,7 +15,8 @@ pub fn git_status(path: String) -> Result<Vec<StatusEntry>, String> {
             "-C", &path,
             "status",
             "--porcelain",
-            "-u",
+            "--untracked-files=normal",
+            "--no-ahead-behind",
         ])
         .output()
         .map_err(|e| format!("Failed to run git: {}", e))?;

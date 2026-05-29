@@ -4,7 +4,7 @@ import { api, type Commit, type FileChange, type Branch, type RepoInfo } from "@
 export function useGitLog(repoPath: string | null, page: number = 0) {
   return useQuery<Commit[]>({
     queryKey: ["git", repoPath, "log", page],
-    queryFn: () => api.log(repoPath!, page),
+    queryFn: () => api.log(repoPath!, page, 100),
     enabled: !!repoPath,
     staleTime: 30_000,
   });
@@ -16,7 +16,6 @@ export function useGitStatus(repoPath: string | null) {
     queryFn: () => api.status(repoPath!),
     enabled: !!repoPath,
     staleTime: 0,
-    refetchInterval: 5_000,
   });
 }
 

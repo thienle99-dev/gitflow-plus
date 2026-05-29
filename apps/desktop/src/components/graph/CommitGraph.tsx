@@ -97,7 +97,7 @@ export default function CommitGraph() {
   };
 
   const visibleCommits = layout.commits.slice(visibleRange.start, visibleRange.end);
-  const totalLanes = Math.max(...layout.commits.map((c) => c.lane + 1), 0);
+  const totalLanes = layout.commits.reduce((max, c) => Math.max(max, c.lane + 1), 0);
   const svgWidth = totalLanes * LANE_WIDTH + LABEL_OFFSET + 200;
 
   const ctxItems: ContextMenuItem[] = ctxMenu
