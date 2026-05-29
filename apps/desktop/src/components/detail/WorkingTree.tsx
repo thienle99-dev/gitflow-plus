@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useGitStatus } from "@/queries/useGitLog";
-import { api, type FileChange } from "@/api/tauri";
+import { api, type FileChange, type Branch } from "@/api/tauri";
 import { useQueryClient } from "@tanstack/react-query";
 import ContextMenu, { type ContextMenuItem } from "@/components/common/ContextMenu";
 import {
@@ -147,6 +147,7 @@ export default function WorkingTree() {
     const customUrl = localStorage.getItem("gitflowAiApiUrl") || "";
     const limit = Number(localStorage.getItem("gitflowAiTokenLimit") || "4096");
     const detailLevel = localStorage.getItem("gitflowAiDetailLevel") || "medium";
+    const customRules = localStorage.getItem("gitflowAiCustomRules") || "";
 
     if (!apiKey && !["ollama", "llama.cpp"].includes(model)) {
       // Offline fallback
@@ -168,6 +169,27 @@ export default function WorkingTree() {
         return;
       }
 
+      let branchName = "";
+      try {
+        const branches = await api.branches.list(repoPath!);
+        const currentBranch = branches.find((b: Branch) => b.current);
+        if (currentBranch) {
+          branchName = currentBranch.name;
+        }
+      } catch (err) {
+        console.error("Failed to fetch branch name:", err);
+      }
+
+      let customRulesInstruction = "";
+      if (customRules.trim()) {
+        customRulesInstruction = `\nUSER CUSTOM RULES (YOU MUST STRICTLY FOLLOW THESE RULES ABOVE ALL OTHERS):\n${customRules.trim()}\n`;
+      }
+
+      let branchContext = "";
+      if (branchName) {
+        branchContext = `\nCurrent Git Branch Name: ${branchName} (Use this if the USER CUSTOM RULES ask you to extract Jira tickets or ticket numbers from the branch name)\n`;
+      }
+
       let styleInstruction = "";
       if (detailLevel === "minimal") {
         styleInstruction = "3. Return ONLY a single line (the subject line). Do NOT add any body, description paragraphs, bullet points, or list of changes.";
@@ -186,8 +208,8 @@ CRITICAL INSTRUCTIONS:
 2. Keep the first line (subject) strictly under 50 characters.
 ${styleInstruction}
 4. ABSOLUTELY NO markdown code blocks (do NOT wrap in \`\`\`), no prefixing with "Here is...", no introductory/explanatory text, and no quotes. Return ONLY the raw commit message text.
-5. Use English for the commit message.
-
+5. Use English for the commit message unless requested otherwise by user custom rules.
+${branchContext}${customRulesInstruction}
 Staged diff:
 ${diff.slice(0, 8000)}`;
 

@@ -11,6 +11,7 @@ const LS_KEY_DIFF_MODE = "gitflowDefaultDiffViewMode";
 const LS_KEY_AUTO_FETCH = "gitflowAutoFetch";
 const LS_KEY_FETCHED_MODELS = "gitflowAiFetchedModels";
 const LS_KEY_AI_DETAIL_LEVEL = "gitflowAiDetailLevel";
+const LS_KEY_AI_CUSTOM_RULES = "gitflowAiCustomRules";
 
 interface SettingsDialogProps {
   onClose?: () => void;
@@ -49,6 +50,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
   const [fetchedModels, setFetchedModels] = useState<{ id: string; label: string }[]>([]);
   const [fetchingModels, setFetchingModels] = useState(false);
   const [aiDetailLevel, setAiDetailLevel] = useState<"minimal" | "medium" | "detailed">("medium");
+  const [customRules, setCustomRules] = useState("");
 
   const [hasChanges, setHasChanges] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -69,6 +71,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       const savedLimit = localStorage.getItem(LS_KEY_TOKEN_LIMIT);
       const savedFetched = localStorage.getItem(LS_KEY_FETCHED_MODELS);
       const savedDetailLevel = localStorage.getItem(LS_KEY_AI_DETAIL_LEVEL) as "minimal" | "medium" | "detailed";
+      const savedCustomRules = localStorage.getItem(LS_KEY_AI_CUSTOM_RULES) || "";
 
       if (savedDiffMode) setDefaultDiffMode(savedDiffMode);
       if (savedAutoFetch !== null) setAutoFetch(savedAutoFetch === "true");
@@ -82,6 +85,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
         } catch {}
       }
       if (savedDetailLevel) setAiDetailLevel(savedDetailLevel);
+      setCustomRules(savedCustomRules);
       setSelectedTheme(currentTheme);
     } catch {
       // localStorage is not available
@@ -98,6 +102,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
     const storedLimit = localStorage.getItem(LS_KEY_TOKEN_LIMIT) || "4096";
     const storedFetched = localStorage.getItem(LS_KEY_FETCHED_MODELS) || "[]";
     const storedDetailLevel = (localStorage.getItem(LS_KEY_AI_DETAIL_LEVEL) as "minimal" | "medium" | "detailed") || "medium";
+    const storedCustomRules = localStorage.getItem(LS_KEY_AI_CUSTOM_RULES) || "";
 
     setHasChanges(
       theme !== currentTheme ||
@@ -108,9 +113,10 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       model !== storedModel ||
       tokenLimit !== Number(storedLimit) ||
       JSON.stringify(fetchedModels) !== storedFetched ||
-      aiDetailLevel !== storedDetailLevel
+      aiDetailLevel !== storedDetailLevel ||
+      customRules !== storedCustomRules
     );
-  }, [theme, currentTheme, defaultDiffMode, autoFetch, apiKey, apiUrl, model, tokenLimit, fetchedModels, aiDetailLevel]);
+  }, [theme, currentTheme, defaultDiffMode, autoFetch, apiKey, apiUrl, model, tokenLimit, fetchedModels, aiDetailLevel, customRules]);
 
   const handleFetchModels = async () => {
     if (!apiUrl) {
@@ -202,6 +208,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       localStorage.setItem(LS_KEY_TOKEN_LIMIT, String(tokenLimit));
       localStorage.setItem(LS_KEY_FETCHED_MODELS, JSON.stringify(fetchedModels));
       localStorage.setItem(LS_KEY_AI_DETAIL_LEVEL, aiDetailLevel);
+      localStorage.setItem(LS_KEY_AI_CUSTOM_RULES, customRules);
       
       setHasChanges(false);
       showToast("Settings saved successfully");
@@ -430,6 +437,18 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
                 <option value="medium">Standard (Subject + brief change list)</option>
                 <option value="detailed">Detailed (Comprehensive conventional format)</option>
               </select>
+            </div>
+
+            {/* Custom Rules */}
+            <div className="space-y-1 pt-2">
+              <label className="text-xs font-semibold text-text-primary">Custom Guidelines / Prompt Rules</label>
+              <textarea
+                value={customRules}
+                onChange={(e) => setCustomRules(e.target.value)}
+                placeholder="e.g. Always start with Jira ticket number [PROJ-XXXX] extracted from the branch name, or write in Vietnamese."
+                rows={3}
+                className="w-full px-2 py-1.5 text-xs bg-surface-1 border border-border rounded-mac text-text-primary focus:border-accent outline-none resize-y placeholder:text-text-muted/60"
+              />
             </div>
           </div>
         )}
