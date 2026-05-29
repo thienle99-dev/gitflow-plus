@@ -176,7 +176,10 @@ ${diff.slice(0, 8000)}`;
       let message = "";
 
       if (model.startsWith("claude-")) {
-        const endpoint = customUrl ? customUrl : "https://api.anthropic.com/v1/messages";
+        let endpoint = customUrl ? customUrl.trim() : "https://api.anthropic.com/v1/messages";
+        if (customUrl && !endpoint.endsWith("/messages")) {
+          endpoint = endpoint.replace(/\/+$/, "") + "/messages";
+        }
         const headers: Record<string, string> = {
           "Content-Type": "application/json",
           "x-api-key": apiKey,
@@ -192,17 +195,27 @@ ${diff.slice(0, 8000)}`;
         if (res.status < 200 || res.status >= 300) {
           throw new Error(`API Error: ${res.status}`);
         }
-        const data = JSON.parse(res.body);
+        let data: any;
+        try {
+          data = JSON.parse(res.body);
+        } catch (parseErr) {
+          console.error("JSON parse error:", parseErr, "Body:", res.body);
+          throw new Error(`Invalid response format (not JSON). Received:\n${res.body.trim().slice(0, 150)}...`);
+        }
         message = data.content?.[0]?.text || "";
       } else {
         // OpenAI / Ollama / llama.cpp format
         let endpoint = "";
         if (model === "ollama") {
-          endpoint = customUrl ? customUrl : "http://localhost:11434/v1/chat/completions";
+          endpoint = customUrl ? customUrl.trim() : "http://localhost:11434/v1/chat/completions";
         } else if (model === "llama.cpp") {
-          endpoint = customUrl ? customUrl : "http://localhost:8080/v1/chat/completions";
+          endpoint = customUrl ? customUrl.trim() : "http://localhost:8080/v1/chat/completions";
         } else {
-          endpoint = customUrl ? customUrl : "https://api.openai.com/v1/chat/completions";
+          endpoint = customUrl ? customUrl.trim() : "https://api.openai.com/v1/chat/completions";
+        }
+
+        if (customUrl && !endpoint.endsWith("/chat/completions") && !endpoint.endsWith("/completions")) {
+          endpoint = endpoint.replace(/\/+$/, "") + "/chat/completions";
         }
 
         const headers: Record<string, string> = {
@@ -221,7 +234,13 @@ ${diff.slice(0, 8000)}`;
         if (res.status < 200 || res.status >= 300) {
           throw new Error(`API Error: ${res.status}`);
         }
-        const data = JSON.parse(res.body);
+        let data: any;
+        try {
+          data = JSON.parse(res.body);
+        } catch (parseErr) {
+          console.error("JSON parse error:", parseErr, "Body:", res.body);
+          throw new Error(`Invalid response format (not JSON). Received:\n${res.body.trim().slice(0, 150)}...`);
+        }
         message = data.choices?.[0]?.message?.content || "";
       }
 

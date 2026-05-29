@@ -111,20 +111,20 @@
 ## Phase 2: Advanced Git + AI Features (after Phase 1 ships)
 
 ### Git Advanced
-- [ ] Merge branch + detect conflict state
-- [ ] Conflict resolver UI (3-panel CodeMirror)
-- [ ] Interactive rebase (GIT_SEQUENCE_EDITOR approach)
-- [ ] Stash management
-- [ ] Tag CRUD
-- [ ] Git log search/filter
-- [ ] Cherry-pick (pick commit từ branch khác)
-- [ ] Blame view (inline trong diff viewer — ai viết dòng nào)
+- [x] Merge branch + detect conflict state
+- [x] Conflict resolver UI (3-panel CodeMirror)
+- [x] Interactive rebase (GIT_SEQUENCE_EDITOR approach)
+- [x] Stash management
+- [x] Tag CRUD
+- [x] Git log search/filter
+- [x] Cherry-pick (pick commit từ branch khác)
+- [x] Blame view (inline trong diff viewer — ai viết dòng nào)
 - [ ] Submodule support (hiển thị status, init/update)
 - [ ] Git hooks visibility (show active hooks, --no-verify option)
-- [ ] Undo stack (reflog-based, undo last commit/stage/checkout)
+- [x] Undo stack (reflog-based, undo last commit/stage/checkout)
 
 ### AI Features (Cloud LLM API)
-- [ ] Settings UI: API key input (Claude/OpenAI), model selector, token limit
+- [x] Settings UI: API key input (Claude/OpenAI), model selector, token limit
 - [ ] API key storage in OS keychain (`keyring` crate)
 - [ ] Rust backend: LLM API client + streaming response via Tauri events
 - [ ] **AI Conflict Resolution** — phân tích ours/theirs + surrounding context, đề xuất merged result
