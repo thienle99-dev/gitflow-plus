@@ -30,6 +30,7 @@ export default function MainLayout() {
   // Listen for file watcher events and invalidate queries
   useEffect(() => {
     const unlisten = listen<{ event_type: string }>("repo:changed", (event) => {
+      if (!repoPath) return;
       const type = event.payload.event_type;
       if (type === "worktree") {
         queryClient.invalidateQueries({ queryKey: ["git", repoPath, "status"] });
@@ -37,7 +38,9 @@ export default function MainLayout() {
         queryClient.invalidateQueries({ queryKey: ["git", repoPath, "branches"] });
         queryClient.invalidateQueries({ queryKey: ["git", repoPath, "log"] });
       } else if (type === "head") {
-        queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
+        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "info"] });
+        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "branches"] });
+        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "log"] });
       }
     });
     return () => { unlisten.then((f) => f()); };

@@ -46,9 +46,14 @@ impl RepoWatcher {
         )
         .map_err(|e| format!("Failed to create watcher: {}", e))?;
 
-        // Watch repo root for worktree changes
+        // Watch Git metadata recursively for branch/index changes, but keep the
+        // worktree watch shallow. Recursive root watches can be very expensive
+        // for repos with node_modules, target, dist, or other generated trees.
         watcher
-            .watch(repo_root, RecursiveMode::Recursive)
+            .watch(git_dir.as_path(), RecursiveMode::Recursive)
+            .map_err(|e| format!("Failed to watch .git directory: {}", e))?;
+        watcher
+            .watch(repo_root, RecursiveMode::NonRecursive)
             .map_err(|e| format!("Failed to watch repo root: {}", e))?;
 
         let app_clone = app.clone();

@@ -34,15 +34,21 @@ export function useCanvasRenderer({
     const width = totalLanes * LANE_WIDTH + LABEL_OFFSET + 400;
     const height = containerHeight;
 
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
+    const pixelWidth = Math.ceil(width * dpr);
+    const pixelHeight = Math.ceil(height * dpr);
+    if (canvas.width !== pixelWidth) {
+      canvas.width = pixelWidth;
+    }
+    if (canvas.height !== pixelHeight) {
+      canvas.height = pixelHeight;
+    }
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.scale(dpr, dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, width, height);
 
     const startRow = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER_ROWS);
