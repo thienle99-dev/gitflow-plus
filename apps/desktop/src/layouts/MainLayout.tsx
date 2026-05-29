@@ -12,8 +12,6 @@ import CommitGraph from "@/components/graph/CommitGraph";
 import RightPanel from "@/components/detail/RightPanel";
 import BottomBar from "@/components/common/BottomBar";
 import SearchDialog from "@/components/phase2/SearchDialog";
-import StashPanel from "@/components/phase2/StashPanel";
-import TagPanel from "@/components/phase2/TagPanel";
 import { CherryPickDialog, SettingsDialog, AnalyticsDialog, CreateBranchDialog } from "@/components/phase2";
 
 export default function MainLayout() {
@@ -136,11 +134,13 @@ export default function MainLayout() {
     return <WelcomeScreen onOpen={handleOpenRepo} />;
   }
 
+  const overlayDialog = activeDialog && activeDialog !== "stash" && activeDialog !== "tag"
+    ? activeDialog
+    : null;
+
   // Dialog overlay components
   const dialogComponents: Record<string, React.ReactNode> = {
     search: <SearchDialog open={true} onClose={closeDialog} />,
-    stash: <StashPanel onClose={closeDialog} />,
-    tag: <TagPanel onClose={closeDialog} />,
     settings: <SettingsDialog onClose={closeDialog} />,
     "ai-settings": <SettingsDialog onClose={closeDialog} />,
     "cherry-pick": (
@@ -183,12 +183,12 @@ export default function MainLayout() {
       <BottomBar />
 
       {/* Dialog overlays */}
-      {activeDialog && (
+      {overlayDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-surface-0 rounded-mac shadow-xl border border-border min-w-[480px] max-w-[600px] max-h-[80vh] overflow-hidden">
-            {dialogComponents[activeDialog] || (
+            {dialogComponents[overlayDialog] || (
               <div className="p-4 text-text-muted text-sm">
-                Unknown dialog: {activeDialog}
+                Unknown dialog: {overlayDialog}
                 <button className="ghost text-xs ml-4" onClick={closeDialog}>Close</button>
               </div>
             )}
