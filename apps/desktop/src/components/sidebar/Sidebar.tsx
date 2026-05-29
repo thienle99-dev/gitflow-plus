@@ -4,6 +4,7 @@ import { useUIStore } from "@/stores/ui";
 import { useGitBranches } from "@/queries/useGitLog";
 import { useTagList } from "@/queries/useGitTag";
 import { api } from "@/api/tauri";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import {
   ChevronRight,
   GitBranch,
@@ -11,20 +12,43 @@ import {
   Package,
   Search,
   Archive,
+  Folder,
+  ChevronDown,
+  Plus,
+  LogOut,
 } from "lucide-react";
 
 export default function Sidebar() {
   const repoPath = useRepoStore((s) => s.repoPath);
   const selectedRef = useRepoStore((s) => s.selectedRef);
   const selectRef = useRepoStore((s) => s.selectRef);
-  const openDialog = useUIStore((s) => s.openDialog);
+  const openDialogState = useUIStore((s) => s.openDialog);
   const { data: branches } = useGitBranches(repoPath);
   const { data: tags } = useTagList(repoPath);
   const [branchesOpen, setBranchesOpen] = useState(true);
   const [remotesOpen, setRemotesOpen] = useState(true);
   const [tagsOpen, setTagsOpen] = useState(true);
+  const [repoMenuOpen, setRepoMenuOpen] = useState(false);
+
+  const openRepo = useRepoStore((s) => s.openRepo);
+  const closeRepo = useRepoStore((s) => s.closeRepo);
+  const recentRepos = useRepoStore((s) => s.recentRepos);
 
   if (!repoPath) return null;
+
+  const repoName = repoPath.split(/[/\\]/).filter(Boolean).pop() || repoPath;
+
+  const handleOpenRepo = async () => {
+    try {
+      const selected = await openDialog({ directory: true, multiple: false });
+      if (selected) {
+        openRepo(selected as string);
+      }
+    } catch (e) {
+      const path = prompt("Enter repository path:");
+      if (path) openRepo(path);
+    }
+  };
 
   const localBranches = branches?.filter((b) => !b.remote) || [];
   const remoteBranches = branches?.filter((b) => b.remote) || [];
@@ -40,8 +64,80 @@ export default function Sidebar() {
 
   return (
     <div className="h-full overflow-y-auto py-2">
+      {/* Repository Selector */}
+      <div className="relative px-2 mb-3">
+        <button
+          onClick={() => setRepoMenuOpen(!repoMenuOpen)}
+          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-mac bg-surface-2/40 hover:bg-surface-2 border border-border/40 hover:border-border transition-all text-left"
+        >
+          <Folder size={14} className="text-accent shrink-0" />
+          <span className="flex-1 text-xs font-semibold truncate text-text-primary">
+            {repoName}
+          </span>
+          <ChevronDown size={12} className="text-text-muted shrink-0" />
+        </button>
+
+        {repoMenuOpen && (
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setRepoMenuOpen(false)}
+            />
+            <div className="absolute left-2 right-2 mt-1 z-50 py-1 bg-surface-1 border border-border rounded-mac shadow-lg overflow-hidden animate-toast-in">
+              <button
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text-primary hover:bg-accent hover:text-accent-fg text-left"
+                onClick={() => {
+                  handleOpenRepo();
+                  setRepoMenuOpen(false);
+                }}
+              >
+                <Plus size={12} />
+                <span>Open Repository...</span>
+              </button>
+              <button
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text-primary hover:bg-accent hover:text-accent-fg text-left"
+                onClick={() => {
+                  closeRepo();
+                  setRepoMenuOpen(false);
+                }}
+              >
+                <LogOut size={12} />
+                <span>Close Repository</span>
+              </button>
+
+              {recentRepos.length > 1 && (
+                <>
+                  <div className="h-[1px] bg-border my-1" />
+                  <div className="px-3 py-1 text-[9px] font-bold text-text-muted uppercase tracking-wider">
+                    Recent Repositories
+                  </div>
+                  {recentRepos.filter(path => path !== repoPath).map((path) => {
+                    const name = path.split(/[/\\]/).filter(Boolean).pop() || path;
+                    return (
+                      <button
+                        key={path}
+                        title={path}
+                        className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text-secondary hover:bg-accent hover:text-accent-fg text-left"
+                        onClick={() => {
+                          openRepo(path);
+                          setRepoMenuOpen(false);
+                        }}
+                      >
+                        <Folder size={12} className="opacity-75 shrink-0" />
+                        <span className="truncate flex-1">{name}</span>
+                      </button>
+                    );
+                  })}
+                </>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
       {/* Branches */}
       <SectionHeader title="Branches" open={branchesOpen} onToggle={() => setBranchesOpen(!branchesOpen)} />
+
       {branchesOpen && (
         <div className="space-y-[1px]">
           <div
@@ -125,21 +221,21 @@ export default function Sidebar() {
       <div className="space-y-[1px] px-2">
         <button
           className="tree-item w-full flex items-center gap-2 px-2 py-[3px]"
-          onClick={() => openDialog("search")}
+          onClick={() => openDialogState("search")}
         >
           <Search size={12} className="text-text-muted" />
           <span className="text-xs text-text-secondary">Search Commits</span>
         </button>
         <button
           className="tree-item w-full flex items-center gap-2 px-2 py-[3px]"
-          onClick={() => openDialog("stash")}
+          onClick={() => openDialogState("stash")}
         >
           <Archive size={12} className="text-text-muted" />
           <span className="text-xs text-text-secondary">Stash</span>
         </button>
         <button
           className="tree-item w-full flex items-center gap-2 px-2 py-[3px]"
-          onClick={() => openDialog("tag")}
+          onClick={() => openDialogState("tag")}
         >
           <Package size={12} className="text-text-muted" />
           <span className="text-xs text-text-secondary">Manage Tags</span>

@@ -102,7 +102,7 @@
 - [x] Loading states + skeleton UI
 - [x] Empty states (no repo open, no commits)
 - [ ] Git credentials handling (HTTPS auth prompt, SSH key detection)
-- [ ] Error UX phân loại: network error / auth error / conflict error → UX riêng
+- [x] Error UX phân loại: network error / auth error / conflict error → UX riêng
 - [ ] Undo last commit (git reset --soft HEAD~1) button
 - [ ] Performance logging (measure open repo, render graph, status refresh)
 
