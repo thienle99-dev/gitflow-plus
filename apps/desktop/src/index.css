@@ -270,3 +270,43 @@ button.ghost:active {
   background: #ff375f;
   color: white;
 }
+
+/* Gutter Actions Premium Styles */
+.diff-gutter-actions {
+  width: 36px;
+  display: flex;
+  justify-content: center;
+  user-select: none;
+}
+
+.diff-gutter-marker-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+}
+
+.gutter-action-btn {
+  background: none;
+  border: none;
+  font-size: 8px;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.65;
+  transition: all 120ms ease;
+  transform: scale(0.9);
+}
+
+.gutter-action-btn:hover {
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+.diff-gutter-actions {
+  border-right: 1px solid var(--border);
+  background-color: var(--surface-1);
+}

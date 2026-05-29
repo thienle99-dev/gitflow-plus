@@ -1,5 +1,5 @@
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
-import { api, type Commit, type CommitFileChange, type FileChange, type Branch, type RepoInfo } from "@/api/tauri";
+import { api, type Commit, type CommitFileChange, type FileChange, type Branch, type RepoInfo, type SyncStatus } from "@/api/tauri";
 
 const PAGE_SIZE = 50;
 
@@ -71,5 +71,14 @@ export function useRepoInfo(repoPath: string | null) {
     queryKey: ["git", repoPath, "info"],
     queryFn: () => api.repo.info(repoPath!),
     enabled: !!repoPath,
+  });
+}
+
+export function useGitSyncStatus(repoPath: string | null) {
+  return useQuery<SyncStatus>({
+    queryKey: ["git", repoPath, "sync-status"],
+    queryFn: () => api.remote.getSyncStatus(repoPath!),
+    enabled: !!repoPath,
+    staleTime: 5000,
   });
 }

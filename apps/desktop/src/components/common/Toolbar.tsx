@@ -1,10 +1,11 @@
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { api } from "@/api/tauri";
-import { useGitBranches, useGitStatus } from "@/queries/useGitLog";
+import { useGitBranches, useGitStatus, useGitSyncStatus } from "@/queries/useGitLog";
 import { useMergeStatus } from "@/queries/useGitMerge";
 import { useUndoLast } from "@/queries/useGitReflog";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   GitPullRequest,
   GitBranchPlus,
@@ -20,8 +21,10 @@ import {
   ArrowLeftRight,
   Archive,
   Settings,
+  BarChart3,
 } from "lucide-react";
 import CreateBranchDialog from "./CreateBranchDialog";
+import { useErrorReporter } from "@/lib/ErrorContext";
 
 export default function Toolbar() {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -30,10 +33,13 @@ export default function Toolbar() {
   const selectCommit = useUIStore((s) => s.selectCommit);
   const selectFile = useUIStore((s) => s.selectFile);
   const openDialog = useUIStore((s) => s.openDialog);
+  const queryClient = useQueryClient();
   const { data: branches } = useGitBranches(repoPath);
   const { data: changes } = useGitStatus(repoPath);
+  const { data: syncStatus } = useGitSyncStatus(repoPath);
   const { data: mergeStatus } = useMergeStatus(repoPath);
   const undoLast = useUndoLast(repoPath);
+  const { reportError } = useErrorReporter();
   const [loading, setLoading] = useState<string | null>(null);
   const [showBranchDialog, setShowBranchDialog] = useState(false);
 
@@ -43,8 +49,11 @@ export default function Toolbar() {
     setLoading(action);
     try {
       await fn();
+      if (action === "pull" || action === "push" || action === "fetch") {
+        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "sync-status"] });
+      }
     } catch (e) {
-      console.error(`${action} failed:`, e);
+      reportError(e, action, () => doAction(action, fn));
     } finally {
       setLoading(null);
     }
@@ -71,9 +80,19 @@ export default function Toolbar() {
         <div className="w-[1px] h-4 bg-border mx-1" />
         <button className="ghost text-xs" onClick={() => doAction("pull", () => api.remote.pull(repoPath!))} disabled={!!loading}>
           <ArrowDownToLine size={14} /> Pull
+          {!!syncStatus?.behind && (
+            <span className="ml-1 rounded bg-[#007aff]/15 dark:bg-[#0a84ff]/15 px-1.5 py-0.5 text-[10px] font-bold text-[#007aff] dark:text-[#0a84ff]">
+              {syncStatus.behind}
+            </span>
+          )}
         </button>
         <button className="ghost text-xs" onClick={() => doAction("push", () => api.remote.push(repoPath!))} disabled={!!loading}>
           <ArrowUpFromLine size={14} /> Push
+          {!!syncStatus?.ahead && (
+            <span className="ml-1 rounded bg-[#34c759]/15 dark:bg-[#30d158]/15 px-1.5 py-0.5 text-[10px] font-bold text-[#34c759] dark:text-[#30d158]">
+              {syncStatus.ahead}
+            </span>
+          )}
         </button>
         <button className="ghost text-xs" onClick={() => doAction("fetch", () => api.remote.fetch(repoPath!))} disabled={!!loading}>
           <RefreshCw size={14} className={loading === "fetch" ? "animate-spin" : ""} /> Fetch
@@ -104,6 +123,11 @@ export default function Toolbar() {
         {/* Search */}
         <button className="ghost text-xs" onClick={() => openDialog("search")}>
           <Search size={14} /> Search
+        </button>
+
+        {/* Analytics */}
+        <button className="ghost text-xs" onClick={() => openDialog("analytics")} title="View Repository Activity Analytics">
+          <BarChart3 size={14} /> Analytics
         </button>
 
         {/* Undo */}

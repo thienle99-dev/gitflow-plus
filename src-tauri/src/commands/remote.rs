@@ -95,3 +95,41 @@ pub fn git_fetch(path: String, remote: Option<String>) -> Result<String, String>
         Err(format!("Fetch failed: {}", stderr.trim()))
     }
 }
+
+#[derive(serde::Serialize)]
+pub struct SyncStatus {
+    pub ahead: usize,
+    pub behind: usize,
+}
+
+#[tauri::command]
+pub fn get_sync_status(path: String) -> Result<SyncStatus, String> {
+    let output = Command::new("git")
+        .args([
+            "--no-pager",
+            "-C",
+            &path,
+            "rev-list",
+            "--left-right",
+            "--count",
+            "HEAD...@{u}",
+        ])
+        .output()
+        .map_err(|e| format!("Failed to run git: {}", e))?;
+
+    if !output.status.success() {
+        // If there's no upstream branch, we return 0, 0
+        return Ok(SyncStatus { ahead: 0, behind: 0 });
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let parts: Vec<&str> = stdout.trim().split_whitespace().collect();
+    if parts.len() == 2 {
+        let ahead = parts[0].parse::<usize>().unwrap_or(0);
+        let behind = parts[1].parse::<usize>().unwrap_or(0);
+        Ok(SyncStatus { ahead, behind })
+    } else {
+        Ok(SyncStatus { ahead: 0, behind: 0 })
+    }
+}
+

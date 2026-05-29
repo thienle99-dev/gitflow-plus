@@ -40,6 +40,12 @@ export interface RepoInfo {
   remote: string | null;
 }
 
+export interface SyncStatus {
+  ahead: number;
+  behind: number;
+}
+
+
 export interface MergeResult {
   success: boolean;
   message: string;
@@ -157,6 +163,8 @@ export const api = {
       invoke<string>("git_push", { path, remote: remote ?? null, branch: branch ?? null }),
     fetch: (path: string, remote?: string) =>
       invoke<string>("git_fetch", { path, remote: remote ?? null }),
+    getSyncStatus: (path: string) =>
+      invoke<SyncStatus>("get_sync_status", { path }),
   },
 
   watcher: {

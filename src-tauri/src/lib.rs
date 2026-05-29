@@ -43,6 +43,7 @@ pub fn run() {
             commands::remote::git_pull,
             commands::remote::git_push,
             commands::remote::git_fetch,
+            commands::remote::get_sync_status,
             commands::watcher::start_watcher,
             commands::watcher::stop_watcher,
             commands::merge::merge_branch,

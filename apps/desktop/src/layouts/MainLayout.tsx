@@ -14,7 +14,7 @@ import BottomBar from "@/components/common/BottomBar";
 import SearchDialog from "@/components/phase2/SearchDialog";
 import StashPanel from "@/components/phase2/StashPanel";
 import TagPanel from "@/components/phase2/TagPanel";
-import { CherryPickDialog, SettingsDialog } from "@/components/phase2";
+import { CherryPickDialog, SettingsDialog, AnalyticsDialog } from "@/components/phase2";
 
 export default function MainLayout() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
@@ -44,10 +44,12 @@ export default function MainLayout() {
       } else if (type === "refs") {
         queryClient.invalidateQueries({ queryKey: ["git", repoPath, "branches"] });
         queryClient.invalidateQueries({ queryKey: ["git", repoPath, "log"] });
+        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "sync-status"] });
       } else if (type === "head") {
         queryClient.invalidateQueries({ queryKey: ["git", repoPath, "info"] });
         queryClient.invalidateQueries({ queryKey: ["git", repoPath, "branches"] });
         queryClient.invalidateQueries({ queryKey: ["git", repoPath, "log"] });
+        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "sync-status"] });
       }
     });
     return () => { unlisten.then((f) => f()); };
@@ -91,6 +93,7 @@ export default function MainLayout() {
         onClose={closeDialog}
       />
     ),
+    analytics: <AnalyticsDialog open={true} onClose={closeDialog} />,
   };
 
   return (

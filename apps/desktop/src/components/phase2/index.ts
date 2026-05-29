@@ -7,3 +7,5 @@ export { default as UndoButton } from "./UndoButton";
 export { default as BlameView } from "./BlameView";
 export { default as AISettings } from "./AISettings";
 export { default as SettingsDialog } from "./SettingsDialog";
+export { default as AnalyticsDialog } from "./AnalyticsDialog";
+

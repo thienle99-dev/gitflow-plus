@@ -5,7 +5,7 @@ import { api } from "@/api/tauri";
 import { Sparkles, RefreshCw } from "lucide-react";
 import { EditorView, basicSetup } from "codemirror";
 import { EditorState, RangeSetBuilder, StateField } from "@codemirror/state";
-import { keymap, Decoration, type DecorationSet, WidgetType } from "@codemirror/view";
+import { keymap, Decoration, type DecorationSet, WidgetType, gutter, GutterMarker } from "@codemirror/view";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { javascript } from "@codemirror/lang-javascript";
 import { python } from "@codemirror/lang-python";
@@ -756,6 +756,101 @@ function getDiffHighlightExtension(
   });
 }
 
+class DiffGutterMarker extends GutterMarker {
+  constructor(
+    readonly action: "stage" | "unstage" | "discard",
+    readonly hunk: DiffHunk,
+    readonly hunkIndex: number,
+    readonly onAction: (hunk: DiffHunk, index: number, action: "stage" | "unstage" | "discard") => void
+  ) {
+    super();
+  }
+
+  toDOM() {
+    const el = document.createElement("div");
+    el.className = `diff-gutter-marker-action`;
+    el.style.display = "inline-flex";
+    el.style.gap = "2px";
+    el.style.alignItems = "center";
+    el.style.height = "100%";
+    
+    if (this.action === "stage") {
+      const stageBtn = document.createElement("button");
+      stageBtn.className = `gutter-action-btn stage`;
+      stageBtn.title = "Stage this hunk";
+      stageBtn.innerHTML = "🟢";
+      stageBtn.onclick = (e) => {
+        e.stopPropagation();
+        this.onAction(this.hunk, this.hunkIndex, "stage");
+      };
+      el.appendChild(stageBtn);
+
+      const discardBtn = document.createElement("button");
+      discardBtn.className = `gutter-action-btn discard`;
+      discardBtn.title = "Discard this hunk";
+      discardBtn.innerHTML = "🔴";
+      discardBtn.onclick = (e) => {
+        e.stopPropagation();
+        this.onAction(this.hunk, this.hunkIndex, "discard");
+      };
+      el.appendChild(discardBtn);
+    } else {
+      const unstageBtn = document.createElement("button");
+      unstageBtn.className = `gutter-action-btn unstage`;
+      unstageBtn.title = "Unstage this hunk";
+      unstageBtn.innerHTML = "🔵";
+      unstageBtn.onclick = (e) => {
+        e.stopPropagation();
+        this.onAction(this.hunk, this.hunkIndex, "unstage");
+      };
+      el.appendChild(unstageBtn);
+    }
+    
+    return el;
+  }
+}
+
+function getDiffGutterExtension(
+  hunks: DiffHunk[],
+  source: "working" | "staged" | "commit",
+  onAction: (hunk: DiffHunk, index: number, action: "stage" | "unstage" | "discard") => void,
+) {
+  if (source === "commit") return [];
+
+  return gutter({
+    class: "diff-gutter-actions",
+    lineMarker(view, line) {
+      const text = view.state.doc.lineAt(line.from).text;
+      if (!text.startsWith("+") && !text.startsWith("-")) return null;
+
+      let currentLine = 1;
+      let hunkIndex = 0;
+      for (const hunk of hunks) {
+        const headerStart = currentLine;
+        currentLine++;
+        
+        const isFirstChangedLineOfHunk = view.state.doc.line(headerStart + 1).from === line.from;
+            
+        if (isFirstChangedLineOfHunk) {
+          return new DiffGutterMarker(
+            source === "working" ? "stage" : "unstage",
+            hunk,
+            hunkIndex,
+            onAction
+          );
+        }
+
+        for (const l of hunk.lines) {
+          if (l.type === "header") continue;
+          currentLine++;
+        }
+        hunkIndex++;
+      }
+      return null;
+    }
+  });
+}
+
 function createEditor(
   parent: HTMLDivElement,
   content: string,
@@ -772,6 +867,7 @@ function createEditor(
       lang,
       ...theme,
       getDiffHighlightExtension(hunks, source, onAction),
+      getDiffGutterExtension(hunks, source, onAction),
       EditorView.editable.of(false),
       EditorView.lineWrapping,
       keymap.of([]),
