@@ -130,7 +130,7 @@ export default function CommitGraph() {
                   stroke={commit.color}
                   strokeWidth={selectedCommit === commit.hash ? 2 : 1}
                 />
-                {/* Message label */}
+                {/* Message label + ref badges */}
                 <text
                   x={commit.x + LABEL_OFFSET}
                   y={commit.y + 4}
@@ -142,6 +142,44 @@ export default function CommitGraph() {
                     ? commit.message.slice(0, 60) + "..."
                     : commit.message}
                 </text>
+
+                {/* Ref badges — SVG rect + text */}
+                {commit.refs.map((ref, i) => {
+                  const badgeOffset = commit.x + LABEL_OFFSET + 12 + Math.min(commit.message.length, 60) * 6.5;
+                  const badgeX = badgeOffset + i * 70;
+                  const badgeColor =
+                    ref.ref_type === "head"
+                      ? "#ff9f0a"
+                      : ref.ref_type === "tag"
+                        ? "#bf5af2"
+                        : ref.ref_type === "remote"
+                          ? "#636366"
+                          : "var(--accent)";
+                  const label = ref.ref_type === "remote"
+                    ? ref.name.split("/").slice(1).join("/")
+                    : ref.name;
+                  return (
+                    <g key={`badge-${commit.hash}-${i}`}>
+                      <rect
+                        x={badgeX}
+                        y={commit.y - 6}
+                        width={label.length * 7 + 6}
+                        height={13}
+                        rx={2}
+                        fill={badgeColor}
+                      />
+                      <text
+                        x={badgeX + 3}
+                        y={commit.y + 1}
+                        fill="#fff"
+                        fontSize={9}
+                        fontWeight={500}
+                      >
+                        {label.length > 12 ? label.slice(0, 11) + "…" : label}
+                      </text>
+                    </g>
+                  );
+                })}
               </g>
             ))}
           </svg>

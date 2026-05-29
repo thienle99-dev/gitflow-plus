@@ -1,21 +1,22 @@
-import type { Commit } from "@/api/tauri";
+import type { Commit, Ref } from "@/api/tauri";
 
 const COLORS = [
-  "#0a84ff", // blue
-  "#30d158", // green
-  "#ff9f0a", // orange
-  "#bf5af2", // purple
-  "#ff375f", // red
-  "#64d2ff", // cyan
-  "#ffd60a", // yellow
-  "#5e5ce6", // indigo
-  "#ff6482", // pink
-  "#00c7be", // teal
+  "#0a84ff",
+  "#30d158",
+  "#ff9f0a",
+  "#bf5af2",
+  "#ff375f",
+  "#64d2ff",
+  "#ffd60a",
+  "#5e5ce6",
+  "#ff6482",
+  "#00c7be",
 ];
 
-interface LayoutCommit {
+export interface LayoutCommit {
   hash: string;
   message: string;
+  refs: Ref[];
   lane: number;
   y: number;
   x: number;
@@ -64,6 +65,7 @@ export function computeGraphLayout(commits: Commit[]): GraphLayout {
     result.push({
       hash: commit.hash,
       message: commit.message,
+      refs: commit.refs || [],
       lane,
       y,
       x: lane * 24 + 24,
