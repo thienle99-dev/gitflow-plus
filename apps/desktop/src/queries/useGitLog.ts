@@ -38,18 +38,19 @@ export function useGitDiff(
   filePath: string | null,
   commitHash?: string | null,
   staged?: boolean,
+  context?: number,
 ) {
   return useQuery<string>({
-    queryKey: ["git", repoPath, "diff", commitHash || (staged ? "staged" : "working"), filePath],
+    queryKey: ["git", repoPath, "diff", commitHash || (staged ? "staged" : "working"), filePath, context],
     queryFn: () => {
       if (!repoPath || !filePath) return "";
       if (commitHash) {
-        return api.diff.commit(repoPath, commitHash, filePath);
+        return api.diff.commit(repoPath, commitHash, filePath, context);
       }
       if (staged) {
-        return api.diff.staged(repoPath, filePath);
+        return api.diff.staged(repoPath, filePath, context);
       }
-      return api.diff.file(repoPath, filePath);
+      return api.diff.file(repoPath, filePath, context);
     },
     enabled: !!repoPath && !!filePath,
     staleTime: 15_000,

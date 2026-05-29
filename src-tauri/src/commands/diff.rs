@@ -9,9 +9,10 @@ pub struct CommitFileChange {
 }
 
 #[tauri::command]
-pub fn file_diff(path: String, file_path: String) -> Result<String, String> {
+pub fn file_diff(path: String, file_path: String, context: Option<u32>) -> Result<String, String> {
+    let context_arg = format!("-U{}", context.unwrap_or(3));
     let output = Command::new("git")
-        .args(["--no-pager", "-C", &path, "diff", "--no-color", &file_path])
+        .args(["--no-pager", "-C", &path, "diff", &context_arg, "--no-color", &file_path])
         .output()
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
@@ -29,12 +30,15 @@ pub fn commit_diff(
     path: String,
     commit_hash: String,
     file_path: Option<String>,
+    context: Option<u32>,
 ) -> Result<String, String> {
+    let context_arg = format!("-U{}", context.unwrap_or(3));
     let mut args = vec![
         "--no-pager".to_string(),
         "-C".to_string(),
         path,
         "show".to_string(),
+        context_arg,
         "--format=".to_string(),
         "--no-color".to_string(),
         "--find-renames".to_string(),
@@ -129,12 +133,18 @@ fn parse_name_status_line(line: &str) -> Option<CommitFileChange> {
 }
 
 #[tauri::command]
-pub fn staged_diff(path: String, file_path: Option<String>) -> Result<String, String> {
+pub fn staged_diff(
+    path: String,
+    file_path: Option<String>,
+    context: Option<u32>,
+) -> Result<String, String> {
+    let context_arg = format!("-U{}", context.unwrap_or(3));
     let mut args = vec![
         "--no-pager".to_string(),
         "-C".to_string(),
         path,
         "diff".to_string(),
+        context_arg,
         "--cached".to_string(),
         "--no-color".to_string(),
     ];

@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
 import { useGitStatus, useGitDiff } from "@/queries/useGitLog";
 import { useQueryClient } from "@tanstack/react-query";
+import { Eye } from "lucide-react";
 import WorkingTree from "./WorkingTree";
 import CommitDetail from "./CommitDetail";
 import DiffViewer from "@/components/diff/DiffViewer";
@@ -37,11 +39,14 @@ function DiffViewerPanel() {
   const selectedFile = useUIStore((s) => s.selectedFile);
   const selectedCommit = useUIStore((s) => s.selectedCommit);
   const selectedFileStage = useUIStore((s) => s.selectedFileStage);
+  const [showFullContext, setShowFullContext] = useState(false);
+  
   const { data: diff, isLoading } = useGitDiff(
     repoPath,
     selectedFile,
     selectedCommit,
     !selectedCommit && selectedFileStage === "staged",
+    showFullContext ? 9999 : undefined,
   );
   const diffViewMode = useUIStore((s) => s.diffViewMode);
   const setDiffViewMode = useUIStore((s) => s.setDiffViewMode);
@@ -62,19 +67,33 @@ function DiffViewerPanel() {
         <button className="ghost text-xs" onClick={() => selectFile(null)}>
           ← Back
         </button>
-        <div className="segmented-control">
+        <div className="flex items-center gap-2">
           <button
-            className={diffViewMode === "split" ? "active" : ""}
-            onClick={() => setDiffViewMode("split")}
+            className={`ghost text-2xs px-2.5 py-1 flex items-center gap-1 border border-transparent rounded transition-colors ${
+              showFullContext 
+                ? "text-[#0a84ff] bg-[#0a84ff]/10 border-[#0a84ff]/20 font-medium" 
+                : "hover:bg-surface-2"
+            }`}
+            onClick={() => setShowFullContext(!showFullContext)}
+            title={showFullContext ? "Show only changed hunks" : "Show entire file context"}
           >
-            Split
+            <Eye size={12} />
+            {showFullContext ? "Compact Diff" : "Show Full File"}
           </button>
-          <button
-            className={diffViewMode === "unified" ? "active" : ""}
-            onClick={() => setDiffViewMode("unified")}
-          >
-            Unified
-          </button>
+          <div className="segmented-control">
+            <button
+              className={diffViewMode === "split" ? "active" : ""}
+              onClick={() => setDiffViewMode("split")}
+            >
+              Split
+            </button>
+            <button
+              className={diffViewMode === "unified" ? "active" : ""}
+              onClick={() => setDiffViewMode("unified")}
+            >
+              Unified
+            </button>
+          </div>
         </div>
       </div>
       {isLoading ? (

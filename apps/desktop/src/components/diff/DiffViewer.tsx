@@ -4,7 +4,7 @@ import { useRepoStore } from "@/stores/repo";
 import { api } from "@/api/tauri";
 import { EditorView, basicSetup } from "codemirror";
 import { EditorState, RangeSetBuilder, StateField } from "@codemirror/state";
-import { keymap, Decoration, type DecorationSet } from "@codemirror/view";
+import { keymap, Decoration, type DecorationSet, WidgetType } from "@codemirror/view";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { javascript } from "@codemirror/lang-javascript";
 import { python } from "@codemirror/lang-python";
@@ -286,6 +286,29 @@ export default function DiffViewer({
   );
 }
 
+class PrefixWidget extends WidgetType {
+  constructor(readonly char: string) {
+    super();
+  }
+
+  eq(other: PrefixWidget) {
+    return this.char === other.char;
+  }
+
+  toDOM() {
+    const span = document.createElement("span");
+    span.textContent = this.char;
+    span.className = `diff-prefix-widget ${
+      this.char === "+" ? "added" : this.char === "-" ? "deleted" : "empty"
+    }`;
+    return span;
+  }
+
+  ignoreEvent() {
+    return true;
+  }
+}
+
 function computeMismatch(oldStr: string, newStr: string) {
   // Skip first char (+ or -)
   const oldText = oldStr.slice(1);
@@ -329,12 +352,26 @@ const diffHighlightExtension = StateField.define<DecorationSet>({
           line.from,
           Decoration.line({ attributes: { class: "diff-line-added" } }),
         );
+        
+        // Hide leading '+' character
+        builder.add(
+          line.from,
+          line.from + 1,
+          Decoration.replace({ widget: new PrefixWidget("+") }),
+        );
       } else if (text.startsWith("-")) {
         // Line decoration
         builder.add(
           line.from,
           line.from,
           Decoration.line({ attributes: { class: "diff-line-deleted" } }),
+        );
+        
+        // Hide leading '-' character
+        builder.add(
+          line.from,
+          line.from + 1,
+          Decoration.replace({ widget: new PrefixWidget("-") }),
         );
         
         // Check if next line is an added line to pair for inline highlights
@@ -354,6 +391,13 @@ const diffHighlightExtension = StateField.define<DecorationSet>({
             }
           }
         }
+      } else if (text.startsWith(" ")) {
+        // Hide leading space for perfect code alignment
+        builder.add(
+          line.from,
+          line.from + 1,
+          Decoration.replace({ widget: new PrefixWidget(" ") }),
+        );
       } else if (text.startsWith("@@")) {
         builder.add(
           line.from,

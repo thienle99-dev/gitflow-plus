@@ -211,3 +211,29 @@ button.ghost:active {
   text-decoration: line-through;
   opacity: 0.85;
 }
+
+/* Diff Prefix Widgets (Copy-safe Gutter Markers) */
+.diff-prefix-widget {
+  display: inline-block;
+  width: 14px;
+  text-align: center;
+  font-weight: 600;
+  font-family: monospace;
+  font-size: 11px;
+  user-select: none;
+  pointer-events: none;
+  margin-right: 6px;
+  opacity: 0.85;
+}
+
+.diff-prefix-widget.added {
+  color: #30d158;
+}
+
+.diff-prefix-widget.deleted {
+  color: #ff375f;
+}
+
+.diff-prefix-widget.empty {
+  color: transparent;
+}

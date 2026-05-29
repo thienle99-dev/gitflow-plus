@@ -138,14 +138,14 @@ export const api = {
   },
 
   diff: {
-    file: (path: string, filePath: string) =>
-      invoke<string>("file_diff", { path, filePath }),
-    commit: (path: string, commitHash: string, filePath?: string) =>
-      invoke<string>("commit_diff", { path, commitHash, filePath: filePath ?? null }),
+    file: (path: string, filePath: string, context?: number) =>
+      invoke<string>("file_diff", { path, filePath, context: context ?? null }),
+    commit: (path: string, commitHash: string, filePath?: string, context?: number) =>
+      invoke<string>("commit_diff", { path, commitHash, filePath: filePath ?? null, context: context ?? null }),
     commitFiles: (path: string, commitHash: string) =>
       invoke<CommitFileChange[]>("commit_changed_files", { path, commitHash }),
-    staged: (path: string, filePath?: string) =>
-      invoke<string>("staged_diff", { path, filePath: filePath ?? null }),
+    staged: (path: string, filePath?: string, context?: number) =>
+      invoke<string>("staged_diff", { path, filePath: filePath ?? null, context: context ?? null }),
     applyHunk: (path: string, patch: string, action: "stage" | "unstage" | "discard") =>
       invoke<string>("apply_diff_hunk", { path, patch, action }),
   },

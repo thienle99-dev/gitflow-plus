@@ -14,16 +14,15 @@ import BottomBar from "@/components/common/BottomBar";
 import SearchDialog from "@/components/phase2/SearchDialog";
 import StashPanel from "@/components/phase2/StashPanel";
 import TagPanel from "@/components/phase2/TagPanel";
-import CherryPickDialog from "@/components/phase2/CherryPickDialog";
-import UndoButton from "@/components/phase2/UndoButton";
-import ConflictResolver from "@/components/phase2/ConflictResolver";
 import AISettings from "@/components/phase2/AISettings";
+import { CherryPickDialog } from "@/components/phase2";
 
 export default function MainLayout() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const activeDialog = useUIStore((s) => s.activeDialog);
   const closeDialog = useUIStore((s) => s.closeDialog);
+  const selectedCommit = useUIStore((s) => s.selectedCommit);
   const repoPath = useRepoStore((s) => s.repoPath);
   const queryClient = useQueryClient();
 
@@ -88,6 +87,7 @@ export default function MainLayout() {
     "cherry-pick": (
       <CherryPickDialog
         open={true}
+        commitHash={selectedCommit || ""}
         onClose={closeDialog}
       />
     ),
