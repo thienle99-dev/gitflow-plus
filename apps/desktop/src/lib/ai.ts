@@ -1,0 +1,282 @@
+import { api, type FileChange, type Branch } from "@/api/tauri";
+
+const DEFAULT_MODEL = "claude-sonnet-4-20250514";
+
+interface AISettings {
+  apiKey: string;
+  model: string;
+  customUrl: string;
+  tokenLimit: number;
+  detailLevel: string;
+  customRules: string;
+}
+
+interface GeneratedCommitMessage {
+  message: string;
+  fallback: boolean;
+  reason?: string;
+}
+
+export async function generateCommitMessageWithAI(
+  repoPath: string,
+  files: FileChange[],
+): Promise<GeneratedCommitMessage> {
+  const fallback = generateLocalCommitMessage(files);
+  const settings = readAISettings();
+
+  if (!hasProvider(settings)) {
+    return {
+      message: fallback,
+      fallback: true,
+      reason: "Configure API key in settings for real AI",
+    };
+  }
+
+  const diff = await api.diff.staged(repoPath);
+  if (!diff.trim()) {
+    return {
+      message: fallback,
+      fallback: true,
+      reason: "Diff is empty",
+    };
+  }
+
+  const branchName = await getCurrentBranchName(repoPath);
+  const prompt = buildCommitPrompt(diff, settings, branchName);
+  const message = cleanAIText(await requestAIText(prompt, settings));
+  if (!message) {
+    throw new Error("Empty response from AI");
+  }
+
+  return { message, fallback: false };
+}
+
+export async function reviewDiffWithAI(filePath: string, diff: string) {
+  const settings = readAISettings();
+  if (!hasProvider(settings)) {
+    throw new Error("Configure an AI API key or local model in settings");
+  }
+
+  const prompt = `You are a world-class senior software architect. Analyze the git diff below for the file "${filePath}" and provide two structured sections:
+1. CODE EXPLANATION: A clear, high-level summary of WHAT was changed and WHY.
+2. CODE REVIEW & SUGGESTIONS: Inspect the code changes for potential bugs, security issues, performance optimization opportunities, or style improvements. If everything looks good, say that clearly.
+
+Be professional, direct, constructive, and use markdown styling.
+
+Diff:
+${diff.slice(0, 8000)}`;
+
+  const review = cleanAIText(await requestAIText(prompt, settings));
+  if (!review) {
+    throw new Error("Empty response from AI reviewer");
+  }
+  return review;
+}
+
+export function generateLocalCommitMessage(files: FileChange[]) {
+  const statusCounts = files.reduce<Record<string, number>>((counts, file) => {
+    counts[file.status] = (counts[file.status] || 0) + 1;
+    return counts;
+  }, {});
+  const folders = files.map((file) => getTopLevelFolder(file.path)).filter(Boolean);
+  const primaryScope = mostCommon(folders);
+  const primaryStatus = Object.entries(statusCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "modified";
+  const type = primaryStatus === "deleted"
+    ? "refactor"
+    : primaryStatus === "added" || primaryStatus === "untracked"
+      ? "feat"
+      : "chore";
+  const scope = primaryScope ? `(${primaryScope})` : "";
+
+  if (files.length === 1) {
+    return `${type}${scope}: ${statusVerb(primaryStatus)} ${getFileName(files[0].path)}`;
+  }
+
+  return `${type}${scope}: update ${files.length} files`;
+}
+
+function readAISettings(): AISettings {
+  return {
+    apiKey: localStorage.getItem("gitflowAiApiKey") || "",
+    model: localStorage.getItem("gitflowAiModel") || DEFAULT_MODEL,
+    customUrl: localStorage.getItem("gitflowAiApiUrl") || "",
+    tokenLimit: Number(localStorage.getItem("gitflowAiTokenLimit") || "4096"),
+    detailLevel: localStorage.getItem("gitflowAiDetailLevel") || "medium",
+    customRules: localStorage.getItem("gitflowAiCustomRules") || "",
+  };
+}
+
+function hasProvider(settings: AISettings) {
+  return !!settings.apiKey || settings.model === "ollama" || settings.model === "llama.cpp";
+}
+
+async function getCurrentBranchName(repoPath: string) {
+  try {
+    const branches = await api.branches.list(repoPath);
+    return branches.find((branch: Branch) => branch.current)?.name || "";
+  } catch {
+    return "";
+  }
+}
+
+function buildCommitPrompt(diff: string, settings: AISettings, branchName: string) {
+  const styleInstruction = settings.detailLevel === "minimal"
+    ? "3. Return ONLY a single line (the subject line). Do NOT add a body."
+    : settings.detailLevel === "detailed"
+      ? "3. Write a detailed commit message with a body and concise bullet points."
+      : "3. If the changes are complex, add a short body after a blank line.";
+  const branchContext = branchName
+    ? `\nCurrent Git Branch Name: ${branchName}\n`
+    : "";
+  const customRules = settings.customRules.trim()
+    ? `\nUSER CUSTOM RULES:\n${settings.customRules.trim()}\n`
+    : "";
+
+  return `You are an expert developer. Generate a professional Git commit message following Conventional Commits based on the staged diff below.
+
+CRITICAL INSTRUCTIONS:
+1. Format: <type>(<optional-scope>): <description in imperative mood, lowercase, no period>
+2. Keep the subject under 50 characters.
+${styleInstruction}
+4. No markdown code blocks, no introductory text, no quotes. Return ONLY the raw commit message.
+5. Use English unless custom rules say otherwise.
+${branchContext}${customRules}
+Staged diff:
+${diff.slice(0, 8000)}`;
+}
+
+async function requestAIText(prompt: string, settings: AISettings) {
+  if (settings.model.startsWith("claude-")) {
+    let endpoint = settings.customUrl.trim() || "https://api.anthropic.com/v1/messages";
+    if (settings.customUrl && !endpoint.endsWith("/messages")) {
+      endpoint = endpoint.replace(/\/+$/, "") + "/messages";
+    }
+    const res = await api.ai.request(
+      endpoint,
+      "POST",
+      {
+        "Content-Type": "application/json",
+        "x-api-key": settings.apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      JSON.stringify({
+        model: settings.model,
+        max_tokens: settings.tokenLimit,
+        messages: [{ role: "user", content: prompt }],
+        stream: false,
+      }),
+    );
+    assertSuccess(res.status);
+    return parseAnthropicResponse(res.body);
+  }
+
+  let endpoint = settings.customUrl.trim();
+  if (!endpoint) {
+    endpoint = settings.model === "ollama"
+      ? "http://localhost:11434/v1/chat/completions"
+      : settings.model === "llama.cpp"
+        ? "http://localhost:8080/v1/chat/completions"
+        : "https://api.openai.com/v1/chat/completions";
+  }
+  if (settings.customUrl && !endpoint.endsWith("/chat/completions") && !endpoint.endsWith("/completions")) {
+    endpoint = endpoint.replace(/\/+$/, "") + "/chat/completions";
+  }
+
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (settings.apiKey) {
+    headers.Authorization = `Bearer ${settings.apiKey}`;
+  }
+
+  const res = await api.ai.request(
+    endpoint,
+    "POST",
+    headers,
+    JSON.stringify({
+      model: settings.model === "ollama" ? "llama3" : settings.model === "llama.cpp" ? "local-model" : settings.model,
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: settings.tokenLimit,
+      stream: false,
+    }),
+  );
+  assertSuccess(res.status);
+  return parseOpenAIResponse(res.body);
+}
+
+function assertSuccess(status: number) {
+  if (status < 200 || status >= 300) {
+    throw new Error(`API Error: ${status}`);
+  }
+}
+
+function parseAnthropicResponse(body: string) {
+  const trimmed = body.trim();
+  if (trimmed.startsWith("data:")) {
+    return parseSSE(trimmed, (json) => json.choices?.[0]?.delta?.content || json.delta?.content || "");
+  }
+  const data = JSON.parse(trimmed);
+  return data.content?.[0]?.text || "";
+}
+
+function parseOpenAIResponse(body: string) {
+  const trimmed = body.trim();
+  if (trimmed.startsWith("data:")) {
+    return parseSSE(trimmed, (json) => json.choices?.[0]?.delta?.content || json.choices?.[0]?.text || "");
+  }
+  const data = JSON.parse(trimmed);
+  return data.choices?.[0]?.message?.content || data.choices?.[0]?.text || "";
+}
+
+function parseSSE(body: string, extract: (json: any) => string) {
+  let text = "";
+  for (const line of body.split("\n")) {
+    const cleaned = line.trim();
+    if (!cleaned.startsWith("data:") || cleaned === "data: [DONE]") continue;
+    try {
+      text += extract(JSON.parse(cleaned.slice(5).trim()));
+    } catch {
+      // Ignore malformed SSE fragments.
+    }
+  }
+  return text;
+}
+
+function cleanAIText(text: string) {
+  let clean = text.trim();
+  if (clean.startsWith("```")) {
+    clean = clean.replace(/^```[a-zA-Z]*\n/, "").replace(/\n```$/, "");
+  }
+  return clean.trim();
+}
+
+function statusVerb(status: string) {
+  switch (status) {
+    case "added":
+    case "untracked":
+      return "add";
+    case "deleted":
+      return "remove";
+    case "renamed":
+      return "rename";
+    default:
+      return "update";
+  }
+}
+
+function mostCommon(items: string[]) {
+  const counts = items.reduce<Record<string, number>>((acc, item) => {
+    acc[item] = (acc[item] || 0) + 1;
+    return acc;
+  }, {});
+  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+}
+
+function getTopLevelFolder(path: string) {
+  const [first, second] = path.split("/");
+  if (!first || !second) return "";
+  if (first === "apps" || first === "packages" || first === "crates") return second;
+  return first;
+}
+
+function getFileName(path: string) {
+  return path.split("/").pop() || path;
+}

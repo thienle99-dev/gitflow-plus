@@ -2,7 +2,9 @@ import { useState, useRef, useEffect } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useGitStatus } from "@/queries/useGitLog";
-import { api, type FileChange, type Branch } from "@/api/tauri";
+import { api, type FileChange } from "@/api/tauri";
+import { useGenerateCommitMessage } from "@/queries/useAI";
+import { generateLocalCommitMessage } from "@/lib/ai";
 import { useQueryClient } from "@tanstack/react-query";
 import ContextMenu, { type ContextMenuItem } from "@/components/common/ContextMenu";
 import UndoButton from "@/components/phase2/UndoButton";
@@ -38,10 +40,10 @@ export default function WorkingTree() {
   const selectFile = useUIStore((s) => s.selectFile);
   const { data: changes } = useGitStatus(repoPath);
   const queryClient = useQueryClient();
+  const generateCommit = useGenerateCommitMessage(repoPath);
   const [commitMessage, setCommitMessage] = useState("");
   const [amend, setAmend] = useState(false);
   const [committing, setCommitting] = useState(false);
-  const [generatingMessage, setGeneratingMessage] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [stagedOpen, setStagedOpen] = useState(true);
   const [unstagedOpen, setUnstagedOpen] = useState(true);
@@ -137,212 +139,21 @@ export default function WorkingTree() {
   };
 
   const handleGenerateCommit = async () => {
-    if (generatingMessage) return;
+    if (generateCommit.isPending) return;
     if (staged.length === 0) {
       showToast("Stage changes before generating a commit message");
       return;
     }
 
-    const apiKey = localStorage.getItem("gitflowAiApiKey") || "";
-    const model = localStorage.getItem("gitflowAiModel") || "claude-sonnet-4-20250514";
-    const customUrl = localStorage.getItem("gitflowAiApiUrl") || "";
-    const limit = Number(localStorage.getItem("gitflowAiTokenLimit") || "4096");
-    const detailLevel = localStorage.getItem("gitflowAiDetailLevel") || "medium";
-    const customRules = localStorage.getItem("gitflowAiCustomRules") || "";
-
-    if (!apiKey && !["ollama", "llama.cpp"].includes(model)) {
-      // Offline fallback
-      setCommitMessage(generateCommitMessage(staged));
-      showToast("Generated message using local templates (Configure API key in settings for real AI)");
-      requestAnimationFrame(() => textareaRef.current?.focus());
-      return;
-    }
-
-    setGeneratingMessage(true);
-    showToast("AI is generating commit message...");
-
+    showToast("Generating commit message...");
     try {
-      // Get staged diff
-      const diff = await api.diff.staged(repoPath!);
-      if (!diff || diff.trim().length === 0) {
-        setCommitMessage(generateCommitMessage(staged));
-        showToast("Diff is empty, fell back to local template");
-        return;
-      }
-
-      let branchName = "";
-      try {
-        const branches = await api.branches.list(repoPath!);
-        const currentBranch = branches.find((b: Branch) => b.current);
-        if (currentBranch) {
-          branchName = currentBranch.name;
-        }
-      } catch (err) {
-        console.error("Failed to fetch branch name:", err);
-      }
-
-      let customRulesInstruction = "";
-      if (customRules.trim()) {
-        customRulesInstruction = `\nUSER CUSTOM RULES (YOU MUST STRICTLY FOLLOW THESE RULES ABOVE ALL OTHERS):\n${customRules.trim()}\n`;
-      }
-
-      let branchContext = "";
-      if (branchName) {
-        branchContext = `\nCurrent Git Branch Name: ${branchName} (Use this if the USER CUSTOM RULES ask you to extract Jira tickets or ticket numbers from the branch name)\n`;
-      }
-
-      let styleInstruction = "";
-      if (detailLevel === "minimal") {
-        styleInstruction = "3. Return ONLY a single line (the subject line). Do NOT add any body, description paragraphs, bullet points, or list of changes.";
-      } else if (detailLevel === "detailed") {
-        styleInstruction = "3. Write a highly detailed commit message. Always include a comprehensive body with bullet points listing each modified file and detailing exactly what was added, removed, or refactored.";
-      } else {
-        styleInstruction = "3. If the changes are complex, add a blank line after the subject line, followed by a bulleted body explaining WHAT changed and WHY (keep bullet lines short, concise, and professional).";
-      }
-
-      const prompt = `You are an expert developer. Generate a professional, clean, and concise Git commit message following the Conventional Commits specification based on the staged diff below.
-
-CRITICAL INSTRUCTIONS:
-1. Format must be: <type>(<optional-scope>): <description in imperative mood, lowercase, no period>
-   - Example types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert.
-   - Example: feat(ai): implement native proxy to bypass CORS
-2. Keep the first line (subject) strictly under 50 characters.
-${styleInstruction}
-4. ABSOLUTELY NO markdown code blocks (do NOT wrap in \`\`\`), no prefixing with "Here is...", no introductory/explanatory text, and no quotes. Return ONLY the raw commit message text.
-5. Use English for the commit message unless requested otherwise by user custom rules.
-${branchContext}${customRulesInstruction}
-Staged diff:
-${diff.slice(0, 8000)}`;
-
-      let message = "";
-
-      if (model.startsWith("claude-")) {
-        let endpoint = customUrl ? customUrl.trim() : "https://api.anthropic.com/v1/messages";
-        if (customUrl && !endpoint.endsWith("/messages")) {
-          endpoint = endpoint.replace(/\/+$/, "") + "/messages";
-        }
-        const headers: Record<string, string> = {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01"
-        };
-        const body = JSON.stringify({
-          model: model,
-          max_tokens: limit,
-          messages: [{ role: "user", content: prompt }],
-          stream: false
-        });
-
-        const res = await api.ai.request(endpoint, "POST", headers, body);
-        if (res.status < 200 || res.status >= 300) {
-          throw new Error(`API Error: ${res.status}`);
-        }
-        let data: any;
-        try {
-          const trimmedBody = res.body.trim();
-          if (trimmedBody.startsWith("data:")) {
-            // It's a stream! Parse and concatenate all chunks
-            let contentAccumulator = "";
-            const lines = trimmedBody.split("\n");
-            for (const line of lines) {
-              const cleaned = line.trim();
-              if (cleaned.startsWith("data:") && cleaned !== "data: [DONE]") {
-                try {
-                  const chunkStr = cleaned.slice(5).trim();
-                  const chunkJson = JSON.parse(chunkStr);
-                  const content = chunkJson.choices?.[0]?.delta?.content || chunkJson.delta?.content || "";
-                  contentAccumulator += content;
-                } catch {}
-              }
-            }
-            data = { content: [{ text: contentAccumulator }] };
-          } else {
-            data = JSON.parse(res.body);
-          }
-        } catch (parseErr) {
-          console.error("JSON parse error:", parseErr, "Body:", res.body);
-          throw new Error(`Invalid response format (not JSON). Received:\n${res.body.trim().slice(0, 150)}...`);
-        }
-        message = data.content?.[0]?.text || "";
-      } else {
-        // OpenAI / Ollama / llama.cpp format
-        let endpoint = "";
-        if (model === "ollama") {
-          endpoint = customUrl ? customUrl.trim() : "http://localhost:11434/v1/chat/completions";
-        } else if (model === "llama.cpp") {
-          endpoint = customUrl ? customUrl.trim() : "http://localhost:8080/v1/chat/completions";
-        } else {
-          endpoint = customUrl ? customUrl.trim() : "https://api.openai.com/v1/chat/completions";
-        }
-
-        if (customUrl && !endpoint.endsWith("/chat/completions") && !endpoint.endsWith("/completions")) {
-          endpoint = endpoint.replace(/\/+$/, "") + "/chat/completions";
-        }
-
-        const headers: Record<string, string> = {
-          "Content-Type": "application/json"
-        };
-        if (apiKey) {
-          headers["Authorization"] = `Bearer ${apiKey}`;
-        }
-        const body = JSON.stringify({
-          model: model === "ollama" ? "llama3" : model === "llama.cpp" ? "local-model" : model,
-          messages: [{ role: "user", content: prompt }],
-          max_tokens: limit,
-          stream: false
-        });
-
-        const res = await api.ai.request(endpoint, "POST", headers, body);
-        if (res.status < 200 || res.status >= 300) {
-          throw new Error(`API Error: ${res.status}`);
-        }
-        let data: any;
-        try {
-          const trimmedBody = res.body.trim();
-          if (trimmedBody.startsWith("data:")) {
-            // It's a stream! Parse and concatenate all chunks
-            let contentAccumulator = "";
-            const lines = trimmedBody.split("\n");
-            for (const line of lines) {
-              const cleaned = line.trim();
-              if (cleaned.startsWith("data:") && cleaned !== "data: [DONE]") {
-                try {
-                  const chunkStr = cleaned.slice(5).trim();
-                  const chunkJson = JSON.parse(chunkStr);
-                  const content = chunkJson.choices?.[0]?.delta?.content || chunkJson.choices?.[0]?.text || "";
-                  contentAccumulator += content;
-                } catch {}
-              }
-            }
-            data = { choices: [{ message: { content: contentAccumulator } }] };
-          } else {
-            data = JSON.parse(res.body);
-          }
-        } catch (parseErr) {
-          console.error("JSON parse error:", parseErr, "Body:", res.body);
-          throw new Error(`Invalid response format (not JSON). Received:\n${res.body.trim().slice(0, 150)}...`);
-        }
-        message = data.choices?.[0]?.message?.content || "";
-      }
-
-      if (message.trim()) {
-        // Strip markdown backticks if present
-        let cleanMsg = message.trim();
-        if (cleanMsg.startsWith("```")) {
-          cleanMsg = cleanMsg.replace(/^```[a-zA-Z]*\n/, "").replace(/\n```$/, "");
-        }
-        setCommitMessage(cleanMsg);
-        showToast("AI Commit Message generated!");
-      } else {
-        throw new Error("Empty response from AI");
-      }
+      const result = await generateCommit.mutateAsync({ files: staged });
+      setCommitMessage(result.message);
+      showToast(result.fallback ? `Generated message using local template${result.reason ? ` (${result.reason})` : ""}` : "AI commit message generated");
     } catch (err: any) {
-      console.error(err);
-      // Fallback
-      setCommitMessage(generateCommitMessage(staged));
-      showToast(`AI Failed: ${err.message || err}. Used local fallback.`);
+      setCommitMessage(generateLocalCommitMessage(staged));
+      showToast(`AI failed: ${err.message || err}. Used local fallback.`);
     } finally {
-      setGeneratingMessage(false);
       requestAnimationFrame(() => textareaRef.current?.focus());
     }
   };
@@ -416,12 +227,12 @@ ${diff.slice(0, 8000)}`;
             <RefreshCw size={13} />
           </button>
           <button 
-            className={`ghost p-1 rounded hover:bg-surface-2 transition-colors ${generatingMessage ? "opacity-50 cursor-not-allowed text-accent" : ""}`}
+            className={`ghost p-1 rounded hover:bg-surface-2 transition-colors ${generateCommit.isPending ? "opacity-50 cursor-not-allowed text-accent" : ""}`}
             onClick={handleGenerateCommit}
-            disabled={generatingMessage}
-            title={generatingMessage ? "Generating message..." : "Generate commit message (AI)"}
+            disabled={generateCommit.isPending}
+            title={generateCommit.isPending ? "Generating message..." : "Generate commit message (AI)"}
           >
-            {generatingMessage ? (
+            {generateCommit.isPending ? (
               <RefreshCw size={13} className="animate-spin" />
             ) : (
               <Sparkles size={13} />
@@ -495,12 +306,12 @@ ${diff.slice(0, 8000)}`;
             className="w-full h-[64px] text-xs bg-surface-1 border border-border rounded-mac pl-2 pr-9 py-1.5 text-text-primary placeholder:text-text-muted resize-none outline-none focus:border-accent transition-colors"
           />
           <button
-            className={`absolute right-1.5 top-1.5 ghost p-1 ${generatingMessage ? "opacity-50 cursor-not-allowed text-accent" : ""}`}
+            className={`absolute right-1.5 top-1.5 ghost p-1 ${generateCommit.isPending ? "opacity-50 cursor-not-allowed text-accent" : ""}`}
             onClick={handleGenerateCommit}
-            disabled={generatingMessage}
-            title={generatingMessage ? "Generating..." : "Generate commit message"}
+            disabled={generateCommit.isPending}
+            title={generateCommit.isPending ? "Generating..." : "Generate commit message"}
           >
-            {generatingMessage ? (
+            {generateCommit.isPending ? (
               <RefreshCw size={14} className="animate-spin" />
             ) : (
               <Sparkles size={14} />
@@ -850,61 +661,6 @@ function statusColor(status: string) {
     case "untracked": return "text-text-muted";
     default: return "text-[#ff9f0a]";
   }
-}
-
-function generateCommitMessage(files: FileChange[]) {
-  const statusCounts = files.reduce<Record<string, number>>((counts, file) => {
-    counts[file.status] = (counts[file.status] || 0) + 1;
-    return counts;
-  }, {});
-  const folders = files
-    .map((file) => getTopLevelFolder(file.path))
-    .filter(Boolean);
-  const primaryScope = mostCommon(folders);
-  const primaryStatus = Object.entries(statusCounts)
-    .sort((a, b) => b[1] - a[1])[0]?.[0] || "modified";
-  const type = primaryStatus === "deleted"
-    ? "refactor"
-    : primaryStatus === "added" || primaryStatus === "untracked"
-      ? "feat"
-      : "chore";
-  const scope = primaryScope ? `(${primaryScope})` : "";
-
-  if (files.length === 1) {
-    const fileName = getFileName(files[0].path);
-    return `${type}${scope}: ${statusVerb(primaryStatus)} ${fileName}`;
-  }
-
-  return `${type}${scope}: update ${files.length} files`;
-}
-
-function statusVerb(status: string) {
-  switch (status) {
-    case "added":
-    case "untracked":
-      return "add";
-    case "deleted":
-      return "remove";
-    case "renamed":
-      return "rename";
-    default:
-      return "update";
-  }
-}
-
-function mostCommon(items: string[]) {
-  const counts = items.reduce<Record<string, number>>((acc, item) => {
-    acc[item] = (acc[item] || 0) + 1;
-    return acc;
-  }, {});
-  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
-}
-
-function getTopLevelFolder(path: string) {
-  const [first, second] = path.split("/");
-  if (!first || !second) return "";
-  if (first === "apps" || first === "packages" || first === "crates") return second;
-  return first;
 }
 
 function getFileName(path: string) {

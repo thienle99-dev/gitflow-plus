@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
 import { api } from "@/api/tauri";
+import { useAIDiffReview } from "@/queries/useAI";
 import { Sparkles, RefreshCw } from "lucide-react";
 import { EditorView, basicSetup } from "codemirror";
 import { EditorState, RangeSetBuilder, StateField } from "@codemirror/state";
@@ -65,15 +66,13 @@ export default function DiffViewer({
   const [error, setError] = useState<string | null>(null);
 
   const [showReview, setShowReview] = useState(false);
-  const [loadingReview, setLoadingReview] = useState(false);
   const [reviewResult, setReviewResult] = useState<string>("");
-  const [reviewError, setReviewError] = useState<string | null>(null);
+  const aiReview = useAIDiffReview();
 
   useEffect(() => {
     setReviewResult("");
     setShowReview(false);
-    setReviewError(null);
-    setLoadingReview(false);
+    aiReview.reset();
   }, [filePath, diff]);
 
   const handleToggleAiReview = async () => {
@@ -84,131 +83,11 @@ export default function DiffViewer({
     
     setShowReview(true);
     if (reviewResult) return;
-    
-    setLoadingReview(true);
-    setReviewError(null);
-    
+
     try {
-      const apiKey = localStorage.getItem("gitflowAiApiKey") || "";
-      const model = localStorage.getItem("gitflowAiModel") || "claude-sonnet-4-20250514";
-      const customUrl = localStorage.getItem("gitflowAiApiUrl") || "";
-      const limit = Number(localStorage.getItem("gitflowAiTokenLimit") || "4096");
-
-      const prompt = `You are a world-class senior software architect. Analyze the git diff below for the file "${filePath}" and provide two structured sections:
-1. 💡 CODE EXPLANATION: A clear, high-level summary of WHAT was changed and WHY (keep it accessible and neat).
-2. 🔍 CODE REVIEW & SUGGESTIONS: Inspect the code changes for potential bugs, security issues, performance optimization opportunities, or style improvements. If everything looks perfect, explicitly praise it.
-
-Be professional, direct, constructive, and use markdown styling.
-
-Staged diff:
-${diff.slice(0, 8000)}`;
-
-      let endpoint = "";
-      let message = "";
-
-      if (model.startsWith("claude-")) {
-        endpoint = customUrl ? customUrl.trim() : "https://api.anthropic.com/v1/messages";
-        if (customUrl && !endpoint.endsWith("/messages")) {
-          endpoint = endpoint.replace(/\/+$/, "") + "/messages";
-        }
-        const headers: Record<string, string> = {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01"
-        };
-        const body = JSON.stringify({
-          model: model,
-          max_tokens: limit,
-          messages: [{ role: "user", content: prompt }],
-          stream: false
-        });
-
-        const res = await api.ai.request(endpoint, "POST", headers, body);
-        if (res.status < 200 || res.status >= 300) {
-          throw new Error(`API Error: ${res.status}`);
-        }
-        let data: any;
-        const trimmedBody = res.body.trim();
-        if (trimmedBody.startsWith("data:")) {
-          let contentAccumulator = "";
-          const lines = trimmedBody.split("\n");
-          for (const line of lines) {
-            const cleaned = line.trim();
-            if (cleaned.startsWith("data:") && cleaned !== "data: [DONE]") {
-              try {
-                const chunkStr = cleaned.slice(5).trim();
-                const chunkJson = JSON.parse(chunkStr);
-                contentAccumulator += chunkJson.choices?.[0]?.delta?.content || chunkJson.delta?.content || "";
-              } catch {}
-            }
-          }
-          data = { content: [{ text: contentAccumulator }] };
-        } else {
-          data = JSON.parse(res.body);
-        }
-        message = data.content?.[0]?.text || "";
-      } else {
-        if (model === "ollama") {
-          endpoint = customUrl ? customUrl.trim() : "http://localhost:11434/v1/chat/completions";
-        } else if (model === "llama.cpp") {
-          endpoint = customUrl ? customUrl.trim() : "http://localhost:8080/v1/chat/completions";
-        } else {
-          endpoint = customUrl ? customUrl.trim() : "https://api.openai.com/v1/chat/completions";
-        }
-
-        if (customUrl && !endpoint.endsWith("/chat/completions") && !endpoint.endsWith("/completions")) {
-          endpoint = endpoint.replace(/\/+$/, "") + "/chat/completions";
-        }
-
-        const headers: Record<string, string> = {
-          "Content-Type": "application/json"
-        };
-        if (apiKey) {
-          headers["Authorization"] = `Bearer ${apiKey}`;
-        }
-        const body = JSON.stringify({
-          model: model === "ollama" ? "llama3" : model === "llama.cpp" ? "local-model" : model,
-          messages: [{ role: "user", content: prompt }],
-          max_tokens: limit,
-          stream: false
-        });
-
-        const res = await api.ai.request(endpoint, "POST", headers, body);
-        if (res.status < 200 || res.status >= 300) {
-          throw new Error(`API Error: ${res.status}`);
-        }
-        let data: any;
-        const trimmedBody = res.body.trim();
-        if (trimmedBody.startsWith("data:")) {
-          let contentAccumulator = "";
-          const lines = trimmedBody.split("\n");
-          for (const line of lines) {
-            const cleaned = line.trim();
-            if (cleaned.startsWith("data:") && cleaned !== "data: [DONE]") {
-              try {
-                const chunkStr = cleaned.slice(5).trim();
-                const chunkJson = JSON.parse(chunkStr);
-                contentAccumulator += chunkJson.choices?.[0]?.delta?.content || chunkJson.choices?.[0]?.text || "";
-              } catch {}
-            }
-          }
-          data = { choices: [{ message: { content: contentAccumulator } }] };
-        } else {
-          data = JSON.parse(res.body);
-        }
-        message = data.choices?.[0]?.message?.content || "";
-      }
-
-      if (message.trim()) {
-        setReviewResult(message.trim());
-      } else {
-        throw new Error("Empty response from AI Reviewer");
-      }
-    } catch (e: any) {
-      console.error(e);
-      setReviewError(e.message || String(e));
-    } finally {
-      setLoadingReview(false);
+      setReviewResult(await aiReview.mutateAsync({ filePath, diff }));
+    } catch {
+      // Error is rendered from the mutation state.
     }
   };
   const leftRef = useRef<HTMLDivElement>(null);
@@ -392,13 +271,13 @@ ${diff.slice(0, 8000)}`;
           )}
           <button
             onClick={handleToggleAiReview}
-            disabled={loadingReview}
+            disabled={aiReview.isPending}
             className={`ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-surface-2 transition-all text-accent hover:text-accent-hover ${
-              loadingReview ? "opacity-60 cursor-not-allowed" : ""
+              aiReview.isPending ? "opacity-60 cursor-not-allowed" : ""
             }`}
             title="Analyze and explain code changes with AI"
           >
-            {loadingReview ? (
+            {aiReview.isPending ? (
               <RefreshCw size={11} className="animate-spin text-accent" />
             ) : (
               <Sparkles size={11} />
@@ -484,17 +363,23 @@ ${diff.slice(0, 8000)}`;
           </div>
           
           <div className="flex-1 overflow-y-auto p-4 space-y-4 select-text">
-            {loadingReview ? (
+            {aiReview.isPending ? (
               <div className="flex flex-col items-center justify-center h-full space-y-3 text-text-muted py-10">
                 <RefreshCw size={24} className="animate-spin text-accent" />
                 <span className="text-xs">Analyzing and reviewing changes...</span>
               </div>
-            ) : reviewError ? (
+            ) : aiReview.error ? (
               <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-mac space-y-2">
                 <div className="text-xs font-semibold text-[#ff453a]">Review Failed</div>
-                <div className="text-2xs text-text-secondary break-words whitespace-pre-wrap">{reviewError}</div>
+                <div className="text-2xs text-text-secondary break-words whitespace-pre-wrap">
+                  {aiReview.error instanceof Error ? aiReview.error.message : String(aiReview.error)}
+                </div>
                 <button
-                  onClick={() => { setReviewResult(""); handleToggleAiReview(); }}
+                  onClick={() => {
+                    setReviewResult("");
+                    aiReview.reset();
+                    handleToggleAiReview();
+                  }}
                   className="text-2xs text-accent underline block"
                 >
                   Retry Analysis

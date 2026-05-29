@@ -21,7 +21,6 @@ export function useGitStatus(repoPath: string | null) {
     queryFn: () => api.status(repoPath!),
     enabled: !!repoPath,
     staleTime: 0,
-    refetchInterval: 5000, // Check for file modifications every 5 seconds
   });
 }
 
