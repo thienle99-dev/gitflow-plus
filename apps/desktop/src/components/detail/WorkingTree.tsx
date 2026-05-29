@@ -65,6 +65,9 @@ export default function WorkingTree() {
   const handleStage = async (filePath: string) => {
     try {
       await api.commit.stage(repoPath!, filePath);
+      if (selectedFile === filePath) {
+        selectFile(filePath, "staged");
+      }
       invalidate();
     } catch (e: any) {
       showToast(`Error: ${e}`);
@@ -74,6 +77,9 @@ export default function WorkingTree() {
   const handleUnstage = async (filePath: string) => {
     try {
       await api.commit.unstage(repoPath!, filePath);
+      if (selectedFile === filePath) {
+        selectFile(filePath, "unstaged");
+      }
       invalidate();
     } catch (e: any) {
       showToast(`Error: ${e}`);
