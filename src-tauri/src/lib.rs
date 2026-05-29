@@ -1,10 +1,107 @@
 use std::sync::Mutex;
 use tauri::Manager;
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
+use tauri::Emitter;
 
 mod commands;
 mod watcher;
 
 struct WatcherState(Mutex<Option<watcher::fs_watcher::RepoWatcher>>);
+
+fn create_menu<R: tauri::Runtime>(app: &tauri::App<R>) -> Result<Menu<R>, tauri::Error> {
+    let menu = Menu::new(app)?;
+
+    // App Submenu
+    let app_submenu = Submenu::new(app, "GitFlow Desktop", true)?;
+    app_submenu.append(&PredefinedMenuItem::about(app, None, None)?)?;
+    app_submenu.append(&MenuItem::with_id(
+        app,
+        "open_settings",
+        "Settings...",
+        true,
+        Some("CmdOrCtrl+,"),
+    )?)?;
+    app_submenu.append(&PredefinedMenuItem::separator(app)?)?;
+    app_submenu.append(&PredefinedMenuItem::hide(app, None)?)?;
+    app_submenu.append(&PredefinedMenuItem::hide_others(app, None)?)?;
+    app_submenu.append(&PredefinedMenuItem::show_all(app, None)?)?;
+    app_submenu.append(&PredefinedMenuItem::separator(app)?)?;
+    app_submenu.append(&PredefinedMenuItem::quit(app, None)?)?;
+
+    // File Submenu
+    let file_submenu = Submenu::new(app, "File", true)?;
+    file_submenu.append(&MenuItem::with_id(
+        app,
+        "open_repo",
+        "Open Repository...",
+        true,
+        Some("CmdOrCtrl+O"),
+    )?)?;
+    file_submenu.append(&MenuItem::with_id(
+        app,
+        "close_repo",
+        "Close Repository",
+        true,
+        Some("CmdOrCtrl+W"),
+    )?)?;
+
+    // Edit Submenu
+    let edit_submenu = Submenu::new(app, "Edit", true)?;
+    edit_submenu.append(&PredefinedMenuItem::undo(app, None)?)?;
+    edit_submenu.append(&PredefinedMenuItem::redo(app, None)?)?;
+    edit_submenu.append(&PredefinedMenuItem::separator(app)?)?;
+    edit_submenu.append(&PredefinedMenuItem::cut(app, None)?)?;
+    edit_submenu.append(&PredefinedMenuItem::copy(app, None)?)?;
+    edit_submenu.append(&PredefinedMenuItem::paste(app, None)?)?;
+    edit_submenu.append(&PredefinedMenuItem::select_all(app, None)?)?;
+
+    // View Submenu
+    let view_submenu = Submenu::new(app, "View", true)?;
+    view_submenu.append(&MenuItem::with_id(
+        app,
+        "toggle_sidebar",
+        "Toggle Sidebar",
+        true,
+        Some("CmdOrCtrl+B"),
+    )?)?;
+    view_submenu.append(&MenuItem::with_id(
+        app,
+        "refresh",
+        "Refresh / Fetch",
+        true,
+        Some("CmdOrCtrl+R"),
+    )?)?;
+    view_submenu.append(&MenuItem::with_id(
+        app,
+        "toggle_theme",
+        "Toggle Dark Mode",
+        true,
+        Some("CmdOrCtrl+T"),
+    )?)?;
+
+    // Window Submenu
+    let window_submenu = Submenu::new(app, "Window", true)?;
+    window_submenu.append(&PredefinedMenuItem::minimize(app, None)?)?;
+
+    // Help Submenu
+    let help_submenu = Submenu::new(app, "Help", true)?;
+    help_submenu.append(&MenuItem::with_id(
+        app,
+        "help_docs",
+        "GitFlow Desktop Documentation",
+        true,
+        None::<&str>,
+    )?)?;
+
+    menu.append(&app_submenu)?;
+    menu.append(&file_submenu)?;
+    menu.append(&edit_submenu)?;
+    menu.append(&view_submenu)?;
+    menu.append(&window_submenu)?;
+    menu.append(&help_submenu)?;
+
+    Ok(menu)
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -15,9 +112,38 @@ pub fn run() {
             watcher::fs_watcher::RepoWatcher::new(),
         ))))
         .setup(|app| {
+            let menu = create_menu(app)?;
+            app.set_menu(menu)?;
+
             let window = app.get_webview_window("main").unwrap();
             let _ = window.set_decorations(true);
             Ok(())
+        })
+        .on_menu_event(|app_handle, event| {
+            match event.id.0.as_str() {
+                "open_settings" => {
+                    let _ = app_handle.emit("menu-action", "open-settings");
+                }
+                "open_repo" => {
+                    let _ = app_handle.emit("menu-action", "open-repo");
+                }
+                "close_repo" => {
+                    let _ = app_handle.emit("menu-action", "close-repo");
+                }
+                "toggle_sidebar" => {
+                    let _ = app_handle.emit("menu-action", "toggle-sidebar");
+                }
+                "refresh" => {
+                    let _ = app_handle.emit("menu-action", "refresh");
+                }
+                "toggle_theme" => {
+                    let _ = app_handle.emit("menu-action", "toggle-theme");
+                }
+                "help_docs" => {
+                    let _ = app_handle.emit("menu-action", "help-docs");
+                }
+                _ => {}
+            }
         })
         .invoke_handler(tauri::generate_handler![
             commands::repo::open_repo,

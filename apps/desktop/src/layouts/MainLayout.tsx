@@ -23,6 +23,10 @@ export default function MainLayout() {
   const closeDialog = useUIStore((s) => s.closeDialog);
   const selectedCommit = useUIStore((s) => s.selectedCommit);
   const repoPath = useRepoStore((s) => s.repoPath);
+  const openRepo = useRepoStore((s) => s.openRepo);
+  const closeRepo = useRepoStore((s) => s.closeRepo);
+  const toggleTheme = useRepoStore((s) => s.toggleTheme);
+  const openDialogState = useUIStore((s) => s.openDialog);
   const queryClient = useQueryClient();
 
   // Start/stop file watcher when repo changes
@@ -55,6 +59,46 @@ export default function MainLayout() {
     return () => { unlisten.then((f) => f()); };
   }, [repoPath, queryClient]);
 
+  const handleOpenRepo = async () => {
+    try {
+      const selected = await openDialog({ directory: true, multiple: false });
+      if (selected) {
+        openRepo(selected as string);
+      }
+    } catch (e) {
+      const path = prompt("Enter repository path:");
+      if (path) openRepo(path);
+    }
+  };
+
+  // Listen for native macOS/Tauri menu events
+  useEffect(() => {
+    const unlisten = listen<string>("menu-action", async (event) => {
+      const action = event.payload;
+      if (action === "open-repo") {
+        await handleOpenRepo();
+      } else if (action === "close-repo") {
+        closeRepo();
+      } else if (action === "toggle-sidebar") {
+        toggleSidebar();
+      } else if (action === "refresh") {
+        if (repoPath) {
+          queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
+          api.remote.fetch(repoPath).catch(console.error);
+        }
+      } else if (action === "toggle-theme") {
+        toggleTheme();
+      } else if (action === "open-settings") {
+        openDialogState("settings");
+      } else if (action === "help-docs") {
+        window.open("https://github.com/thienle99-dev/gitflow-plus", "_blank");
+      }
+    });
+    return () => {
+      unlisten.then((f) => f());
+    };
+  }, [repoPath, queryClient, closeRepo, toggleSidebar, toggleTheme, openDialogState]);
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "b") {
@@ -76,7 +120,7 @@ export default function MainLayout() {
   }, [handleKeyDown]);
 
   if (!repoPath) {
-    return <WelcomeScreen />;
+    return <WelcomeScreen onOpen={handleOpenRepo} />;
   }
 
   // Dialog overlay components
@@ -141,22 +185,9 @@ export default function MainLayout() {
   );
 }
 
-function WelcomeScreen() {
+function WelcomeScreen({ onOpen }: { onOpen: () => void }) {
   const openRepo = useRepoStore((s) => s.openRepo);
   const recentRepos = useRepoStore((s) => s.recentRepos);
-
-  const handleOpenRepo = async () => {
-    try {
-      const selected = await openDialog({ directory: true, multiple: false });
-      if (selected) {
-        openRepo(selected as string);
-      }
-    } catch (e) {
-      // Fallback: prompt path
-      const path = prompt("Enter repository path:");
-      if (path) openRepo(path);
-    }
-  };
 
   return (
     <div className="h-full flex items-center justify-center bg-surface-0">
@@ -166,7 +197,7 @@ function WelcomeScreen() {
           Open a local Git repository to get started
         </p>
         <button
-          onClick={handleOpenRepo}
+          onClick={onOpen}
           className="px-6 py-2 bg-accent text-accent-fg rounded-mac text-sm font-medium hover:opacity-90 transition-opacity"
         >
           Open Repository

@@ -21,6 +21,7 @@ export function useGitStatus(repoPath: string | null) {
     queryFn: () => api.status(repoPath!),
     enabled: !!repoPath,
     staleTime: 0,
+    refetchInterval: 5000, // Check for file modifications every 5 seconds
   });
 }
 
@@ -80,5 +81,6 @@ export function useGitSyncStatus(repoPath: string | null) {
     queryFn: () => api.remote.getSyncStatus(repoPath!),
     enabled: !!repoPath,
     staleTime: 5000,
+    refetchInterval: 10000, // Check remote ahead/behind counts every 10 seconds
   });
 }
