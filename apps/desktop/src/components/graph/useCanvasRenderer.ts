@@ -2,11 +2,11 @@ import { useEffect } from "react";
 import type { LayoutState } from "@/lib/graph-layout";
 
 const ROW_HEIGHT = 32;
-const NODE_RADIUS = 5;
-const LANE_WIDTH = 24;
+const NODE_RADIUS = 4;
+const LANE_WIDTH = 16;
 const LABEL_OFFSET = 12;
 const BUFFER_ROWS = 10;
-const GRAPH_LEFT_PADDING = 24;
+const GRAPH_LEFT_PADDING = 28;
 const BADGE_GAP = 8;
 
 interface RenderParams {
@@ -67,13 +67,13 @@ export function useCanvasRenderer({
     const visible = layout.commits.slice(startRow, endRow);
     const commitByHash = new Map(layout.commits.map((commit) => [commit.hash, commit]));
     const offsetY = -scrollTop;
-    const graphColumnWidth = totalLanes * LANE_WIDTH + GRAPH_LEFT_PADDING + 16;
-    const messageX = graphColumnWidth + 12;
+    const graphColumnWidth = totalLanes * LANE_WIDTH + GRAPH_LEFT_PADDING + 18;
+    const messageX = graphColumnWidth + 14;
 
     // Hover lane highlight
     if (hoveredLane !== null) {
       ctx.fillStyle = "rgba(255,255,255,0.035)";
-      const laneX = hoveredLane * LANE_WIDTH + GRAPH_LEFT_PADDING;
+      const laneX = laneXFor(hoveredLane);
       ctx.fillRect(laneX - 10, 0, LANE_WIDTH + 4, height);
     }
 
@@ -86,8 +86,9 @@ export function useCanvasRenderer({
       ctx.fillRect(0, cy - ROW_HEIGHT / 2, width, ROW_HEIGHT);
     }
 
-    // Edges
-    for (const commit of visible) {
+    // Edges. Iterate all loaded edges and clip by viewport so long-running lanes
+    // stay visible even when their source commit has scrolled out of view.
+    for (const commit of layout.commits) {
       const cy = commit.y + offsetY;
       for (let i = 0; i < commit.parentLanes.length; i++) {
         const parentLane = commit.parentLanes[i];
@@ -96,20 +97,22 @@ export function useCanvasRenderer({
           continue;
         }
         const py = parent ? parent.y + offsetY : cy + ROW_HEIGHT;
-        if (py < -ROW_HEIGHT || cy > height + ROW_HEIGHT) {
+        if (Math.max(cy, py) < -ROW_HEIGHT || Math.min(cy, py) > height + ROW_HEIGHT) {
           continue;
         }
         ctx.beginPath();
         ctx.strokeStyle = commit.color;
-        ctx.globalAlpha = 0.5;
-        ctx.lineWidth = 1.5;
+        ctx.globalAlpha = 0.72;
+        ctx.lineWidth = 1.35;
         if (parentLane === commit.lane) {
           ctx.moveTo(commit.x, cy);
           ctx.lineTo(commit.x, py);
         } else {
-          const px = parentLane * LANE_WIDTH + GRAPH_LEFT_PADDING;
+          const px = laneXFor(parentLane);
+          const bendY = Math.min(py, cy + ROW_HEIGHT * 0.58);
           ctx.moveTo(commit.x, cy);
-          ctx.bezierCurveTo(commit.x, cy + ROW_HEIGHT * 0.5, px, py - ROW_HEIGHT * 0.5, px, py);
+          ctx.bezierCurveTo(commit.x, bendY, px, bendY, px, bendY);
+          ctx.lineTo(px, py);
         }
         ctx.stroke();
       }
@@ -127,7 +130,7 @@ export function useCanvasRenderer({
       ctx.fillStyle = isSelected ? "#ffffff" : commit.color;
       ctx.fill();
       ctx.strokeStyle = commit.color;
-      ctx.lineWidth = isSelected ? 2 : 1.25;
+      ctx.lineWidth = isSelected ? 2 : 1;
       ctx.stroke();
     }
 
@@ -187,6 +190,10 @@ export function useCanvasRenderer({
       }
     }
   }, [canvasRef, layout, scrollTop, containerHeight, containerWidth, selectedCommit, hoveredLane, totalLanes]);
+}
+
+function laneXFor(lane: number) {
+  return lane * LANE_WIDTH + GRAPH_LEFT_PADDING;
 }
 
 function truncateText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {

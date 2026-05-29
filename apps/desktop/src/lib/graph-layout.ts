@@ -4,6 +4,8 @@ const COLORS = [
   "#0a84ff", "#30d158", "#ff9f0a", "#bf5af2", "#ff375f",
   "#64d2ff", "#ffd60a", "#5e5ce6", "#ff6482", "#00c7be",
 ];
+const LANE_WIDTH = 16;
+const GRAPH_LEFT_PADDING = 28;
 
 export interface LayoutCommit {
   hash: string;
@@ -68,7 +70,7 @@ export function computeGraphLayout(
       refs: commit.refs || [],
       lane,
       y,
-      x: lane * 24 + 24,
+      x: lane * LANE_WIDTH + GRAPH_LEFT_PADDING,
       parents: commit.parents,
       parentLanes,
       color: laneColors.get(lane) || COLORS[0],
