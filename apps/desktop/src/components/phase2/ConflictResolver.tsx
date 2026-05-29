@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { api } from "@/api/tauri";
-import { Check, Combine, ArrowLeft } from "lucide-react";
+import { Check, Combine, ArrowLeft, Sparkles, RefreshCw } from "lucide-react";
 import { EditorView, basicSetup } from "codemirror";
 import { EditorState } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
@@ -22,6 +22,154 @@ export default function ConflictResolver({ filePath, onComplete, onCancel }: Con
   const [resultContent, setResultContent] = useState("");
   const [resolving, setResolving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [loadingAi, setLoadingAi] = useState(false);
+
+  const handleAiResolveConflict = async () => {
+    setLoadingAi(true);
+    showToast("AI is resolving conflict...");
+    try {
+      const apiKey = localStorage.getItem("gitflowAiApiKey") || "";
+      const model = localStorage.getItem("gitflowAiModel") || "claude-sonnet-4-20250514";
+      const customUrl = localStorage.getItem("gitflowAiApiUrl") || "";
+      const limit = Number(localStorage.getItem("gitflowAiTokenLimit") || "4096");
+
+      const prompt = `You are an elite, highly experienced lead software engineer. We have a merge conflict in the file "${filePath}".
+Please merge the following two versions of code changes intelligently. Solve all conflicts, preserve key logic from both branches where applicable, and ensure correct syntax with no compiler errors.
+
+==================================================
+OURS VERSION (Your current active working branch changes):
+${oursContent}
+
+==================================================
+THEIRS VERSION (Incoming changes from target branch):
+${theirsContent}
+
+==================================================
+CRITICAL INSTRUCTIONS:
+1. Return ONLY the resolved, syntactically correct code that merges both versions.
+2. ABSOLUTELY NO introductory text, no "Here is the merged code...", no explanations, and no markdown code blocks (do NOT wrap in \`\`\`).
+3. Return the exact, raw merged code text.`;
+
+      let endpoint = "";
+      let message = "";
+
+      if (model.startsWith("claude-")) {
+        endpoint = customUrl ? customUrl.trim() : "https://api.anthropic.com/v1/messages";
+        if (customUrl && !endpoint.endsWith("/messages")) {
+          endpoint = endpoint.replace(/\/+$/, "") + "/messages";
+        }
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01"
+        };
+        const body = JSON.stringify({
+          model: model,
+          max_tokens: limit,
+          messages: [{ role: "user", content: prompt }],
+          stream: false
+        });
+
+        const res = await api.ai.request(endpoint, "POST", headers, body);
+        if (res.status < 200 || res.status >= 300) {
+          throw new Error(`API Error: ${res.status}`);
+        }
+        let data: any;
+        const trimmedBody = res.body.trim();
+        if (trimmedBody.startsWith("data:")) {
+          let contentAccumulator = "";
+          const lines = trimmedBody.split("\n");
+          for (const line of lines) {
+            const cleaned = line.trim();
+            if (cleaned.startsWith("data:") && cleaned !== "data: [DONE]") {
+              try {
+                const chunkStr = cleaned.slice(5).trim();
+                const chunkJson = JSON.parse(chunkStr);
+                contentAccumulator += chunkJson.choices?.[0]?.delta?.content || chunkJson.delta?.content || "";
+              } catch {}
+            }
+          }
+          data = { content: [{ text: contentAccumulator }] };
+        } else {
+          data = JSON.parse(res.body);
+        }
+        message = data.content?.[0]?.text || "";
+      } else {
+        if (model === "ollama") {
+          endpoint = customUrl ? customUrl.trim() : "http://localhost:11434/v1/chat/completions";
+        } else if (model === "llama.cpp") {
+          endpoint = customUrl ? customUrl.trim() : "http://localhost:8080/v1/chat/completions";
+        } else {
+          endpoint = customUrl ? customUrl.trim() : "https://api.openai.com/v1/chat/completions";
+        }
+
+        if (customUrl && !endpoint.endsWith("/chat/completions") && !endpoint.endsWith("/completions")) {
+          endpoint = endpoint.replace(/\/+$/, "") + "/chat/completions";
+        }
+
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json"
+        };
+        if (apiKey) {
+          headers["Authorization"] = `Bearer ${apiKey}`;
+        }
+        const body = JSON.stringify({
+          model: model === "ollama" ? "llama3" : model === "llama.cpp" ? "local-model" : model,
+          messages: [{ role: "user", content: prompt }],
+          max_tokens: limit,
+          stream: false
+        });
+
+        const res = await api.ai.request(endpoint, "POST", headers, body);
+        if (res.status < 200 || res.status >= 300) {
+          throw new Error(`API Error: ${res.status}`);
+        }
+        let data: any;
+        const trimmedBody = res.body.trim();
+        if (trimmedBody.startsWith("data:")) {
+          let contentAccumulator = "";
+          const lines = trimmedBody.split("\n");
+          for (const line of lines) {
+            const cleaned = line.trim();
+            if (cleaned.startsWith("data:") && cleaned !== "data: [DONE]") {
+              try {
+                const chunkStr = cleaned.slice(5).trim();
+                const chunkJson = JSON.parse(chunkStr);
+                contentAccumulator += chunkJson.choices?.[0]?.delta?.content || chunkJson.choices?.[0]?.text || "";
+              } catch {}
+            }
+          }
+          data = { choices: [{ message: { content: contentAccumulator } }] };
+        } else {
+          data = JSON.parse(res.body);
+        }
+        message = data.choices?.[0]?.message?.content || "";
+      }
+
+      if (message.trim()) {
+        let resolved = message.trim();
+        if (resolved.startsWith("```")) {
+          const lines = resolved.split("\n");
+          if (lines[0].startsWith("```")) {
+            lines.shift();
+          }
+          if (lines[lines.length - 1] === "```") {
+            lines.pop();
+          }
+          resolved = lines.join("\n");
+        }
+        setResultContent(resolved);
+        showToast("AI resolved conflict successfully!");
+      } else {
+        throw new Error("AI returned empty resolution code.");
+      }
+    } catch (e: any) {
+      console.error(e);
+      showToast(`AI Resolve Failed: ${e.message || e}`);
+    } finally {
+      setLoadingAi(false);
+    }
+  };
 
   const oursRef = useRef<HTMLDivElement>(null);
   const theirsRef = useRef<HTMLDivElement>(null);
@@ -183,6 +331,18 @@ export default function ConflictResolver({ filePath, onComplete, onCancel }: Con
               onClick={acceptBoth}
             >
               <Combine size={10} /> Accept Both
+            </button>
+            <button
+              className="ghost text-2xs px-2 py-0.5 rounded text-accent hover:bg-accent/10 flex items-center gap-1 transition-colors"
+              onClick={handleAiResolveConflict}
+              disabled={loadingAi}
+            >
+              {loadingAi ? (
+                <RefreshCw size={10} className="animate-spin text-accent" />
+              ) : (
+                <Sparkles size={10} />
+              )}
+              <span>AI Auto Resolve</span>
             </button>
           </div>
           <div ref={resultRef} className="flex-1 overflow-auto" />
