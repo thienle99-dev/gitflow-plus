@@ -13,9 +13,25 @@ const DATE_COLUMN_WIDTH = 116;
 const COLUMN_GAP = 16;
 const RIGHT_PADDING = 18;
 
+export interface GraphEdgeSegment {
+  id: number;
+  fromRow: number;
+  toRow: number;
+  fromLane: number;
+  toLane: number;
+  color: string;
+}
+
+export interface GraphRenderIndex {
+  commitByHash: Map<string, LayoutState["commits"][number]>;
+  edgeBlocks: GraphEdgeSegment[][];
+  blockSize: number;
+}
+
 interface RenderParams {
   canvasRef: React.RefObject<HTMLCanvasElement>;
   layout: LayoutState | null;
+  graphIndex: GraphRenderIndex | null;
   scrollTop: number;
   containerHeight: number;
   containerWidth: number;
@@ -27,6 +43,7 @@ interface RenderParams {
 export function useCanvasRenderer({
   canvasRef,
   layout,
+  graphIndex,
   scrollTop,
   containerHeight,
   containerWidth,
@@ -36,7 +53,7 @@ export function useCanvasRenderer({
 }: RenderParams) {
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !layout || layout.commits.length === 0) return;
+    if (!canvas || !layout || !graphIndex || layout.commits.length === 0) return;
 
     const dpr = window.devicePixelRatio || 1;
     const laneWidth = getLaneWidth(totalLanes);
@@ -48,9 +65,9 @@ export function useCanvasRenderer({
     );
 
     const visible = layout.commits.slice(startRow, endRow);
-    const commitByHash = new Map(layout.commits.map((commit) => [commit.hash, commit]));
+    const visibleEdges = getVisibleEdges(graphIndex, startRow, endRow);
     const offsetY = -scrollTop;
-    const graphRight = getVisibleGraphRight(layout, visible, commitByHash, offsetY, height, laneWidth);
+    const graphRight = getVisibleGraphRight(visible, visibleEdges, laneWidth);
     const messageX = Math.max(84, graphRight + 24);
     const width = Math.max(
       containerWidth,
@@ -95,38 +112,31 @@ export function useCanvasRenderer({
       ctx.fillRect(0, cy - ROW_HEIGHT / 2, width, ROW_HEIGHT);
     }
 
-    // Edges. Iterate all loaded edges and clip by viewport so long-running lanes
-    // stay visible even when their source commit has scrolled out of view.
-    for (const commit of layout.commits) {
-      const cy = commit.y + offsetY;
-      for (let i = 0; i < commit.parentLanes.length; i++) {
-        const parentLane = commit.parentLanes[i];
-        const parent = commitByHash.get(commit.parents[i]);
-        if (parent && parent.y <= commit.y) {
-          continue;
-        }
-        const py = parent ? parent.y + offsetY : cy + ROW_HEIGHT;
-        if (Math.max(cy, py) < -ROW_HEIGHT || Math.min(cy, py) > height + ROW_HEIGHT) {
-          continue;
-        }
-        ctx.beginPath();
-        ctx.strokeStyle = commit.color;
-        ctx.globalAlpha = 0.72;
-        ctx.lineWidth = 1.35;
-        if (parentLane === commit.lane) {
-          const x = laneXFor(commit.lane, laneWidth);
-          ctx.moveTo(x, cy);
-          ctx.lineTo(x, py);
-        } else {
-          const x = laneXFor(commit.lane, laneWidth);
-          const px = laneXFor(parentLane, laneWidth);
-          const bendY = Math.min(py, cy + ROW_HEIGHT * 0.58);
-          ctx.moveTo(x, cy);
-          ctx.bezierCurveTo(x, bendY, px, bendY, px, bendY);
-          ctx.lineTo(px, py);
-        }
-        ctx.stroke();
+    // Edges are indexed by row blocks, so scroll/hover redraws only touch the
+    // visible interval instead of scanning the entire loaded history.
+    for (const edge of visibleEdges) {
+      const cy = edge.fromRow * ROW_HEIGHT + ROW_HEIGHT / 2 + offsetY;
+      const py = edge.toRow * ROW_HEIGHT + ROW_HEIGHT / 2 + offsetY;
+      if (Math.max(cy, py) < -ROW_HEIGHT || Math.min(cy, py) > height + ROW_HEIGHT) {
+        continue;
       }
+      ctx.beginPath();
+      ctx.strokeStyle = edge.color;
+      ctx.globalAlpha = 0.72;
+      ctx.lineWidth = 1.35;
+      if (edge.toLane === edge.fromLane) {
+        const x = laneXFor(edge.fromLane, laneWidth);
+        ctx.moveTo(x, cy);
+        ctx.lineTo(x, py);
+      } else {
+        const x = laneXFor(edge.fromLane, laneWidth);
+        const px = laneXFor(edge.toLane, laneWidth);
+        const bendY = Math.min(py, cy + ROW_HEIGHT * 0.58);
+        ctx.moveTo(x, cy);
+        ctx.bezierCurveTo(x, bendY, px, bendY, px, bendY);
+        ctx.lineTo(px, py);
+      }
+      ctx.stroke();
     }
 
     ctx.globalAlpha = 1;
@@ -213,7 +223,7 @@ export function useCanvasRenderer({
       ctx.fillText(truncateText(ctx, commit.author || "Unknown", AUTHOR_COLUMN_WIDTH - 8), columns.authorX, cy);
       ctx.fillText(truncateText(ctx, formatCommitDate(commit.date), DATE_COLUMN_WIDTH - 8), columns.dateX, cy);
     }
-  }, [canvasRef, layout, scrollTop, containerHeight, containerWidth, selectedCommit, hoveredLane, totalLanes]);
+  }, [canvasRef, layout, graphIndex, scrollTop, containerHeight, containerWidth, selectedCommit, hoveredLane, totalLanes]);
 }
 
 function getColumns(width: number, messageX: number) {
@@ -232,31 +242,37 @@ function laneXFor(lane: number, laneWidth: number) {
 }
 
 function getVisibleGraphRight(
-  layout: LayoutState,
   visible: LayoutState["commits"],
-  commitByHash: Map<string, LayoutState["commits"][number]>,
-  offsetY: number,
-  height: number,
+  visibleEdges: GraphEdgeSegment[],
   laneWidth: number,
 ) {
   let maxLane = visible.reduce((max, commit) => Math.max(max, commit.lane), 0);
 
-  for (const commit of layout.commits) {
-    const cy = commit.y + offsetY;
-    for (let i = 0; i < commit.parentLanes.length; i++) {
-      const parent = commitByHash.get(commit.parents[i]);
-      if (parent && parent.y <= commit.y) {
-        continue;
-      }
-      const py = parent ? parent.y + offsetY : cy + ROW_HEIGHT;
-      if (Math.max(cy, py) < -ROW_HEIGHT || Math.min(cy, py) > height + ROW_HEIGHT) {
-        continue;
-      }
-      maxLane = Math.max(maxLane, commit.lane, commit.parentLanes[i]);
-    }
+  for (const edge of visibleEdges) {
+    maxLane = Math.max(maxLane, edge.fromLane, edge.toLane);
   }
 
   return laneXFor(maxLane, laneWidth) + NODE_RADIUS;
+}
+
+function getVisibleEdges(index: GraphRenderIndex, startRow: number, endRow: number) {
+  const startBlock = Math.max(0, Math.floor(startRow / index.blockSize));
+  const endBlock = Math.min(index.edgeBlocks.length - 1, Math.floor(Math.max(startRow, endRow - 1) / index.blockSize));
+  const seen = new Set<number>();
+  const edges: GraphEdgeSegment[] = [];
+
+  for (let block = startBlock; block <= endBlock; block++) {
+    const bucket = index.edgeBlocks[block];
+    if (!bucket) continue;
+    for (const edge of bucket) {
+      if (seen.has(edge.id)) continue;
+      if (edge.toRow < startRow || edge.fromRow > endRow) continue;
+      seen.add(edge.id);
+      edges.push(edge);
+    }
+  }
+
+  return edges;
 }
 
 function getLaneWidth(totalLanes: number) {

@@ -26,8 +26,6 @@ import ThemePicker from "./ThemePicker";
 
 export default function Toolbar() {
   const repoPath = useRepoStore((s) => s.repoPath);
-  const theme = useRepoStore((s) => s.theme);
-  const toggleTheme = useRepoStore((s) => s.toggleTheme);
   const selectCommit = useUIStore((s) => s.selectCommit);
   const selectFile = useUIStore((s) => s.selectFile);
   const openDialog = useUIStore((s) => s.openDialog);
