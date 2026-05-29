@@ -1,10 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { api, type Commit, type FileChange, type Branch, type RepoInfo } from "@/api/tauri";
 
-export function useGitLog(repoPath: string | null, page: number = 0) {
-  return useQuery<Commit[]>({
-    queryKey: ["git", repoPath, "log", page],
-    queryFn: () => api.log(repoPath!, page, 100),
+const PAGE_SIZE = 50;
+
+export function useGitLog(repoPath: string | null) {
+  return useInfiniteQuery<Commit[]>({
+    queryKey: ["git", repoPath, "log"],
+    queryFn: ({ pageParam }) => api.log(repoPath!, pageParam as number, PAGE_SIZE),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length === PAGE_SIZE ? allPages.length : undefined,
     enabled: !!repoPath,
     staleTime: 30_000,
   });

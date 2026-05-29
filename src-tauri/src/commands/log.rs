@@ -88,7 +88,7 @@ pub fn git_log(path: String, page: Option<usize>, per_page: Option<usize>) -> Re
     Ok(commits)
 }
 
-fn parse_refs(refs_str: &str) -> Vec<Ref> {
+pub fn parse_refs(refs_str: &str) -> Vec<Ref> {
     if refs_str.trim().is_empty() {
         return vec![];
     }

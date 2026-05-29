@@ -2,17 +2,16 @@ import { useMemo } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useGitLog } from "@/queries/useGitLog";
-import { FilePlus, FileMinus, FileEdit, GitCommit, User, Clock, ArrowRight } from "lucide-react";
+import { GitCommit, User, Clock, ArrowRight } from "lucide-react";
 
 export default function CommitDetail() {
   const repoPath = useRepoStore((s) => s.repoPath);
   const selectedCommit = useUIStore((s) => s.selectedCommit);
-  const selectFile = useUIStore((s) => s.selectFile);
-  const { data: commits } = useGitLog(repoPath);
+  const { data } = useGitLog(repoPath);
 
   const commit = useMemo(
-    () => commits?.find((c) => c.hash === selectedCommit),
-    [commits, selectedCommit],
+    () => data?.pages.flat().find((c) => c.hash === selectedCommit),
+    [data, selectedCommit],
   );
 
   if (!commit) {

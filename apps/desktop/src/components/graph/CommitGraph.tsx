@@ -12,22 +12,22 @@ const NODE_RADIUS = 5;
 const LANE_WIDTH = 24;
 const LABEL_OFFSET = 12;
 const BUFFER = 50;
+const LOAD_MORE_THRESHOLD = 200; // px from bottom
 
 export default function CommitGraph() {
   const repoPath = useRepoStore((s) => s.repoPath);
   const selectCommit = useUIStore((s) => s.selectCommit);
   const selectedCommit = useUIStore((s) => s.selectedCommit);
-  const { data: commits } = useGitLog(repoPath);
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useGitLog(repoPath);
   const queryClient = useQueryClient();
   const [containerHeight, setContainerHeight] = useState(600);
   const [scrollTop, setScrollTop] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; hash: string } | null>(null);
 
-  const layout = useMemo(() => {
-    if (!commits) return null;
-    return computeGraphLayout(commits);
-  }, [commits]);
+  const commits = useMemo(() => data?.pages.flat() ?? [], [data]);
+
+  const layout = useMemo(() => computeGraphLayout(commits), [commits]);
 
   const totalHeight = layout ? layout.commits.length * ROW_HEIGHT : 0;
 
@@ -42,8 +42,16 @@ export default function CommitGraph() {
   }, []);
 
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    setScrollTop(e.currentTarget.scrollTop);
-  }, []);
+    const el = e.currentTarget;
+    setScrollTop(el.scrollTop);
+    if (
+      hasNextPage &&
+      !isFetchingNextPage &&
+      el.scrollHeight - el.scrollTop - el.clientHeight < LOAD_MORE_THRESHOLD
+    ) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent, hash: string) => {
     e.preventDefault();
@@ -80,10 +88,34 @@ export default function CommitGraph() {
     }
   };
 
-  if (!layout || !commits) {
+  if (isLoading && commits.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center text-text-muted text-sm">
-        Loading commits...
+      <div className="h-full flex flex-col">
+        <div className="h-[28px] flex items-center px-3 border-b border-border text-xs text-text-muted font-medium">
+          <div className="flex items-center gap-1">
+            {repoPath?.split("/").pop()}
+            <span className="text-text-muted">—</span>
+            <span className="text-text-secondary animate-pulse">Loading...</span>
+          </div>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          {Array.from({ length: 20 }).map((_, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-3 px-3 border-b border-border/30"
+              style={{ height: ROW_HEIGHT }}
+            >
+              <div
+                className="rounded-full bg-surface-2 animate-pulse shrink-0"
+                style={{ width: 10, height: 10, opacity: 1 - i * 0.04 }}
+              />
+              <div
+                className="rounded bg-surface-2 animate-pulse"
+                style={{ width: `${30 + ((i * 37) % 40)}%`, height: 8, opacity: 1 - i * 0.04 }}
+              />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -246,6 +278,13 @@ export default function CommitGraph() {
           </svg>
         </div>
       </div>
+
+      {/* Load more indicator */}
+      {isFetchingNextPage && (
+        <div className="h-8 flex items-center justify-center text-xs text-text-muted border-t border-border">
+          Loading more commits...
+        </div>
+      )}
 
       {/* Context menu */}
       {ctxMenu && (
