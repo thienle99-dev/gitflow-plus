@@ -1,6 +1,41 @@
 import { create } from "zustand";
 
-export type Theme = "dark" | "light" | "gruvbox-dark" | "gruvbox-dark-soft" | "gruvbox-dark-hard" | "gruvbox-light" | "gruvbox-light-soft";
+export type Theme =
+  | "dark"
+  | "light"
+  | "gruvbox-dark"
+  | "gruvbox-dark-soft"
+  | "gruvbox-dark-hard"
+  | "gruvbox-light"
+  | "gruvbox-light-soft";
+
+export const THEME_CLASSES: Theme[] = [
+  "dark",
+  "light",
+  "gruvbox-dark",
+  "gruvbox-dark-soft",
+  "gruvbox-dark-hard",
+  "gruvbox-light",
+  "gruvbox-light-soft",
+];
+
+const isDarkTheme = (theme: Theme) => theme === "dark" || theme.startsWith("gruvbox-dark");
+
+export function applyTheme(theme: Theme) {
+  if (typeof document === "undefined") return;
+
+  const targets = [document.documentElement, document.body];
+
+  for (const target of targets) {
+    target.classList.remove(...THEME_CLASSES);
+    if (theme !== "light") target.classList.add(theme);
+    if (isDarkTheme(theme)) target.classList.add("dark");
+    target.style.colorScheme = isDarkTheme(theme) ? "dark" : "light";
+  }
+}
+
+const initialTheme = (localStorage.getItem("theme") as Theme) || "dark";
+applyTheme(initialTheme);
 
 interface RepoState {
   repoPath: string | null;
@@ -18,7 +53,7 @@ export const useRepoStore = create<RepoState>((set) => ({
   repoPath: null,
   selectedRef: null,
   recentRepos: JSON.parse(localStorage.getItem("recentRepos") || "[]"),
-  theme: (localStorage.getItem("theme") as Theme) || "dark",
+  theme: initialTheme,
 
   openRepo: (path) =>
     set((state) => {
@@ -39,11 +74,13 @@ export const useRepoStore = create<RepoState>((set) => ({
       // Cycle: dark → light → dark for toggle
       const next = state.theme === "dark" ? "light" : "dark";
       localStorage.setItem("theme", next);
+      applyTheme(next);
       return { theme: next };
     }),
 
   setTheme: (theme: Theme) => {
     localStorage.setItem("theme", theme);
+    applyTheme(theme);
     set({ theme });
   },
 }));
