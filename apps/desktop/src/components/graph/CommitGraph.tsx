@@ -6,12 +6,11 @@ import { computeGraphLayout } from "@/lib/graph-layout";
 import { api } from "@/api/tauri";
 import { useQueryClient } from "@tanstack/react-query";
 import ContextMenu, { type ContextMenuItem } from "@/components/common/ContextMenu";
+import { useCanvasRenderer } from "./useCanvasRenderer";
+import { useHitTest } from "./useHitTest";
+import CommitTooltip from "./CommitTooltip";
 
 const ROW_HEIGHT = 32;
-const NODE_RADIUS = 5;
-const LANE_WIDTH = 24;
-const LABEL_OFFSET = 12;
-const BUFFER = 50;
 const LOAD_MORE_THRESHOLD = 200; // px from bottom
 
 export default function CommitGraph() {
@@ -20,17 +19,24 @@ export default function CommitGraph() {
   const selectedCommit = useUIStore((s) => s.selectedCommit);
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useGitLog(repoPath);
   const queryClient = useQueryClient();
+
   const [containerHeight, setContainerHeight] = useState(600);
   const [scrollTop, setScrollTop] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; hash: string } | null>(null);
 
   const commits = useMemo(() => data?.pages.flat() ?? [], [data]);
-
   const layout = useMemo(() => computeGraphLayout(commits), [commits]);
 
   const totalHeight = layout ? layout.commits.length * ROW_HEIGHT : 0;
+  const totalLanes = useMemo(
+    () => layout.commits.reduce((max, c) => Math.max(max, c.lane + 1), 1),
+    [layout],
+  );
 
+  // Track container size
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -41,28 +47,41 @@ export default function CommitGraph() {
     return () => observer.disconnect();
   }, []);
 
-  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    const el = e.currentTarget;
-    setScrollTop(el.scrollTop);
-    if (
-      hasNextPage &&
-      !isFetchingNextPage &&
-      el.scrollHeight - el.scrollTop - el.clientHeight < LOAD_MORE_THRESHOLD
-    ) {
-      fetchNextPage();
-    }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  // Hit-test hook — hover state + event handlers
+  const { hover, handleMouseMove, handleMouseLeave, handleClick, handleContextMenu } =
+    useHitTest(layout, scrollTop);
 
-  const handleContextMenu = useCallback((e: React.MouseEvent, hash: string) => {
-    e.preventDefault();
-    setCtxMenu({ x: e.clientX, y: e.clientY, hash });
-  }, []);
+  // Canvas renderer — redraws whenever deps change
+  useCanvasRenderer({
+    canvasRef,
+    layout,
+    scrollTop,
+    containerHeight,
+    selectedCommit,
+    hoveredLane: hover.lane,
+    totalLanes,
+  });
+
+  const handleScroll = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      const el = e.currentTarget;
+      setScrollTop(el.scrollTop);
+      if (
+        hasNextPage &&
+        !isFetchingNextPage &&
+        el.scrollHeight - el.scrollTop - el.clientHeight < LOAD_MORE_THRESHOLD
+      ) {
+        fetchNextPage();
+      }
+    },
+    [hasNextPage, isFetchingNextPage, fetchNextPage],
+  );
 
   const copyHash = async (hash: string) => {
     try {
       await navigator.clipboard.writeText(hash);
     } catch {
-      // fallback
+      // fallback — clipboard may be unavailable in some WebView contexts
     }
   };
 
@@ -120,18 +139,6 @@ export default function CommitGraph() {
     );
   }
 
-  const visibleRange = {
-    start: Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER),
-    end: Math.min(
-      layout.commits.length,
-      Math.ceil((scrollTop + containerHeight) / ROW_HEIGHT) + BUFFER,
-    ),
-  };
-
-  const visibleCommits = layout.commits.slice(visibleRange.start, visibleRange.end);
-  const totalLanes = layout.commits.reduce((max, c) => Math.max(max, c.lane + 1), 0);
-  const svgWidth = totalLanes * LANE_WIDTH + LABEL_OFFSET + 200;
-
   const ctxItems: ContextMenuItem[] = ctxMenu
     ? [
         {
@@ -155,135 +162,47 @@ export default function CommitGraph() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="h-[28px] flex items-center px-3 border-b border-border text-xs text-text-muted font-medium">
+      {/* Header */}
+      <div className="h-[28px] flex items-center px-3 border-b border-border text-xs text-text-muted font-medium shrink-0">
         <div className="flex items-center gap-1">
           {repoPath?.split("/").pop()}
           <span className="text-text-muted">—</span>
           <span className="text-text-secondary">{commits.length} commits</span>
         </div>
       </div>
+
+      {/* Scrollable graph area */}
       <div
         ref={containerRef}
         className="flex-1 overflow-auto"
         onScroll={handleScroll}
       >
+        {/* Tall div establishes the virtual scroll height */}
         <div style={{ height: totalHeight, position: "relative" }}>
-          <svg
-            width={svgWidth}
-            height={totalHeight}
-            style={{ position: "absolute", top: 0, left: 0 }}
-            onContextMenu={(e) => e.preventDefault()}
-          >
-            {/* Edges */}
-            {visibleCommits.map((commit) =>
-              commit.parentLanes.map((parentLane, i) => {
-                const y1 = commit.y;
-                const y2 = commit.y + ROW_HEIGHT;
-                return (
-                  <path
-                    key={`${commit.hash}-${i}`}
-                    d={
-                      parentLane === commit.lane
-                        ? `M ${commit.x} ${y1} L ${commit.x} ${y2}`
-                        : `M ${commit.x} ${y1} Q ${(commit.x + parentLane * LANE_WIDTH + LANE_WIDTH / 2 + commit.x) / 2} ${(y1 + y2) / 2}, ${parentLane * LANE_WIDTH + LANE_WIDTH / 2 + LABEL_OFFSET} ${y2}`
-                    }
-                    stroke={commit.color}
-                    strokeWidth={1.5}
-                    fill="none"
-                    opacity={0.5}
-                  />
-                );
-              }),
-            )}
-
-            {/* Commit nodes */}
-            {visibleCommits.map((commit) => (
-              <g
-                key={commit.hash}
-                onClick={() => selectCommit(commit.hash)}
-                onContextMenu={(e) => handleContextMenu(e, commit.hash)}
-                style={{ cursor: "pointer" }}
-              >
-                {/* Edge to next row */}
-                <line
-                  x1={commit.x}
-                  y1={commit.y + NODE_RADIUS + 1}
-                  x2={commit.x}
-                  y2={commit.y + ROW_HEIGHT}
-                  stroke={commit.color}
-                  strokeWidth={1.5}
-                  opacity={0.4}
-                />
-                {/* Node circle */}
-                <circle
-                  cx={commit.x}
-                  cy={commit.y}
-                  r={NODE_RADIUS}
-                  fill={selectedCommit === commit.hash ? "#fff" : commit.color}
-                  stroke={commit.color}
-                  strokeWidth={selectedCommit === commit.hash ? 2 : 1}
-                />
-                {/* Message label */}
-                <text
-                  x={commit.x + LABEL_OFFSET}
-                  y={commit.y + 4}
-                  className="text-xs"
-                  fill="var(--text-primary)"
-                  dominantBaseline="middle"
-                >
-                  {commit.message.length > 60
-                    ? commit.message.slice(0, 60) + "..."
-                    : commit.message}
-                </text>
-
-                {/* Ref badges */}
-                {commit.refs.map((ref, i) => {
-                  const badgeOffset = commit.x + LABEL_OFFSET + 12 + Math.min(commit.message.length, 60) * 6.5;
-                  const badgeX = badgeOffset + i * 70;
-                  const badgeColor =
-                    ref.ref_type === "head"
-                      ? "#ff9f0a"
-                      : ref.ref_type === "tag"
-                        ? "#bf5af2"
-                        : ref.ref_type === "remote"
-                          ? "#636366"
-                          : "var(--accent)";
-                  const label = ref.ref_type === "remote"
-                    ? ref.name.split("/").slice(1).join("/")
-                    : ref.name;
-                  return (
-                    <g key={`badge-${commit.hash}-${i}`}>
-                      <rect
-                        x={badgeX}
-                        y={commit.y - 6}
-                        width={label.length * 7 + 6}
-                        height={13}
-                        rx={2}
-                        fill={badgeColor}
-                      />
-                      <text
-                        x={badgeX + 3}
-                        y={commit.y + 1}
-                        fill="#fff"
-                        fontSize={9}
-                        fontWeight={500}
-                      >
-                        {label.length > 12 ? label.slice(0, 11) + "…" : label}
-                      </text>
-                    </g>
-                  );
-                })}
-              </g>
-            ))}
-          </svg>
+          {/* Canvas is sticky so it stays in view while the div scrolls behind it */}
+          <canvas
+            ref={canvasRef}
+            style={{ position: "sticky", top: 0, display: "block", cursor: "pointer" }}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            onClick={(e) => handleClick(e, selectCommit)}
+            onContextMenu={(e) =>
+              handleContextMenu(e, (x, y, hash) => setCtxMenu({ x, y, hash }))
+            }
+          />
         </div>
       </div>
 
       {/* Load more indicator */}
       {isFetchingNextPage && (
-        <div className="h-8 flex items-center justify-center text-xs text-text-muted border-t border-border">
+        <div className="h-8 flex items-center justify-center text-xs text-text-muted border-t border-border shrink-0">
           Loading more commits...
         </div>
+      )}
+
+      {/* Hover tooltip */}
+      {hover.commit && (
+        <CommitTooltip commit={hover.commit} x={hover.x} y={hover.y} />
       )}
 
       {/* Context menu */}
