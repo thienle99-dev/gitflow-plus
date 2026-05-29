@@ -104,7 +104,7 @@
 
 ---
 
-## Phase 2: Advanced Git (after Phase 1 ships)
+## Phase 2: Advanced Git + AI Features (after Phase 1 ships)
 
 - [ ] Merge branch + detect conflict state
 - [ ] Conflict resolver UI (3-panel CodeMirror)
@@ -112,6 +112,17 @@
 - [ ] Stash management
 - [ ] Tag CRUD
 - [ ] Git log search/filter
+
+### AI Features (Cloud LLM API)
+- [ ] Settings UI: API key input (Claude/OpenAI), model selector, token limit
+- [ ] API key storage in OS keychain (`keyring` crate)
+- [ ] Rust backend: LLM API client + streaming response via Tauri events
+- [ ] **AI Conflict Resolution** — phân tích ours/theirs + surrounding context, đề xuất merged result
+- [ ] **AI Commit Message** — phân tích staged diff, generate conventional commit (type: subject + body)
+- [ ] **AI Explain Changes** — giải thích commit/diff bằng ngôn ngữ tự nhiên
+- [ ] **AI Code Review Assist** — flag bugs, suggest improvements, đề xuất test cases
+- [ ] Rate limiting + response caching cho cùng diff
+- [ ] Fallback: API fail → toast error, manual workflow vẫn hoạt động bình thường
 
 ## Phase 3: Remote Integration (after Phase 2)
 
