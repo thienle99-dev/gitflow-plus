@@ -1,16 +1,8 @@
 import type { Commit, Ref } from "@/api/tauri";
 
 const COLORS = [
-  "#0a84ff",
-  "#30d158",
-  "#ff9f0a",
-  "#bf5af2",
-  "#ff375f",
-  "#64d2ff",
-  "#ffd60a",
-  "#5e5ce6",
-  "#ff6482",
-  "#00c7be",
+  "#0a84ff", "#30d158", "#ff9f0a", "#bf5af2", "#ff375f",
+  "#64d2ff", "#ffd60a", "#5e5ce6", "#ff6482", "#00c7be",
 ];
 
 export interface LayoutCommit {
@@ -24,26 +16,32 @@ export interface LayoutCommit {
   color: string;
 }
 
-interface GraphLayout {
+export interface LayoutState {
   commits: LayoutCommit[];
+  laneMap: Map<string, number>;
+  laneColors: Map<number, string>;
+  nextLane: number;
 }
 
-export function computeGraphLayout(commits: Commit[]): GraphLayout {
-  // Commits arrive newest-first. A commit inherits the lane reserved by a child;
-  // then it reserves that lane for its first parent to keep linear history vertical.
-  const laneMap = new Map<string, number>(); // hash -> reserved lane
-  const laneColors = new Map<number, string>();
-  let nextLane = 0;
+export function computeGraphLayout(
+  commits: Commit[],
+  prev?: LayoutState,
+): LayoutState {
+  const laneMap = prev ? new Map(prev.laneMap) : new Map<string, number>();
+  const laneColors = prev ? new Map(prev.laneColors) : new Map<number, string>();
+  let nextLane = prev?.nextLane ?? 0;
+  const yOffset = prev ? prev.commits.length * 32 : 0;
 
-  const result: LayoutCommit[] = [];
-  const totalCommits = commits.length;
+  const newCommits: LayoutCommit[] = [];
 
-  // Process in reverse chronological (commits already from git log = newest first)
-  for (let i = 0; i < totalCommits; i++) {
+  for (let i = 0; i < commits.length; i++) {
     const commit = commits[i];
-    const y = i * 32 + 16; // row center
+    const y = yOffset + i * 32 + 16;
 
-    const lane = laneMap.get(commit.hash) ?? nextLane++;
+    // Inherit first parent's lane if already known (incremental append case),
+    // otherwise use a pre-reserved lane for this commit, or allocate a new one.
+    const firstParentLane = commit.parents.length > 0 ? laneMap.get(commit.parents[0]) : undefined;
+    const lane = laneMap.get(commit.hash) ?? firstParentLane ?? nextLane++;
     laneMap.set(commit.hash, lane);
 
     if (!laneColors.has(lane)) {
@@ -51,14 +49,19 @@ export function computeGraphLayout(commits: Commit[]): GraphLayout {
     }
 
     const parentLanes = commit.parents.map((parent, parentIndex) => {
-      const parentLane = parentIndex === 0
-        ? lane
-        : laneMap.get(parent) ?? nextLane++;
+      if (parentIndex === 0) {
+        // Keep existing lane for first parent; only set if not yet reserved.
+        const existing = laneMap.get(parent);
+        if (existing !== undefined) return existing;
+        laneMap.set(parent, lane);
+        return lane;
+      }
+      const parentLane = laneMap.get(parent) ?? nextLane++;
       laneMap.set(parent, parentLane);
       return parentLane;
     });
 
-    result.push({
+    newCommits.push({
       hash: commit.hash,
       message: commit.message,
       refs: commit.refs || [],
@@ -70,5 +73,10 @@ export function computeGraphLayout(commits: Commit[]): GraphLayout {
     });
   }
 
-  return { commits: result };
+  return {
+    commits: prev ? [...prev.commits, ...newCommits] : newCommits,
+    laneMap,
+    laneColors,
+    nextLane,
+  };
 }
