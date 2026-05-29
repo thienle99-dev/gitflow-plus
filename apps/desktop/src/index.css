@@ -237,3 +237,36 @@ button.ghost:active {
 .diff-prefix-widget.empty {
   color: transparent;
 }
+
+/* Inline Hunk Action Widgets */
+.diff-hunk-actions-widget {
+  display: inline-flex;
+  gap: 6px;
+  margin-left: 12px;
+  vertical-align: middle;
+}
+
+.hunk-action-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-family: inherit;
+  padding: 1px 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 150ms ease;
+  user-select: none;
+}
+
+.hunk-action-btn:hover {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: transparent;
+}
+
+.hunk-action-btn.discard:hover {
+  background: #ff375f;
+  color: white;
+}

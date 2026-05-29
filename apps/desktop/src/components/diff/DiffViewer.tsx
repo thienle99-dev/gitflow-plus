@@ -133,12 +133,18 @@ export default function DiffViewer({
       oldContent,
       lang,
       theme,
+      hunks,
+      source,
+      applyHunk,
     );
     rightView.current = createEditor(
       rightRef.current,
       newContent,
       lang,
       theme,
+      hunks,
+      source,
+      applyHunk,
     );
 
     return () => {
@@ -147,7 +153,7 @@ export default function DiffViewer({
       leftView.current = null;
       rightView.current = null;
     };
-  }, [diffViewMode, oldContent, newContent, lang, theme]);
+  }, [diffViewMode, oldContent, newContent, lang, theme, hunks, source]);
 
   // Mount unified view editor
   useEffect(() => {
@@ -163,13 +169,16 @@ export default function DiffViewer({
       unifiedContent,
       lang,
       theme,
+      hunks,
+      source,
+      applyHunk,
     );
 
     return () => {
       unifiedView.current?.destroy();
       unifiedView.current = null;
     };
-  }, [diffViewMode, unifiedContent, lang, theme]);
+  }, [diffViewMode, unifiedContent, lang, theme, hunks, source]);
 
   // Synchronized scrolling for Split View
   useEffect(() => {
@@ -336,108 +345,189 @@ function computeMismatch(oldStr: string, newStr: string) {
   };
 }
 
-const diffHighlightExtension = StateField.define<DecorationSet>({
-  create(state) {
-    const builder = new RangeSetBuilder<Decoration>();
-    const doc = state.doc;
+class HunkActionsWidget extends WidgetType {
+  constructor(
+    readonly index: number,
+    readonly hunk: DiffHunk,
+    readonly source: "working" | "staged" | "commit",
+    readonly onAction: (hunk: DiffHunk, index: number, action: "stage" | "unstage" | "discard") => void,
+  ) {
+    super();
+  }
+
+  eq(other: HunkActionsWidget) {
+    return this.index === other.index && this.source === other.source;
+  }
+
+  toDOM() {
+    const span = document.createElement("span");
+    span.className = "diff-hunk-actions-widget";
     
-    for (let i = 1; i <= doc.lines; i++) {
-      const line = doc.line(i);
-      const text = line.text;
+    if (this.source === "commit") return span;
+
+    if (this.source === "working") {
+      const stageBtn = document.createElement("button");
+      stageBtn.textContent = "Stage";
+      stageBtn.className = "hunk-action-btn stage";
+      stageBtn.onclick = (e) => {
+        e.stopPropagation();
+        this.onAction(this.hunk, this.index, "stage");
+      };
+      span.appendChild(stageBtn);
+
+      const discardBtn = document.createElement("button");
+      discardBtn.textContent = "Discard";
+      discardBtn.className = "hunk-action-btn discard";
+      discardBtn.onclick = (e) => {
+        e.stopPropagation();
+        this.onAction(this.hunk, this.index, "discard");
+      };
+      span.appendChild(discardBtn);
+    } else if (this.source === "staged") {
+      const unstageBtn = document.createElement("button");
+      unstageBtn.textContent = "Unstage";
+      unstageBtn.className = "hunk-action-btn unstage";
+      unstageBtn.onclick = (e) => {
+        e.stopPropagation();
+        this.onAction(this.hunk, this.index, "unstage");
+      };
+      span.appendChild(unstageBtn);
+    }
+
+    return span;
+  }
+
+  ignoreEvent() {
+    return false; // Enable handling clicks on widget buttons
+  }
+}
+
+function getDiffHighlightExtension(
+  hunks: DiffHunk[],
+  source: "working" | "staged" | "commit",
+  onAction: (hunk: DiffHunk, index: number, action: "stage" | "unstage" | "discard") => void,
+) {
+  return StateField.define<DecorationSet>({
+    create(state) {
+      const builder = new RangeSetBuilder<Decoration>();
+      const doc = state.doc;
+      let hunkIndex = 0;
       
-      if (text.startsWith("+")) {
-        // Line decoration
-        builder.add(
-          line.from,
-          line.from,
-          Decoration.line({ attributes: { class: "diff-line-added" } }),
-        );
+      for (let i = 1; i <= doc.lines; i++) {
+        const line = doc.line(i);
+        const text = line.text;
         
-        // Hide leading '+' character
-        builder.add(
-          line.from,
-          line.from + 1,
-          Decoration.replace({ widget: new PrefixWidget("+") }),
-        );
-      } else if (text.startsWith("-")) {
-        // Line decoration
-        builder.add(
-          line.from,
-          line.from,
-          Decoration.line({ attributes: { class: "diff-line-deleted" } }),
-        );
+        if (text.startsWith("+")) {
+          // Line decoration
+          builder.add(
+            line.from,
+            line.from,
+            Decoration.line({ attributes: { class: "diff-line-added" } }),
+          );
+          
+          // Hide leading '+' character
+          builder.add(
+            line.from,
+            line.from + 1,
+            Decoration.replace({ widget: new PrefixWidget("+") }),
+          );
+        } else if (text.startsWith("-")) {
+          // Line decoration
+          builder.add(
+            line.from,
+            line.from,
+            Decoration.line({ attributes: { class: "diff-line-deleted" } }),
+          );
+          
+          // Hide leading '-' character
+          builder.add(
+            line.from,
+            line.from + 1,
+            Decoration.replace({ widget: new PrefixWidget("-") }),
+          );
+          
+          // Check if next line is an added line to pair for inline highlights
+          if (i < doc.lines) {
+            const nextLine = doc.line(i + 1);
+            if (nextLine.text.startsWith("+")) {
+              const { prefixLen, suffixLen } = computeMismatch(text, nextLine.text);
+              
+              const fromOld = line.from + prefixLen;
+              const toOld = line.to - suffixLen;
+              if (toOld > fromOld) {
+                builder.add(
+                  fromOld,
+                  toOld,
+                  Decoration.mark({ class: "diff-inline-deleted" }),
+                );
+              }
+            }
+          }
+        } else if (text.startsWith(" ")) {
+          // Hide leading space for perfect code alignment
+          builder.add(
+            line.from,
+            line.from + 1,
+            Decoration.replace({ widget: new PrefixWidget(" ") }),
+          );
+        } else if (text.startsWith("@@")) {
+          builder.add(
+            line.from,
+            line.from,
+            Decoration.line({ attributes: { class: "diff-line-header" } }),
+          );
+          
+          // Append hunk inline actions widget at the end of Hunk Header line
+          const currentHunk = hunks[hunkIndex];
+          if (currentHunk && source !== "commit") {
+            builder.add(
+              line.to,
+              line.to,
+              Decoration.widget({
+                widget: new HunkActionsWidget(hunkIndex, currentHunk, source, onAction),
+                side: 1,
+              }),
+            );
+          }
+          hunkIndex++;
+        }
         
-        // Hide leading '-' character
-        builder.add(
-          line.from,
-          line.from + 1,
-          Decoration.replace({ widget: new PrefixWidget("-") }),
-        );
-        
-        // Check if next line is an added line to pair for inline highlights
-        if (i < doc.lines) {
-          const nextLine = doc.line(i + 1);
-          if (nextLine.text.startsWith("+")) {
-            const { prefixLen, suffixLen } = computeMismatch(text, nextLine.text);
+        // Check if previous line is a deleted line to pair for inline highlights
+        if (text.startsWith("+") && i > 1) {
+          const prevLine = doc.line(i - 1);
+          if (prevLine.text.startsWith("-")) {
+            const { prefixLen, suffixLen } = computeMismatch(prevLine.text, text);
             
-            const fromOld = line.from + prefixLen;
-            const toOld = line.to - suffixLen;
-            if (toOld > fromOld) {
+            const fromNew = line.from + prefixLen;
+            const toNew = line.to - suffixLen;
+            if (toNew > fromNew) {
               builder.add(
-                fromOld,
-                toOld,
-                Decoration.mark({ class: "diff-inline-deleted" }),
+                fromNew,
+                toNew,
+                Decoration.mark({ class: "diff-inline-added" }),
               );
             }
           }
         }
-      } else if (text.startsWith(" ")) {
-        // Hide leading space for perfect code alignment
-        builder.add(
-          line.from,
-          line.from + 1,
-          Decoration.replace({ widget: new PrefixWidget(" ") }),
-        );
-      } else if (text.startsWith("@@")) {
-        builder.add(
-          line.from,
-          line.from,
-          Decoration.line({ attributes: { class: "diff-line-header" } }),
-        );
       }
       
-      // Check if previous line is a deleted line to pair for inline highlights
-      if (text.startsWith("+") && i > 1) {
-        const prevLine = doc.line(i - 1);
-        if (prevLine.text.startsWith("-")) {
-          const { prefixLen, suffixLen } = computeMismatch(prevLine.text, text);
-          
-          const fromNew = line.from + prefixLen;
-          const toNew = line.to - suffixLen;
-          if (toNew > fromNew) {
-            builder.add(
-              fromNew,
-              toNew,
-              Decoration.mark({ class: "diff-inline-added" }),
-            );
-          }
-        }
-      }
-    }
-    
-    return builder.finish();
-  },
-  update(decorations, transaction) {
-    return decorations.map(transaction.changes);
-  },
-  provide: (f) => EditorView.decorations.from(f),
-});
+      return builder.finish();
+    },
+    update(decorations, transaction) {
+      return decorations.map(transaction.changes);
+    },
+    provide: (f) => EditorView.decorations.from(f),
+  });
+}
 
 function createEditor(
   parent: HTMLDivElement,
   content: string,
   lang: ReturnType<typeof javascript>,
   theme: any[],
+  hunks: DiffHunk[],
+  source: "working" | "staged" | "commit",
+  onAction: (hunk: DiffHunk, index: number, action: "stage" | "unstage" | "discard") => void,
 ): EditorView {
   const state = EditorState.create({
     doc: content,
@@ -445,7 +535,7 @@ function createEditor(
       basicSetup,
       lang,
       ...theme,
-      diffHighlightExtension,
+      getDiffHighlightExtension(hunks, source, onAction),
       EditorView.editable.of(false),
       EditorView.lineWrapping,
       keymap.of([]),
