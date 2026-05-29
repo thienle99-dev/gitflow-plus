@@ -90,4 +90,11 @@ export const api = {
     fetch: (path: string, remote?: string) =>
       invoke<string>("git_fetch", { path, remote: remote ?? null }),
   },
+
+  watcher: {
+    start: (path: string) =>
+      invoke<string>("start_watcher", { path }),
+    stop: () =>
+      invoke<string>("stop_watcher"),
+  },
 };

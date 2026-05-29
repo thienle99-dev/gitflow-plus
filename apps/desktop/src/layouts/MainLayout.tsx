@@ -1,7 +1,10 @@
 import { useEffect, useCallback } from "react";
+import { listen } from "@tauri-apps/api/event";
+import { useQueryClient } from "@tanstack/react-query";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
+import { api } from "@/api/tauri";
 import Toolbar from "@/components/common/Toolbar";
 import Sidebar from "@/components/sidebar/Sidebar";
 import CommitGraph from "@/components/graph/CommitGraph";
@@ -12,6 +15,32 @@ export default function MainLayout() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const repoPath = useRepoStore((s) => s.repoPath);
+  const queryClient = useQueryClient();
+
+  // Start/stop file watcher when repo changes
+  useEffect(() => {
+    if (!repoPath) return;
+    api.watcher.start(repoPath).catch(console.error);
+    return () => {
+      api.watcher.stop().catch(console.error);
+    };
+  }, [repoPath]);
+
+  // Listen for file watcher events and invalidate queries
+  useEffect(() => {
+    const unlisten = listen<{ event_type: string }>("repo:changed", (event) => {
+      const type = event.payload.event_type;
+      if (type === "worktree") {
+        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "status"] });
+      } else if (type === "refs") {
+        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "branches"] });
+        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "log"] });
+      } else if (type === "head") {
+        queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
+      }
+    });
+    return () => { unlisten.then((f) => f()); };
+  }, [repoPath, queryClient]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
