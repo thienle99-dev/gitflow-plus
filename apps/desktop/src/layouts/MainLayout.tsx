@@ -11,10 +11,13 @@ import Sidebar from "@/components/sidebar/Sidebar";
 import CommitGraph from "@/components/graph/CommitGraph";
 import RightPanel from "@/components/detail/RightPanel";
 import BottomBar from "@/components/common/BottomBar";
+import SearchDialog from "@/components/phase2/SearchDialog";
 
 export default function MainLayout() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
+  const activeDialog = useUIStore((s) => s.activeDialog);
+  const closeDialog = useUIStore((s) => s.closeDialog);
   const repoPath = useRepoStore((s) => s.repoPath);
   const queryClient = useQueryClient();
 
@@ -92,6 +95,7 @@ export default function MainLayout() {
         </PanelGroup>
       </div>
       <BottomBar />
+      <SearchDialog open={activeDialog === "search"} onClose={closeDialog} />
     </div>
   );
 }

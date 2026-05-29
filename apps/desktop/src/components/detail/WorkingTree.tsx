@@ -24,6 +24,7 @@ import {
   GitCommit,
   MoreHorizontal,
   RefreshCw,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 
@@ -58,7 +59,6 @@ export default function WorkingTree() {
   const handleStage = async (filePath: string) => {
     try {
       await api.commit.stage(repoPath!, filePath);
-      selectFile(filePath, "staged");
       invalidate();
     } catch (e: any) {
       showToast(`Error: ${e}`);
@@ -68,7 +68,6 @@ export default function WorkingTree() {
   const handleUnstage = async (filePath: string) => {
     try {
       await api.commit.unstage(repoPath!, filePath);
-      selectFile(filePath, "unstaged");
       invalidate();
     } catch (e: any) {
       showToast(`Error: ${e}`);
@@ -131,6 +130,16 @@ export default function WorkingTree() {
     } finally {
       setCommitting(false);
     }
+  };
+
+  const handleGenerateCommit = () => {
+    if (staged.length === 0) {
+      showToast("Stage changes before generating a commit message");
+      return;
+    }
+
+    setCommitMessage(generateCommitMessage(staged));
+    requestAnimationFrame(() => textareaRef.current?.focus());
   };
 
   useEffect(() => {
@@ -242,13 +251,23 @@ export default function WorkingTree() {
       </div>
 
       <div className="px-3 py-2 border-t border-border space-y-2 shrink-0">
-        <textarea
-          ref={textareaRef}
-          value={commitMessage}
-          onChange={(e) => setCommitMessage(e.target.value)}
-          placeholder="Commit message"
-          className="w-full h-[64px] text-xs bg-surface-1 border border-border rounded-mac px-2 py-1.5 text-text-primary placeholder:text-text-muted resize-none outline-none focus:border-accent transition-colors"
-        />
+        <div className="relative">
+          <textarea
+            ref={textareaRef}
+            value={commitMessage}
+            onChange={(e) => setCommitMessage(e.target.value)}
+            placeholder="Commit message"
+            className="w-full h-[64px] text-xs bg-surface-1 border border-border rounded-mac pl-2 pr-9 py-1.5 text-text-primary placeholder:text-text-muted resize-none outline-none focus:border-accent transition-colors"
+          />
+          <button
+            className="absolute right-1.5 top-1.5 ghost p-1"
+            onClick={handleGenerateCommit}
+            disabled={staged.length === 0}
+            title="Generate commit message"
+          >
+            <Sparkles size={14} />
+          </button>
+        </div>
         <div className="flex items-center gap-2">
           <button
             onClick={handleCommit}
@@ -385,30 +404,30 @@ function StatusBadge({ status, selected }: { status: string; selected: boolean }
   
   let badgeClass = "";
   if (selected) {
-    badgeClass = "bg-accent-fg/20 text-accent-fg border border-accent-fg/30";
+    badgeClass = "text-accent-fg opacity-90";
   } else {
     switch (status) {
       case "added":
-        badgeClass = "bg-[#30d158]/10 text-[#30d158] border border-[#30d158]/20";
+        badgeClass = "text-[#30d158]";
         break;
       case "deleted":
-        badgeClass = "bg-[#ff375f]/10 text-[#ff375f] border border-[#ff375f]/20";
+        badgeClass = "text-[#ff375f]";
         break;
       case "renamed":
       case "copied":
-        badgeClass = "bg-[#64d2ff]/10 text-[#64d2ff] border border-[#64d2ff]/20";
+        badgeClass = "text-[#64d2ff]";
         break;
       case "untracked":
-        badgeClass = "bg-text-muted/10 text-text-muted border border-text-muted/15";
+        badgeClass = "text-text-muted";
         break;
       default: // modified
-        badgeClass = "bg-[#ff9f0a]/10 text-[#ff9f0a] border border-[#ff9f0a]/20";
+        badgeClass = "text-[#ff9f0a]";
         break;
     }
   }
 
   return (
-    <span className={`inline-flex items-center justify-center h-4 min-w-[15px] px-1 rounded-[3px] text-[9px] font-mono font-bold leading-none select-none ${badgeClass}`}>
+    <span className={`inline-flex items-center justify-center font-mono text-[10px] font-bold select-none px-1 leading-none ${badgeClass}`}>
       {label}
     </span>
   );
@@ -420,7 +439,7 @@ function ChangeRow({ file, checked, selected, onSelect, onToggle, onMenu }: Chan
 
   return (
     <div
-      className={`tree-item group w-full grid grid-cols-[14px_16px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5 text-left border-b border-border/10 last:border-b-0 ${
+      className={`tree-item group w-full grid grid-cols-[14px_16px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-1 text-left ${
         selected ? "selected" : ""
       }`}
       onClick={onSelect}
@@ -441,9 +460,11 @@ function ChangeRow({ file, checked, selected, onSelect, onToggle, onMenu }: Chan
       <span
         className={`h-3.5 w-3.5 rounded-[4px] border flex items-center justify-center transition-all cursor-pointer ${
           checked
-            ? "bg-accent border-accent text-accent-fg"
+            ? selected
+              ? "bg-accent-fg border-accent-fg text-accent"
+              : "bg-accent border-accent text-accent-fg"
             : selected
-              ? "border-accent-fg/50 hover:border-accent-fg hover:bg-accent-fg/10 text-transparent"
+              ? "border-accent-fg/40 hover:border-accent-fg hover:bg-accent-fg/10 text-transparent"
               : "border-border hover:border-text-secondary hover:bg-surface-2 text-transparent"
         }`}
         onClick={(e) => {
@@ -588,6 +609,61 @@ function statusColor(status: string) {
     case "untracked": return "text-text-muted";
     default: return "text-[#ff9f0a]";
   }
+}
+
+function generateCommitMessage(files: FileChange[]) {
+  const statusCounts = files.reduce<Record<string, number>>((counts, file) => {
+    counts[file.status] = (counts[file.status] || 0) + 1;
+    return counts;
+  }, {});
+  const folders = files
+    .map((file) => getTopLevelFolder(file.path))
+    .filter(Boolean);
+  const primaryScope = mostCommon(folders);
+  const primaryStatus = Object.entries(statusCounts)
+    .sort((a, b) => b[1] - a[1])[0]?.[0] || "modified";
+  const type = primaryStatus === "deleted"
+    ? "refactor"
+    : primaryStatus === "added" || primaryStatus === "untracked"
+      ? "feat"
+      : "chore";
+  const scope = primaryScope ? `(${primaryScope})` : "";
+
+  if (files.length === 1) {
+    const fileName = getFileName(files[0].path);
+    return `${type}${scope}: ${statusVerb(primaryStatus)} ${fileName}`;
+  }
+
+  return `${type}${scope}: update ${files.length} files`;
+}
+
+function statusVerb(status: string) {
+  switch (status) {
+    case "added":
+    case "untracked":
+      return "add";
+    case "deleted":
+      return "remove";
+    case "renamed":
+      return "rename";
+    default:
+      return "update";
+  }
+}
+
+function mostCommon(items: string[]) {
+  const counts = items.reduce<Record<string, number>>((acc, item) => {
+    acc[item] = (acc[item] || 0) + 1;
+    return acc;
+  }, {});
+  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+}
+
+function getTopLevelFolder(path: string) {
+  const [first, second] = path.split("/");
+  if (!first || !second) return "";
+  if (first === "apps" || first === "packages" || first === "crates") return second;
+  return first;
 }
 
 function getFileName(path: string) {

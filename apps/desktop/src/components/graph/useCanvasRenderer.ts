@@ -72,8 +72,9 @@ export function useCanvasRenderer({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const styles = getComputedStyle(document.documentElement);
+    const styles = getComputedStyle(document.body);
     const textPrimary = styles.getPropertyValue("--text-primary").trim() || "#e5e5e5";
+    const textSecondary = styles.getPropertyValue("--text-secondary").trim() || "#a1a1a6";
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, width, height);
@@ -204,11 +205,11 @@ export function useCanvasRenderer({
       }
 
       ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
-      ctx.fillStyle = isSelected ? "#0a84ff" : "#a1a1a6";
+      ctx.fillStyle = isSelected ? "#0a84ff" : textSecondary;
       ctx.fillText(commit.hash.slice(0, 7), columns.hashX, cy);
 
       ctx.font = "11px -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
-      ctx.fillStyle = "#a1a1a6";
+      ctx.fillStyle = textSecondary;
       ctx.fillText(truncateText(ctx, commit.author || "Unknown", AUTHOR_COLUMN_WIDTH - 8), columns.authorX, cy);
       ctx.fillText(truncateText(ctx, formatCommitDate(commit.date), DATE_COLUMN_WIDTH - 8), columns.dateX, cy);
     }

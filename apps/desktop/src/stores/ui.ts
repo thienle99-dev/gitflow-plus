@@ -26,8 +26,17 @@ export const useUIStore = create<UIState>((set) => ({
 
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
-  selectCommit: (hash) => set({ selectedCommit: hash, selectedFile: null, selectedFileStage: null }),
-  selectFile: (path, stage = null) => set({ selectedFile: path, selectedFileStage: path ? stage : null }),
+  selectCommit: (hash) => set({
+    selectedCommit: hash,
+    selectedFile: null,
+    selectedFileStage: null,
+    activeDialog: null,
+  }),
+  selectFile: (path, stage = null) => set({
+    selectedFile: path,
+    selectedFileStage: path ? stage : null,
+    activeDialog: null,
+  }),
   setDiffViewMode: (mode) => set({ diffViewMode: mode }),
   openDialog: (name) => set({ activeDialog: name }),
   closeDialog: () => set({ activeDialog: null }),

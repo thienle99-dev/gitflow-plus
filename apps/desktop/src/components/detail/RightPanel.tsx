@@ -5,10 +5,21 @@ import { useQueryClient } from "@tanstack/react-query";
 import WorkingTree from "./WorkingTree";
 import CommitDetail from "./CommitDetail";
 import DiffViewer from "@/components/diff/DiffViewer";
+import StashPanel from "@/components/phase2/StashPanel";
+import TagPanel from "@/components/phase2/TagPanel";
 
 export default function RightPanel() {
   const selectedCommit = useUIStore((s) => s.selectedCommit);
   const selectedFile = useUIStore((s) => s.selectedFile);
+  const activeDialog = useUIStore((s) => s.activeDialog);
+
+  if (activeDialog === "stash") {
+    return <StashPanel />;
+  }
+
+  if (activeDialog === "tag") {
+    return <TagPanel />;
+  }
 
   if (selectedFile && !selectedCommit) {
     return <DiffViewerPanel />;
@@ -74,7 +85,7 @@ function DiffViewerPanel() {
         <DiffViewer
           diff={diff}
           filePath={selectedFile || ""}
-          source={diffSource}
+          source={diffSource as "working" | "staged" | "commit"}
           onPatchApplied={refreshDiff}
         />
       ) : (
