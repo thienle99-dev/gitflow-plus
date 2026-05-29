@@ -96,8 +96,21 @@ export default function MainLayout() {
     });
     return () => {
       unlisten.then((f) => f());
-    };
+    }
   }, [repoPath, queryClient, closeRepo, toggleSidebar, toggleTheme, openDialogState]);
+
+  // Auto-refresh Git state when the app window gains focus
+  useEffect(() => {
+    const handleFocus = () => {
+      if (repoPath) {
+        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "status"] });
+        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "sync-status"] });
+        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "branches"] });
+      }
+    };
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [repoPath, queryClient]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {

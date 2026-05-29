@@ -139,6 +139,36 @@ export default function CommitGraph() {
     }
   };
 
+  const createTagFromCommit = async (hash: string) => {
+    const name = prompt("Tag name:");
+    if (!name || !repoPath) return;
+    const message = prompt("Tag message (optional):") || "";
+    try {
+      await api.tag.create(repoPath, name, hash, message);
+      queryClient.invalidateQueries({ queryKey: ["git", repoPath, "tags"] });
+      queryClient.invalidateQueries({ queryKey: ["git", repoPath, "log"] });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const cherryPickCommit = async (hash: string) => {
+    if (!repoPath) return;
+    if (!confirm(`Are you sure you want to cherry-pick commit ${hash.substring(0, 7)}?`)) return;
+    try {
+      const res = await api.cherryPick.pick(repoPath, hash);
+      if (res.success) {
+        queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
+      } else {
+        alert(`Cherry-pick had conflicts: \n${res.conflicted_files.join("\n")}`);
+        queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
+      }
+    } catch (e) {
+      console.error(e);
+      alert(`Cherry-pick failed: ${e}`);
+    }
+  };
+
   if (isLoading && commits.length === 0) {
     return (
       <div className="h-full flex flex-col">
@@ -180,14 +210,24 @@ export default function CommitGraph() {
           action: () => copyHash(ctxMenu.hash),
         },
         {
-          label: "Checkout",
+          label: "Checkout commit",
           icon: <CheckoutIcon />,
           action: () => checkoutCommit(ctxMenu.hash),
         },
         {
-          label: "Create branch here",
+          label: "Create branch here...",
           icon: <BranchIcon />,
           action: () => createBranchFromCommit(ctxMenu.hash),
+        },
+        {
+          label: "Create tag here...",
+          icon: <TagIcon />,
+          action: () => createTagFromCommit(ctxMenu.hash),
+        },
+        {
+          label: "Cherry-pick commit...",
+          icon: <CherryPickIcon />,
+          action: () => cherryPickCommit(ctxMenu.hash),
         },
       ]
     : [];
@@ -276,6 +316,25 @@ function BranchIcon() {
       <circle cx="18" cy="6" r="3" />
       <circle cx="6" cy="18" r="3" />
       <path d="M18 9a9 9 0 0 1-9 9" />
+    </svg>
+  );
+}
+
+function TagIcon() {
+  return (
+    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+      <line x1="7" y1="7" x2="7.01" y2="7" />
+    </svg>
+  );
+}
+
+function CherryPickIcon() {
+  return (
+    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+      <path d="M2 12h20" />
     </svg>
   );
 }

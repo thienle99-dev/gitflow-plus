@@ -51,7 +51,7 @@
 - [x] `components/graph/GraphEdge.tsx` — lines + bezier curves
 - [x] Branch coloring (8-10 color palette)
 - [x] Click → select commit
-- [ ] Right-click → context menu
+- [x] Right-click → context menu
 - [x] Pagination: load more on scroll bottom
 - [ ] Unit tests for layout algorithm
 
