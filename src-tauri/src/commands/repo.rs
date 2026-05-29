@@ -1,10 +1,11 @@
 use std::path::Path;
 use std::process::Command;
-use tauri::State;
-use std::sync::Mutex;
 
-pub struct RepoState {
-    pub current_path: Mutex<Option<String>>,
+#[derive(serde::Serialize)]
+pub struct RepoInfo {
+    pub path: String,
+    pub current_branch: String,
+    pub remote: Option<String>,
 }
 
 #[tauri::command]
@@ -62,11 +63,4 @@ fn get_repo_info_inner(path: &str) -> Result<RepoInfo, String> {
         current_branch: branch,
         remote,
     })
-}
-
-#[derive(serde::Serialize)]
-pub struct RepoInfo {
-    pub path: String,
-    pub current_branch: String,
-    pub remote: Option<String>,
 }
