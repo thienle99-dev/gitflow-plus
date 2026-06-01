@@ -65,14 +65,33 @@ export default function Toolbar() {
   return (
     <>
       <div className="vibrancy h-[38px] border-b border-border flex items-center px-3 gap-1 select-none">
-        <button className="ghost text-xs" onClick={showChanges} title="Show current changes">
-          <FileDiff size={14} /> Changes
-          {!!changes?.length && (
-            <span className="ml-0.5 rounded bg-surface-3 px-1 text-[10px] font-semibold text-text-secondary">
-              {changes.length}
-            </span>
-          )}
-        </button>
+        {/* Status Badge — replaces old "Show Changes" button */}
+        {changes && changes.length > 0 ? (
+          <button
+            onClick={showChanges}
+            className="flex items-center gap-1.5 px-2 h-7 text-2xs font-medium rounded-mac transition-all border border-transparent hover:border-border"
+            title={`${changes.filter(c => c.staged).length} staged, ${changes.filter(c => !c.staged).length} unstaged — click to view`}
+          >
+            <FileDiff size={13} className="text-accent" />
+            {changes.filter(c => c.staged).length > 0 && (
+              <span className="text-green-600 dark:text-green-400 font-semibold">
+                {changes.filter(c => c.staged).length} staged
+              </span>
+            )}
+            {changes.filter(c => c.staged).length > 0 && changes.filter(c => !c.staged).length > 0 && (
+              <span className="text-text-muted">•</span>
+            )}
+            {changes.filter(c => !c.staged).length > 0 && (
+              <span className="text-orange-600 dark:text-orange-400 font-semibold">
+                {changes.filter(c => !c.staged).length} unstaged
+              </span>
+            )}
+          </button>
+        ) : (
+          <button className="ghost text-xs" onClick={showChanges} title="Show current changes">
+            <FileDiff size={14} /> Changes
+          </button>
+        )}
         <div className="w-[1px] h-4 bg-border mx-1" />
         <button className="ghost text-xs" onClick={() => doAction("pull", () => api.remote.pull(repoPath!))} disabled={!!loading}>
           <ArrowDownToLine size={14} /> Pull
