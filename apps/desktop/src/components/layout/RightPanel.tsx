@@ -3,7 +3,7 @@ import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
 import { useGitStatus, useGitDiff } from "@/queries/useGitLog";
 import { useQueryClient } from "@tanstack/react-query";
-import { Eye, Maximize2, Minimize2 } from "lucide-react";
+import { Eye, History, Maximize2, Minimize2 } from "lucide-react";
 import WorkingTree from "@/components/features/working-tree/WorkingTree";
 import CommitDetail from "@/components/features/commit-detail/CommitDetail";
 import DiffViewer from "@/components/features/diff/DiffViewer";

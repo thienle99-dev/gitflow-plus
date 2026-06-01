@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useGitStatus, useGitBranches } from "@/queries/useGitLog";
-import { api, type FileChange } from "@/api/tauri";
-import { useQueryClient } from "@tanstack/react-query";
+import { api, type FileChange, type Commit, type StashEntry } from "@/api/tauri";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useGenerateCommitMessage } from "@/queries/useAI";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import {
@@ -23,6 +23,8 @@ import {
   CheckSquare,
   Square,
   Search,
+  Archive,
+  History,
 } from "lucide-react";
 
 export default function TrayPanelView() {
@@ -38,6 +40,7 @@ export default function TrayPanelView() {
   const currentBranch = branches?.find((b) => b.current)?.name || "";
 
   // States
+  const [activeTab, setActiveTab] = useState<"changes" | "commits">("changes");
   const [repoDropdownOpen, setRepoDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [commitMessage, setCommitMessage] = useState("");
@@ -49,6 +52,10 @@ export default function TrayPanelView() {
   const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
   const [branchSearchQuery, setBranchSearchQuery] = useState("");
   const [checkingOutBranch, setCheckingOutBranch] = useState<string | null>(null);
+
+  // Stash states
+  const [stashLoading, setStashLoading] = useState(false);
+  const [popLoading, setPopLoading] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const branchDropdownRef = useRef<HTMLDivElement>(null);
@@ -67,6 +74,22 @@ export default function TrayPanelView() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Fetch stashes
+  const { data: stashes } = useQuery<StashEntry[]>({
+    queryKey: ["git", repoPath, "stash-list"],
+    queryFn: () => api.stash.list(repoPath!),
+    enabled: !!repoPath,
+    staleTime: 10_000,
+  });
+
+  // Fetch recent commits
+  const { data: recentCommits, isLoading: isLoadingCommits } = useQuery<Commit[]>({
+    queryKey: ["git", repoPath, "recent-commits"],
+    queryFn: () => api.log(repoPath!, 0, 8),
+    enabled: !!repoPath,
+    staleTime: 10_000,
+  });
+
   const handleCheckoutBranch = async (branchName: string) => {
     if (!repoPath) return;
     setCheckingOutBranch(branchName);
@@ -80,6 +103,43 @@ export default function TrayPanelView() {
       showToast(e.message || `Failed to checkout ${branchName}`, "error");
     } finally {
       setCheckingOutBranch(null);
+    }
+  };
+
+  const handleStashPush = async () => {
+    if (!repoPath) return;
+    setStashLoading(true);
+    try {
+      await api.stash.push(repoPath, `Stash from Tray - ${new Date().toLocaleTimeString()}`, true);
+      invalidate();
+      showToast("Stashed changes successfully");
+    } catch (e: any) {
+      showToast(e.message || String(e), "error");
+    } finally {
+      setStashLoading(false);
+    }
+  };
+
+  const handleStashPop = async () => {
+    if (!repoPath || !stashes || stashes.length === 0) return;
+    setPopLoading(true);
+    try {
+      await api.stash.pop(repoPath, 0);
+      invalidate();
+      showToast("Popped stash successfully");
+    } catch (e: any) {
+      showToast(e.message || String(e), "error");
+    } finally {
+      setPopLoading(false);
+    }
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast("Commit hash copied to clipboard!");
+    } catch (err) {
+      showToast("Failed to copy hash", "error");
     }
   };
 
@@ -283,35 +343,86 @@ export default function TrayPanelView() {
         </button>
       </div>
 
+      {/* Segmented Tab Control */}
+      {repoPath && (
+        <div className="px-3 pt-2.5 shrink-0 bg-surface-0">
+          <div className="flex bg-surface-1 p-0.5 rounded border border-border-40">
+            <button
+              onClick={() => setActiveTab("changes")}
+              className={`flex-1 py-1 text-[10px] font-bold rounded transition-all cursor-pointer ${
+                activeTab === "changes" ? "bg-surface-2 text-accent shadow-sm" : "text-text-muted hover:text-text-primary"
+              }`}
+            >
+              Changes ({changes?.length || 0})
+            </button>
+            <button
+              onClick={() => setActiveTab("commits")}
+              className={`flex-1 py-1 text-[10px] font-bold rounded transition-all cursor-pointer ${
+                activeTab === "commits" ? "bg-surface-2 text-accent shadow-sm" : "text-text-muted hover:text-text-primary"
+              }`}
+            >
+              Recent Commits
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
         {repoPath ? (
-          <>
-            {/* Working Tree Section */}
-            <div className="flex-1 flex flex-col min-h-[170px] border border-border-40 bg-surface-1/40 rounded-mac p-2.5">
-              <div className="flex items-center justify-between border-b border-border-40 pb-1.5 shrink-0">
-                <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
-                  Changes ({changes?.length || 0})
-                </span>
-                <div className="flex gap-2">
-                  {unstaged.length > 0 && (
-                    <button
-                      onClick={handleStageAll}
-                      className="text-[9px] font-semibold text-accent hover:underline"
-                    >
-                      Stage All
-                    </button>
-                  )}
-                  {staged.length > 0 && (
-                    <button
-                      onClick={handleUnstageAll}
-                      className="text-[9px] font-semibold text-text-muted hover:text-text-primary hover:underline"
-                    >
-                      Unstage All
-                    </button>
-                  )}
+          activeTab === "changes" ? (
+            <>
+              {/* Working Tree Section */}
+              <div className="flex-1 flex flex-col min-h-[170px] border border-border-40 bg-surface-1/40 rounded-mac p-2.5">
+                <div className="flex items-center justify-between border-b border-border-40 pb-1.5 shrink-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
+                      Changes ({changes?.length || 0})
+                    </span>
+                    {repoPath && (
+                      <div className="flex items-center gap-1.5 border-l border-border-40 pl-2">
+                        <button
+                          onClick={handleStashPush}
+                          disabled={stashLoading || changes?.length === 0}
+                          className="text-[9px] font-semibold text-text-secondary hover:text-accent disabled:opacity-40 flex items-center gap-0.5 cursor-pointer"
+                          title="Stash changes"
+                        >
+                          {stashLoading ? <Loader2 size={9} className="animate-spin" /> : <Archive size={9} />}
+                          <span>Stash</span>
+                        </button>
+                        {stashes && stashes.length > 0 && (
+                          <button
+                            onClick={handleStashPop}
+                            disabled={popLoading}
+                            className="text-[9px] font-semibold text-text-secondary hover:text-accent disabled:opacity-40 flex items-center gap-0.5 cursor-pointer"
+                            title={`Pop latest stash (${stashes.length})`}
+                          >
+                            {popLoading ? <Loader2 size={9} className="animate-spin" /> : <History size={9} />}
+                            <span>Pop ({stashes.length})</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    {unstaged.length > 0 && (
+                      <button
+                        onClick={handleStageAll}
+                        className="text-[9px] font-semibold text-accent hover:underline"
+                      >
+                        Stage All
+                      </button>
+                    )}
+                    {staged.length > 0 && (
+                      <button
+                        onClick={handleUnstageAll}
+                        className="text-[9px] font-semibold text-text-muted hover:text-text-primary hover:underline"
+                      >
+                        Unstage All
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
 
               {/* Scrollable File List */}
               <div className="flex-1 overflow-y-auto mt-2 space-y-1 pr-1">
@@ -404,11 +515,55 @@ export default function TrayPanelView() {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center text-text-muted gap-2">
-            <FolderOpen size={24} className="opacity-45" />
-            <span className="text-xs font-semibold">Select a Repository to start</span>
+          <div className="flex-1 flex flex-col border border-border-40 bg-surface-1/40 rounded-mac p-2.5 overflow-hidden">
+            <div className="flex items-center justify-between border-b border-border-40 pb-1.5 shrink-0">
+              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
+                Recent Commits
+              </span>
+              <span className="text-[8px] text-text-muted">Click commit to copy hash</span>
+            </div>
+
+            <div className="flex-1 overflow-y-auto mt-2 space-y-1.5 pr-1 animate-in fade-in duration-200">
+              {isLoadingCommits ? (
+                <div className="h-full flex items-center justify-center py-8 text-text-muted gap-1.5">
+                  <Loader2 size={12} className="animate-spin text-accent" />
+                  <span className="text-[10px]">Loading commits...</span>
+                </div>
+              ) : recentCommits && recentCommits.length > 0 ? (
+                recentCommits.map((commit) => (
+                  <button
+                    key={commit.hash}
+                    onClick={() => copyToClipboard(commit.hash)}
+                    className="w-full text-left p-2 rounded hover:bg-surface-2 active:bg-surface-3 transition-all flex flex-col gap-1 border border-transparent hover:border-border-40 cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between gap-1.5 w-full">
+                      <span className="text-[10px] text-text-primary font-semibold truncate flex-1">
+                        {commit.message.split("\n")[0]}
+                      </span>
+                      <span className="text-[8px] font-mono bg-surface-3 px-1 rounded text-text-muted shrink-0">
+                        {commit.hash.slice(0, 7)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[8px] text-text-muted w-full">
+                      <span className="truncate max-w-[120px]">{commit.author}</span>
+                      <span>{new Date(commit.date).toLocaleDateString()}</span>
+                    </div>
+                  </button>
+                ))
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center py-8 text-center text-text-muted">
+                  <span className="text-[10px]">No commits found</span>
+                </div>
+              )}
+            </div>
           </div>
-        )}
+        )
+      ) : (
+        <div className="flex-1 flex flex-col items-center justify-center text-center text-text-muted gap-2">
+          <FolderOpen size={24} className="opacity-45" />
+          <span className="text-xs font-semibold">Select a Repository to start</span>
+        </div>
+      )}
       </div>
 
       {/* Footer Git Actions Bar */}
