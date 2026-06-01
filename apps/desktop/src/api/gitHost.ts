@@ -117,16 +117,14 @@ export async function fetchMergeRequests(remoteUrl: string): Promise<MergeReques
 
   if (provider === "github") {
     const token = localStorage.getItem("gitflowGithubToken") || "";
-    if (!token) {
-      throw new Error("GitHub Personal Access Token is not configured. Please add it in settings.");
-    }
-
     const url = `https://api.github.com/repos/${owner}/${repo}/pulls?state=all&per_page=30`;
     const headers: Record<string, string> = {
       "Accept": "application/vnd.github.v3+json",
       "User-Agent": "GitFlow-Desktop",
-      "Authorization": `token ${token}`,
     };
+    if (token) {
+      headers["Authorization"] = `token ${token}`;
+    }
 
     const response = await api.ai.request(url, "GET", headers);
     if (response.status !== 200) {
@@ -162,17 +160,15 @@ export async function fetchMergeRequests(remoteUrl: string): Promise<MergeReques
     });
   } else {
     const token = localStorage.getItem("gitflowGitlabToken") || "";
-    if (!token) {
-      throw new Error("GitLab Personal Access Token is not configured. Please add it in settings.");
-    }
-
     const gitlabHost = host || localStorage.getItem("gitflowGitlabHost") || "https://gitlab.com";
     const projectId = encodeURIComponent(`${owner}/${repo}`);
     const url = `${gitlabHost}/api/v4/projects/${projectId}/merge_requests?state=all&per_page=30`;
     const headers: Record<string, string> = {
-      "PRIVATE-TOKEN": token,
       "User-Agent": "GitFlow-Desktop",
     };
+    if (token) {
+      headers["PRIVATE-TOKEN"] = token;
+    }
 
     const response = await api.ai.request(url, "GET", headers);
     if (response.status !== 200) {

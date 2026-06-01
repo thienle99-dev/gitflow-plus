@@ -61,12 +61,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
   const [checkoutSuccess, setCheckoutSuccess] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
-  const hasToken = useMemo(() => {
-    if (!remoteInfo?.provider) return false;
-    return remoteInfo.provider === "github"
-      ? !!localStorage.getItem("gitflowGithubToken")
-      : !!localStorage.getItem("gitflowGitlabToken");
-  }, [remoteInfo]);
+
 
   const loadMRs = async () => {
     if (!remoteUrl) return;
@@ -90,10 +85,10 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
 
   // Load MRs on mount or remote info change
   useEffect(() => {
-    if (remoteUrl && hasToken) {
+    if (remoteUrl) {
       loadMRs();
     }
-  }, [remoteUrl, hasToken]);
+  }, [remoteUrl]);
 
   // Handle MR selection change
   useEffect(() => {
@@ -169,7 +164,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
             <GitPullRequest size={14} className="text-accent" />
             <span className="text-xs font-semibold text-text-primary">Merge Requests</span>
           </div>
-          {remoteUrl && hasToken && (
+          {remoteUrl && (
             <button
               onClick={loadMRs}
               disabled={loading}
@@ -210,23 +205,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
               <AlertCircle size={16} />
               <span className="text-3xs font-semibold">No remote detected</span>
             </div>
-          ) : !hasToken ? (
-            <div className="h-full flex flex-col items-center justify-center p-4 text-center space-y-3">
-              <AlertCircle size={16} className="text-text-muted mx-auto" />
-              <div className="space-y-1">
-                <span className="block text-3xs font-bold text-text-primary">Credentials Required</span>
-                <p className="text-[10px] text-text-muted leading-relaxed">
-                  Please configure your Personal Access Token (PAT) for {remoteInfo?.provider || "Git host"} in Settings.
-                </p>
-              </div>
-              <button
-                onClick={openSettings}
-                className="h-6 px-3 bg-accent text-accent-fg text-3xs font-bold rounded-mac hover:opacity-95 transition-all shadow-sm flex items-center gap-1.5 mx-auto cursor-pointer"
-              >
-                <Settings size={10} />
-                <span>Configure Integrations</span>
-              </button>
-            </div>
+
           ) : filteredMrs.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center p-4 text-center text-text-muted space-y-1">
               <GitPullRequest size={16} className="opacity-40" />
