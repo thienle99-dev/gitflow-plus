@@ -150,3 +150,28 @@ pub fn submodule_update(path: String, submodule_path: Option<String>) -> Result<
         Err(format!("Failed to update submodule: {}", stderr.trim()))
     }
 }
+
+#[tauri::command]
+pub fn submodule_remove(path: String, submodule_path: String) -> Result<String, String> {
+    let args = vec![
+        "--no-pager".to_string(),
+        "-C".to_string(),
+        path,
+        "submodule".to_string(),
+        "deinit".to_string(),
+        "-f".to_string(),
+        submodule_path,
+    ];
+
+    let output = Command::new("git")
+        .args(&args)
+        .output()
+        .map_err(|e| format!("Failed to run git: {}", e))?;
+
+    if output.status.success() {
+        Ok("Submodule removed successfully".to_string())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Failed to remove submodule: {}", stderr.trim()))
+    }
+}

@@ -199,6 +199,7 @@ pub fn run() {
             commands::submodule::submodule_list,
             commands::submodule::submodule_init,
             commands::submodule::submodule_update,
+            commands::submodule::submodule_remove,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
