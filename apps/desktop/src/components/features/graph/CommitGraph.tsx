@@ -219,7 +219,7 @@ export default function CommitGraph() {
           {Array.from({ length: 20 }).map((_, i) => (
             <div
               key={i}
-              className="flex items-center gap-3 px-3 border-b border-border/30"
+              className="flex items-center gap-3 px-3 border-b border-border-40"
               style={{ height: ROW_HEIGHT }}
             >
               <div

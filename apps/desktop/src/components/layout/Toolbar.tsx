@@ -65,7 +65,7 @@ export default function Toolbar() {
   return (
     <>
       <div className="vibrancy h-[44px] border-b border-border-60 bg-surface-1/40 backdrop-blur-md flex items-center justify-between px-4 select-none animate-in fade-in duration-200">
-        
+
         {/* Left Side: Status Capsule Badge */}
         <div className="flex items-center gap-3">
           {changes && changes.length > 0 ? (
@@ -160,11 +160,10 @@ export default function Toolbar() {
             </button>
             <div className="w-[1px] h-3.5 bg-border-40/50" />
             <button
-              className={`h-7 px-4 flex items-center gap-2 text-2xs font-semibold hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer ${
-                inMerge
-                  ? "text-[#ff9f0a] bg-[#ff9f0a]/10 hover:bg-[#ff9f0a]/20"
-                  : "text-text-secondary hover:text-text-primary"
-              }`}
+              className={`h-7 px-4 flex items-center gap-2 text-2xs font-semibold hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer ${inMerge
+                ? "text-[#ff9f0a] bg-[#ff9f0a]/10 hover:bg-[#ff9f0a]/20"
+                : "text-text-secondary hover:text-text-primary"
+                }`}
               onClick={() => openDialog("merge")}
               title={inMerge ? "Merge in progress — click to resolve conflicts" : "Merge branches"}
             >
@@ -224,7 +223,7 @@ export default function Toolbar() {
           >
             <GitPullRequest size={13} />
           </button>
-          
+
           <div className="w-[1px] h-3.5 bg-border-40/60" />
 
           {/* Settings & Quick Actions */}

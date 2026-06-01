@@ -70,7 +70,7 @@ export default function BlameView({ filePath, onClose }: BlameViewProps) {
                 return (
                   <tr
                     key={line.line_number}
-                    className="border-b border-border/30 hover:bg-surface-1 transition-colors font-mono text-xs"
+                    className="border-b border-border-40 hover:bg-surface-1 transition-colors font-mono text-xs"
                   >
                     <td className="px-2 py-[1px] text-right text-2xs text-text-muted select-none">
                       {line.line_number}

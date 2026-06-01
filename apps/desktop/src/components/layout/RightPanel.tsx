@@ -132,7 +132,7 @@ function DiffViewerPanel() {
           </div>
 
           <button
-            className="ghost text-2xs px-2.5 py-1 hover:bg-surface-2 border border-border/40 rounded flex items-center gap-1 transition-colors"
+            className="ghost text-2xs px-2.5 py-1 hover:bg-surface-2 border border-border-40 rounded flex items-center gap-1 transition-colors"
             onClick={() => setIsFullScreen(!isFullScreen)}
             title={isFullScreen ? "Exit Full Screen" : "Open Full Screen"}
           >

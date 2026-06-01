@@ -292,7 +292,7 @@ export default function CreateBranchDialog({ open, onClose }: CreateBranchDialog
                     </div>
                   </div>
                 ) : (
-                  <div className="text-2xs text-text-muted bg-surface-1 p-2 rounded-mac text-center border border-border/40">
+                  <div className="text-2xs text-text-muted bg-surface-1 p-2 rounded-mac text-center border border-border-40">
                     No tags available in this repository
                   </div>
                 )}

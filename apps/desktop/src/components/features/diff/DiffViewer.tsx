@@ -293,7 +293,7 @@ export default function DiffViewer({
               return (
                 <div
                   key={`${hunk.header}:${index}`}
-                  className="min-h-7 px-3 py-1 flex items-center gap-2 border-b border-border/60 last:border-b-0"
+                  className="min-h-7 px-3 py-1 flex items-center gap-2 border-b border-border-60 last:border-b-0"
                 >
                   <span className="min-w-0 flex-1 truncate font-mono text-2xs text-text-muted">
                     {hunk.header}

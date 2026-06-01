@@ -69,10 +69,10 @@ export default function Sidebar() {
   return (
     <div className="h-full overflow-y-auto py-2">
       {/* Repository Selector */}
-      <div className="relative px-2 mb-3">
+      <div className="relative px-4 mb-3">
         <button
           onClick={() => setRepoMenuOpen(!repoMenuOpen)}
-          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-mac bg-surface-2/40 hover:bg-surface-2 border border-border/40 hover:border-border transition-all text-left"
+          className="w-full flex-1 flex items-center gap-2 px-2.5 py-1.5 rounded-mac bg-surface-2/40 hover:bg-surface-2 border border-border-40 hover:border-border transition-all text-left"
         >
           <Folder size={14} className="text-accent shrink-0" />
           <span className="flex-1 text-xs font-semibold truncate text-text-primary">
@@ -232,7 +232,7 @@ export default function Sidebar() {
 
       {/* Submodules Section */}
       {submodules && submodules.length > 0 && (
-        <div className="px-2 mt-3 space-y-1">
+        <div className="px-4 mt-3 space-y-1">
           <div className="text-xs font-semibold text-text-muted px-2 py-1">
             Submodules ({submodules.length})
           </div>
@@ -250,11 +250,11 @@ export default function Sidebar() {
       )}
 
       {/* Quick actions spacer */}
-      <div className="my-1 mx-2 border-t border-border" />
+      <div className="my-1 mx-4 border-t border-border" />
 
       {/* Quick actions */}
       <SectionHeader title="Actions" open={true} onToggle={() => {}} />
-      <div className="space-y-[1px] px-2">
+      <div className="space-y-[1px] px-4">
         <button
           className="tree-item w-full flex items-center gap-2 px-2 py-[3px]"
           onClick={() => openDialogState("search")}
@@ -294,7 +294,7 @@ function SectionHeader({
 }) {
   return (
     <div
-      className="flex items-center justify-between px-2 py-1 cursor-pointer hover:bg-surface-2 select-none group"
+      className="flex items-center justify-between px-4 py-1.5 cursor-pointer hover:bg-surface-2 select-none group"
       onClick={onToggle}
     >
       <div className="flex items-center gap-1">
