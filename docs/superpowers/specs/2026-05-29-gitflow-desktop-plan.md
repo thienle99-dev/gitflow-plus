@@ -117,7 +117,7 @@
 - [ ] Git credentials handling (HTTPS auth prompt, SSH key detection)
 - [x] Error UX phân loại: network error / auth error / conflict error → UX riêng
 - [x] Undo last commit (git reset --soft HEAD~1) button
-- [ ] Performance logging — measure open repo, render graph, status refresh (đo trước khi optimize)
+- [x] Performance logging — measure open repo, render graph, status refresh (đo trước khi optimize)
 
 ---
 

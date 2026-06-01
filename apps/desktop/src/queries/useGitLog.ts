@@ -1,5 +1,6 @@
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { api, type Commit, type CommitFileChange, type FileChange, type Branch, type RepoInfo, type SyncStatus } from "@/api/tauri";
+import { markRepoOpenMilestone, measureAsync, repoName } from "@/lib/performance";
 
 const PAGE_SIZE = 200;
 
@@ -13,7 +14,18 @@ function getSyncStatusInterval() {
 export function useGitLog(repoPath: string | null, refName?: string | null) {
   return useInfiniteQuery<Commit[]>({
     queryKey: ["git", repoPath, "log", refName || "all"],
-    queryFn: ({ pageParam }) => api.log(repoPath!, pageParam as number, PAGE_SIZE, refName),
+    queryFn: async ({ pageParam }) => {
+      const page = pageParam as number;
+      const commits = await measureAsync(
+        "git_log",
+        () => api.log(repoPath!, page, PAGE_SIZE, refName),
+        { repo: repoName(repoPath), page, ref: refName || "all" },
+      );
+      if (page === 0 && !refName) {
+        markRepoOpenMilestone(repoPath!, "log");
+      }
+      return commits;
+    },
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) =>
       lastPage.length === PAGE_SIZE ? allPages.length : undefined,
@@ -25,7 +37,15 @@ export function useGitLog(repoPath: string | null, refName?: string | null) {
 export function useGitStatus(repoPath: string | null) {
   return useQuery<FileChange[]>({
     queryKey: ["git", repoPath, "status"],
-    queryFn: () => api.status(repoPath!),
+    queryFn: async () => {
+      const changes = await measureAsync(
+        "git_status",
+        () => api.status(repoPath!),
+        { repo: repoName(repoPath) },
+      );
+      markRepoOpenMilestone(repoPath!, "status");
+      return changes;
+    },
     enabled: !!repoPath,
     staleTime: 0,
   });
@@ -34,7 +54,15 @@ export function useGitStatus(repoPath: string | null) {
 export function useGitBranches(repoPath: string | null) {
   return useQuery<Branch[]>({
     queryKey: ["git", repoPath, "branches"],
-    queryFn: () => api.branches.list(repoPath!),
+    queryFn: async () => {
+      const branches = await measureAsync(
+        "git_branches",
+        () => api.branches.list(repoPath!),
+        { repo: repoName(repoPath) },
+      );
+      markRepoOpenMilestone(repoPath!, "branches");
+      return branches;
+    },
     enabled: !!repoPath,
     staleTime: 15_000,
   });

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import type { LayoutState } from "@/lib/graph-layout";
+import { logPerformance } from "@/lib/performance";
 import type { Theme } from "@/stores/repo";
 
 const ROW_HEIGHT = 28;
@@ -57,6 +58,7 @@ export function useCanvasRenderer({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !layout || !graphIndex || layout.commits.length === 0) return;
+    const startedAt = performance.now();
 
     const dpr = window.devicePixelRatio || 1;
     const laneWidth = getLaneWidth(totalLanes);
@@ -226,6 +228,14 @@ export function useCanvasRenderer({
       ctx.fillText(truncateText(ctx, commit.author || "Unknown", AUTHOR_COLUMN_WIDTH - 8), columns.authorX, cy);
       ctx.fillText(truncateText(ctx, formatCommitDate(commit.date), DATE_COLUMN_WIDTH - 8), columns.dateX, cy);
     }
+
+    logPerformance("graph_canvas_render", performance.now() - startedAt, {
+      commits: layout.commits.length,
+      visibleRows: visible.length,
+      edges: visibleEdges.length,
+      width,
+      height,
+    });
   }, [canvasRef, layout, graphIndex, scrollTop, containerHeight, containerWidth, selectedCommit, hoveredLane, totalLanes, theme]);
 }
 

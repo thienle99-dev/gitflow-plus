@@ -3,6 +3,7 @@ import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useGitLog } from "@/queries/useGitLog";
 import { computeGraphLayout, type LayoutState } from "@/lib/graph-layout";
+import { measureSync, repoName } from "@/lib/performance";
 import { api } from "@/api/tauri";
 import { useQueryClient } from "@tanstack/react-query";
 import ContextMenu, { type ContextMenuItem } from "@/components/ui/overlay/ContextMenu";
@@ -38,30 +39,48 @@ export default function CommitGraph() {
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; hash: string } | null>(null);
 
   const layout = useMemo(() => {
-    const pages = data?.pages ?? [];
-    const cache = layoutCacheRef.current;
-    let layout: LayoutState | null = null;
-    let startPage = 0;
+    return measureSync(
+      "graph_layout",
+      () => {
+        const pages = data?.pages ?? [];
+        const cache = layoutCacheRef.current;
+        let layout: LayoutState | null = null;
+        let startPage = 0;
 
-    if (
-      cache &&
-      cache.pages.length <= pages.length &&
-      cache.pages.every((page, index) => page === pages[index])
-    ) {
-      layout = cache.layout;
-      startPage = cache.pages.length;
-    }
+        if (
+          cache &&
+          cache.pages.length <= pages.length &&
+          cache.pages.every((page, index) => page === pages[index])
+        ) {
+          layout = cache.layout;
+          startPage = cache.pages.length;
+        }
 
-    for (let i = startPage; i < pages.length; i++) {
-      layout = computeGraphLayout(pages[i], layout ?? undefined);
-    }
+        for (let i = startPage; i < pages.length; i++) {
+          layout = computeGraphLayout(pages[i], layout ?? undefined);
+        }
 
-    const nextLayout = layout ?? computeGraphLayout([]);
-    layoutCacheRef.current = { pages: [...pages], layout: nextLayout };
-    return nextLayout;
-  }, [data]);
+        const nextLayout = layout ?? computeGraphLayout([]);
+        layoutCacheRef.current = { pages: [...pages], layout: nextLayout };
+        return nextLayout;
+      },
+      {
+        repo: repoName(repoPath),
+        pages: data?.pages.length ?? 0,
+        commits: data?.pages.reduce((count, page) => count + page.length, 0) ?? 0,
+      },
+    );
+  }, [data, repoPath]);
   const commits = layout.commits;
-  const graphIndex = useMemo(() => buildGraphRenderIndex(layout), [layout]);
+  const graphIndex = useMemo(
+    () =>
+      measureSync(
+        "graph_render_index",
+        () => buildGraphRenderIndex(layout),
+        { repo: repoName(repoPath), commits: layout.commits.length },
+      ),
+    [layout, repoPath],
+  );
 
   const totalHeight = layout.commits.length * ROW_HEIGHT;
   const scrollHeight = Math.max(totalHeight, containerHeight);

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { startRepoOpenMeasurement } from "@/lib/performance";
 
 export type Theme =
   | "dark"
@@ -58,6 +59,7 @@ export const useRepoStore = create<RepoState>((set) => ({
 
   openRepo: (path) =>
     set((state) => {
+      startRepoOpenMeasurement(path);
       const recent = [
         path,
         ...state.recentRepos.filter((r) => r !== path),
