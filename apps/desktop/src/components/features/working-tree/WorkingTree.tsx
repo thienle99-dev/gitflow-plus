@@ -190,7 +190,7 @@ export default function WorkingTree() {
     if (!commitMessage.trim()) return;
     setCommitting(true);
     try {
-      if (staged.length === 0 && unstaged.length > 0) {
+      if (unstaged.length > 0) {
         await api.commit.stageAll(repoPath!);
       }
       const result = await api.commit.commit(repoPath!, commitMessage, amend);
@@ -212,19 +212,13 @@ export default function WorkingTree() {
       return;
     }
 
-    const filesForMessage = staged.length > 0 ? staged : changes;
-
-    showToast(
-      staged.length > 0
-        ? "Generating commit message..."
-        : "Generating commit message for all changes..."
-    );
+    showToast("Generating commit message for all changes...");
     try {
-      const result = await generateCommit.mutateAsync({ files: filesForMessage });
+      const result = await generateCommit.mutateAsync({ files: changes });
       setCommitMessage(result.message);
       showToast(result.fallback ? `Generated message using local template${result.reason ? ` (${result.reason})` : ""}` : "AI commit message generated");
     } catch (err: any) {
-      setCommitMessage(generateLocalCommitMessage(filesForMessage));
+      setCommitMessage(generateLocalCommitMessage(changes));
       showToast(`AI failed: ${err.message || err}. Used local fallback.`);
     } finally {
       requestAnimationFrame(() => textareaRef.current?.focus());
@@ -429,7 +423,7 @@ export default function WorkingTree() {
             }
           >
             <Check size={12} className={commitMessage.trim() && (staged.length > 0 || unstaged.length > 0) ? "text-accent-fg" : "text-text-muted"} />
-            <span>{committing ? "Committing..." : staged.length === 0 && unstaged.length > 0 ? "Commit All" : "Commit"}</span>
+            <span>{committing ? "Committing..." : unstaged.length > 0 ? "Commit All" : "Commit"}</span>
           </button>
 
           <UndoButton onUndoComplete={invalidate} />

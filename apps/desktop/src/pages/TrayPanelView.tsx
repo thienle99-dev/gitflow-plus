@@ -229,15 +229,9 @@ export default function TrayPanelView() {
       return;
     }
 
-    const filesForMessage = staged.length > 0 ? staged : changes;
     try {
-      showToast(
-        staged.length > 0
-          ? "Generating message with AI..."
-          : "Generating message for all changes...",
-        "success"
-      );
-      const msg = await generateCommit.mutateAsync({ files: filesForMessage });
+      showToast("Generating message for all changes...", "success");
+      const msg = await generateCommit.mutateAsync({ files: changes });
       setCommitMessage(msg.message);
     } catch (e: any) {
       showToast(e.message || "Failed to generate commit message", "error");
@@ -248,7 +242,7 @@ export default function TrayPanelView() {
     if (!repoPath || !commitMessage.trim()) return;
     setCommitting(true);
     try {
-      if (staged.length === 0 && unstaged.length > 0) {
+      if (unstaged.length > 0) {
         await api.commit.stageAll(repoPath);
       }
       await api.commit.commit(repoPath, commitMessage, false);
@@ -609,9 +603,7 @@ export default function TrayPanelView() {
                     disabled={(changes?.length || 0) === 0 || generateCommit.isPending}
                     className="text-[9px] font-bold text-accent hover:opacity-85 disabled:opacity-40 transition-all flex items-center gap-1 cursor-pointer"
                     title={
-                      staged.length > 0
-                        ? "Generate message using staged changes"
-                        : "Generate message using all changes"
+                      "Generate message using all changes"
                     }
                   >
                     {generateCommit.isPending ? (
@@ -632,7 +624,7 @@ export default function TrayPanelView() {
                     ) : (
                       <GitCommit size={10} />
                     )}
-                    <span>Commit {staged.length > 0 ? `(${staged.length})` : unstaged.length > 0 ? "(all)" : ""}</span>
+                    <span>Commit {unstaged.length > 0 ? "(all)" : staged.length > 0 ? `(${staged.length})` : ""}</span>
                   </button>
                 </div>
               </div>

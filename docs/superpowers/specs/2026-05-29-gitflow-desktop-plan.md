@@ -19,8 +19,8 @@
 - [x] `commands/commit.rs` — stage, unstage, commit, amend
 - [x] `commands/diff.rs` — file diff, commit diff, staged diff
 - [x] `commands/remote.rs` — pull, push, fetch
-- [ ] `commands/clone.rs` — git_clone (URL + destination path)
-- [ ] Async Tauri commands — đảm bảo tất cả `#[tauri::command]` là `async fn`, tránh block main thread
+- [x] `commands/clone.rs` — git_clone (URL + destination path)
+- [x] Async Tauri commands — đảm bảo tất cả `#[tauri::command]` là `async fn`, tránh block main thread
 - [ ] Stream git log output — dùng `Stdio::piped()` đọc từng dòng, emit chunks về frontend (user thấy commits xuất hiện dần)
 - [ ] Unit tests for output parsing
 
@@ -94,7 +94,7 @@
 - [x] Checkout branch (from sidebar double-click + context menu)
 - [x] Create branch dialog (name input + base ref selector)
 - [x] Error handling: toast notifications, auth prompts
-- [ ] Clone dialog — URL input + destination path picker
+- [x] Clone dialog — URL input + destination path picker
 - [ ] Revert commit — tạo commit mới đảo ngược thay đổi (an toàn cho shared branches)
 - [ ] Branch merge preview — show ahead/behind count + diff preview trước khi merge
 
@@ -137,14 +137,14 @@
 - [x] Conflict resolver UI (3-panel CodeMirror)
 - [x] Interactive rebase (GIT_SEQUENCE_EDITOR approach)
 - [x] Stash management
-- [ ] Stash diff viewer — preview nội dung stash trước khi apply
+- [x] Stash diff viewer — preview nội dung stash trước khi apply
 - [x] Tag CRUD
 - [x] Git log search/filter
 - [x] Cherry-pick (pick commit từ branch khác)
 - [ ] Multi-select commits — chọn nhiều commits để cherry-pick batch hoặc xem combined diff
 - [x] Blame view (inline trong diff viewer — ai viết dòng nào)
-- [ ] File history — xem toàn bộ commits đã chạm vào một file (`git log -- <file>`)
-- [ ] Submodule support (hiển thị status, init/update)
+- [x] File history — xem toàn bộ commits đã chạm vào một file (`git log -- <file>`)
+- [x] Submodule support (hiển thị status, init/update)
 - [ ] Git hooks visibility (show active hooks, --no-verify option)
 - [x] Undo stack (reflog-based, undo last commit/stage/checkout)
 - [ ] Auto-fetch — background fetch theo interval (configurable, mặc định 5 phút), badge "X commits behind"
