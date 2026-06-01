@@ -145,11 +145,15 @@ async function getCurrentBranchName(repoPath: string) {
 
 function buildCommitPrompt(diff: string, settings: AISettings, branchName: string) {
   const formatInstruction = commitStyleInstruction(settings.commitStyle);
-  const styleInstruction = settings.detailLevel === "minimal"
-    ? "3. Return ONLY a single line (the subject line). Do NOT add a body."
-    : settings.detailLevel === "detailed"
-      ? "3. Write a detailed commit message with a body and concise bullet points."
-      : "3. If the changes are complex, add a short body after a blank line.";
+  const styleInstruction = settings.detailLevel === "ultra-minimal"
+    ? "3. Return ONLY a single line (the subject line). No body."
+    : settings.detailLevel === "minimal"
+      ? "3. Return subject + 1-2 lines of brief explanation."
+      : settings.detailLevel === "medium"
+        ? "3. If the changes are complex, add a short body after a blank line."
+        : settings.detailLevel === "detailed"
+          ? "3. Write a detailed commit message with a body and concise bullet points."
+          : "3. Write comprehensive message with body, 5-8 bullet points, reasoning section, and any breaking changes.";
   const branchContext = branchName
     ? `\nCurrent Git Branch Name: ${branchName}\n`
     : "";
