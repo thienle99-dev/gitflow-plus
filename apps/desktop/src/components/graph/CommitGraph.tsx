@@ -77,9 +77,9 @@ export default function CommitGraph() {
     let lastWidth = 0;
     let lastHeight = 0;
 
-    const measure = () => {
-      const width = el.clientWidth;
-      const height = el.clientHeight;
+    const measure = (rect?: DOMRectReadOnly) => {
+      const width = Math.round(rect?.width ?? el.clientWidth);
+      const height = Math.round(rect?.height ?? el.clientHeight);
       if (width === lastWidth && height === lastHeight) return;
       lastWidth = width;
       lastHeight = height;
@@ -87,25 +87,28 @@ export default function CommitGraph() {
       setContainerHeight(height);
     };
 
-    const scheduleMeasure = () => {
+    const scheduleMeasure = (rect?: DOMRectReadOnly) => {
       if (frame !== null) return;
       frame = requestAnimationFrame(() => {
         frame = null;
-        measure();
+        measure(rect);
       });
     };
 
     measure();
     scheduleMeasure();
-    const observer = new ResizeObserver(scheduleMeasure);
+    const observer = new ResizeObserver((entries) => {
+      scheduleMeasure(entries[0]?.contentRect);
+    });
+    const handleWindowResize = () => scheduleMeasure();
     observer.observe(el);
-    window.addEventListener("resize", scheduleMeasure);
+    window.addEventListener("resize", handleWindowResize);
     return () => {
       if (frame !== null) {
         cancelAnimationFrame(frame);
       }
       observer.disconnect();
-      window.removeEventListener("resize", scheduleMeasure);
+      window.removeEventListener("resize", handleWindowResize);
     };
   }, []);
 
@@ -266,7 +269,7 @@ export default function CommitGraph() {
     : [];
 
   return (
-    <div className="h-full min-h-0 flex flex-col">
+    <div className="h-full min-h-0 w-full overflow-hidden flex flex-col">
       {/* Header */}
       <div className="h-[28px] flex items-center px-3 border-b border-border text-xs text-text-muted font-medium shrink-0">
         <div className="flex items-center gap-1">
@@ -281,7 +284,7 @@ export default function CommitGraph() {
       {/* Scrollable graph area */}
       <div
         ref={containerRef}
-        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
+        className="flex-1 min-h-0 w-full overflow-y-auto overflow-x-hidden"
         onScroll={handleScroll}
       >
         {/* Tall div establishes the virtual scroll height */}

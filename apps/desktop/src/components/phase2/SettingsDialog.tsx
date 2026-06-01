@@ -1,5 +1,19 @@
 import { useState, useEffect } from "react";
-import { Sparkles, Eye, EyeOff, Settings, ShieldAlert, Sliders, Sun, Moon, RefreshCw } from "lucide-react";
+import {
+  Database,
+  Eye,
+  EyeOff,
+  Gauge,
+  GitBranch,
+  Keyboard,
+  RefreshCw,
+  RotateCcw,
+  Settings,
+  ShieldAlert,
+  Sliders,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { useRepoStore } from "@/stores/repo";
 import { api } from "@/api/tauri";
 
@@ -12,6 +26,44 @@ const LS_KEY_AUTO_FETCH = "gitflowAutoFetch";
 const LS_KEY_FETCHED_MODELS = "gitflowAiFetchedModels";
 const LS_KEY_AI_DETAIL_LEVEL = "gitflowAiDetailLevel";
 const LS_KEY_AI_CUSTOM_RULES = "gitflowAiCustomRules";
+const LS_KEY_FETCH_INTERVAL = "gitflowFetchIntervalMinutes";
+const LS_KEY_AUTO_PRUNE = "gitflowAutoPruneOnFetch";
+const LS_KEY_CONFIRM_DANGEROUS = "gitflowConfirmDangerousActions";
+const LS_KEY_REOPEN_LAST_REPO = "gitflowReopenLastRepo";
+const LS_KEY_RECENT_REPO_LIMIT = "gitflowRecentRepoLimit";
+const LS_KEY_GRAPH_DENSITY = "gitflowGraphDensity";
+const LS_KEY_GRAPH_SHOW_HASH = "gitflowGraphShowHash";
+const LS_KEY_GRAPH_SHOW_AUTHOR = "gitflowGraphShowAuthor";
+const LS_KEY_GRAPH_SHOW_DATE = "gitflowGraphShowDate";
+const LS_KEY_DIFF_CONTEXT = "gitflowDiffContextLines";
+const LS_KEY_DIFF_LINE_WRAP = "gitflowDiffLineWrap";
+const LS_KEY_LARGE_DIFF_MODE = "gitflowLargeDiffMode";
+const LS_KEY_REDUCED_MOTION = "gitflowReducedMotion";
+
+const SETTINGS_KEYS = [
+  LS_KEY_DIFF_MODE,
+  LS_KEY_AUTO_FETCH,
+  LS_KEY_FETCH_INTERVAL,
+  LS_KEY_AUTO_PRUNE,
+  LS_KEY_CONFIRM_DANGEROUS,
+  LS_KEY_REOPEN_LAST_REPO,
+  LS_KEY_RECENT_REPO_LIMIT,
+  LS_KEY_GRAPH_DENSITY,
+  LS_KEY_GRAPH_SHOW_HASH,
+  LS_KEY_GRAPH_SHOW_AUTHOR,
+  LS_KEY_GRAPH_SHOW_DATE,
+  LS_KEY_DIFF_CONTEXT,
+  LS_KEY_DIFF_LINE_WRAP,
+  LS_KEY_LARGE_DIFF_MODE,
+  LS_KEY_REDUCED_MOTION,
+  LS_KEY_API_KEY,
+  LS_KEY_API_URL,
+  LS_KEY_MODEL,
+  LS_KEY_TOKEN_LIMIT,
+  LS_KEY_FETCHED_MODELS,
+  LS_KEY_AI_DETAIL_LEVEL,
+  LS_KEY_AI_CUSTOM_RULES,
+];
 
 interface SettingsDialogProps {
   onClose?: () => void;
@@ -99,12 +151,25 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
   const currentTheme = useRepoStore((s) => s.theme);
   const setTheme = useRepoStore((s) => s.setTheme);
 
-  const [activeTab, setActiveTab] = useState<"general" | "ai">("general");
+  const [activeTab, setActiveTab] = useState<"general" | "git" | "ai" | "advanced">("general");
   
   // General Tab States
   const [theme, setSelectedTheme] = useState<typeof currentTheme>(currentTheme);
   const [defaultDiffMode, setDefaultDiffMode] = useState<"split" | "unified">("split");
+  const [graphDensity, setGraphDensity] = useState<"comfortable" | "compact">("comfortable");
+  const [graphShowHash, setGraphShowHash] = useState(true);
+  const [graphShowAuthor, setGraphShowAuthor] = useState(true);
+  const [graphShowDate, setGraphShowDate] = useState(false);
+  const [diffContext, setDiffContext] = useState(3);
+  const [diffLineWrap, setDiffLineWrap] = useState(true);
+
+  // Git Tab States
   const [autoFetch, setAutoFetch] = useState(true);
+  const [fetchInterval, setFetchInterval] = useState(10);
+  const [autoPrune, setAutoPrune] = useState(false);
+  const [confirmDangerous, setConfirmDangerous] = useState(true);
+  const [reopenLastRepo, setReopenLastRepo] = useState(false);
+  const [recentRepoLimit, setRecentRepoLimit] = useState(10);
 
   // AI Tab States
   const [apiKey, setApiKey] = useState("");
@@ -116,6 +181,10 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
   const [fetchingModels, setFetchingModels] = useState(false);
   const [aiDetailLevel, setAiDetailLevel] = useState<"minimal" | "medium" | "detailed">("medium");
   const [customRules, setCustomRules] = useState("");
+
+  // Advanced Tab States
+  const [largeDiffMode, setLargeDiffMode] = useState<"full" | "prompt" | "summary">("prompt");
+  const [reducedMotion, setReducedMotion] = useState(false);
 
   const [hasChanges, setHasChanges] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -130,6 +199,19 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
     try {
       const savedDiffMode = localStorage.getItem(LS_KEY_DIFF_MODE) as "split" | "unified";
       const savedAutoFetch = localStorage.getItem(LS_KEY_AUTO_FETCH);
+      const savedFetchInterval = localStorage.getItem(LS_KEY_FETCH_INTERVAL);
+      const savedAutoPrune = localStorage.getItem(LS_KEY_AUTO_PRUNE);
+      const savedConfirmDangerous = localStorage.getItem(LS_KEY_CONFIRM_DANGEROUS);
+      const savedReopenLastRepo = localStorage.getItem(LS_KEY_REOPEN_LAST_REPO);
+      const savedRecentRepoLimit = localStorage.getItem(LS_KEY_RECENT_REPO_LIMIT);
+      const savedGraphDensity = localStorage.getItem(LS_KEY_GRAPH_DENSITY) as "comfortable" | "compact";
+      const savedGraphShowHash = localStorage.getItem(LS_KEY_GRAPH_SHOW_HASH);
+      const savedGraphShowAuthor = localStorage.getItem(LS_KEY_GRAPH_SHOW_AUTHOR);
+      const savedGraphShowDate = localStorage.getItem(LS_KEY_GRAPH_SHOW_DATE);
+      const savedDiffContext = localStorage.getItem(LS_KEY_DIFF_CONTEXT);
+      const savedDiffLineWrap = localStorage.getItem(LS_KEY_DIFF_LINE_WRAP);
+      const savedLargeDiffMode = localStorage.getItem(LS_KEY_LARGE_DIFF_MODE) as "full" | "prompt" | "summary";
+      const savedReducedMotion = localStorage.getItem(LS_KEY_REDUCED_MOTION);
       const savedKey = localStorage.getItem(LS_KEY_API_KEY);
       const savedApiUrl = localStorage.getItem(LS_KEY_API_URL);
       const savedModel = localStorage.getItem(LS_KEY_MODEL);
@@ -140,6 +222,19 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
 
       if (savedDiffMode) setDefaultDiffMode(savedDiffMode);
       if (savedAutoFetch !== null) setAutoFetch(savedAutoFetch === "true");
+      if (savedFetchInterval) setFetchInterval(Number(savedFetchInterval));
+      if (savedAutoPrune !== null) setAutoPrune(savedAutoPrune === "true");
+      if (savedConfirmDangerous !== null) setConfirmDangerous(savedConfirmDangerous === "true");
+      if (savedReopenLastRepo !== null) setReopenLastRepo(savedReopenLastRepo === "true");
+      if (savedRecentRepoLimit) setRecentRepoLimit(Number(savedRecentRepoLimit));
+      if (savedGraphDensity) setGraphDensity(savedGraphDensity);
+      if (savedGraphShowHash !== null) setGraphShowHash(savedGraphShowHash === "true");
+      if (savedGraphShowAuthor !== null) setGraphShowAuthor(savedGraphShowAuthor === "true");
+      if (savedGraphShowDate !== null) setGraphShowDate(savedGraphShowDate === "true");
+      if (savedDiffContext) setDiffContext(Number(savedDiffContext));
+      if (savedDiffLineWrap !== null) setDiffLineWrap(savedDiffLineWrap === "true");
+      if (savedLargeDiffMode) setLargeDiffMode(savedLargeDiffMode);
+      if (savedReducedMotion !== null) setReducedMotion(savedReducedMotion === "true");
       if (savedKey) setApiKey(savedKey);
       if (savedApiUrl) setApiUrl(savedApiUrl);
       if (savedModel) setModel(savedModel);
@@ -161,6 +256,19 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
   useEffect(() => {
     const storedDiffMode = (localStorage.getItem(LS_KEY_DIFF_MODE) as "split" | "unified") || "split";
     const storedAutoFetch = localStorage.getItem(LS_KEY_AUTO_FETCH) !== "false"; // default to true
+    const storedFetchInterval = localStorage.getItem(LS_KEY_FETCH_INTERVAL) || "10";
+    const storedAutoPrune = localStorage.getItem(LS_KEY_AUTO_PRUNE) === "true";
+    const storedConfirmDangerous = localStorage.getItem(LS_KEY_CONFIRM_DANGEROUS) !== "false";
+    const storedReopenLastRepo = localStorage.getItem(LS_KEY_REOPEN_LAST_REPO) === "true";
+    const storedRecentRepoLimit = localStorage.getItem(LS_KEY_RECENT_REPO_LIMIT) || "10";
+    const storedGraphDensity = (localStorage.getItem(LS_KEY_GRAPH_DENSITY) as "comfortable" | "compact") || "comfortable";
+    const storedGraphShowHash = localStorage.getItem(LS_KEY_GRAPH_SHOW_HASH) !== "false";
+    const storedGraphShowAuthor = localStorage.getItem(LS_KEY_GRAPH_SHOW_AUTHOR) !== "false";
+    const storedGraphShowDate = localStorage.getItem(LS_KEY_GRAPH_SHOW_DATE) === "true";
+    const storedDiffContext = localStorage.getItem(LS_KEY_DIFF_CONTEXT) || "3";
+    const storedDiffLineWrap = localStorage.getItem(LS_KEY_DIFF_LINE_WRAP) !== "false";
+    const storedLargeDiffMode = (localStorage.getItem(LS_KEY_LARGE_DIFF_MODE) as "full" | "prompt" | "summary") || "prompt";
+    const storedReducedMotion = localStorage.getItem(LS_KEY_REDUCED_MOTION) === "true";
     const storedKey = localStorage.getItem(LS_KEY_API_KEY) || "";
     const storedApiUrl = localStorage.getItem(LS_KEY_API_URL) || "";
     const storedModel = localStorage.getItem(LS_KEY_MODEL) || "claude-sonnet-4-20250514";
@@ -173,6 +281,19 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       theme !== currentTheme ||
       defaultDiffMode !== storedDiffMode ||
       autoFetch !== storedAutoFetch ||
+      fetchInterval !== Number(storedFetchInterval) ||
+      autoPrune !== storedAutoPrune ||
+      confirmDangerous !== storedConfirmDangerous ||
+      reopenLastRepo !== storedReopenLastRepo ||
+      recentRepoLimit !== Number(storedRecentRepoLimit) ||
+      graphDensity !== storedGraphDensity ||
+      graphShowHash !== storedGraphShowHash ||
+      graphShowAuthor !== storedGraphShowAuthor ||
+      graphShowDate !== storedGraphShowDate ||
+      diffContext !== Number(storedDiffContext) ||
+      diffLineWrap !== storedDiffLineWrap ||
+      largeDiffMode !== storedLargeDiffMode ||
+      reducedMotion !== storedReducedMotion ||
       apiKey !== storedKey ||
       apiUrl !== storedApiUrl ||
       model !== storedModel ||
@@ -181,7 +302,32 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       aiDetailLevel !== storedDetailLevel ||
       customRules !== storedCustomRules
     );
-  }, [theme, currentTheme, defaultDiffMode, autoFetch, apiKey, apiUrl, model, tokenLimit, fetchedModels, aiDetailLevel, customRules]);
+  }, [
+    theme,
+    currentTheme,
+    defaultDiffMode,
+    autoFetch,
+    fetchInterval,
+    autoPrune,
+    confirmDangerous,
+    reopenLastRepo,
+    recentRepoLimit,
+    graphDensity,
+    graphShowHash,
+    graphShowAuthor,
+    graphShowDate,
+    diffContext,
+    diffLineWrap,
+    largeDiffMode,
+    reducedMotion,
+    apiKey,
+    apiUrl,
+    model,
+    tokenLimit,
+    fetchedModels,
+    aiDetailLevel,
+    customRules,
+  ]);
 
   const handleFetchModels = async () => {
     if (!apiUrl) {
@@ -267,6 +413,19 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       setTheme(theme);
       localStorage.setItem(LS_KEY_DIFF_MODE, defaultDiffMode);
       localStorage.setItem(LS_KEY_AUTO_FETCH, String(autoFetch));
+      localStorage.setItem(LS_KEY_FETCH_INTERVAL, String(fetchInterval));
+      localStorage.setItem(LS_KEY_AUTO_PRUNE, String(autoPrune));
+      localStorage.setItem(LS_KEY_CONFIRM_DANGEROUS, String(confirmDangerous));
+      localStorage.setItem(LS_KEY_REOPEN_LAST_REPO, String(reopenLastRepo));
+      localStorage.setItem(LS_KEY_RECENT_REPO_LIMIT, String(recentRepoLimit));
+      localStorage.setItem(LS_KEY_GRAPH_DENSITY, graphDensity);
+      localStorage.setItem(LS_KEY_GRAPH_SHOW_HASH, String(graphShowHash));
+      localStorage.setItem(LS_KEY_GRAPH_SHOW_AUTHOR, String(graphShowAuthor));
+      localStorage.setItem(LS_KEY_GRAPH_SHOW_DATE, String(graphShowDate));
+      localStorage.setItem(LS_KEY_DIFF_CONTEXT, String(diffContext));
+      localStorage.setItem(LS_KEY_DIFF_LINE_WRAP, String(diffLineWrap));
+      localStorage.setItem(LS_KEY_LARGE_DIFF_MODE, largeDiffMode);
+      localStorage.setItem(LS_KEY_REDUCED_MOTION, String(reducedMotion));
       localStorage.setItem(LS_KEY_API_KEY, apiKey);
       localStorage.setItem(LS_KEY_API_URL, apiUrl);
       localStorage.setItem(LS_KEY_MODEL, model);
@@ -285,6 +444,50 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
     } catch (e: any) {
       showToast(`Error saving: ${e}`);
     }
+  };
+
+  const handleClearAiCredentials = () => {
+    setApiKey("");
+    setApiUrl("");
+    localStorage.removeItem(LS_KEY_API_KEY);
+    localStorage.removeItem(LS_KEY_API_URL);
+    showToast("AI credentials cleared");
+    window.dispatchEvent(new Event("gitflow-settings-updated"));
+  };
+
+  const handleClearRecentRepos = () => {
+    localStorage.setItem("recentRepos", "[]");
+    showToast("Recent repositories cleared");
+  };
+
+  const handleResetSettings = () => {
+    if (!confirm("Reset GitFlow Desktop settings to defaults?")) return;
+    SETTINGS_KEYS.forEach((key) => localStorage.removeItem(key));
+    setSelectedTheme(currentTheme);
+    setDefaultDiffMode("split");
+    setAutoFetch(true);
+    setFetchInterval(10);
+    setAutoPrune(false);
+    setConfirmDangerous(true);
+    setReopenLastRepo(false);
+    setRecentRepoLimit(10);
+    setGraphDensity("comfortable");
+    setGraphShowHash(true);
+    setGraphShowAuthor(true);
+    setGraphShowDate(false);
+    setDiffContext(3);
+    setDiffLineWrap(true);
+    setLargeDiffMode("prompt");
+    setReducedMotion(false);
+    setApiKey("");
+    setApiUrl("");
+    setModel("claude-sonnet-4-20250514");
+    setTokenLimit(4096);
+    setFetchedModels([]);
+    setAiDetailLevel("medium");
+    setCustomRules("");
+    showToast("Settings reset to defaults");
+    window.dispatchEvent(new Event("gitflow-settings-updated"));
   };
 
   const handleCancel = () => {

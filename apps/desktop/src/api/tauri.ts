@@ -73,6 +73,14 @@ export interface Tag {
   date: string;
 }
 
+export interface SubmoduleInfo {
+  name: string;
+  path: string;
+  commit_hash: string;
+  status: string;
+  desc: string;
+}
+
 export interface CherryPickResult {
   success: boolean;
   message: string;
@@ -266,5 +274,16 @@ export const api = {
       invoke<{ status: number; body: string }>("ai_http_request", {
         request: { url, method, headers, body: body ?? null }
       }),
+  },
+
+  submodules: {
+    list: (path: string) =>
+      invoke<SubmoduleInfo[]>("submodule_list", { path }),
+    init: (path: string, submodulePath?: string) =>
+      invoke<string>("submodule_init", { path, submodulePath: submodulePath ?? null }),
+    update: (path: string, submodulePath?: string) =>
+      invoke<string>("submodule_update", { path, submodulePath: submodulePath ?? null }),
+    remove: (path: string, submodulePath: string) =>
+      invoke<string>("submodule_remove", { path, submodulePath }),
   },
 };

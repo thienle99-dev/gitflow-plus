@@ -182,10 +182,10 @@ export default function MainLayout() {
     <div className="h-full min-h-0 flex flex-col">
       <Toolbar />
       <div className="flex-1 min-h-0 overflow-hidden">
-        <PanelGroup direction="horizontal" autoSaveId="main-layout">
+        <PanelGroup direction="horizontal" autoSaveId="main-layout" className="h-full min-h-0">
           {sidebarOpen && (
             <>
-              <Panel defaultSize={20} minSize={15} maxSize={35}>
+              <Panel defaultSize={20} minSize={15} maxSize={35} className="min-h-0">
                 <div className="vibrancy h-full border-r border-border overflow-hidden">
                   <Sidebar />
                 </div>
@@ -193,14 +193,16 @@ export default function MainLayout() {
               <PanelResizeHandle className="w-[3px] bg-transparent hover:bg-accent transition-colors cursor-col-resize" />
             </>
           )}
-          <Panel defaultSize={sidebarOpen ? 50 : 70} minSize={30}>
+          <Panel defaultSize={sidebarOpen ? 50 : 70} minSize={30} className="min-h-0">
             <div className="h-full min-h-0 overflow-hidden bg-surface-0">
               <CommitGraph />
             </div>
           </Panel>
           <PanelResizeHandle className="w-[3px] bg-transparent hover:bg-accent transition-colors cursor-col-resize" />
-          <Panel defaultSize={30} minSize={20} maxSize={45}>
-            <RightPanel />
+          <Panel defaultSize={30} minSize={20} maxSize={45} className="min-h-0">
+            <div className="h-full min-h-0 overflow-hidden">
+              <RightPanel />
+            </div>
           </Panel>
         </PanelGroup>
       </div>
