@@ -47,6 +47,7 @@ interface RepoState {
   selectRef: (ref: string | null) => void;
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
+  removeRecentRepo: (path: string) => void;
 }
 
 export const useRepoStore = create<RepoState>((set) => ({
@@ -83,4 +84,11 @@ export const useRepoStore = create<RepoState>((set) => ({
     applyTheme(theme);
     set({ theme });
   },
+
+  removeRecentRepo: (path) =>
+    set((state) => {
+      const recent = state.recentRepos.filter((r) => r !== path);
+      localStorage.setItem("recentRepos", JSON.stringify(recent));
+      return { recentRepos: recent };
+    }),
 }));

@@ -18,6 +18,7 @@ import {
   ChevronDown,
   Plus,
   LogOut,
+  Trash2,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -36,6 +37,7 @@ export default function Sidebar() {
 
   const openRepo = useRepoStore((s) => s.openRepo);
   const closeRepo = useRepoStore((s) => s.closeRepo);
+  const removeRecentRepo = useRepoStore((s) => s.removeRecentRepo);
   const recentRepos = useRepoStore((s) => s.recentRepos);
 
   if (!repoPath) return null;
@@ -139,18 +141,32 @@ export default function Sidebar() {
                   {recentRepos.filter(path => path !== repoPath).map((path) => {
                     const name = path.split(/[/\\]/).filter(Boolean).pop() || path;
                     return (
-                      <button
+                      <div
                         key={path}
-                        title={path}
-                        className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text-secondary hover:bg-accent hover:text-accent-fg text-left"
-                        onClick={() => {
-                          openRepo(path);
-                          setRepoMenuOpen(false);
-                        }}
+                        className="group flex items-center justify-between px-3 py-1 text-xs text-text-secondary hover:bg-surface-2"
                       >
-                        <Folder size={12} className="opacity-75 shrink-0" />
-                        <span className="truncate flex-1">{name}</span>
-                      </button>
+                        <button
+                          title={path}
+                          className="flex-1 flex items-center gap-2 py-1 text-left truncate hover:text-text-primary transition-colors cursor-pointer"
+                          onClick={() => {
+                            openRepo(path);
+                            setRepoMenuOpen(false);
+                          }}
+                        >
+                          <Folder size={12} className="opacity-75 shrink-0" />
+                          <span className="truncate flex-1">{name}</span>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeRecentRepo(path);
+                          }}
+                          className="h-5 w-5 flex items-center justify-center rounded hover:bg-surface-3 text-text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all cursor-pointer shrink-0"
+                          title="Remove from list"
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      </div>
                     );
                   })}
                 </>
