@@ -250,20 +250,31 @@ export default function TrayPanelView() {
   };
 
   const handleOpenMainApp = async () => {
+    console.log("[Tray] Open Full App clicked");
     try {
-      const mainWin = await WebviewWindow.getByLabel("main");
+      let mainWin = await WebviewWindow.getByLabel("main");
+      if (!mainWin) {
+        console.warn("[Tray] Main window not found, creating it");
+        // Create the main window using the default config (label "main")
+        // eslint-disable-next-line no-new
+        new WebviewWindow("main", { url: "index.html" });
+        // Give Tauri a moment to register the window, then retrieve it
+        mainWin = await WebviewWindow.getByLabel("main");
+      }
       if (mainWin) {
         await mainWin.show();
         await mainWin.unminimize();
         await mainWin.setFocus();
+        console.log("[Tray] Main window shown and focused");
       }
       // Hide tray popover
       const trayWin = await WebviewWindow.getByLabel("tray");
       if (trayWin) {
         await trayWin.hide();
+        console.log("[Tray] Tray window hidden");
       }
     } catch (e) {
-      console.error(e);
+      console.error("[Tray] Error opening full app:", e);
     }
   };
 
