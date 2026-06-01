@@ -3,6 +3,13 @@ import { api, type Commit, type CommitFileChange, type FileChange, type Branch, 
 
 const PAGE_SIZE = 200;
 
+function getSyncStatusInterval() {
+  if (localStorage.getItem("gitflowAutoFetch") === "false") return false;
+  const minutes = Number(localStorage.getItem("gitflowFetchIntervalMinutes") || "10");
+  const safeMinutes = Number.isFinite(minutes) ? Math.min(60, Math.max(5, minutes)) : 10;
+  return safeMinutes * 60_000;
+}
+
 export function useGitLog(repoPath: string | null, refName?: string | null) {
   return useInfiniteQuery<Commit[]>({
     queryKey: ["git", repoPath, "log", refName || "all"],
@@ -80,6 +87,6 @@ export function useGitSyncStatus(repoPath: string | null) {
     queryFn: () => api.remote.getSyncStatus(repoPath!),
     enabled: !!repoPath,
     staleTime: 5000,
-    refetchInterval: 10000, // Check remote ahead/behind counts every 10 seconds
+    refetchInterval: getSyncStatusInterval(),
   });
 }

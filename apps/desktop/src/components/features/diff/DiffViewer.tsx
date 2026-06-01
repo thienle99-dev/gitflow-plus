@@ -6,7 +6,7 @@ import { useAIDiffReview } from "@/queries/useAI";
 import { Sparkles, RefreshCw } from "lucide-react";
 import { EditorView, basicSetup } from "codemirror";
 import { EditorState, RangeSetBuilder, StateField } from "@codemirror/state";
-import { keymap, Decoration, type DecorationSet, WidgetType, gutter, GutterMarker } from "@codemirror/view";
+import { keymap, Decoration, type DecorationSet, WidgetType } from "@codemirror/view";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { javascript } from "@codemirror/lang-javascript";
 import { python } from "@codemirror/lang-python";
@@ -106,15 +106,29 @@ export default function DiffViewer({
 
   // Determine old/new content from diff
   const hunks = useMemo(() => parseDiff(diff), [diff]);
-  const oldContent = useMemo(() => buildSideContent(hunks, "old"), [hunks]);
-  const newContent = useMemo(() => buildSideContent(hunks, "new"), [hunks]);
-  const unifiedContent = useMemo(() => buildUnifiedContent(hunks), [hunks]);
-  const deletedCount = useMemo(
-    () => hunks.reduce((s, h) => s + h.lines.filter(l => l.type === "delete").length, 0),
-    [hunks],
+  const oldContent = useMemo(
+    () => diffViewMode === "split" ? buildSideContent(hunks, "old") : "",
+    [diffViewMode, hunks],
   );
-  const addedCount = useMemo(
-    () => hunks.reduce((s, h) => s + h.lines.filter(l => l.type === "add").length, 0),
+  const newContent = useMemo(
+    () => diffViewMode === "split" ? buildSideContent(hunks, "new") : "",
+    [diffViewMode, hunks],
+  );
+  const unifiedContent = useMemo(
+    () => diffViewMode === "unified" ? buildUnifiedContent(hunks) : "",
+    [diffViewMode, hunks],
+  );
+  const { deletedCount, addedCount } = useMemo(
+    () => hunks.reduce(
+      (counts, hunk) => {
+        for (const line of hunk.lines) {
+          if (line.type === "delete") counts.deletedCount++;
+          if (line.type === "add") counts.addedCount++;
+        }
+        return counts;
+      },
+      { deletedCount: 0, addedCount: 0 },
+    ),
     [hunks],
   );
   const patchPrefix = useMemo(() => getPatchPrefix(diff), [diff]);
@@ -696,114 +710,6 @@ function getDiffHighlightExtension(
   });
 }
 
-class DiffGutterMarker extends GutterMarker {
-  constructor(
-    readonly action: "stage" | "unstage" | "discard",
-    readonly hunk: DiffHunk,
-    readonly hunkIndex: number,
-    readonly onAction: (hunk: DiffHunk, index: number, action: "stage" | "unstage" | "discard") => void
-  ) {
-    super();
-  }
-
-  toDOM() {
-    const el = document.createElement("div");
-    el.className = `diff-gutter-marker-action`;
-    el.style.display = "inline-flex";
-    el.style.gap = "2px";
-    el.style.alignItems = "center";
-    el.style.height = "100%";
-    
-    if (this.action === "stage") {
-      const stageBtn = document.createElement("button");
-      stageBtn.className = `gutter-action-btn stage`;
-      stageBtn.title = "Stage this hunk";
-      stageBtn.innerHTML = "🟢";
-      stageBtn.onclick = (e) => {
-        e.stopPropagation();
-        this.onAction(this.hunk, this.hunkIndex, "stage");
-      };
-      el.appendChild(stageBtn);
-
-      const discardBtn = document.createElement("button");
-      discardBtn.className = `gutter-action-btn discard`;
-      discardBtn.title = "Discard this hunk";
-      discardBtn.innerHTML = "🔴";
-      discardBtn.onclick = (e) => {
-        e.stopPropagation();
-        this.onAction(this.hunk, this.hunkIndex, "discard");
-      };
-      el.appendChild(discardBtn);
-    } else {
-      const unstageBtn = document.createElement("button");
-      unstageBtn.className = `gutter-action-btn unstage`;
-      unstageBtn.title = "Unstage this hunk";
-      unstageBtn.innerHTML = "🔵";
-      unstageBtn.onclick = (e) => {
-        e.stopPropagation();
-        this.onAction(this.hunk, this.hunkIndex, "unstage");
-      };
-      el.appendChild(unstageBtn);
-    }
-    
-    return el;
-  }
-}
-
-function getDiffGutterExtension(
-  hunks: DiffHunk[],
-  source: "working" | "staged" | "commit",
-  onAction: (hunk: DiffHunk, index: number, action: "stage" | "unstage" | "discard") => void,
-) {
-  if (source === "commit") return [];
-
-  return gutter({
-    class: "diff-gutter-actions",
-    lineMarker(view, line) {
-      const lineObj = view.state.doc.lineAt(line.from);
-      const text = lineObj.text;
-      if (!text.startsWith("+") && !text.startsWith("-")) return null;
-
-      // Count @@ headers before this line to get the hunkIndex
-      let hunkIndex = -1;
-      let isFirstChanged = false;
-      
-      const doc = view.state.doc;
-      for (let i = 1; i < lineObj.number; i++) {
-        if (doc.line(i).text.startsWith("@@")) {
-          hunkIndex++;
-        }
-      }
-      
-      // Check if this is the first changed line of the hunk (ignoring empty placeholder lines)
-      let prevLineNum = lineObj.number - 1;
-      while (prevLineNum >= 1) {
-        const prevText = doc.line(prevLineNum).text;
-        if (prevText.startsWith("@@")) {
-          isFirstChanged = true;
-          break;
-        }
-        if (!prevText.startsWith("~")) {
-          break;
-        }
-        prevLineNum--;
-      }
-      
-      const hunk = hunks[hunkIndex];
-      if (isFirstChanged && hunk) {
-        return new DiffGutterMarker(
-          source === "working" ? "stage" : "unstage",
-          hunk,
-          hunkIndex,
-          onAction
-        );
-      }
-      
-      return null;
-    }
-  });
-}
-
 function createEditor(
   parent: HTMLDivElement,
   content: string,
@@ -823,7 +729,6 @@ function createEditor(
       lang,
       ...theme,
       getDiffHighlightExtension(hunks, source, onAction, side, oldLines, newLines),
-      getDiffGutterExtension(hunks, source, onAction),
       EditorView.editable.of(false),
       EditorView.lineWrapping,
       keymap.of([]),

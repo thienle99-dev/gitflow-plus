@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useQueryClient } from "@tanstack/react-query";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
@@ -27,6 +27,28 @@ export default function MainLayout() {
   const toggleTheme = useRepoStore((s) => s.toggleTheme);
   const openDialogState = useUIStore((s) => s.openDialog);
   const queryClient = useQueryClient();
+  const invalidateTimersRef = useRef<Map<string, number>>(new Map());
+  const lastFocusRefreshRef = useRef(0);
+
+  const scheduleInvalidate = useCallback((queryKey: unknown[], delay = 250) => {
+    const key = JSON.stringify(queryKey);
+    const existing = invalidateTimersRef.current.get(key);
+    if (existing !== undefined) {
+      window.clearTimeout(existing);
+    }
+    const timer = window.setTimeout(() => {
+      invalidateTimersRef.current.delete(key);
+      queryClient.invalidateQueries({ queryKey });
+    }, delay);
+    invalidateTimersRef.current.set(key, timer);
+  }, [queryClient]);
+
+  useEffect(() => {
+    return () => {
+      invalidateTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+      invalidateTimersRef.current.clear();
+    };
+  }, []);
 
   // Start/stop file watcher when repo changes
   useEffect(() => {
@@ -43,21 +65,21 @@ export default function MainLayout() {
       if (!repoPath) return;
       const type = event.payload.event_type;
       if (type === "worktree") {
-        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "status"] });
-        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "submodules"] });
+        scheduleInvalidate(["git", repoPath, "status"]);
+        scheduleInvalidate(["git", repoPath, "submodules"]);
       } else if (type === "refs") {
-        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "branches"] });
-        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "log"] });
-        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "sync-status"] });
+        scheduleInvalidate(["git", repoPath, "branches"]);
+        scheduleInvalidate(["git", repoPath, "log"]);
+        scheduleInvalidate(["git", repoPath, "sync-status"]);
       } else if (type === "head") {
-        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "info"] });
-        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "branches"] });
-        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "log"] });
-        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "sync-status"] });
+        scheduleInvalidate(["git", repoPath, "info"]);
+        scheduleInvalidate(["git", repoPath, "branches"]);
+        scheduleInvalidate(["git", repoPath, "log"]);
+        scheduleInvalidate(["git", repoPath, "sync-status"]);
       }
     });
     return () => { unlisten.then((f) => f()); };
-  }, [repoPath, queryClient]);
+  }, [repoPath, scheduleInvalidate]);
 
   const handleOpenRepo = async () => {
     try {
@@ -109,19 +131,22 @@ export default function MainLayout() {
   useEffect(() => {
     const handleFocus = () => {
       if (repoPath) {
-        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "status"] });
-        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "sync-status"] });
-        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "branches"] });
+        const now = Date.now();
+        if (now - lastFocusRefreshRef.current < 5_000) return;
+        lastFocusRefreshRef.current = now;
+        scheduleInvalidate(["git", repoPath, "status"]);
+        scheduleInvalidate(["git", repoPath, "sync-status"]);
+        scheduleInvalidate(["git", repoPath, "branches"]);
       }
     };
     window.addEventListener("focus", handleFocus);
     return () => window.removeEventListener("focus", handleFocus);
-  }, [repoPath, queryClient]);
+  }, [repoPath, scheduleInvalidate]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       // Stage/unstage shortcuts (only when no dialog is open)
-      if (!activeDialog) {
+      if (!activeDialog && repoPath) {
         if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === "a" || e.key === "A")) {
           e.preventDefault();
           api.commit.stageAll(repoPath!).then(() =>

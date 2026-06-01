@@ -262,10 +262,10 @@ CRITICAL INSTRUCTIONS:
           </div>
           
           {/* Segmented Control */}
-          <div className="grid grid-cols-2 p-0.5 rounded-mac bg-surface-2/60 border border-border-40/50 w-[240px]">
+          <div className="grid grid-cols-2 p-0.5 rounded-mac bg-surface-2/60 border border-border-40 w-[240px]">
             <button
               onClick={() => setSearchMode("standard")}
-              className={`h-6 text-3xs font-semibold rounded-[5px] transition-all flex items-center justify-center ${
+              className={`h-6 text-3xs font-semibold rounded-[5px] transition-all flex items-center justify-center border border-transparent outline-none ${
                 searchMode === "standard"
                   ? "bg-surface-0 text-text-primary shadow-sm"
                   : "text-text-muted hover:text-text-primary"
@@ -275,7 +275,7 @@ CRITICAL INSTRUCTIONS:
             </button>
             <button
               onClick={() => setSearchMode("semantic")}
-              className={`h-6 text-3xs font-semibold rounded-[5px] transition-all flex items-center justify-center gap-1 ${
+              className={`h-6 text-3xs font-semibold rounded-[5px] transition-all flex items-center justify-center gap-1 border border-transparent outline-none ${
                 searchMode === "semantic"
                   ? "bg-surface-0 text-text-primary shadow-sm"
                   : "text-text-muted hover:text-text-primary"
@@ -286,7 +286,7 @@ CRITICAL INSTRUCTIONS:
             </button>
           </div>
           
-          <button onClick={onClose} className="ghost p-1 text-text-muted hover:text-text-primary">
+          <button onClick={onClose} className="ghost p-1 text-text-muted hover:text-text-primary border border-transparent outline-none">
             <X size={13} />
           </button>
         </div>
@@ -307,7 +307,7 @@ CRITICAL INSTRUCTIONS:
                 <button
                   type="submit"
                   disabled={loadingSemantic || !semanticQuery.trim()}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-6 px-3 bg-accent text-accent-fg text-3xs font-semibold rounded hover:opacity-95 disabled:opacity-40 transition-all flex items-center gap-1"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-6 px-3 bg-accent text-accent-fg text-3xs font-semibold rounded hover:opacity-95 disabled:opacity-40 transition-all flex items-center gap-1 border border-transparent outline-none"
                 >
                   {loadingSemantic ? (
                     <RefreshCw size={10} className="animate-spin text-accent-fg" />
@@ -338,7 +338,7 @@ CRITICAL INSTRUCTIONS:
                 className="h-8 pl-8 pr-8 text-xs font-medium rounded-mac placeholder:text-text-muted/60"
               />
               {query && (
-                <button onClick={() => setQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 ghost p-0.5 text-text-muted hover:text-text-primary">
+                <button onClick={() => setQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 ghost p-0.5 text-text-muted hover:text-text-primary border border-transparent outline-none">
                   <X size={12} />
                 </button>
               )}
@@ -387,25 +387,27 @@ CRITICAL INSTRUCTIONS:
                     className="h-7 pl-7 pr-2 text-2xs rounded-[5px]"
                   />
                 </div>
-                {/* Date range inputs */}
-                <div className="relative col-span-1">
+                {/* Date range inputs with From/To indicators */}
+                <div className="relative col-span-1 flex items-center">
+                  <span className="absolute left-2 text-[9px] font-bold text-text-muted uppercase tracking-wider pointer-events-none select-none">From</span>
                   <Input
                     variant="surface-1"
                     type="date"
                     value={since}
                     onChange={(e) => setSince(e.target.value)}
-                    className="h-7 px-1.5 text-2xs rounded-[5px] [color-scheme:dark]"
-                    title="Since date"
+                    className="h-7 pl-10 pr-1 text-2xs rounded-[5px] [color-scheme:dark]"
+                    title="From date"
                   />
                 </div>
-                <div className="relative col-span-1">
+                <div className="relative col-span-1 flex items-center">
+                  <span className="absolute left-2 text-[9px] font-bold text-text-muted uppercase tracking-wider pointer-events-none select-none">To</span>
                   <Input
                     variant="surface-1"
                     type="date"
                     value={until}
                     onChange={(e) => setUntil(e.target.value)}
-                    className="h-7 px-1.5 text-2xs rounded-[5px] [color-scheme:dark]"
-                    title="Until date"
+                    className="h-7 pl-7 pr-1 text-2xs rounded-[5px] [color-scheme:dark]"
+                    title="To date"
                   />
                 </div>
               </div>

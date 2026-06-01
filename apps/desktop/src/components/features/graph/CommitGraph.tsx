@@ -28,6 +28,8 @@ export default function CommitGraph() {
   const [scrollTop, setScrollTop] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const scrollFrameRef = useRef<number | null>(null);
+  const latestScrollTopRef = useRef(0);
   const layoutCacheRef = useRef<{
     pages: NonNullable<typeof data>["pages"];
     layout: LayoutState;
@@ -112,6 +114,14 @@ export default function CommitGraph() {
     };
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (scrollFrameRef.current !== null) {
+        cancelAnimationFrame(scrollFrameRef.current);
+      }
+    };
+  }, []);
+
   // Hit-test hook — hover state + event handlers
   const { hover, handleMouseMove, handleMouseLeave, handleClick, handleContextMenu } =
     useHitTest(layout, scrollTop);
@@ -133,7 +143,13 @@ export default function CommitGraph() {
   const handleScroll = useCallback(
     (e: React.UIEvent<HTMLDivElement>) => {
       const el = e.currentTarget;
-      setScrollTop(el.scrollTop);
+      latestScrollTopRef.current = el.scrollTop;
+      if (scrollFrameRef.current === null) {
+        scrollFrameRef.current = requestAnimationFrame(() => {
+          scrollFrameRef.current = null;
+          setScrollTop(latestScrollTopRef.current);
+        });
+      }
       if (
         hasNextPage &&
         !isFetchingNextPage &&
