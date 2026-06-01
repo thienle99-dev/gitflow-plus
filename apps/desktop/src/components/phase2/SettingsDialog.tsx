@@ -17,6 +17,71 @@ interface SettingsDialogProps {
   onClose?: () => void;
 }
 
+const THEME_CARDS = [
+  { id: "dark",             label: "macOS Dark",   group: "macOS",         colors: { bg: "#1c1c1e", surface: "#2c2c2e", sidebar: "#111113", accent: "#0a84ff", text: "#f5f5f7" } },
+  { id: "light",            label: "macOS Light",  group: "macOS",         colors: { bg: "#ffffff", surface: "#f2f2f7", sidebar: "#e8e8ed", accent: "#007aff", text: "#1d1d1f" } },
+  { id: "gruvbox-dark",     label: "Dark Medium",  group: "Gruvbox Dark",  colors: { bg: "#282828", surface: "#3c3836", sidebar: "#1d2021", accent: "#d79921", text: "#ebdbb2" } },
+  { id: "gruvbox-dark-soft",label: "Dark Soft",    group: "Gruvbox Dark",  colors: { bg: "#32302f", surface: "#3c3836", sidebar: "#282828", accent: "#d79921", text: "#ebdbb2" } },
+  { id: "gruvbox-dark-hard",label: "Dark Hard",    group: "Gruvbox Dark",  colors: { bg: "#1d2021", surface: "#282828", sidebar: "#141617", accent: "#d79921", text: "#ebdbb2" } },
+  { id: "gruvbox-light",    label: "Light Medium", group: "Gruvbox Light", colors: { bg: "#fbf1c7", surface: "#f9f5d7", sidebar: "#ebdbb2", accent: "#b57614", text: "#3c3836" } },
+  { id: "gruvbox-light-soft",label:"Light Soft",   group: "Gruvbox Light", colors: { bg: "#f2e5bc", surface: "#ebdbb2", sidebar: "#d5c4a1", accent: "#b57614", text: "#3c3836" } },
+] as const;
+
+const THEME_GROUPS = ["macOS", "Gruvbox Dark", "Gruvbox Light"] as const;
+
+function ThemeSkeletonCard({ card, selected, onClick }: {
+  card: typeof THEME_CARDS[number];
+  selected: boolean;
+  onClick: () => void;
+}) {
+  const c = card.colors;
+  return (
+    <button
+      onClick={onClick}
+      className="flex flex-col items-center gap-1.5 p-1.5 rounded-mac border transition-all focus:outline-none"
+      style={{
+        borderColor: selected ? c.accent : "transparent",
+        background: selected ? c.accent + "18" : "transparent",
+        boxShadow: selected ? `0 0 0 1px ${c.accent}` : undefined,
+      }}
+      title={card.label}
+    >
+      {/* Skeleton preview */}
+      <div style={{ width: 72, height: 48, borderRadius: 5, overflow: "hidden", background: c.bg, border: `1px solid ${c.text}18`, flexShrink: 0 }}>
+        {/* Titlebar */}
+        <div style={{ height: 9, background: c.surface, display: "flex", alignItems: "center", paddingLeft: 4, gap: 2 }}>
+          <div style={{ width: 3, height: 3, borderRadius: "50%", background: "#ff5f57" }} />
+          <div style={{ width: 3, height: 3, borderRadius: "50%", background: "#febc2e" }} />
+          <div style={{ width: 3, height: 3, borderRadius: "50%", background: "#28c840" }} />
+        </div>
+        {/* Body */}
+        <div style={{ display: "flex", height: "calc(100% - 9px)" }}>
+          {/* Sidebar */}
+          <div style={{ width: 18, background: c.sidebar, padding: "3px 3px", display: "flex", flexDirection: "column", gap: 2.5 }}>
+            <div style={{ height: 2, borderRadius: 1, background: c.accent, width: "80%" }} />
+            <div style={{ height: 2, borderRadius: 1, background: c.text + "50", width: "65%" }} />
+            <div style={{ height: 2, borderRadius: 1, background: c.text + "35", width: "75%" }} />
+            <div style={{ height: 2, borderRadius: 1, background: c.text + "35", width: "55%" }} />
+          </div>
+          {/* Graph + detail */}
+          <div style={{ flex: 1, padding: "3px 4px", display: "flex", flexDirection: "column", gap: 3 }}>
+            {[c.accent, c.text + "70", c.text + "50", c.text + "40"].map((color, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <div style={{ width: i === 0 ? 5 : 4, height: i === 0 ? 5 : 4, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                <div style={{ height: 1.5, borderRadius: 1, background: color + (i === 0 ? "" : "80"), flex: 1 }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      {/* Label */}
+      <span className="text-2xs font-medium leading-none" style={{ color: selected ? c.accent : undefined }}>
+        {card.label}
+      </span>
+    </button>
+  );
+}
+
 const AVAILABLE_MODELS = [
   { id: "claude-sonnet-4-20250514", label: "Claude Sonnet 4" },
   { id: "claude-haiku-3-20250101", label: "Claude Haiku 3" },
@@ -273,19 +338,30 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
         {activeTab === "general" && (
           <div className="space-y-4">
             {/* Color Theme Selector */}
-            <div className="space-y-1">
+            <div className="space-y-2">
               <label className="text-xs font-semibold text-text-primary">Color Theme</label>
-              <select
-                value={theme}
-                onChange={(e) => setSelectedTheme(e.target.value as any)}
-                className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer"
-              >
-                <option value="light">Light Mode</option>
-                <option value="dark">Dark Mode</option>
-              </select>
-              <p className="text-2xs text-text-muted">
-                Select your preferred user interface color scheme.
-              </p>
+              <div className="space-y-3">
+                {THEME_GROUPS.map((group) => {
+                  const cards = THEME_CARDS.filter((c) => c.group === group);
+                  return (
+                    <div key={group}>
+                      <div className="text-2xs font-semibold text-text-muted uppercase tracking-wider mb-1.5">
+                        {group}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {cards.map((card) => (
+                          <ThemeSkeletonCard
+                            key={card.id}
+                            card={card}
+                            selected={theme === card.id}
+                            onClick={() => setSelectedTheme(card.id as any)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Default Diff Mode Selector */}

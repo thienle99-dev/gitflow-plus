@@ -281,7 +281,7 @@ export default function CommitGraph() {
       {/* Scrollable graph area */}
       <div
         ref={containerRef}
-        className="flex-1 min-h-0 overflow-auto"
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
         onScroll={handleScroll}
       >
         {/* Tall div establishes the virtual scroll height */}

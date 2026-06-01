@@ -19,6 +19,9 @@
 - [x] `commands/commit.rs` — stage, unstage, commit, amend
 - [x] `commands/diff.rs` — file diff, commit diff, staged diff
 - [x] `commands/remote.rs` — pull, push, fetch
+- [ ] `commands/clone.rs` — git_clone (URL + destination path)
+- [ ] Async Tauri commands — đảm bảo tất cả `#[tauri::command]` là `async fn`, tránh block main thread
+- [ ] Stream git log output — dùng `Stdio::piped()` đọc từng dòng, emit chunks về frontend (user thấy commits xuất hiện dần)
 - [ ] Unit tests for output parsing
 
 ### Step 3: API Layer (Frontend)
@@ -28,6 +31,7 @@
 - [x] `queries/useGitBranches.ts`
 - [x] `queries/useGitDiff.ts`
 - [x] TanStack Query provider setup
+- [ ] Parallel startup queries — `Promise.all` cho git_log + git_status + git_branches khi mở repo
 
 ### Step 4: Layout Shell
 - [x] `layouts/MainLayout.tsx` — 3-panel + bottom bar
@@ -53,6 +57,9 @@
 - [x] Click → select commit
 - [x] Right-click → context menu
 - [x] Pagination: load more on scroll bottom
+- [ ] Canvas renderer — thay SVG bằng Canvas để tránh DOM overhead với 1000+ nodes/edges
+- [ ] Web Worker cho graph layout — move `computeGraphLayout` ra khỏi main thread (pure function, dễ isolate)
+- [ ] True virtualization — TanStack Virtual, chỉ render rows đang visible thay vì pagination
 - [ ] Unit tests for layout algorithm
 
 ### Step 7: Right Panel
@@ -67,6 +74,7 @@
 - [x] Commit message textarea
 - [x] Commit button (Cmd+Enter shortcut)
 - [x] Amend toggle
+- [ ] Interactive staging — stage/unstage per hunk hoặc per line (`git add -p` equivalent)
 
 ### Step 9: Diff Viewer
 - [x] `components/diff/DiffViewer.tsx` — wrapper component
@@ -76,6 +84,8 @@
 - [x] Segmented control toggle (split/unified)
 - [x] Syntax highlight auto-detect by extension
 - [x] Edge cases: binary, large file, new/deleted
+- [ ] Word-level diff highlighting — highlight từng từ thay đổi trong một dòng, không chỉ cả dòng
+- [ ] Lazy load CodeMirror — chỉ import khi user click xem diff, không load upfront (~500KB saved)
 
 ### Step 10: Git Actions
 - [x] Pull button → invoke git_pull → refresh queries
@@ -84,6 +94,9 @@
 - [x] Checkout branch (from sidebar double-click + context menu)
 - [x] Create branch dialog (name input + base ref selector)
 - [x] Error handling: toast notifications, auth prompts
+- [ ] Clone dialog — URL input + destination path picker
+- [ ] Revert commit — tạo commit mới đảo ngược thay đổi (an toàn cho shared branches)
+- [ ] Branch merge preview — show ahead/behind count + diff preview trước khi merge
 
 ### Step 11: File Watcher
 - [x] `watcher/fs_watcher.rs` — notify crate setup
@@ -104,24 +117,42 @@
 - [ ] Git credentials handling (HTTPS auth prompt, SSH key detection)
 - [x] Error UX phân loại: network error / auth error / conflict error → UX riêng
 - [x] Undo last commit (git reset --soft HEAD~1) button
-- [ ] Performance logging (measure open repo, render graph, status refresh)
+- [ ] Performance logging — measure open repo, render graph, status refresh (đo trước khi optimize)
 
 ---
 
 ## Phase 2: Advanced Git + AI Features (after Phase 1 ships)
+
+### GitFlow Workflow (core brand feature)
+- [ ] Detect gitflow init (`.git/config` có `[gitflow]` section)
+- [ ] `gitflow init` — setup branch naming conventions (main/develop/feature/release/hotfix prefix)
+- [ ] Feature: start (`git checkout -b feature/<name> develop`), finish (merge → develop, delete branch)
+- [ ] Release: start (`git checkout -b release/<version> develop`), finish (merge → main + develop, tag)
+- [ ] Hotfix: start (`git checkout -b hotfix/<version> main`), finish (merge → main + develop, tag)
+- [ ] GitFlow toolbar section — dedicated buttons cho từng action
+- [ ] Visual indicator trên commit graph — highlight gitflow branches theo màu riêng
 
 ### Git Advanced
 - [x] Merge branch + detect conflict state
 - [x] Conflict resolver UI (3-panel CodeMirror)
 - [x] Interactive rebase (GIT_SEQUENCE_EDITOR approach)
 - [x] Stash management
+- [ ] Stash diff viewer — preview nội dung stash trước khi apply
 - [x] Tag CRUD
 - [x] Git log search/filter
 - [x] Cherry-pick (pick commit từ branch khác)
+- [ ] Multi-select commits — chọn nhiều commits để cherry-pick batch hoặc xem combined diff
 - [x] Blame view (inline trong diff viewer — ai viết dòng nào)
+- [ ] File history — xem toàn bộ commits đã chạm vào một file (`git log -- <file>`)
 - [ ] Submodule support (hiển thị status, init/update)
 - [ ] Git hooks visibility (show active hooks, --no-verify option)
 - [x] Undo stack (reflog-based, undo last commit/stage/checkout)
+- [ ] Auto-fetch — background fetch theo interval (configurable, mặc định 5 phút), badge "X commits behind"
+
+### Performance
+- [ ] Incremental git log — cache commit list, chỉ fetch commits mới hơn HEAD đã biết (`git log <known_HEAD>..HEAD`)
+- [ ] Response caching cho diff — tránh re-parse cùng một diff khi user switch qua lại giữa files
+- [ ] Measure & profile — dùng performance logging từ Phase 1 để xác định bottleneck thực tế trước khi optimize thêm
 
 ### AI Features (Cloud LLM API)
 - [x] Settings UI: API key input (Claude/OpenAI), model selector, token limit
@@ -146,11 +177,15 @@
 - [ ] PR Review inline — xem review comments trực tiếp trong diff viewer
 - [ ] CI/CD status — show pipeline status per commit/PR (GitHub Actions, GitLab CI)
 - [ ] Issue linking — link commits/PRs tới issues, show trong commit detail
+- [ ] Clone from GitHub/GitLab — search và clone repos trực tiếp trong app sau khi OAuth
+- [ ] Branch protection rules visualization — show branches nào đang protected và rules
+- [ ] Desktop notifications — notify khi long-running ops xong hoặc CI/CD status thay đổi
 - [ ] Workspace (multi-repo)
 - [ ] Bulk fetch/pull
 
 ## Phase 4: Productivity & Collaboration (after Phase 3)
 
+- [ ] Command palette (Cmd+K) — quick search branches, commands, recent repos
 - [ ] Git bisect UI — visual binary search cho bug introduction
 - [ ] Worktree management — tạo/switch/delete git worktrees
 - [ ] Diff bookmarks — đánh dấu files/hunks để review sau
@@ -159,6 +194,10 @@
 - [ ] Commit message templates per project (snippets)
 - [ ] Activity heatmap — contribution graph (như GitHub profile)
 - [ ] Branch comparison — so sánh 2 branches side-by-side (ahead/behind + diff)
+- [ ] Gitignore editor — visual editor cho `.gitignore`, browse files, add patterns, test matching
+- [ ] Patch export/import — export commits thành `.patch` file, apply patch từ file
+- [ ] Git LFS support — detect LFS-tracked files, show LFS status, hỗ trợ lfs pull/push
+- [ ] Repository health check — scan large files không LFS-tracked, sensitive data patterns, broken symlinks
 
 ## Phase 5: Plugin System & Extensibility (future)
 

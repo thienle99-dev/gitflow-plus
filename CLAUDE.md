@@ -55,3 +55,15 @@ Note Tauri's arg casing: Rust snake_case params (e.g. `base_ref`) are passed as 
 ### Commit graph layout
 
 `apps/desktop/src/lib/graph-layout.ts` (`computeGraphLayout`) turns the flat newest-first commit list into lanes/colors/coordinates for `components/graph/CommitGraph.tsx`. It keeps a commit on its first parent's lane, allocating a new lane otherwise. It's a presentation-only transform — pure function over `Commit[]`.
+
+### AI integration
+
+All AI HTTP requests go through Tauri's `ai_http_request` command (`commands/ai.rs`) rather than direct browser `fetch` — this is required to bypass CORS in the WebView. The frontend AI logic lives entirely in `lib/ai.ts`. AI settings are stored in `localStorage` under these keys: `gitflowAiApiKey`, `gitflowAiModel`, `gitflowAiApiUrl`, `gitflowAiTokenLimit`, `gitflowAiDetailLevel`, `gitflowAiCustomRules`. Supported providers: Claude (Anthropic), OpenAI-compatible APIs, Ollama (`http://localhost:11434`), llama.cpp (`http://localhost:8080`).
+
+### Dialog system
+
+Dialogs are rendered as overlays in `MainLayout.tsx` via a string-keyed `dialogComponents` map. To add a new dialog: (1) create the component in `components/phase2/`, (2) add it to `dialogComponents` in `MainLayout.tsx`, (3) trigger it from anywhere with `useUIStore.openDialog("key")`. The `activeDialog` field in `useUIStore` is the single source of truth. Exception: `"stash"` and `"tag"` are treated as inline sidebar panels, not overlays — they're excluded from the overlay render path.
+
+### Theme system
+
+Themes are CSS classes applied to both `document.documentElement` and `document.body` by `applyTheme` in `stores/repo.ts`. Available themes: `dark`, `light`, `gruvbox-dark`, `gruvbox-dark-soft`, `gruvbox-dark-hard`, `gruvbox-light`, `gruvbox-light-soft`. All dark variants also get the `dark` class (for Tailwind's `dark:` utilities). Theme is persisted to `localStorage` under key `"theme"` and initialized before React mounts — avoid setting theme classes elsewhere.

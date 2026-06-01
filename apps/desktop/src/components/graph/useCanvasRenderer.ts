@@ -72,10 +72,7 @@ export function useCanvasRenderer({
     const offsetY = -scrollTop;
     const graphRight = getVisibleGraphRight(visible, visibleEdges, laneWidth);
     const messageX = Math.max(84, graphRight + 24);
-    const width = Math.max(
-      containerWidth,
-      messageX + 360 + HASH_COLUMN_WIDTH + AUTHOR_COLUMN_WIDTH + DATE_COLUMN_WIDTH + COLUMN_GAP * 3 + RIGHT_PADDING,
-    );
+    const width = Math.max(1, containerWidth);
     const columns = getColumns(width, messageX);
 
     const pixelWidth = Math.ceil(width * dpr);

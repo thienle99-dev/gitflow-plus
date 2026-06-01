@@ -1,0 +1,134 @@
+# ═══════════════════════════════════════════════════
+# .neuralmemory/surface.nm
+# Neural Memory Knowledge Surface v1
+# Auto-generated from brain.db | Editable by human
+# ═══════════════════════════════════════════════════
+---
+brain: default
+updated: 2026-06-01T02:12:53
+neurons: 58
+synapses: 388
+token_budget: 1200
+depth_available: [surface, detail, deep]
+---
+
+# ── GRAPH ──────────────────────────────────────────
+# Nodes = key concepts. Edges = causal/decisional links.
+# Agent: scan this section to understand the knowledge landscape.
+# Format: [id] content (type) {p:N} →edge→ [target_id_or_text]
+
+[c5] GitFlow (concept) {p:6}
+  →co_occurs→ "CLI"
+  →co_occurs→ [c4] "TypeScript"
+  →co_occurs→ "Built"
+  →co_occurs→ "Features"
+  →co_occurs→ "Tailwind CSS"
+
+[c6] Set up Docker infrastructure for Gio Le project: frontend Dockerfile (nginx… (concept) {p:6}
+  →involves→ "Docker"
+  →involves→ "compose.yml"
+  →involves→ "npm"
+  →involves→ "All"
+  →involves→ "Frontend Dockerfile"
+
+[c7] PostgreSQL (concept) {p:6}
+  →co_occurs→ "All"
+  →co_occurs→ "Frontend Dockerfile"
+  →co_occurs→ "match go"
+  →co_occurs→ "Redis"
+  →co_occurs→ "Go API"
+
+[c8] Vite (concept) {p:6}
+  →co_occurs→ "All"
+  →co_occurs→ "Frontend Dockerfile"
+  →co_occurs→ "match go"
+  →co_occurs→ "Redis"
+  →co_occurs→ "Go API"
+
+[c9] Dockerfile (concept) {p:6}
+  →co_occurs→ "All"
+  →co_occurs→ "Frontend Dockerfile"
+  →co_occurs→ "match go"
+  →co_occurs→ [c8] "Vite"
+  →co_occurs→ "Redis"
+
+[c10] Gio Le (concept) {p:6}
+  →co_occurs→ "All"
+  →co_occurs→ "Frontend Dockerfile"
+  →co_occurs→ "match go"
+  →co_occurs→ [c8] "Vite"
+  →co_occurs→ "Redis"
+
+[c11] Docker (concept) {p:6}
+  →co_occurs→ "All"
+  →co_occurs→ "Frontend Dockerfile"
+  →co_occurs→ "match go"
+  →co_occurs→ [c10] "Gio Le"
+  →co_occurs→ [c8] "Vite"
+
+[c12] go.mod (concept) {p:6}
+  →co_occurs→ [c11] "Docker"
+  →co_occurs→ "All"
+  →co_occurs→ "Frontend Dockerfile"
+  →co_occurs→ "match go"
+  →co_occurs→ [c10] "Gio Le"
+
+[c13] compose.yml (concept) {p:6}
+  →co_occurs→ [c11] "Docker"
+  →co_occurs→ "All"
+  →co_occurs→ "Frontend Dockerfile"
+  →co_occurs→ "match go"
+  →co_occurs→ [c10] "Gio Le"
+
+[c14] v1.7 (concept) {p:6}
+  →co_occurs→ [c11] "Docker"
+  →co_occurs→ [c13] "compose.yml"
+  →co_occurs→ "All"
+  →co_occurs→ "Frontend Dockerfile"
+  →co_occurs→ "match go"
+
+[c15] npm (concept) {p:6}
+  →co_occurs→ [c11] "Docker"
+  →co_occurs→ [c13] "compose.yml"
+  →co_occurs→ "All"
+  →co_occurs→ "Frontend Dockerfile"
+  →co_occurs→ "match go"
+
+# ── CLUSTERS ───────────────────────────────────────
+# Auto-detected topic groups from brain.db entity co-occurrence.
+# Agent: use clusters to scope recall queries.
+
+@gitflow: [1a851721-ec04-4e4d-b451-2985e3452367, 1c545de1-b4ca-450d-ba6a-af392df687da, 50918ba7-19f4-47f2-b5d7-aa7679036c42, 8edb5a8e-8d37-493a-b51a-db054ec016e7, aa25cd53-d6c1-4889-8b64-f063cc7f9614] "Phase, React 18, Built"
+@docker: [03a403ac-2c79-4da8-bb92-28393c176ca2, 0b51d69b-1079-4121-bf79-e2fa2719fd98, 0ce862f0-c3be-419d-9f86-b703dfab2f3b, 26276a4f-4d5d-4e34-bf82-119883e21c40, 38f41c3e-68d2-4056-a27e-c9a333e0cc43] "PostgreSQL, Set up Docker infrastructure for Gio Le , Frontend Dockerfile"
+@fixed: [5d5e4ecc-9e40-4452-bd92-5e6c02767648, 70f8aa5e-1631-487b-8e12-e6e017360337, 95ab4a33-f6cb-4134-b74f-2d5e269eee0c, b24360d1-77cb-46b0-8cd3-5fdafe2ceabf, b3cf30cd-48bf-4bfe-ba92-e91416e73899] "of, default.json, Fixed"
+
+# ── SIGNALS ────────────────────────────────────────
+# Active alerts, unresolved items, pending decisions.
+# Agent: check this FIRST each session for urgent context.
+
+! Fixed two critical Tauri 2 permission bugs: (1) Missing capabilities/default.jso
+! GitFlow Desktop - Phase 1 implementation complete. Built with Tauri 2 + React 18
+! Set up Docker infrastructure for Gio Le project: frontend Dockerfile (nginx serv
+
+# ── DEPTH MAP ──────────────────────────────────────
+# When surface isn't enough, this tells agent WHERE to dig.
+# Format: [id] → depth_hint (context)
+
+[c5] → NEEDS_DETAIL (13 total synapses, recall "GitFlow")
+[c6] → NEEDS_DEEP (26 synapses in brain.db, recall "Set up Docker infrastructure for Gio…")
+[c8] → NEEDS_DETAIL (11 total synapses, recall "Vite")
+[c9] → NEEDS_DETAIL (12 total synapses, recall "Dockerfile")
+[c10] → NEEDS_DETAIL (13 total synapses, recall "Gio Le")
+[c11] → NEEDS_DETAIL (14 total synapses, recall "Docker")
+[c12] → NEEDS_DETAIL (15 total synapses, recall "go.mod")
+[c13] → NEEDS_DEEP (16 synapses in brain.db, recall "compose.yml")
+[c14] → NEEDS_DEEP (17 synapses in brain.db, recall "v1.7")
+[c15] → NEEDS_DEEP (18 synapses in brain.db, recall "npm")
+
+# ── META ───────────────────────────────────────────
+# Stats for agent to gauge brain richness
+
+coverage: 0.52
+staleness: 0.04
+last_consolidation: 2026-06-01T02:12:53
+top_entities: [GitFlow, GitFlow, CodeMirror, TypeScript, GitFlow]
