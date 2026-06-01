@@ -1079,9 +1079,11 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
                       onChange={(e) => setAiDetailLevel(e.target.value as any)}
                       className="w-full h-8 pl-2.5 pr-8 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer hover:bg-surface-2 transition-all"
                     >
-                      <option value="minimal">Minimal (Subject only, max 50 chars)</option>
-                      <option value="medium">Standard (Subject + brief change list)</option>
-                      <option value="detailed">Detailed (Comprehensive conventional format)</option>
+                      <option value="ultra-minimal">Ultra-Minimal (Subject only)</option>
+                      <option value="minimal">Minimal (Subject + brief context)</option>
+                      <option value="medium">Standard (Subject + 3-4 bullet points)</option>
+                      <option value="detailed">Detailed (Subject + body + 5-8 bullets)</option>
+                      <option value="comprehensive">Comprehensive (Full format + reasoning)</option>
                     </select>
                     <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
                       <ChevronDown size={11} strokeWidth={2.5} />
