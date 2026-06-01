@@ -48,6 +48,9 @@ export default function WorkingTree() {
   const [stagedOpen, setStagedOpen] = useState(true);
   const [unstagedOpen, setUnstagedOpen] = useState(true);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; file: FileChange; stage: "staged" | "unstaged" } | null>(null);
+  // Multi-select for batch stage/unstage
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+  const lastClickedRef = useRef<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const staged = changes?.filter((c) => c.staged) || [];
@@ -122,6 +125,61 @@ export default function WorkingTree() {
     try {
       await api.commit.discardAll(repoPath!);
       selectFile(null);
+      invalidate();
+    } catch (e: any) {
+      showToast(`Error: ${e}`);
+    }
+  };
+
+  // Multi-select for batch stage/unstage
+  const handleFileClick = (filePath: string, e: React.MouseEvent) => {
+    const currentList = [...staged, ...unstaged];
+    if (e.shiftKey && lastClickedRef.current) {
+      const currentIdx = currentList.findIndex(f => f.path === filePath);
+      const lastIdx = currentList.findIndex(f => f.path === lastClickedRef.current);
+      if (currentIdx !== -1 && lastIdx !== -1) {
+        const [start, end] = currentIdx > lastIdx ? [lastIdx, currentIdx] : [currentIdx, lastIdx];
+        const newSet = new Set(selectedFiles);
+        for (let i = start; i <= end; i++) {
+          newSet.add(currentList[i].path);
+        }
+        setSelectedFiles(newSet);
+        return; // handled — don't also select file for diff
+      }
+    }
+    // Simple toggle if shift not held
+    setSelectedFiles((prev) => {
+      const next = new Set(prev);
+      if (next.has(filePath)) {
+        next.delete(filePath);
+      } else {
+        next.add(filePath);
+      }
+      return next;
+    });
+    lastClickedRef.current = filePath;
+  };
+
+  const handleBatchStage = async () => {
+    if (selectedFiles.size === 0) return;
+    try {
+      for (const path of selectedFiles) {
+        await api.commit.stage(repoPath!, path);
+      }
+      setSelectedFiles(new Set());
+      invalidate();
+    } catch (e: any) {
+      showToast(`Error: ${e}`);
+    }
+  };
+
+  const handleBatchUnstage = async () => {
+    if (selectedFiles.size === 0) return;
+    try {
+      for (const path of selectedFiles) {
+        await api.commit.unstage(repoPath!, path);
+      }
+      setSelectedFiles(new Set());
       invalidate();
     } catch (e: any) {
       showToast(`Error: ${e}`);
@@ -278,11 +336,13 @@ export default function WorkingTree() {
           selectedFile={selectedFile}
           selectedStage={selectedFileStage}
           stage="staged"
+          multiSelectedFiles={selectedFiles}
           onToggleAll={handleUnstageAll}
           onToggleFile={handleUnstage}
           onSelect={(path) => selectFile(path, "staged")}
           onToggleOpen={() => setStagedOpen((open) => !open)}
           onMenu={(x, y, file) => setCtxMenu({ x, y, file, stage: "staged" })}
+          onFileMultiClick={handleFileClick}
         />
         <ChangeSection
           title="Unstaged files"
@@ -293,13 +353,29 @@ export default function WorkingTree() {
           selectedFile={selectedFile}
           selectedStage={selectedFileStage}
           stage="unstaged"
+          multiSelectedFiles={selectedFiles}
           onToggleAll={handleStageAll}
           onToggleFile={handleStage}
           onSelect={(path) => selectFile(path, "unstaged")}
           onToggleOpen={() => setUnstagedOpen((open) => !open)}
           onMenu={(x, y, file) => setCtxMenu({ x, y, file, stage: "unstaged" })}
+          onFileMultiClick={handleFileClick}
           grow
         />
+        {selectedFiles.size > 0 && (
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-accent/5 border-b border-accent/20 shrink-0">
+            <span className="text-2xs text-text-muted">{selectedFiles.size} selected</span>
+            <button onClick={handleBatchStage} className="text-2xs font-medium text-accent hover:underline">
+              Stage selected
+            </button>
+            <button onClick={handleBatchUnstage} className="text-2xs font-medium text-text-muted hover:text-text-primary hover:underline">
+              Unstage selected
+            </button>
+            <button onClick={() => setSelectedFiles(new Set())} className="text-2xs text-text-muted hover:text-text-primary ml-auto">
+              Clear
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="px-3 py-2 border-t border-border space-y-2 shrink-0">
@@ -379,11 +455,13 @@ interface ChangeSectionProps {
   selectedFile: string | null;
   selectedStage: "staged" | "unstaged" | null;
   stage: "staged" | "unstaged";
+  multiSelectedFiles: Set<string>;
   onToggleAll: () => void;
   onToggleFile: (path: string) => void;
   onSelect: (path: string) => void;
   onToggleOpen: () => void;
   onMenu: (x: number, y: number, file: FileChange) => void;
+  onFileMultiClick: (path: string, e: React.MouseEvent) => void;
   grow?: boolean;
 }
 
@@ -396,11 +474,13 @@ function ChangeSection({
   selectedFile,
   selectedStage,
   stage,
+  multiSelectedFiles,
   onToggleAll,
   onToggleFile,
   onSelect,
   onToggleOpen,
   onMenu,
+  onFileMultiClick,
   grow,
 }: ChangeSectionProps) {
   return (
@@ -447,9 +527,11 @@ function ChangeSection({
               file={file}
               checked={checked}
               selected={selectedFile === file.path && selectedStage === stage}
+              multiSelected={multiSelectedFiles.has(file.path)}
               onSelect={() => onSelect(file.path)}
               onToggle={() => onToggleFile(file.path)}
               onMenu={(x, y) => onMenu(x, y, file)}
+              onMultiClick={(e) => onFileMultiClick(file.path, e)}
             />
           ))
         )}
@@ -463,9 +545,11 @@ interface ChangeRowProps {
   file: FileChange;
   checked: boolean;
   selected: boolean;
+  multiSelected?: boolean;
   onSelect: () => void;
   onToggle: () => void;
   onMenu: (x: number, y: number) => void;
+  onMultiClick?: (e: React.MouseEvent) => void;
 }
 
 function StatusBadge({ status, selected }: { status: string; selected: boolean }) {
@@ -502,16 +586,22 @@ function StatusBadge({ status, selected }: { status: string; selected: boolean }
   );
 }
 
-function ChangeRow({ file, checked, selected, onSelect, onToggle, onMenu }: ChangeRowProps) {
+function ChangeRow({ file, checked, selected, multiSelected, onSelect, onToggle, onMenu, onMultiClick }: ChangeRowProps) {
   const fileName = getFileName(file.path);
   const folder = getFolder(file.path);
 
   return (
     <div
       className={`tree-item group w-full grid grid-cols-[14px_16px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-1 text-left ${
-        selected ? "selected" : ""
+        multiSelected ? "ring-1 ring-accent bg-accent/5" : selected ? "selected" : ""
       }`}
-      onClick={onSelect}
+      onClick={(e) => {
+        if (onMultiClick) {
+          onMultiClick(e);
+        } else {
+          onSelect();
+        }
+      }}
       onContextMenu={(e) => {
         e.preventDefault();
         onMenu(e.clientX, e.clientY);
