@@ -19,7 +19,7 @@ interface GeneratedCommitMessage {
 }
 
 type CommitMessageStyle = "conventional" | "plain" | "gitmoji" | "jira";
-type CommitMessageDetailLevel = "minimal" | "medium" | "detailed";
+type CommitMessageDetailLevel = "ultra-minimal" | "minimal" | "medium" | "detailed" | "comprehensive";
 
 export async function generateCommitMessageWithAI(
   repoPath: string,
@@ -123,8 +123,9 @@ function readCommitMessageStyle(): CommitMessageStyle {
 
 function readCommitMessageDetailLevel(): CommitMessageDetailLevel {
   const saved = localStorage.getItem("gitflowAiDetailLevel");
-  if (saved === "minimal" || saved === "detailed") {
-    return saved;
+  const validLevels: CommitMessageDetailLevel[] = ["ultra-minimal", "minimal", "medium", "detailed", "comprehensive"];
+  if (saved && validLevels.includes(saved as CommitMessageDetailLevel)) {
+    return saved as CommitMessageDetailLevel;
   }
   return "medium";
 }
