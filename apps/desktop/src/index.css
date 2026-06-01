@@ -398,3 +398,29 @@ button.ghost:active {
 .diff-prefix-widget.placeholder {
   color: transparent;
 }
+
+/* Custom Settings Dialog Theme Utilities (resolving HEX opacity issues) */
+.btn-accent-soft {
+  background-color: color-mix(in srgb, var(--accent) 15%, transparent) !important;
+  border-color: color-mix(in srgb, var(--accent) 25%, transparent) !important;
+  color: var(--accent) !important;
+}
+
+.btn-accent-soft:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--accent) 25%, transparent) !important;
+}
+
+.tab-accent-active {
+  background-color: color-mix(in srgb, var(--accent) 10%, transparent) !important;
+  color: var(--accent) !important;
+  font-weight: 600 !important;
+}
+
+.border-border-60 {
+  border-color: color-mix(in srgb, var(--border) 60%, transparent) !important;
+}
+
+.border-border-40 {
+  border-color: color-mix(in srgb, var(--border) 40%, transparent) !important;
+}
+

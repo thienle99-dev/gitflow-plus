@@ -511,12 +511,12 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       </div>
 
       {/* Tabs Row */}
-      <div className="flex px-3 py-1.5 border-b border-border/60 bg-surface-1 gap-1">
+      <div className="flex px-3 py-1.5 border-b border-border-60 bg-surface-1 gap-1">
         <button
           onClick={() => setActiveTab("general")}
           className={`px-2.5 py-1 text-2xs font-medium rounded-mac flex items-center gap-1 transition-all ${
             activeTab === "general"
-              ? "bg-accent/10 text-accent font-semibold"
+              ? "tab-accent-active"
               : "text-text-muted hover:text-text-primary hover:bg-surface-2"
           }`}
         >
@@ -527,7 +527,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
           onClick={() => setActiveTab("git")}
           className={`px-2.5 py-1 text-2xs font-medium rounded-mac flex items-center gap-1 transition-all ${
             activeTab === "git"
-              ? "bg-accent/10 text-accent font-semibold"
+              ? "tab-accent-active"
               : "text-text-muted hover:text-text-primary hover:bg-surface-2"
           }`}
         >
@@ -538,7 +538,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
           onClick={() => setActiveTab("ai")}
           className={`px-2.5 py-1 text-2xs font-medium rounded-mac flex items-center gap-1 transition-all ${
             activeTab === "ai"
-              ? "bg-accent/10 text-accent font-semibold"
+              ? "tab-accent-active"
               : "text-text-muted hover:text-text-primary hover:bg-surface-2"
           }`}
         >
@@ -549,7 +549,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
           onClick={() => setActiveTab("advanced")}
           className={`px-2.5 py-1 text-2xs font-medium rounded-mac flex items-center gap-1 transition-all ${
             activeTab === "advanced"
-              ? "bg-accent/10 text-accent font-semibold"
+              ? "tab-accent-active"
               : "text-text-muted hover:text-text-primary hover:bg-surface-2"
           }`}
         >
@@ -605,7 +605,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/40">
+            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border-40">
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-text-primary">Commit Graph Density</label>
                 <select
@@ -709,7 +709,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
               </div>
             </div>
 
-            <div className="space-y-2 pt-2 border-t border-border/40">
+            <div className="space-y-2 pt-2 border-t border-border-40">
               <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none">
                 <input
                   type="checkbox"
@@ -783,7 +783,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
                   type="button"
                   onClick={handleFetchModels}
                   disabled={fetchingModels || !apiUrl}
-                  className="px-3 h-8 text-2xs font-semibold bg-accent/15 text-accent border border-accent/25 hover:bg-accent/25 disabled:opacity-40 rounded-mac transition-all shrink-0 flex items-center justify-center gap-1"
+                  className="px-3 h-8 text-2xs font-semibold btn-accent-soft border disabled:opacity-40 rounded-mac transition-all shrink-0 flex items-center justify-center gap-1"
                 >
                   <RefreshCw size={11} className={fetchingModels ? "animate-spin" : ""} />
                   {fetchingModels ? "Fetching..." : "Fetch Models"}
@@ -904,7 +904,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
               </div>
             </div>
 
-            <div className="space-y-3 pt-3 border-t border-border/40">
+            <div className="space-y-3 pt-3 border-t border-border-40">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
                 <Keyboard size={13} className="text-accent" />
                 Keyboard Shortcuts
@@ -926,7 +926,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
               </div>
             </div>
 
-            <div className="space-y-3 pt-3 border-t border-border/40">
+            <div className="space-y-3 pt-3 border-t border-border-40">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
                 <ShieldAlert size={13} className="text-[#ff9f0a]" />
                 Maintenance
