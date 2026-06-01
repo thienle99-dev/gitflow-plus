@@ -72,7 +72,7 @@ export default function Sidebar() {
       <div className="relative px-4 mb-3">
         <button
           onClick={() => setRepoMenuOpen(!repoMenuOpen)}
-          className="w-full flex-1 flex items-center gap-2 px-2.5 py-1.5 rounded-mac bg-surface-2/40 hover:bg-surface-2 border border-border-40 hover:border-border transition-all text-left"
+          className="w-full flex-1 flex items-center gap-2 px-2.5 py-1.5 rounded-mac bg-surface-2-40 hover:bg-surface-2 border border-border-40 hover:border-border transition-all text-left"
         >
           <Folder size={14} className="text-accent shrink-0" />
           <span className="flex-1 text-xs font-semibold truncate text-text-primary">

@@ -6,7 +6,7 @@ export default function BottomBar() {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="h-[26px] border-t border-border-60 bg-surface-1/40 backdrop-blur-md flex items-center px-4 text-2xs text-text-muted select-none">
+    <div className="h-[26px] border-t border-border-60 bg-surface-1-40 backdrop-blur-md flex items-center px-4 text-2xs text-text-muted select-none">
       
       {/* Left side: Terminal Log expand toggle */}
       <button
@@ -34,7 +34,7 @@ export default function BottomBar() {
       <div className="flex-1" />
 
       {/* Right side: Version Capsule */}
-      <span className="bg-surface-2/60 border border-border-40 rounded-full px-2 py-0.5 text-[9px] font-semibold text-text-muted/80 shadow-2xs">
+      <span className="bg-surface-2-60 border border-border-40 rounded-full px-2 py-0.5 text-[9px] font-semibold text-text-muted/80 shadow-2xs">
         GitFlow Desktop v0.1.0
       </span>
     </div>

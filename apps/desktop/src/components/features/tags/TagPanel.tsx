@@ -68,7 +68,7 @@ export default function TagPanel({ onClose }: { onClose?: () => void }) {
   return (
     <div className="h-full flex flex-col bg-surface-0">
       {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border-60 bg-surface-1/40 backdrop-blur-md">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-border-60 bg-surface-1-40 backdrop-blur-md">
         <Tag size={14} className="text-text-muted" />
         <span className="text-xs font-semibold text-text-primary flex-1">
           Tags ({tags?.length ?? 0})
@@ -84,7 +84,7 @@ export default function TagPanel({ onClose }: { onClose?: () => void }) {
 
       {/* Create tag form (collapsible) */}
       {showCreate && (
-        <div className="px-4 py-3.5 border-b border-border-60 space-y-2.5 bg-surface-1/30">
+        <div className="px-4 py-3.5 border-b border-border-60 space-y-2.5 bg-surface-1-30">
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -135,7 +135,7 @@ export default function TagPanel({ onClose }: { onClose?: () => void }) {
         {tags?.map((tag) => (
           <div
             key={tag.name}
-            className="px-4 py-3 border-b border-border-40 hover:bg-surface-1/30 transition-colors"
+            className="px-4 py-3 border-b border-border-40 hover:bg-surface-1-30 transition-colors"
           >
             <div className="flex items-start gap-2.5">
               <Tag size={13} className="mt-0.5 shrink-0 text-[#ff9f0a]" />
@@ -145,13 +145,13 @@ export default function TagPanel({ onClose }: { onClose?: () => void }) {
                     {tag.name}
                   </span>
                   {tag.annotated && (
-                    <span className="text-3xs bg-accent/10 text-accent font-semibold px-1 rounded-sm">annotated</span>
+                    <span className="text-3xs bg-accent-10 text-accent font-semibold px-1 rounded-sm">annotated</span>
                   )}
                 </div>
                 <div className="flex items-center gap-2 mt-1 flex-wrap text-3xs text-text-muted">
                   <span className="flex items-center gap-0.5">
                     <GitCommit size={9} className="opacity-75" />
-                    <span className="font-mono font-semibold text-accent bg-accent/10 px-0.5 rounded-sm">
+                    <span className="font-mono font-semibold text-accent bg-accent-10 px-0.5 rounded-sm">
                       {tag.hash.slice(0, 7)}
                     </span>
                   </span>

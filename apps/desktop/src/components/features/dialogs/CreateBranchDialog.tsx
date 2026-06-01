@@ -142,7 +142,7 @@ export default function CreateBranchDialog({ open, onClose }: CreateBranchDialog
       <div className="absolute inset-0 bg-[#000000]/45" />
       <div className="relative w-[400px] bg-surface-0 border border-border rounded-mac shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-surface-1/40">
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-surface-1-40">
           <GitBranch size={15} className="text-accent shrink-0" />
           <span className="text-xs font-semibold text-text-primary flex-1">
             Create Branch
@@ -160,7 +160,7 @@ export default function CreateBranchDialog({ open, onClose }: CreateBranchDialog
           )}
 
           {/* New Branch Details Card */}
-          <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
+          <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
             {/* New Branch Name */}
             <div className="space-y-1.5">
               <label className="block text-2xs font-semibold text-text-secondary">
@@ -183,7 +183,7 @@ export default function CreateBranchDialog({ open, onClose }: CreateBranchDialog
           </div>
 
           {/* Source Base Selection Card */}
-          <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
+          <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
             {/* Source Type Selector */}
             <div className="space-y-1.5">
               <label className="block text-2xs font-semibold text-text-secondary">

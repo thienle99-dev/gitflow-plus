@@ -477,6 +477,9 @@ button.ghost:active {
 .hover\:bg-surface-1-70:hover {
   background-color: color-mix(in srgb, var(--surface-1) 70%, transparent) !important;
 }
+.hover\:bg-surface-1-30:hover {
+  background-color: color-mix(in srgb, var(--surface-1) 30%, transparent) !important;
+}
 
 .bg-surface-2-30 {
   background-color: color-mix(in srgb, var(--surface-2) 30%, transparent) !important;
@@ -496,6 +499,9 @@ button.ghost:active {
 }
 .hover\:bg-surface-2-50:hover {
   background-color: color-mix(in srgb, var(--surface-2) 50%, transparent) !important;
+}
+.hover\:bg-surface-2-40:hover {
+  background-color: color-mix(in srgb, var(--surface-2) 40%, transparent) !important;
 }
 
 .focus-within\:border-accent-60:focus-within {

@@ -35,8 +35,8 @@ export default function SubmoduleEntry({
       onContextMenu={onContextMenu}
       className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors ${
         isSelected
-          ? "bg-accent/20 text-accent"
-          : "hover:bg-surface-2/40 text-text-primary"
+          ? "bg-accent-20 text-accent"
+          : "hover:bg-surface-2-40 text-text-primary"
       }`}
     >
       <div className="relative">
