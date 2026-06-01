@@ -189,10 +189,10 @@ export default function CreateBranchDialog({ open, onClose }: CreateBranchDialog
               <label className="block text-2xs font-semibold text-text-secondary">
                 Based On
               </label>
-              <div className="grid grid-cols-3 gap-1 p-0.5 bg-surface-2 rounded-mac border border-border-40/50">
+              <div className="grid grid-cols-3 gap-1 p-0.5 bg-surface-2 rounded-mac border border-border-40">
                 <button
                   type="button"
-                  className={`py-1 rounded text-3xs font-medium transition-all ${
+                  className={`py-1 rounded text-3xs font-medium transition-all border border-transparent outline-none ${
                     baseType === "branch"
                       ? "bg-surface-0 text-text-primary shadow-sm"
                       : "text-text-secondary hover:text-text-primary"
@@ -210,7 +210,7 @@ export default function CreateBranchDialog({ open, onClose }: CreateBranchDialog
                 </button>
                 <button
                   type="button"
-                  className={`py-1 rounded text-3xs font-medium transition-all ${
+                  className={`py-1 rounded text-3xs font-medium transition-all border border-transparent outline-none ${
                     baseType === "tag"
                       ? "bg-surface-0 text-text-primary shadow-sm"
                       : "text-text-secondary hover:text-text-primary"
@@ -229,7 +229,7 @@ export default function CreateBranchDialog({ open, onClose }: CreateBranchDialog
                 </button>
                 <button
                   type="button"
-                  className={`py-1 rounded text-3xs font-medium transition-all ${
+                  className={`py-1 rounded text-3xs font-medium transition-all border border-transparent outline-none ${
                     baseType === "hash"
                       ? "bg-surface-0 text-text-primary shadow-sm"
                       : "text-text-secondary hover:text-text-primary"

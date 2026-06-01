@@ -997,7 +997,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
                     ["Commit staged changes", "Cmd+Enter"],
                     ["Open search", "Toolbar"],
                   ].map(([label, shortcut]) => (
-                    <div key={label} className="flex items-center justify-between gap-3 bg-surface-1/40 border border-border-40/50 rounded-mac px-2.5 py-1.5">
+                    <div key={label} className="flex items-center justify-between gap-3 bg-surface-1/40 border border-border-40 rounded-mac px-2.5 py-1.5">
                       <span className="text-text-secondary text-2xs font-medium">{label}</span>
                       <span className="font-mono text-3xs font-semibold text-text-muted bg-surface-2 border border-border rounded px-1.5 py-0.5">
                         {shortcut}

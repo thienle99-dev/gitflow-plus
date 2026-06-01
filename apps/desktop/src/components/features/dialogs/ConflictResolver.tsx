@@ -293,7 +293,7 @@ CRITICAL INSTRUCTIONS:
       <div className="flex-1 grid grid-rows-[1fr_1fr_1fr] gap-0 overflow-hidden">
         {/* OURS panel */}
         <div className="flex flex-col border-b border-border-40 overflow-hidden">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-1/60 border-b border-border-40/50">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-1/60 border-b border-border-40">
             <span className="text-3xs font-bold text-[#30d158] uppercase tracking-wider">OURS (current branch)</span>
             <div className="flex-1" />
             <button
@@ -309,7 +309,7 @@ CRITICAL INSTRUCTIONS:
 
         {/* THEIRS panel */}
         <div className="flex flex-col border-b border-border-40 overflow-hidden">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-1/60 border-b border-border-40/50">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-1/60 border-b border-border-40">
             <span className="text-3xs font-bold text-[#ff9f0a] uppercase tracking-wider">THEIRS (incoming changes)</span>
             <div className="flex-1" />
             <button
@@ -325,7 +325,7 @@ CRITICAL INSTRUCTIONS:
 
         {/* RESULT panel */}
         <div className="flex flex-col overflow-hidden">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-1/60 border-b border-border-40/50">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-1/60 border-b border-border-40">
             <span className="text-3xs font-bold text-text-primary uppercase tracking-wider">RESULT (merged preview / editable)</span>
             <div className="flex-1" />
             <div className="flex items-center gap-1.5">

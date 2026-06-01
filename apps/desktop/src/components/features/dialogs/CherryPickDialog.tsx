@@ -160,7 +160,7 @@ export default function CherryPickDialog({
               </div>
               <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
                 {cherryPick.data.conflicted_files.map((f) => (
-                  <div key={f} className="text-2xs text-text-muted font-mono bg-surface-1/30 border border-border-40/50 rounded px-2 py-1 truncate">
+                  <div key={f} className="text-2xs text-text-muted font-mono bg-surface-1/30 border border-border-40 rounded px-2 py-1 truncate">
                     {f}
                   </div>
                 ))}

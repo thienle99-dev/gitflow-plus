@@ -121,6 +121,13 @@ export default function AnalyticsDialog({ open, onClose }: AnalyticsDialogProps)
   useEffect(() => {
     if (loading || !stats) return;
 
+    // Read active theme CSS variables dynamically
+    const style = getComputedStyle(document.body);
+    const surface0 = style.getPropertyValue("--surface-0").trim() || "#1c1c1e";
+    const accent = style.getPropertyValue("--accent").trim() || "#0a84ff";
+    const border = style.getPropertyValue("--border").trim() || "#38383a";
+    const textMuted = style.getPropertyValue("--text-muted").trim() || "#8e8e93";
+
     // --- 1. Draw Timeline Canvas ---
     const tCanvas = timelineCanvasRef.current;
     if (tCanvas) {
@@ -149,7 +156,7 @@ export default function AnalyticsDialog({ open, onClose }: AnalyticsDialogProps)
         const chartHeight = height - paddingTop - paddingBottom;
 
         // Draw background grid lines
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.06)";
+        ctx.strokeStyle = border.startsWith("#") ? border + "33" : "rgba(128, 128, 128, 0.15)";
         ctx.lineWidth = 1;
         for (let i = 0; i <= 4; i++) {
           const y = paddingTop + (chartHeight / 4) * i;
@@ -168,10 +175,10 @@ export default function AnalyticsDialog({ open, onClose }: AnalyticsDialogProps)
           const barHeight = (count / maxVal) * chartHeight;
           const y = height - paddingBottom - barHeight;
 
-          // Gradient
+          // Gradient using active theme accent color
           const grad = ctx.createLinearGradient(0, y, 0, height - paddingBottom);
-          grad.addColorStop(0, "#0a84ff");
-          grad.addColorStop(1, "rgba(10, 132, 255, 0.2)");
+          grad.addColorStop(0, accent);
+          grad.addColorStop(1, accent.startsWith("#") ? accent + "20" : "rgba(10, 132, 255, 0.12)");
 
           ctx.fillStyle = grad;
           ctx.beginPath();
@@ -179,7 +186,7 @@ export default function AnalyticsDialog({ open, onClose }: AnalyticsDialogProps)
           ctx.fill();
 
           // Value label
-          ctx.fillStyle = "#8e8e93";
+          ctx.fillStyle = textMuted;
           ctx.font = "9px sans-serif";
           ctx.textAlign = "center";
           ctx.fillText(String(count), x + barWidth / 2, y - 5);
@@ -237,8 +244,8 @@ export default function AnalyticsDialog({ open, onClose }: AnalyticsDialogProps)
           startAngle += sliceAngle;
         });
 
-        // Inner circle for donut
-        ctx.fillStyle = "#1c1c1e"; // dark mode matching background
+        // Inner circle for donut dynamically matches theme background!
+        ctx.fillStyle = surface0;
         ctx.beginPath();
         ctx.arc(centerX, centerY, radius * 0.6, 0, 2 * Math.PI);
         ctx.fill();
@@ -327,7 +334,7 @@ export default function AnalyticsDialog({ open, onClose }: AnalyticsDialogProps)
                     <Calendar size={13} className="text-accent" />
                     <span>Weekly Commit Frequency</span>
                   </div>
-                  <div className="flex items-center justify-center bg-surface-0 border border-border-40/60 rounded-mac px-2 py-3">
+                  <div className="flex items-center justify-center bg-surface-0 border border-border-40 rounded-mac px-2 py-3">
                     <canvas ref={timelineCanvasRef} className="w-full h-40" />
                   </div>
                 </div>
@@ -338,7 +345,7 @@ export default function AnalyticsDialog({ open, onClose }: AnalyticsDialogProps)
                     <BarChart3 size={13} className="text-[#30d158]" />
                     <span>Commit Types Distribution</span>
                   </div>
-                  <div className="flex gap-4 items-center bg-surface-0 border border-border-40/60 rounded-mac p-3 h-40">
+                  <div className="flex gap-4 items-center bg-surface-0 border border-border-40 rounded-mac p-3 h-40">
                     <canvas ref={typeCanvasRef} className="w-[120px] h-[120px] shrink-0" />
                     <div className="flex-1 text-2xs space-y-1.5 max-h-[130px] overflow-y-auto pr-1">
                       {Object.entries(stats.typeCounts)
@@ -385,7 +392,7 @@ export default function AnalyticsDialog({ open, onClose }: AnalyticsDialogProps)
                             {count} commits ({Math.round(ratio * 100)}%)
                           </span>
                         </div>
-                        <div className="h-2 w-full bg-surface-2 border border-border-40/60 rounded-full overflow-hidden">
+                        <div className="h-2 w-full bg-surface-2 border border-border-40 rounded-full overflow-hidden">
                           <div
                             className="h-full bg-accent rounded-full transition-all duration-300"
                             style={{ width: `${ratio * 100}%` }}
