@@ -9,11 +9,15 @@ import CommitDetail from "./CommitDetail";
 import DiffViewer from "@/components/diff/DiffViewer";
 import StashPanel from "@/components/phase2/StashPanel";
 import TagPanel from "@/components/phase2/TagPanel";
+import SubmoduleDetail from "./SubmoduleDetail";
+import { useSubmoduleList } from "@/queries/useSubmoduleList";
 
 export default function RightPanel() {
   const selectedCommit = useUIStore((s) => s.selectedCommit);
   const selectedFile = useUIStore((s) => s.selectedFile);
   const activeDialog = useUIStore((s) => s.activeDialog);
+  const repoPath = useRepoStore((s) => s.repoPath);
+  const { data: submodules } = useSubmoduleList(repoPath);
 
   if (activeDialog === "stash") {
     return <StashPanel />;
@@ -21,6 +25,11 @@ export default function RightPanel() {
 
   if (activeDialog === "tag") {
     return <TagPanel />;
+  }
+
+  // Check if selected file is a submodule
+  if (selectedFile && !selectedCommit && submodules?.find((sub) => sub.path === selectedFile)) {
+    return <SubmoduleDetail submodule={submodules!.find((sub) => sub.path === selectedFile)!} />;
   }
 
   if (selectedFile && !selectedCommit) {
