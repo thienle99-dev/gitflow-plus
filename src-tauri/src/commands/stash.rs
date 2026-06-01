@@ -32,7 +32,11 @@ pub async fn git_stash_list(path: &str) -> Result<Vec<StashEntry>, String> {
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let entries = stdout
+    Ok(parse_stash_list_output(&stdout))
+}
+
+fn parse_stash_list_output(stdout: &str) -> Vec<StashEntry> {
+    stdout
         .lines()
         .filter(|l| !l.is_empty())
         .filter_map(|line| {
@@ -53,9 +57,7 @@ pub async fn git_stash_list(path: &str) -> Result<Vec<StashEntry>, String> {
                 None
             }
         })
-        .collect();
-
-    Ok(entries)
+        .collect()
 }
 
 pub async fn git_stash_push(
@@ -83,6 +85,33 @@ pub async fn git_stash_push(
         Ok(stdout.trim().to_string())
     } else {
         Err(String::from_utf8_lossy(&output.stderr).to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_stash_list_entries() {
+        let entries = parse_stash_list_output(
+            "stash@{0}|WIP on main: abc123 initial commit|Alice\nstash@{12}|On feature: save work|Bob\n",
+        );
+
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].index, 0);
+        assert_eq!(entries[0].message, "WIP on main: abc123 initial commit");
+        assert_eq!(entries[0].branch, "Alice");
+        assert_eq!(entries[1].index, 12);
+        assert_eq!(entries[1].message, "On feature: save work");
+    }
+
+    #[test]
+    fn skips_malformed_stash_lines() {
+        let entries = parse_stash_list_output("not enough fields\nstash@{1}|valid|Dev\n");
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].index, 1);
     }
 }
 

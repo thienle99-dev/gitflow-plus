@@ -34,7 +34,11 @@ pub async fn git_reflog(path: &str, max_count: Option<u32>) -> Result<Vec<Reflog
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let entries = stdout
+    Ok(parse_reflog_output(&stdout))
+}
+
+fn parse_reflog_output(stdout: &str) -> Vec<ReflogEntry> {
+    stdout
         .lines()
         .filter(|l| !l.is_empty())
         .filter_map(|line| {
@@ -55,9 +59,7 @@ pub async fn git_reflog(path: &str, max_count: Option<u32>) -> Result<Vec<Reflog
                 None
             }
         })
-        .collect();
-
-    Ok(entries)
+        .collect()
 }
 
 pub async fn git_undo(path: &str) -> Result<String, String> {
@@ -77,6 +79,44 @@ pub async fn git_undo(path: &str) -> Result<String, String> {
         } else {
             Err(stderr.to_string())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_reflog_entries_and_classifies_actions() {
+        let entries = parse_reflog_output(
+            "HEAD@{0}|abc123|commit: add parser tests|2026-06-01 09:00:00 +0700\nHEAD@{2}|def456|checkout: moving from main to feature|2026-06-01 08:00:00 +0700\n",
+        );
+
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].index, 0);
+        assert_eq!(entries[0].commit_hash, "abc123");
+        assert_eq!(entries[0].action, "commit");
+        assert_eq!(entries[0].description, "commit: add parser tests");
+        assert_eq!(entries[1].index, 2);
+        assert_eq!(entries[1].action, "checkout");
+    }
+
+    #[test]
+    fn classifies_known_reflog_actions() {
+        assert_eq!(classify_reflog_action("reset: moving to HEAD~1"), "reset");
+        assert_eq!(
+            classify_reflog_action("merge feature: Fast-forward"),
+            "merge"
+        );
+        assert_eq!(
+            classify_reflog_action("cherry-pick: fix bug"),
+            "cherry-pick"
+        );
+        assert_eq!(
+            classify_reflog_action("commit (amend): update message"),
+            "commit"
+        );
+        assert_eq!(classify_reflog_action("unknown action"), "other");
     }
 }
 

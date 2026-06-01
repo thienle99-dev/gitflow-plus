@@ -29,6 +29,10 @@ pub async fn git_status(path: String) -> Result<Vec<StatusEntry>, String> {
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(parse_status_output(&stdout))
+}
+
+fn parse_status_output(stdout: &str) -> Vec<StatusEntry> {
     let mut entries: Vec<StatusEntry> = Vec::new();
 
     for line in stdout.lines() {
@@ -58,5 +62,36 @@ pub async fn git_status(path: String) -> Result<Vec<StatusEntry>, String> {
         });
     }
 
-    Ok(entries)
+    entries
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_staged_unstaged_and_untracked_status() {
+        let entries = parse_status_output(
+            " M src/main.rs\nM  src/lib.rs\nA  README.md\nD  old.txt\n?? new.txt\n",
+        );
+
+        assert_eq!(entries.len(), 5);
+        assert_eq!(entries[0].path, "src/main.rs");
+        assert!(!entries[0].staged);
+        assert_eq!(entries[0].status, "modified");
+        assert_eq!(entries[1].path, "src/lib.rs");
+        assert!(entries[1].staged);
+        assert_eq!(entries[1].status, "modified");
+        assert_eq!(entries[2].status, "added");
+        assert_eq!(entries[3].status, "deleted");
+        assert_eq!(entries[4].path, "new.txt");
+        assert_eq!(entries[4].status, "untracked");
+    }
+
+    #[test]
+    fn skips_empty_and_malformed_status_lines() {
+        let entries = parse_status_output("\nM\n");
+
+        assert!(entries.is_empty());
+    }
 }

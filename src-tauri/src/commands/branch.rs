@@ -21,6 +21,10 @@ pub async fn list_branches(path: String) -> Result<Vec<BranchInfo>, String> {
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(parse_branch_output(&stdout))
+}
+
+fn parse_branch_output(stdout: &str) -> Vec<BranchInfo> {
     let mut branches: Vec<BranchInfo> = Vec::new();
 
     for line in stdout.lines() {
@@ -49,7 +53,7 @@ pub async fn list_branches(path: String) -> Result<Vec<BranchInfo>, String> {
         });
     }
 
-    Ok(branches)
+    branches
 }
 
 #[tauri::command]
@@ -80,6 +84,35 @@ pub async fn create_branch(
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
         Err(format!("Failed to create branch: {}", stderr.trim()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_local_and_remote_branches() {
+        let branches = parse_branch_output(
+            "  feature/search\n* main\n  remotes/origin/main\n  remotes/origin/feature/search\n",
+        );
+
+        assert_eq!(branches.len(), 4);
+        assert_eq!(branches[0].name, "feature/search");
+        assert!(!branches[0].current);
+        assert!(branches[0].remote.is_none());
+        assert_eq!(branches[1].name, "main");
+        assert!(branches[1].current);
+        assert_eq!(branches[2].name, "origin/main");
+        assert_eq!(branches[2].remote.as_deref(), Some("origin"));
+    }
+
+    #[test]
+    fn skips_empty_branch_lines() {
+        let branches = parse_branch_output("\n  main\n");
+
+        assert_eq!(branches.len(), 1);
+        assert_eq!(branches[0].name, "main");
     }
 }
 
@@ -136,7 +169,11 @@ pub async fn checkout_branch(path: String, name: String) -> Result<String, Strin
 }
 
 #[tauri::command]
-pub async fn delete_branch(path: String, name: String, force: Option<bool>) -> Result<String, String> {
+pub async fn delete_branch(
+    path: String,
+    name: String,
+    force: Option<bool>,
+) -> Result<String, String> {
     let flag = if force.unwrap_or(false) { "-D" } else { "-d" };
     let output = Command::new("git")
         .args(["--no-pager", "-C", &path, "branch", flag, &name])

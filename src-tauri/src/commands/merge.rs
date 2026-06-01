@@ -192,7 +192,8 @@ pub async fn merge_branch(
         &branch,
         squash.unwrap_or(false),
         no_ff.unwrap_or(false),
-    ).await
+    )
+    .await
 }
 
 #[tauri::command]

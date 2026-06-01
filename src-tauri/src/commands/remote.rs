@@ -130,15 +130,40 @@ pub async fn get_sync_status(path: String) -> Result<SyncStatus, String> {
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(parse_sync_status_output(&stdout))
+}
+
+fn parse_sync_status_output(stdout: &str) -> SyncStatus {
     let parts: Vec<&str> = stdout.trim().split_whitespace().collect();
     if parts.len() == 2 {
         let ahead = parts[0].parse::<usize>().unwrap_or(0);
         let behind = parts[1].parse::<usize>().unwrap_or(0);
-        Ok(SyncStatus { ahead, behind })
+        SyncStatus { ahead, behind }
     } else {
-        Ok(SyncStatus {
+        SyncStatus {
             ahead: 0,
             behind: 0,
-        })
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_sync_status_counts() {
+        let status = parse_sync_status_output("3\t7\n");
+
+        assert_eq!(status.ahead, 3);
+        assert_eq!(status.behind, 7);
+    }
+
+    #[test]
+    fn defaults_invalid_sync_status_to_zero() {
+        let status = parse_sync_status_output("not-counts\n");
+
+        assert_eq!(status.ahead, 0);
+        assert_eq!(status.behind, 0);
     }
 }

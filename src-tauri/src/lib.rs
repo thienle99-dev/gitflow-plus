@@ -1,6 +1,6 @@
 use std::sync::Mutex;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
-use tauri::tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::Emitter;
 use tauri::Manager;
 
@@ -141,7 +141,8 @@ pub fn run() {
                         button_state: MouseButtonState::Up,
                         rect,
                         ..
-                    } = event {
+                    } = event
+                    {
                         let app = tray.app_handle();
                         if let Some(window) = app.get_webview_window("tray") {
                             if window.is_visible().unwrap_or(false) {
@@ -165,7 +166,8 @@ pub fn run() {
                                 } else {
                                     pos_y + size_h
                                 };
-                                let _ = window.set_position(tauri::PhysicalPosition::new(x as i32, y as i32));
+                                let _ = window
+                                    .set_position(tauri::PhysicalPosition::new(x as i32, y as i32));
                                 let _ = window.show();
                                 let _ = window.set_focus();
                             }

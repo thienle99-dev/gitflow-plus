@@ -99,7 +99,10 @@ pub async fn submodule_list(path: String) -> Result<Vec<SubmoduleInfo>, String> 
 }
 
 #[tauri::command]
-pub async fn submodule_init(path: String, submodule_path: Option<String>) -> Result<String, String> {
+pub async fn submodule_init(
+    path: String,
+    submodule_path: Option<String>,
+) -> Result<String, String> {
     let mut args = vec![
         "--no-pager".to_string(),
         "-C".to_string(),
@@ -126,7 +129,10 @@ pub async fn submodule_init(path: String, submodule_path: Option<String>) -> Res
 }
 
 #[tauri::command]
-pub async fn submodule_update(path: String, submodule_path: Option<String>) -> Result<String, String> {
+pub async fn submodule_update(
+    path: String,
+    submodule_path: Option<String>,
+) -> Result<String, String> {
     let mut args = vec![
         "--no-pager".to_string(),
         "-C".to_string(),

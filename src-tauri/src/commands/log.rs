@@ -15,9 +15,9 @@ pub struct Ref {
     pub ref_type: String,
 }
 
+use tauri::{AppHandle, Emitter};
 use tokio::io::AsyncBufReadExt;
 use tokio::process::Command;
-use tauri::{AppHandle, Emitter};
 
 const CHUNK_SIZE: usize = 50;
 
@@ -106,7 +106,9 @@ pub async fn git_log_stream(
         .spawn()
         .map_err(|e| format!("Failed to spawn git log: {}", e))?;
 
-    let stdout = child.stdout.take()
+    let stdout = child
+        .stdout
+        .take()
         .ok_or_else(|| "Failed to capture stdout".to_string())?;
 
     let reader = tokio::io::BufReader::new(stdout);
@@ -126,7 +128,11 @@ pub async fn git_log_stream(
 
         let commit = Commit {
             hash: parts[0].to_string(),
-            parents: if parts[1].is_empty() { vec![] } else { parts[1].split(' ').map(|s| s.to_string()).collect() },
+            parents: if parts[1].is_empty() {
+                vec![]
+            } else {
+                parts[1].split(' ').map(|s| s.to_string()).collect()
+            },
             author: parts[2].to_string(),
             email: parts[3].to_string(),
             date: parts[4].to_string(),
@@ -142,7 +148,8 @@ pub async fn git_log_stream(
                 total_so_far: total,
                 is_last: false,
             };
-            app.emit("git:log-chunk", chunk).map_err(|e| format!("Emit error: {}", e))?;
+            app.emit("git:log-chunk", chunk)
+                .map_err(|e| format!("Emit error: {}", e))?;
         }
     }
 
@@ -152,16 +159,24 @@ pub async fn git_log_stream(
         total_so_far: total,
         is_last: true,
     };
-    app.emit("git:log-chunk", last).map_err(|e| format!("Emit error: {}", e))?;
+    app.emit("git:log-chunk", last)
+        .map_err(|e| format!("Emit error: {}", e))?;
 
     // Wait for child to finish
-    child.wait().await.map_err(|e| format!("Wait error: {}", e))?;
+    child
+        .wait()
+        .await
+        .map_err(|e| format!("Wait error: {}", e))?;
 
     Ok(format!("Streamed {} commits", total))
-} 
+}
 
 #[tauri::command]
-pub async fn file_history(path: String, file_path: String, max_count: Option<usize>) -> Result<Vec<Commit>, String> {
+pub async fn file_history(
+    path: String,
+    file_path: String,
+    max_count: Option<usize>,
+) -> Result<Vec<Commit>, String> {
     let limit = max_count.unwrap_or(100).clamp(1, 500);
 
     let output = Command::new("git")
@@ -228,17 +243,20 @@ pub fn parse_refs(refs_str: &str) -> Vec<Ref> {
         .filter(|s| !s.is_empty())
         .map(|s| {
             // Strip "HEAD -> " prefix
-            let s = if let Some(stripped) = s.strip_prefix("HEAD -> ") {
-                stripped
+            let (s, is_head_ref) = if let Some(stripped) = s.strip_prefix("HEAD -> ") {
+                (stripped, true)
             } else {
-                s
+                (s, s == "HEAD")
             };
 
-            let ref_type = if s == "HEAD" {
+            let ref_type = if is_head_ref {
                 "head"
             } else if s.starts_with("tag: ") {
                 "tag"
-            } else if s.starts_with("origin/") || s.contains('/') {
+            } else if s.starts_with("origin/")
+                || s.starts_with("upstream/")
+                || s.starts_with("remotes/")
+            {
                 "remote"
             } else {
                 "branch"
@@ -256,4 +274,51 @@ pub fn parse_refs(refs_str: &str) -> Vec<Ref> {
             }
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_git_log_output_with_parents_refs_and_subject() {
+        let commits = parse_log_output(
+            "abc123|parent1 parent2|Alice|alice@example.com|2026-06-01 09:00:00 +0700|HEAD -> main, origin/main|feat: add parser tests\ndef456||Bob|bob@example.com|2026-05-31 08:00:00 +0700|tag: v1.0.0|initial commit\n",
+        );
+
+        assert_eq!(commits.len(), 2);
+        assert_eq!(commits[0].hash, "abc123");
+        assert_eq!(commits[0].parents, vec!["parent1", "parent2"]);
+        assert_eq!(commits[0].author, "Alice");
+        assert_eq!(commits[0].email, "alice@example.com");
+        assert_eq!(commits[0].date, "2026-06-01 09:00:00 +0700");
+        assert_eq!(commits[0].message, "feat: add parser tests");
+        assert_eq!(commits[0].refs.len(), 2);
+        assert_eq!(commits[1].parents.len(), 0);
+        assert_eq!(commits[1].refs[0].ref_type, "tag");
+    }
+
+    #[test]
+    fn skips_malformed_log_lines() {
+        let commits = parse_log_output(
+            "too|few|fields\nabc123||Alice|alice@example.com|2026-06-01 09:00:00 +0700||valid subject\n",
+        );
+
+        assert_eq!(commits.len(), 1);
+        assert_eq!(commits[0].message, "valid subject");
+    }
+
+    #[test]
+    fn parses_ref_types() {
+        let refs = parse_refs("HEAD -> main, origin/main, tag: v1.0.0, feature/demo");
+
+        assert_eq!(refs.len(), 4);
+        assert_eq!(refs[0].name, "main");
+        assert_eq!(refs[0].ref_type, "head");
+        assert_eq!(refs[1].name, "origin/main");
+        assert_eq!(refs[1].ref_type, "remote");
+        assert_eq!(refs[2].name, "v1.0.0");
+        assert_eq!(refs[2].ref_type, "tag");
+        assert_eq!(refs[3].ref_type, "branch");
+    }
 }

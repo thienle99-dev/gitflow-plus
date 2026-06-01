@@ -21,8 +21,8 @@
 - [x] `commands/remote.rs` — pull, push, fetch
 - [x] `commands/clone.rs` — git_clone (URL + destination path)
 - [x] Async Tauri commands — đảm bảo tất cả `#[tauri::command]` là `async fn`, tránh block main thread
-- [ ] Stream git log output — dùng `Stdio::piped()` đọc từng dòng, emit chunks về frontend (user thấy commits xuất hiện dần)
-- [ ] Unit tests for output parsing
+- [x] Stream git log output — dùng `Stdio::piped()` đọc từng dòng, emit chunks về frontend (user thấy commits xuất hiện dần)
+- [x] Unit tests for output parsing
 
 ### Step 3: API Layer (Frontend)
 - [x] `api/tauri.ts` — typed invoke wrappers for all commands

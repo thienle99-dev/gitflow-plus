@@ -148,6 +148,46 @@ fn parse_name_status_line(line: &str) -> Option<CommitFileChange> {
     })
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_name_status_for_basic_file_changes() {
+        let added = parse_name_status_line("A\tREADME.md").unwrap();
+        assert_eq!(added.path, "README.md");
+        assert_eq!(added.old_path, None);
+        assert_eq!(added.status, "added");
+
+        let modified = parse_name_status_line("M\tsrc/lib.rs").unwrap();
+        assert_eq!(modified.path, "src/lib.rs");
+        assert_eq!(modified.status, "modified");
+
+        let deleted = parse_name_status_line("D\told.txt").unwrap();
+        assert_eq!(deleted.path, "old.txt");
+        assert_eq!(deleted.status, "deleted");
+    }
+
+    #[test]
+    fn parses_name_status_for_renames_and_copies() {
+        let renamed = parse_name_status_line("R100\told.rs\tnew.rs").unwrap();
+        assert_eq!(renamed.path, "new.rs");
+        assert_eq!(renamed.old_path.as_deref(), Some("old.rs"));
+        assert_eq!(renamed.status, "renamed");
+
+        let copied = parse_name_status_line("C075\tsrc/a.rs\tsrc/b.rs").unwrap();
+        assert_eq!(copied.path, "src/b.rs");
+        assert_eq!(copied.old_path.as_deref(), Some("src/a.rs"));
+        assert_eq!(copied.status, "copied");
+    }
+
+    #[test]
+    fn rejects_malformed_name_status_lines() {
+        assert!(parse_name_status_line("").is_none());
+        assert!(parse_name_status_line("R100\told.rs").is_none());
+    }
+}
+
 #[tauri::command]
 pub async fn staged_diff(
     path: String,

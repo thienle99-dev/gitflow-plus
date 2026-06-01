@@ -25,7 +25,11 @@ pub async fn git_tag_list(path: &str) -> Result<Vec<Tag>, String> {
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let tags = stdout
+    Ok(parse_tag_list_output(&stdout))
+}
+
+fn parse_tag_list_output(stdout: &str) -> Vec<Tag> {
+    stdout
         .lines()
         .filter(|l| !l.is_empty())
         .filter_map(|line| {
@@ -43,9 +47,7 @@ pub async fn git_tag_list(path: &str) -> Result<Vec<Tag>, String> {
                 None
             }
         })
-        .collect();
-
-    Ok(tags)
+        .collect()
 }
 
 pub async fn git_tag_create(
@@ -81,6 +83,32 @@ pub async fn git_tag_create(
         Ok(format!("Created tag '{}'", name))
     } else {
         Err(String::from_utf8_lossy(&output.stderr).to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_annotated_and_lightweight_tags() {
+        let tags = parse_tag_list_output(
+            "v1.0.0|abc123|Release 1.0|Alice|2026-06-01 09:00:00 +0700|tag\nv1.0.1|def456|Patch|Bob|2026-06-01 10:00:00 +0700|commit\n",
+        );
+
+        assert_eq!(tags.len(), 2);
+        assert_eq!(tags[0].name, "v1.0.0");
+        assert!(tags[0].annotated);
+        assert_eq!(tags[1].hash, "def456");
+        assert!(!tags[1].annotated);
+    }
+
+    #[test]
+    fn skips_malformed_tag_lines() {
+        let tags = parse_tag_list_output("missing|fields\nv1|abc|msg|author|date|commit\n");
+
+        assert_eq!(tags.len(), 1);
+        assert_eq!(tags[0].name, "v1");
     }
 }
 
@@ -135,6 +163,10 @@ pub async fn tag_delete(path: String, name: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub async fn tag_push(path: String, name: String, remote: Option<String>) -> Result<String, String> {
+pub async fn tag_push(
+    path: String,
+    name: String,
+    remote: Option<String>,
+) -> Result<String, String> {
     git_tag_push(&path, &name, remote.as_deref()).await
 }
