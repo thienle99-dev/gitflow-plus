@@ -1,5 +1,9 @@
 use notify::event::ModifyKind;
-use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+#[cfg(target_os = "macos")]
+use notify::PollWatcher;
+#[cfg(not(target_os = "macos"))]
+use notify::RecommendedWatcher;
+use notify::{Config, Event, EventKind, RecursiveMode, Watcher};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 use std::sync::{
@@ -9,9 +13,14 @@ use std::sync::{
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
 
+#[cfg(target_os = "macos")]
+type RepoFsWatcher = PollWatcher;
+#[cfg(not(target_os = "macos"))]
+type RepoFsWatcher = RecommendedWatcher;
+
 pub struct RepoWatcher {
     running: Arc<AtomicBool>,
-    _watcher: Option<RecommendedWatcher>,
+    _watcher: Option<RepoFsWatcher>,
     watched_paths: Vec<PathBuf>,
 }
 
@@ -43,13 +52,8 @@ impl RepoWatcher {
             let running = self.running.clone();
             let (tx, rx) = mpsc::channel::<Result<Event, notify::Error>>();
 
-            let watcher = RecommendedWatcher::new(
-                move |res| {
-                    let _ = tx.send(res);
-                },
-                Config::default(),
-            )
-            .map_err(|e| format!("Failed to create watcher: {}", e))?;
+            let watcher =
+                create_watcher(tx).map_err(|e| format!("Failed to create watcher: {}", e))?;
 
             let app_clone = app.clone();
 
@@ -128,13 +132,30 @@ impl Drop for RepoWatcher {
     fn drop(&mut self) {
         self.running.store(false, Ordering::SeqCst);
         self.unwatch_current_paths();
+    }
+}
 
-        // notify's macOS kqueue watcher can panic while dropping during a Tauri
-        // invoke shutdown path. Keep process teardown quiet by avoiding that Drop.
-        #[cfg(target_os = "macos")]
-        if let Some(watcher) = self._watcher.take() {
-            std::mem::forget(watcher);
-        }
+fn create_watcher(
+    tx: mpsc::Sender<Result<Event, notify::Error>>,
+) -> Result<RepoFsWatcher, notify::Error> {
+    #[cfg(target_os = "macos")]
+    {
+        PollWatcher::new(
+            move |res| {
+                let _ = tx.send(res);
+            },
+            Config::default().with_poll_interval(Duration::from_secs(2)),
+        )
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        RecommendedWatcher::new(
+            move |res| {
+                let _ = tx.send(res);
+            },
+            Config::default(),
+        )
     }
 }
 
