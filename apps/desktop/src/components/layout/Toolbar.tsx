@@ -19,6 +19,7 @@ import {
   Archive,
   Settings,
   BarChart3,
+  LogOut,
 } from "lucide-react";
 import CreateBranchDialog from "@/components/features/dialogs/CreateBranchDialog";
 import { useErrorReporter } from "@/lib/ErrorContext";
@@ -26,6 +27,7 @@ import SettingsDropdown from "@/components/ui/theme/SettingsDropdown";
 
 export default function Toolbar() {
   const repoPath = useRepoStore((s) => s.repoPath);
+  const closeRepo = useRepoStore((s) => s.closeRepo);
   const selectCommit = useUIStore((s) => s.selectCommit);
   const selectFile = useUIStore((s) => s.selectFile);
   const openDialog = useUIStore((s) => s.openDialog);
@@ -67,7 +69,23 @@ export default function Toolbar() {
       <div className="vibrancy h-[44px] border-b border-border-60 bg-surface-1/40 backdrop-blur-md flex items-center justify-between px-4 select-none animate-in fade-in duration-200">
 
         {/* Left Side: Status Capsule Badge */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              closeRepo();
+              useUIStore.setState({
+                selectedCommit: null,
+                selectedFile: null,
+                selectedFileStage: null,
+                activeDialog: null,
+              });
+            }}
+            className="h-8 w-8 flex items-center justify-center rounded-mac bg-surface-2-40 hover:bg-surface-2 border border-border-40 hover:border-border text-text-muted hover:text-text-primary transition-all shrink-0 cursor-pointer"
+            title="Close Repository"
+          >
+            <LogOut size={13} />
+          </button>
+          <div className="w-[1px] h-3.5 bg-border-40/60 mr-1" />
           {changes && changes.length > 0 ? (
             <button
               onClick={showChanges}

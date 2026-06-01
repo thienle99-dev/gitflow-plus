@@ -69,16 +69,31 @@ export default function Sidebar() {
   return (
     <div className="h-full overflow-y-auto py-2">
       {/* Repository Selector */}
-      <div className="relative px-4 mb-3">
+      <div className="relative px-4 mb-3 flex items-center gap-1.5">
         <button
           onClick={() => setRepoMenuOpen(!repoMenuOpen)}
-          className="w-full flex-1 flex items-center gap-2 px-2.5 py-1.5 rounded-mac bg-surface-2-40 hover:bg-surface-2 border border-border-40 hover:border-border transition-all text-left"
+          className="flex-1 flex items-center gap-2 px-2.5 py-1.5 rounded-mac bg-surface-2-40 hover:bg-surface-2 border border-border-40 hover:border-border transition-all text-left min-w-0"
         >
           <Folder size={14} className="text-accent shrink-0" />
           <span className="flex-1 text-xs font-semibold truncate text-text-primary">
             {repoName}
           </span>
           <ChevronDown size={12} className="text-text-muted shrink-0" />
+        </button>
+        <button
+          onClick={() => {
+            closeRepo();
+            useUIStore.setState({
+              selectedCommit: null,
+              selectedFile: null,
+              selectedFileStage: null,
+              activeDialog: null,
+            });
+          }}
+          className="h-8 w-8 flex items-center justify-center rounded-mac bg-surface-2-40 hover:bg-surface-2 border border-border-40 hover:border-border text-text-muted hover:text-text-primary transition-all shrink-0 cursor-pointer"
+          title="Close Repository"
+        >
+          <LogOut size={13} />
         </button>
 
         {repoMenuOpen && (
@@ -102,6 +117,12 @@ export default function Sidebar() {
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text-primary hover:bg-accent hover:text-accent-fg text-left"
                 onClick={() => {
                   closeRepo();
+                  useUIStore.setState({
+                    selectedCommit: null,
+                    selectedFile: null,
+                    selectedFileStage: null,
+                    activeDialog: null,
+                  });
                   setRepoMenuOpen(false);
                 }}
               >

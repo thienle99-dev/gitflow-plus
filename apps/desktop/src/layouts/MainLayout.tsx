@@ -79,6 +79,12 @@ export default function MainLayout() {
         await handleOpenRepo();
       } else if (action === "close-repo") {
         closeRepo();
+        useUIStore.setState({
+          selectedCommit: null,
+          selectedFile: null,
+          selectedFileStage: null,
+          activeDialog: null,
+        });
       } else if (action === "toggle-sidebar") {
         toggleSidebar();
       } else if (action === "refresh") {
