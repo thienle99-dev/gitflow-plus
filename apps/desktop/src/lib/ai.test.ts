@@ -148,9 +148,9 @@ describe("buildCommitPrompt", () => {
 
 describe("formatLocalCommitMessage", () => {
   const mockFiles = [
-    { path: "src/auth.ts", status: "modified" },
-    { path: "src/api.ts", status: "modified" },
-    { path: "tests/auth.test.ts", status: "added" },
+    { path: "src/auth.ts", status: "modified", staged: true },
+    { path: "src/api.ts", status: "modified", staged: true },
+    { path: "tests/auth.test.ts", status: "added", staged: true },
   ];
 
   it("returns subject only for ultra-minimal level", () => {
