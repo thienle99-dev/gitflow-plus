@@ -280,11 +280,11 @@ CRITICAL INSTRUCTIONS:
   return (
     <div className="h-full flex flex-col bg-surface-0">
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border bg-surface-1">
-        <button onClick={onCancel} className="ghost p-1" title="Back">
+      <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border-60 bg-surface-1/40 backdrop-blur-md">
+        <button onClick={onCancel} className="ghost p-1 text-text-muted hover:text-text-primary" title="Back">
           <ArrowLeft size={14} />
         </button>
-        <span className="text-xs font-medium text-text-primary truncate flex-1">
+        <span className="text-xs font-semibold text-text-primary truncate flex-1">
           Resolve Conflict: {filePath}
         </span>
       </div>
@@ -292,30 +292,32 @@ CRITICAL INSTRUCTIONS:
       {/* 3-panel content area */}
       <div className="flex-1 grid grid-rows-[1fr_1fr_1fr] gap-0 overflow-hidden">
         {/* OURS panel */}
-        <div className="flex flex-col border-b border-border overflow-hidden">
-          <div className="flex items-center gap-1 px-2 py-1 bg-surface-2">
-            <span className="text-2xs font-medium text-[#30d158]">OURS (current)</span>
+        <div className="flex flex-col border-b border-border-40 overflow-hidden">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-1/60 border-b border-border-40/50">
+            <span className="text-3xs font-bold text-[#30d158] uppercase tracking-wider">OURS (current branch)</span>
             <div className="flex-1" />
             <button
-              className="ghost text-2xs px-2 py-0.5 rounded hover:bg-accent/10 flex items-center gap-1"
+              className="h-6 px-2.5 rounded bg-[#30d158]/10 text-[#30d158] hover:bg-[#30d158]/20 text-3xs font-semibold flex items-center gap-1 transition-all"
               onClick={acceptOurs}
             >
-              <Check size={10} /> Accept
+              <Check size={10} />
+              <span>Accept Ours</span>
             </button>
           </div>
           <div ref={oursRef} className="flex-1 overflow-auto" />
         </div>
 
         {/* THEIRS panel */}
-        <div className="flex flex-col border-b border-border overflow-hidden">
-          <div className="flex items-center gap-1 px-2 py-1 bg-surface-2">
-            <span className="text-2xs font-medium text-[#ff9f0a]">THEIRS (incoming)</span>
+        <div className="flex flex-col border-b border-border-40 overflow-hidden">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-1/60 border-b border-border-40/50">
+            <span className="text-3xs font-bold text-[#ff9f0a] uppercase tracking-wider">THEIRS (incoming changes)</span>
             <div className="flex-1" />
             <button
-              className="ghost text-2xs px-2 py-0.5 rounded hover:bg-accent/10 flex items-center gap-1"
+              className="h-6 px-2.5 rounded bg-[#ff9f0a]/10 text-[#ff9f0a] hover:bg-[#ff9f0a]/20 text-3xs font-semibold flex items-center gap-1 transition-all"
               onClick={acceptTheirs}
             >
-              <Check size={10} /> Accept
+              <Check size={10} />
+              <span>Accept Theirs</span>
             </button>
           </div>
           <div ref={theirsRef} className="flex-1 overflow-auto" />
@@ -323,44 +325,47 @@ CRITICAL INSTRUCTIONS:
 
         {/* RESULT panel */}
         <div className="flex flex-col overflow-hidden">
-          <div className="flex items-center gap-1 px-2 py-1 bg-surface-2">
-            <span className="text-2xs font-medium text-text-primary">RESULT (editable)</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-1/60 border-b border-border-40/50">
+            <span className="text-3xs font-bold text-text-primary uppercase tracking-wider">RESULT (merged preview / editable)</span>
             <div className="flex-1" />
-            <button
-              className="ghost text-2xs px-2 py-0.5 rounded hover:bg-accent/10 flex items-center gap-1"
-              onClick={acceptBoth}
-            >
-              <Combine size={10} /> Accept Both
-            </button>
-            <button
-              className="ghost text-2xs px-2 py-0.5 rounded text-accent hover:bg-accent/10 flex items-center gap-1 transition-colors"
-              onClick={handleAiResolveConflict}
-              disabled={loadingAi}
-            >
-              {loadingAi ? (
-                <RefreshCw size={10} className="animate-spin text-accent" />
-              ) : (
-                <Sparkles size={10} />
-              )}
-              <span>AI Auto Resolve</span>
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                className="h-6 px-2.5 rounded bg-surface-3 hover:bg-surface-4 text-text-primary text-3xs font-semibold flex items-center gap-1 transition-all border border-border-40"
+                onClick={acceptBoth}
+              >
+                <Combine size={10} />
+                <span>Accept Both</span>
+              </button>
+              <button
+                className="h-6 px-3 bg-accent text-accent-fg hover:opacity-90 disabled:opacity-40 text-3xs font-semibold rounded flex items-center gap-1 transition-all shadow-sm"
+                onClick={handleAiResolveConflict}
+                disabled={loadingAi}
+              >
+                {loadingAi ? (
+                  <RefreshCw size={10} className="animate-spin text-accent-fg" />
+                ) : (
+                  <Sparkles size={10} className="text-accent-fg" />
+                )}
+                <span>AI Auto Resolve</span>
+              </button>
+            </div>
           </div>
           <div ref={resultRef} className="flex-1 overflow-auto" />
         </div>
       </div>
 
       {/* Footer actions */}
-      <div className="flex items-center gap-2 px-3 py-2 border-t border-border bg-surface-1">
+      <div className="flex items-center justify-end gap-2.5 px-4 py-2.5 border-t border-border-60 bg-surface-1">
         <button
           onClick={handleComplete}
           disabled={resolving}
-          className="px-3 py-1 bg-accent text-accent-fg text-xs font-medium rounded-mac disabled:opacity-40 hover:opacity-90 transition-opacity"
+          className="h-8 px-4 bg-accent text-accent-fg text-xs font-semibold rounded-mac disabled:opacity-40 hover:opacity-90 transition-opacity min-w-[64px]"
         >
           {resolving ? "Completing..." : "Complete Merge"}
         </button>
         <button
           onClick={onCancel}
-          className="px-3 py-1 text-xs text-text-muted hover:text-text-primary border border-border rounded-mac transition-colors"
+          className="h-8 px-4 text-xs text-text-secondary hover:text-text-primary border border-border hover:bg-surface-2 rounded-mac transition-all"
         >
           Cancel
         </button>

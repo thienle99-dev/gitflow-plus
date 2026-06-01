@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Sparkles, Eye, EyeOff } from "lucide-react";
+import { Sparkles, Eye, EyeOff, X, ChevronDown } from "lucide-react";
 import { Input, Select } from "@/components/ui/form";
 
 const LS_KEY_API_KEY = "gitflowAiApiKey";
@@ -93,97 +93,107 @@ export default function AISettings({ onClose }: AISettingsProps) {
   return (
     <div className="h-full flex flex-col bg-surface-0">
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border bg-surface-1">
-        <Sparkles size={14} className="text-accent" />
-        <span className="text-xs font-medium text-text-primary flex-1">
+      <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border-60 bg-surface-1/40 backdrop-blur-md">
+        <Sparkles size={15} className="text-accent" />
+        <span className="text-xs font-semibold text-text-primary flex-1">
           AI Integration Settings
         </span>
+        {onClose && (
+          <button onClick={onClose} className="ghost p-1 text-text-muted hover:text-text-primary" title="Close">
+            <X size={14} />
+          </button>
+        )}
       </div>
 
       {/* Settings form */}
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
-        {/* API Key */}
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-text-primary">API Key</label>
-          <div className="relative">
-            <Input
-              type={showKey ? "text" : "password"}
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="sk-..."
-              variant="surface-1"
-              className="h-8 pr-7 pl-2 text-xs"
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        <div className="bg-surface-1/30 border border-border-40 rounded-mac p-4 space-y-4">
+          {/* API Key */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold text-text-primary">API Key</label>
+            <div className="relative">
+              <Input
+                type={showKey ? "text" : "password"}
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="sk-..."
+                variant="surface-1"
+                className="h-8 pr-8 pl-3 text-xs"
+              />
+              <button
+                onClick={() => setShowKey(!showKey)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 ghost p-1 text-text-muted hover:text-text-primary"
+                title={showKey ? "Hide key" : "Show key"}
+              >
+                {showKey ? <EyeOff size={12} /> : <Eye size={12} />}
+              </button>
+            </div>
+            <p className="text-3xs text-text-muted font-medium">
+              {apiKey ? maskKey(apiKey) : "Enter an API key for Claude or OpenAI"}
+            </p>
+          </div>
+
+          {/* Model selector */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-semibold text-text-primary">Model</label>
+            <div className="relative">
+              <Select
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                variant="surface-1"
+                className="h-8 pl-3 pr-8 text-xs appearance-none cursor-pointer"
+              >
+                <optgroup label="Cloud Models">
+                  {AVAILABLE_MODELS.map((m) => (
+                    <option key={m.id} value={m.id}>{m.label}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Local Models">
+                  {LOCAL_MODELS.map((m) => (
+                    <option key={m.id} value={m.id}>{m.label}</option>
+                  ))}
+                </optgroup>
+              </Select>
+              <ChevronDown size={11} strokeWidth={2.5} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted" />
+            </div>
+          </div>
+
+          {/* Token limit slider */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-semibold text-text-primary">Max Tokens</label>
+              <span className="text-2xs font-mono font-semibold text-accent">{tokenLimit.toLocaleString()}</span>
+            </div>
+            <input
+              type="range"
+              min={512}
+              max={32768}
+              step={512}
+              value={tokenLimit}
+              onChange={(e) => setTokenLimit(Number(e.target.value))}
+              className="w-full h-1 bg-surface-3 rounded-full appearance-none cursor-pointer accent-accent [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent [&::-webkit-slider-thumb]:shadow-md"
             />
-            <button
-              onClick={() => setShowKey(!showKey)}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 ghost p-1"
-              title={showKey ? "Hide key" : "Show key"}
-            >
-              {showKey ? <EyeOff size={12} /> : <Eye size={12} />}
-            </button>
-          </div>
-          <p className="text-2xs text-text-muted">
-            {apiKey ? maskKey(apiKey) : "Enter an API key for Claude or OpenAI"}
-          </p>
-        </div>
-
-        {/* Model selector */}
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-text-primary">Model</label>
-          <Select
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            variant="surface-1"
-            className="h-8 px-2 text-xs"
-          >
-            <optgroup label="Cloud Models">
-              {AVAILABLE_MODELS.map((m) => (
-                <option key={m.id} value={m.id}>{m.label} ({m.id})</option>
-              ))}
-            </optgroup>
-            <optgroup label="Local Models">
-              {LOCAL_MODELS.map((m) => (
-                <option key={m.id} value={m.id}>{m.label}</option>
-              ))}
-            </optgroup>
-          </Select>
-        </div>
-
-        {/* Token limit slider */}
-        <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-medium text-text-primary">Max Tokens</label>
-            <span className="text-2xs font-mono text-text-muted">{tokenLimit.toLocaleString()}</span>
-          </div>
-          <input
-            type="range"
-            min={512}
-            max={32768}
-            step={512}
-            value={tokenLimit}
-            onChange={(e) => setTokenLimit(Number(e.target.value))}
-            className="w-full h-1.5 bg-surface-2 rounded-full appearance-none cursor-pointer accent-accent [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent [&::-webkit-slider-thumb]:shadow-md"
-          />
-          <div className="flex justify-between text-2xs text-text-muted">
-            <span>512</span>
-            <span>4K (default)</span>
-            <span>32K</span>
+            <div className="flex justify-between text-3xs text-text-muted font-medium">
+              <span>512</span>
+              <span>4K (default)</span>
+              <span>32K</span>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Footer */}
-      <div className="flex items-center gap-2 px-3 py-2 border-t border-border bg-surface-1">
+      <div className="flex items-center gap-2 px-4 py-2.5 border-t border-border-60 bg-surface-1">
         <button
           onClick={handleSave}
           disabled={!hasChanges}
-          className="flex-1 px-3 py-1 bg-accent text-accent-fg text-xs font-medium rounded-mac disabled:opacity-40 hover:opacity-90 transition-opacity"
+          className="flex-1 h-8 bg-accent text-accent-fg text-xs font-semibold rounded-mac disabled:opacity-40 hover:opacity-90 transition-opacity"
         >
           Save
         </button>
         <button
           onClick={handleCancel}
-          className="flex-1 px-3 py-1 text-xs text-text-muted hover:text-text-primary border border-border rounded-mac transition-colors"
+          className="flex-1 h-8 text-xs text-text-secondary hover:text-text-primary border border-border hover:bg-surface-2 rounded-mac transition-colors"
         >
           Cancel
         </button>

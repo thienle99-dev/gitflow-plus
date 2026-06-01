@@ -68,14 +68,14 @@ export default function TagPanel({ onClose }: { onClose?: () => void }) {
   return (
     <div className="h-full flex flex-col bg-surface-0">
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border bg-surface-1">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-border-60 bg-surface-1/40 backdrop-blur-md">
         <Tag size={14} className="text-text-muted" />
-        <span className="text-xs font-medium text-text-primary flex-1">
+        <span className="text-xs font-semibold text-text-primary flex-1">
           Tags ({tags?.length ?? 0})
         </span>
         <button
           onClick={() => setShowCreate(!showCreate)}
-          className="ghost p-1"
+          className="ghost p-1 text-text-muted hover:text-text-primary"
           title="New Tag"
         >
           <Plus size={14} />
@@ -84,39 +84,39 @@ export default function TagPanel({ onClose }: { onClose?: () => void }) {
 
       {/* Create tag form (collapsible) */}
       {showCreate && (
-        <div className="px-3 py-2 border-b border-border space-y-1.5 bg-surface-1">
+        <div className="px-4 py-3.5 border-b border-border-60 space-y-2.5 bg-surface-1/30">
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Tag name *"
             variant="surface-1"
-            className="text-xs px-2 py-1"
+            className="text-xs h-8 px-2.5 rounded-mac"
           />
           <Input
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             placeholder="Target commit hash (optional — defaults to HEAD)"
             variant="surface-1"
-            className="text-xs px-2 py-1"
+            className="text-xs h-8 px-2.5 rounded-mac"
           />
           <Input
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Message (optional — creates annotated tag)"
             variant="surface-1"
-            className="text-xs px-2 py-1"
+            className="text-xs h-8 px-2.5 rounded-mac"
           />
-          <div className="flex gap-1.5">
+          <div className="flex gap-2 pt-1">
             <button
               onClick={handleCreate}
               disabled={!name.trim() || tagCreate.isPending}
-              className="flex-1 px-2 py-1 bg-accent text-accent-fg text-2xs font-medium rounded-mac disabled:opacity-40 hover:opacity-90 transition-opacity"
+              className="flex-1 h-7 bg-accent text-accent-fg text-2xs font-semibold rounded-mac disabled:opacity-40 hover:opacity-90 transition-opacity"
             >
               {tagCreate.isPending ? "Creating..." : "Create Tag"}
             </button>
             <button
               onClick={() => setShowCreate(false)}
-              className="px-2 py-1 text-2xs text-text-muted hover:text-text-primary border border-border rounded-mac"
+              className="h-7 px-3 text-2xs text-text-secondary hover:text-text-primary border border-border hover:bg-surface-2 rounded-mac"
             >
               Cancel
             </button>
@@ -127,67 +127,69 @@ export default function TagPanel({ onClose }: { onClose?: () => void }) {
       {/* Tag list */}
       <div className="flex-1 overflow-y-auto">
         {isLoading && (
-          <div className="text-xs text-text-muted text-center py-4">Loading tags...</div>
+          <div className="text-xs text-text-muted text-center py-6">Loading tags...</div>
         )}
         {!isLoading && (!tags || tags.length === 0) && (
-          <div className="text-xs text-text-muted text-center py-4">No tags</div>
+          <div className="text-xs text-text-muted text-center py-6">No tags found</div>
         )}
         {tags?.map((tag) => (
           <div
             key={tag.name}
-            className="px-3 py-1.5 border-b border-border hover:bg-surface-1 transition-colors"
+            className="px-4 py-3 border-b border-border-40 hover:bg-surface-1/30 transition-colors"
           >
-            <div className="flex items-start gap-2">
-              <Tag size={14} className="mt-0.5 shrink-0 text-[#ff9f0a]" />
+            <div className="flex items-start gap-2.5">
+              <Tag size={13} className="mt-0.5 shrink-0 text-[#ff9f0a]" />
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-medium text-text-primary truncate">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-xs font-semibold text-text-primary truncate">
                     {tag.name}
                   </span>
                   {tag.annotated && (
-                    <span className="text-2xs bg-accent/10 text-accent px-1 rounded">annotated</span>
+                    <span className="text-3xs bg-accent/10 text-accent font-semibold px-1 rounded-sm">annotated</span>
                   )}
                 </div>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <GitCommit size={9} className="text-text-muted shrink-0" />
-                  <span className="text-2xs font-mono text-text-muted">
-                    {tag.hash.slice(0, 7)}
+                <div className="flex items-center gap-2 mt-1 flex-wrap text-3xs text-text-muted">
+                  <span className="flex items-center gap-0.5">
+                    <GitCommit size={9} className="opacity-75" />
+                    <span className="font-mono font-semibold text-accent bg-accent/10 px-0.5 rounded-sm">
+                      {tag.hash.slice(0, 7)}
+                    </span>
                   </span>
                   {tag.author && (
-                    <>
-                      <User size={9} className="text-text-muted shrink-0" />
-                      <span className="text-2xs text-text-muted">{tag.author}</span>
-                    </>
+                    <span className="flex items-center gap-0.5">
+                      <User size={9} className="opacity-75" />
+                      <span className="truncate max-w-[80px]">{tag.author}</span>
+                    </span>
                   )}
                   {tag.date && (
-                    <>
-                      <Calendar size={9} className="text-text-muted shrink-0" />
-                      <span className="text-2xs text-text-muted">{formatDate(tag.date)}</span>
-                    </>
+                    <span className="flex items-center gap-0.5">
+                      <Calendar size={9} className="opacity-75" />
+                      <span>{formatDate(tag.date)}</span>
+                    </span>
                   )}
                 </div>
                 {tag.message && (
-                  <div className="text-2xs text-text-muted mt-0.5 truncate">{tag.message}</div>
+                  <div className="text-3xs text-text-secondary mt-1 italic truncate">{tag.message}</div>
                 )}
               </div>
-              <div className="flex items-center gap-0.5 shrink-0">
+              <div className="flex items-center gap-1 shrink-0">
                 <button
-                  className="ghost p-1 opacity-50 hover:opacity-100"
+                  className="ghost p-1 text-text-muted hover:text-text-primary"
                   title="Push tag"
                   onClick={() => handlePush(tag.name)}
                 >
                   <Upload size={12} />
                 </button>
                 {confirmDelete === tag.name ? (
-                  <div className="flex items-center gap-0.5">
+                  <div className="flex items-center gap-1">
                     <button
-                      className="px-1.5 py-0.5 bg-[#ff375f] text-white text-2xs rounded-mac"
+                      className="h-5 px-1.5 bg-[#ff453a] hover:bg-[#ff3b30] text-white text-3xs font-semibold rounded-mac transition-all"
                       onClick={() => handleDelete(tag.name)}
                     >
                       Confirm
                     </button>
                     <button
-                      className="px-1.5 py-0.5 text-2xs text-text-muted hover:text-text-primary"
+                      className="h-5 px-1.5 text-3xs text-text-secondary hover:text-text-primary"
                       onClick={() => setConfirmDelete(null)}
                     >
                       No
@@ -195,7 +197,7 @@ export default function TagPanel({ onClose }: { onClose?: () => void }) {
                   </div>
                 ) : (
                   <button
-                    className="ghost p-1 opacity-50 hover:opacity-100 hover:text-[#ff375f]"
+                    className="ghost p-1 text-text-muted hover:text-[#ff453a]"
                     title="Delete tag"
                     onClick={() => setConfirmDelete(tag.name)}
                   >

@@ -70,14 +70,14 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
   return (
     <div className="h-full flex flex-col bg-surface-0">
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border bg-surface-1">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-border-60 bg-surface-1/40 backdrop-blur-md">
         <Upload size={14} className="text-text-muted" />
-        <span className="text-xs font-medium text-text-primary flex-1">
+        <span className="text-xs font-semibold text-text-primary flex-1">
           Stashes ({stashes?.length ?? 0})
         </span>
         <button
           onClick={() => setShowPushForm(!showPushForm)}
-          className="ghost p-1"
+          className="ghost p-1 text-text-muted hover:text-text-primary"
           title="New Stash"
         >
           <Plus size={14} />
@@ -86,33 +86,33 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
 
       {/* Push form (collapsible) */}
       {showPushForm && (
-        <div className="px-3 py-2 border-b border-border space-y-1.5 bg-surface-1">
+        <div className="px-4 py-3.5 border-b border-border-60 space-y-2.5 bg-surface-1/30">
           <input
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Stash message (optional)"
-            className="w-full text-xs bg-surface-2 border border-border rounded-mac px-2 py-1 text-text-primary placeholder:text-text-muted outline-none focus:border-accent transition-colors"
+            className="w-full text-xs bg-surface-2 border border-border rounded-mac px-2.5 py-1.5 text-text-primary placeholder:text-text-muted outline-none focus:border-accent transition-colors"
           />
-          <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer">
+          <label className="flex items-center gap-2 text-2xs text-text-muted cursor-pointer font-medium select-none">
             <input
               type="checkbox"
               checked={includeUntracked}
               onChange={(e) => setIncludeUntracked(e.target.checked)}
-              className="rounded"
+              className="rounded border-border-40 text-accent focus:ring-accent bg-surface-2"
             />
-            Include untracked files
+            <span>Include untracked files</span>
           </label>
-          <div className="flex gap-1.5">
+          <div className="flex gap-2 pt-1">
             <button
               onClick={handlePush}
               disabled={stashPush.isPending}
-              className="flex-1 px-2 py-1 bg-accent text-accent-fg text-2xs font-medium rounded-mac disabled:opacity-40 hover:opacity-90 transition-opacity"
+              className="flex-1 h-7 bg-accent text-accent-fg text-2xs font-semibold rounded-mac disabled:opacity-40 hover:opacity-90 transition-opacity"
             >
-              {stashPush.isPending ? "Stashing..." : "Stash"}
+              {stashPush.isPending ? "Stashing..." : "Stash Changes"}
             </button>
             <button
               onClick={() => setShowPushForm(false)}
-              className="px-2 py-1 text-2xs text-text-muted hover:text-text-primary border border-border rounded-mac"
+              className="h-7 px-3 text-2xs text-text-secondary hover:text-text-primary border border-border hover:bg-surface-2 rounded-mac"
             >
               Cancel
             </button>
@@ -123,46 +123,46 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
       {/* Stash list */}
       <div className="flex-1 overflow-y-auto">
         {isLoading && (
-          <div className="text-xs text-text-muted text-center py-4">Loading stashes...</div>
+          <div className="text-xs text-text-muted text-center py-6">Loading stashes...</div>
         )}
         {!isLoading && (!stashes || stashes.length === 0) && (
-          <div className="text-xs text-text-muted text-center py-4">No stashes</div>
+          <div className="text-xs text-text-muted text-center py-6">No stashes found</div>
         )}
         {stashes?.map((stash) => {
           const { branch, label } = formatDate(stash.message);
           return (
             <div
               key={stash.index}
-              className="px-3 py-1.5 border-b border-border hover:bg-surface-1 transition-colors"
+              className="px-4 py-3 border-b border-border-40 hover:bg-surface-1/30 transition-colors"
             >
-              <div className="flex items-center gap-2">
-                <span className="w-[40px] shrink-0 text-2xs font-mono text-text-muted">
+              <div className="flex items-center gap-2.5">
+                <span className="w-[45px] shrink-0 text-3xs font-mono font-semibold text-accent bg-accent/10 px-1 py-0.5 rounded-sm">
                   stash@{stash.index}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs truncate text-text-primary">{label}</div>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    <GitBranch size={9} className="text-text-muted" />
-                    <span className="text-2xs text-text-muted truncate">{branch}</span>
+                  <div className="text-xs font-semibold text-text-primary truncate">{label}</div>
+                  <div className="flex items-center gap-1 mt-1 text-3xs text-text-muted">
+                    <GitBranch size={9} className="opacity-75" />
+                    <span className="truncate max-w-[120px]">{branch}</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-0.5 shrink-0">
+                <div className="flex items-center gap-1 shrink-0">
                   <button
-                    className="ghost p-1 opacity-50 hover:opacity-100"
+                    className="ghost p-1 text-text-muted hover:text-text-primary"
                     title="Pop (apply & drop)"
                     onClick={() => handlePop(stash.index)}
                   >
                     <Download size={12} />
                   </button>
                   <button
-                    className="ghost p-1 opacity-50 hover:opacity-100"
+                    className="ghost p-1 text-text-muted hover:text-text-primary"
                     title="Apply (keep stash)"
                     onClick={() => handleApply(stash.index)}
                   >
                     <Play size={12} />
                   </button>
                   <button
-                    className="ghost p-1 opacity-50 hover:opacity-100 hover:text-[#ff375f]"
+                    className="ghost p-1 text-text-muted hover:text-[#ff453a]"
                     title="Drop"
                     onClick={() => handleDrop(stash.index)}
                   >

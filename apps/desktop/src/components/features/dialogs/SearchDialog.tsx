@@ -4,7 +4,7 @@ import { useGitSearch } from "@/queries/useGitSearch";
 import type { SearchOptions } from "@/queries/useGitSearch";
 import { useGitBranches } from "@/queries/useGitLog";
 import { api } from "@/api/tauri";
-import { Search, X, GitCommit, Calendar, User, FileText, GitBranch, Sparkles, RefreshCw } from "lucide-react";
+import { Search, X, GitCommit, Calendar, User, FileText, GitBranch, Sparkles, RefreshCw, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/form";
 
 interface SearchDialogProps {
@@ -220,8 +220,8 @@ CRITICAL INSTRUCTIONS:
         const matchedHashes: string[] = JSON.parse(cleanJsonStr);
         if (Array.isArray(matchedHashes)) {
           const filtered = matchedHashes
-            .map(hash => commits.find(c => c.hash.startsWith(hash) || hash.startsWith(c.hash)))
-            .filter((c): c is NonNullable<typeof c> => !!c);
+              .map(hash => commits.find(c => c.hash.startsWith(hash) || hash.startsWith(c.hash)))
+              .filter((c): c is NonNullable<typeof c> => !!c);
           setSemanticResults(filtered);
         } else {
           throw new Error("AI did not return a valid array of hashes.");
@@ -246,172 +246,175 @@ CRITICAL INSTRUCTIONS:
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh] animate-in fade-in duration-200"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40" />
+      <div className="absolute inset-0 bg-[#000000]/45" />
 
       {/* Dialog */}
-      <div className="relative w-[640px] max-h-[60vh] bg-surface-0 border border-border rounded-mac shadow-xl flex flex-col overflow-hidden">
-        {/* Mode selector tabs */}
-        <div className="flex border-b border-border bg-surface-1 px-3">
-          <button
-            onClick={() => setSearchMode("standard")}
-            className={`px-3 py-1.5 text-xs font-semibold border-b-2 transition-all ${
-              searchMode === "standard"
-                ? "border-accent text-accent"
-                : "border-transparent text-text-muted hover:text-text-primary"
-            }`}
-          >
-            Standard Search
-          </button>
-          <button
-            onClick={() => setSearchMode("semantic")}
-            className={`px-3 py-1.5 text-xs font-semibold border-b-2 transition-all flex items-center gap-1.5 ${
-              searchMode === "semantic"
-                ? "border-accent text-accent"
-                : "border-transparent text-text-muted hover:text-text-primary"
-            }`}
-          >
-            <Sparkles size={11} className="text-accent" />
-            Semantic AI Search
+      <div className="relative w-[600px] max-h-[70vh] bg-surface-0 border border-border rounded-mac shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+        {/* Spotlight Header & Segmented Tabs */}
+        <div className="p-3 border-b border-border bg-surface-1/40 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Search size={15} className="text-accent shrink-0" />
+            <span className="text-xs font-semibold text-text-primary">Search Repository</span>
+          </div>
+          
+          {/* Segmented Control */}
+          <div className="grid grid-cols-2 p-0.5 rounded-mac bg-surface-2/60 border border-border-40/50 w-[240px]">
+            <button
+              onClick={() => setSearchMode("standard")}
+              className={`h-6 text-3xs font-semibold rounded-[5px] transition-all flex items-center justify-center ${
+                searchMode === "standard"
+                  ? "bg-surface-0 text-text-primary shadow-sm"
+                  : "text-text-muted hover:text-text-primary"
+              }`}
+            >
+              Standard Search
+            </button>
+            <button
+              onClick={() => setSearchMode("semantic")}
+              className={`h-6 text-3xs font-semibold rounded-[5px] transition-all flex items-center justify-center gap-1 ${
+                searchMode === "semantic"
+                  ? "bg-surface-0 text-text-primary shadow-sm"
+                  : "text-text-muted hover:text-text-primary"
+              }`}
+            >
+              <Sparkles size={10} className="text-accent" />
+              Semantic AI
+            </button>
+          </div>
+          
+          <button onClick={onClose} className="ghost p-1 text-text-muted hover:text-text-primary">
+            <X size={13} />
           </button>
         </div>
 
         {/* Filters / Query section */}
         {searchMode === "semantic" ? (
-          <form onSubmit={handleSemanticSearch} className="px-3 py-3 space-y-2 border-b border-border">
-            <div className="relative">
-              <Sparkles size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-accent" />
-              <Input
-                variant="surface-1"
-                value={semanticQuery}
-                onChange={(e) => setSemanticQuery(e.target.value)}
-                placeholder="Ask AI using natural language (e.g. Find where I fixed CORS yesterday)..."
-                className="h-8 pl-8 pr-20 text-xs placeholder:text-text-muted/60"
-              />
-              <button
-                type="submit"
-                disabled={loadingSemantic || !semanticQuery.trim()}
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-6 px-3 bg-accent text-accent-fg text-2xs font-medium rounded hover:opacity-95 disabled:opacity-40 transition-all flex items-center gap-1"
-              >
-                {loadingSemantic ? (
-                  <RefreshCw size={10} className="animate-spin text-accent-fg" />
-                ) : (
-                  <Search size={10} />
-                )}
-                <span>Search</span>
-              </button>
-            </div>
-            {semanticError && (
-              <div className="text-2xs text-[#ff375f] bg-[#ff375f]/5 p-2 border border-[#ff375f]/15 rounded-mac">
-                Error: {semanticError}
+          <div className="p-4 pb-3 space-y-3 bg-surface-0 border-b border-border-60">
+            <form onSubmit={handleSemanticSearch} className="space-y-2.5">
+              <div className="relative">
+                <Sparkles size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-accent animate-pulse" />
+                <Input
+                  variant="surface-1"
+                  value={semanticQuery}
+                  onChange={(e) => setSemanticQuery(e.target.value)}
+                  placeholder="Ask AI using natural language (e.g. Find where I fixed CORS yesterday)..."
+                  className="h-8 pl-8 pr-20 text-xs rounded-mac placeholder:text-text-muted/60"
+                />
+                <button
+                  type="submit"
+                  disabled={loadingSemantic || !semanticQuery.trim()}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-6 px-3 bg-accent text-accent-fg text-3xs font-semibold rounded hover:opacity-95 disabled:opacity-40 transition-all flex items-center gap-1"
+                >
+                  {loadingSemantic ? (
+                    <RefreshCw size={10} className="animate-spin text-accent-fg" />
+                  ) : (
+                    <Search size={10} />
+                  )}
+                  <span>Search</span>
+                </button>
               </div>
-            )}
-          </form>
+              {semanticError && (
+                <div className="text-2xs text-[#ff453a] bg-[#ff453a]/5 p-2.5 border border-[#ff453a]/15 rounded-mac">
+                  Error: {semanticError}
+                </div>
+              )}
+            </form>
+          </div>
         ) : (
-          <div className="px-3 py-2 space-y-1.5 border-b border-border">
-            {/* Query input — prominent */}
+          <div className="p-4 pb-3 space-y-3 bg-surface-0 border-b border-border-60">
+            {/* Query input — Spotlight style */}
             <div className="relative">
-              <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-text-muted" />
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
               <Input
                 ref={inputRef}
                 variant="surface-1"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search commit messages..."
-                className="h-8 pl-7 pr-7 text-sm"
+                placeholder="Type keywords to search commit messages..."
+                className="h-8 pl-8 pr-8 text-xs font-medium rounded-mac placeholder:text-text-muted/60"
               />
               {query && (
-                <button onClick={() => setQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 ghost p-0.5">
+                <button onClick={() => setQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 ghost p-0.5 text-text-muted hover:text-text-primary">
                   <X size={12} />
                 </button>
               )}
             </div>
 
-            {/* Filter row */}
-            <div className="flex gap-1.5 flex-wrap">
-              {/* Author */}
-              <div className="relative flex-1 min-w-[120px]">
-                <User size={10} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-text-muted" />
-                <Input
-                  variant="surface-1"
-                  value={author}
-                  onChange={(e) => setAuthor(e.target.value)}
-                  placeholder="Author"
-                  className="h-6 pl-5 pr-1 text-2xs"
-                />
+            {/* Filter Grid Card */}
+            <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3 space-y-2.5">
+              <div className="grid grid-cols-2 gap-2.5">
+                {/* Author */}
+                <div className="relative">
+                  <User size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
+                  <Input
+                    variant="surface-1"
+                    value={author}
+                    onChange={(e) => setAuthor(e.target.value)}
+                    placeholder="Author name"
+                    className="h-7 pl-7 pr-2 text-2xs rounded-[5px]"
+                  />
+                </div>
+                {/* Branch Selector with Chevron */}
+                <div className="relative">
+                  <GitBranch size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
+                  <select
+                    value={branch}
+                    onChange={(e) => setBranch(e.target.value)}
+                    className="w-full h-7 pl-7 pr-7 text-2xs bg-surface-2/40 border border-border-40 hover:border-border rounded-[5px] text-text-primary outline-none focus:border-accent appearance-none cursor-pointer font-medium transition-colors"
+                  >
+                    <option value="">All branches</option>
+                    {branches?.map((b) => (
+                      <option key={b.name} value={b.name}>{b.name}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={11} strokeWidth={2.5} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted" />
+                </div>
               </div>
-              {/* Branch selector */}
-              <div className="relative flex-1 min-w-[100px]">
-                <GitBranch size={10} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-text-muted" />
-                <select
-                  value={branch}
-                  onChange={(e) => setBranch(e.target.value)}
-                  className="w-full h-6 pl-5 pr-1 text-2xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer"
-                >
-                  <option value="">All branches</option>
-                  {branches?.map((b) => (
-                    <option key={b.name} value={b.name}>{b.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
 
-            <div className="flex gap-1.5 flex-wrap">
-              {/* File path */}
-              <div className="relative flex-[2] min-w-[150px]">
-                <FileText size={10} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-text-muted" />
-                <Input
-                  variant="surface-1"
-                  value={file}
-                  onChange={(e) => setFile(e.target.value)}
-                  placeholder="File path"
-                  className="h-6 pl-5 pr-1 text-2xs"
-                />
-              </div>
-              {/* Since date */}
-              <div className="relative flex-1 min-w-[100px]">
-                <Calendar size={10} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-text-muted" />
-                <Input
-                  variant="surface-1"
-                  type="date"
-                  value={since}
-                  onChange={(e) => setSince(e.target.value)}
-                  className="h-6 pl-5 pr-1 text-2xs [color-scheme:dark]"
-                />
-              </div>
-              {/* Until date */}
-              <div className="relative flex-1 min-w-[100px]">
-                <Calendar size={10} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-text-muted" />
-                <Input
-                  variant="surface-1"
-                  type="date"
-                  value={until}
-                  onChange={(e) => setUntil(e.target.value)}
-                  className="h-6 pl-5 pr-1 text-2xs [color-scheme:dark]"
-                />
-              </div>
-              {/* Max results */}
-              <div className="flex-1 min-w-[60px]">
-                <Input
-                  variant="surface-1"
-                  type="number"
-                  value={maxCount}
-                  onChange={(e) => setMaxCount(Number(e.target.value))}
-                  placeholder="Max"
-                  min={1}
-                  max={500}
-                  className="h-6 px-1.5 text-2xs"
-                />
+              <div className="grid grid-cols-4 gap-2">
+                {/* File path */}
+                <div className="relative col-span-2">
+                  <FileText size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
+                  <Input
+                    variant="surface-1"
+                    value={file}
+                    onChange={(e) => setFile(e.target.value)}
+                    placeholder="File path filter"
+                    className="h-7 pl-7 pr-2 text-2xs rounded-[5px]"
+                  />
+                </div>
+                {/* Date range inputs */}
+                <div className="relative col-span-1">
+                  <Input
+                    variant="surface-1"
+                    type="date"
+                    value={since}
+                    onChange={(e) => setSince(e.target.value)}
+                    className="h-7 px-1.5 text-2xs rounded-[5px] [color-scheme:dark]"
+                    title="Since date"
+                  />
+                </div>
+                <div className="relative col-span-1">
+                  <Input
+                    variant="surface-1"
+                    type="date"
+                    value={until}
+                    onChange={(e) => setUntil(e.target.value)}
+                    className="h-7 px-1.5 text-2xs rounded-[5px] [color-scheme:dark]"
+                    title="Until date"
+                  />
+                </div>
               </div>
             </div>
           </div>
         )}
 
         {/* Results list */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto p-3 space-y-1 bg-surface-0">
           {searchMode === "semantic" ? (
             <>
               {loadingSemantic && (
@@ -423,23 +426,23 @@ CRITICAL INSTRUCTIONS:
               {!loadingSemantic && semanticResults.length === 0 && !semanticError && (
                 <div className="text-xs text-text-muted text-center py-12 flex flex-col items-center justify-center space-y-1">
                   <Sparkles size={16} className="text-text-muted/40 mb-1" />
-                  <span>No semantic search results yet.</span>
+                  <span className="font-semibold text-text-primary">No Semantic Results Yet</span>
                   <span className="text-3xs opacity-60">Try: "Find where I fixed CORS yesterday" or "When was reqwest added?"</span>
                 </div>
               )}
               {!loadingSemantic && semanticResults.map((commit) => (
                 <div
                   key={commit.hash}
-                  className="flex items-start gap-2 px-3 py-1.5 border-b border-border hover:bg-surface-1 transition-colors cursor-pointer"
+                  className="flex items-start gap-3 px-3 py-2 rounded-mac hover:bg-surface-1/50 transition-colors cursor-pointer group"
                 >
-                  <GitCommit size={14} className="mt-0.5 shrink-0 text-accent" />
+                  <GitCommit size={14} className="mt-0.5 shrink-0 text-accent opacity-75 group-hover:opacity-100 transition-opacity" />
                   <div className="min-w-0 flex-1">
-                    <div className="text-xs text-text-primary truncate">{commit.message}</div>
+                    <div className="text-xs font-medium text-text-primary truncate">{commit.message}</div>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-2xs font-mono text-text-muted">
+                      <span className="text-2xs font-mono text-accent bg-accent/10 px-1 py-0.5 rounded-sm font-semibold">
                         {commit.hash.slice(0, 7)}
                       </span>
-                      <span className="text-2xs text-text-muted">{commit.author}</span>
+                      <span className="text-2xs text-text-muted font-medium">{commit.author}</span>
                       <span className="text-2xs text-text-muted">{formatDate(commit.date)}</span>
                     </div>
                   </div>
@@ -449,27 +452,30 @@ CRITICAL INSTRUCTIONS:
           ) : (
             <>
               {isLoading && (
-                <div className="text-xs text-text-muted text-center py-6">Searching...</div>
+                <div className="text-xs text-text-muted text-center py-8 flex flex-col items-center justify-center space-y-2">
+                  <RefreshCw size={16} className="animate-spin text-accent" />
+                  <span>Searching database...</span>
+                </div>
               )}
               {!isLoading && results && results.length === 0 && (
-                <div className="text-xs text-text-muted text-center py-6">No matching commits</div>
+                <div className="text-xs text-text-muted text-center py-8">No matching commits found.</div>
               )}
               {results?.map((commit) => (
                 <div
                   key={commit.hash}
-                  className="flex items-start gap-2 px-3 py-1.5 border-b border-border hover:bg-surface-1 transition-colors cursor-pointer"
+                  className="flex items-start gap-3 px-3 py-2 rounded-mac hover:bg-surface-1/50 transition-colors cursor-pointer group"
                 >
-                  <GitCommit size={14} className="mt-0.5 shrink-0 text-text-muted" />
+                  <GitCommit size={14} className="mt-0.5 shrink-0 text-text-muted group-hover:text-accent transition-colors" />
                   <div className="min-w-0 flex-1">
-                    <div className="text-xs text-text-primary truncate">{commit.message}</div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-2xs font-mono text-text-muted">
+                    <div className="text-xs font-medium text-text-primary truncate">{commit.message}</div>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <span className="text-2xs font-mono text-accent bg-accent/10 px-1 py-0.5 rounded-sm font-semibold">
                         {commit.hash.slice(0, 7)}
                       </span>
-                      <span className="text-2xs text-text-muted">{commit.author}</span>
+                      <span className="text-2xs text-text-muted font-medium">{commit.author}</span>
                       <span className="text-2xs text-text-muted">{formatDate(commit.date)}</span>
                       {commit.refs?.length > 0 && (
-                        <span className="text-2xs text-[#30d158]">
+                        <span className="text-2xs text-[#30d158] font-semibold bg-[#30d158]/10 px-1 rounded-sm">
                           {commit.refs.map((r) => r.name).join(", ")}
                         </span>
                       )}
@@ -482,15 +488,15 @@ CRITICAL INSTRUCTIONS:
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-3 py-1.5 border-t border-border bg-surface-1">
-          <span className="text-2xs text-text-muted">
+        <div className="flex items-center justify-between px-4 py-2.5 border-t border-border-60 bg-surface-1">
+          <span className="text-2xs text-text-muted font-medium">
             {searchMode === "semantic"
               ? `${semanticResults.length} semantic result(s)`
-              : results?.length ? `${results.length} result(s)` : "Enter filters to search"
+              : results?.length ? `${results.length} result(s) found` : "Enter criteria to begin search"
             }
           </span>
-          <button onClick={onClose} className="text-2xs text-text-muted hover:text-text-primary transition-colors">
-            Esc to close
+          <button onClick={onClose} className="h-7 px-3 text-2xs text-text-secondary hover:text-text-primary border border-border hover:bg-surface-2 rounded-mac transition-all" title="Close (Esc)">
+            Close
           </button>
         </div>
       </div>

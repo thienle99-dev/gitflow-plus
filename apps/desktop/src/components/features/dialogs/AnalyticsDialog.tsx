@@ -250,23 +250,26 @@ export default function AnalyticsDialog({ open, onClose }: AnalyticsDialogProps)
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/45"
+      className="fixed inset-0 z-50 flex items-center justify-center p-6 animate-in fade-in duration-200"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="relative w-[780px] max-h-[85vh] bg-surface-0 border border-border rounded-mac shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-[#000000]/45" />
+
+      <div className="relative w-[740px] max-h-[85vh] bg-surface-0 border border-border rounded-mac shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="px-4 py-3 border-b border-border flex items-center justify-between bg-surface-1">
+        <div className="px-4 py-3 border-b border-border-60 flex items-center justify-between bg-surface-1/40 backdrop-blur-md">
           <div className="flex items-center gap-2 text-text-primary">
             <BarChart3 size={16} className="text-accent" />
             <h3 className="text-sm font-semibold">Git Activity Analytics</h3>
           </div>
-          <button onClick={onClose} className="text-text-muted hover:text-text-primary p-1 rounded-mac hover:bg-surface-3 transition-colors">
+          <button onClick={onClose} className="ghost p-1 text-text-muted hover:text-text-primary">
             <X size={14} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-5 bg-surface-0">
+        <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-surface-0">
           {loading ? (
             <div className="flex flex-col items-center justify-center h-48 space-y-2 text-text-muted">
               <RefreshCw size={24} className="animate-spin text-accent" />
@@ -284,58 +287,58 @@ export default function AnalyticsDialog({ open, onClose }: AnalyticsDialogProps)
             <>
               {/* Summary Cards */}
               <div className="grid grid-cols-4 gap-3">
-                <div className="p-3 bg-surface-1 border border-border rounded-mac space-y-1">
+                <div className="p-3.5 bg-surface-1/30 border border-border-40 rounded-mac space-y-1">
                   <div className="text-3xs text-text-muted font-bold uppercase tracking-wider">Total Commits</div>
-                  <div className="text-xl font-bold text-text-primary flex items-center gap-1.5">
-                    <GitCommit size={16} className="text-accent" />
+                  <div className="text-lg font-bold text-text-primary flex items-center gap-1.5">
+                    <GitCommit size={14} className="text-accent" />
                     <span>{stats.totalCommits}</span>
                   </div>
                 </div>
 
-                <div className="p-3 bg-surface-1 border border-border rounded-mac space-y-1">
+                <div className="p-3.5 bg-surface-1/30 border border-border-40 rounded-mac space-y-1">
                   <div className="text-3xs text-text-muted font-bold uppercase tracking-wider">Conventional Commits</div>
-                  <div className="text-xl font-bold text-text-primary flex items-center gap-1.5">
-                    <CheckCircle size={16} className="text-[#30d158]" />
+                  <div className="text-lg font-bold text-text-primary flex items-center gap-1.5">
+                    <CheckCircle size={14} className="text-[#30d158]" />
                     <span>{stats.conventionalCount}</span>
                   </div>
                 </div>
 
-                <div className="p-3 bg-surface-1 border border-border rounded-mac space-y-1">
+                <div className="p-3.5 bg-surface-1/30 border border-border-40 rounded-mac space-y-1">
                   <div className="text-3xs text-text-muted font-bold uppercase tracking-wider">Conventional Ratio</div>
-                  <div className="text-xl font-bold text-text-primary flex items-center justify-between">
+                  <div className="text-lg font-bold text-text-primary flex items-center justify-between">
                     <span>{Math.round(stats.conventionalRatio * 100)}%</span>
                   </div>
                 </div>
 
-                <div className="p-3 bg-surface-1 border border-border rounded-mac space-y-1 flex items-center justify-between">
+                <div className="p-3.5 bg-surface-1/30 border border-border-40 rounded-mac space-y-1 flex items-center justify-between">
                   <div className="space-y-1">
                     <div className="text-3xs text-text-muted font-bold uppercase tracking-wider">Repo Health Grade</div>
-                    <div className={`text-xl font-black ${stats.gradeColor}`}>{stats.grade}</div>
+                    <div className={`text-lg font-black ${stats.gradeColor}`}>{stats.grade}</div>
                   </div>
-                  <Award size={22} className={`${stats.gradeColor} opacity-80`} />
+                  <Award size={20} className={`${stats.gradeColor} opacity-80`} />
                 </div>
               </div>
 
               {/* Main charts section */}
               <div className="grid grid-cols-2 gap-4">
                 {/* Timeline chart */}
-                <div className="p-4 bg-surface-1 border border-border rounded-mac space-y-3">
+                <div className="p-4 bg-surface-1/30 border border-border-40 rounded-mac space-y-3">
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
                     <Calendar size={13} className="text-accent" />
                     <span>Weekly Commit Frequency</span>
                   </div>
-                  <div className="flex items-center justify-center bg-surface-0 border border-border/40 rounded px-2 py-3">
+                  <div className="flex items-center justify-center bg-surface-0 border border-border-40/60 rounded-mac px-2 py-3">
                     <canvas ref={timelineCanvasRef} className="w-full h-40" />
                   </div>
                 </div>
 
                 {/* Donut conventional charts */}
-                <div className="p-4 bg-surface-1 border border-border rounded-mac space-y-3">
+                <div className="p-4 bg-surface-1/30 border border-border-40 rounded-mac space-y-3">
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
                     <BarChart3 size={13} className="text-[#30d158]" />
                     <span>Commit Types Distribution</span>
                   </div>
-                  <div className="flex gap-4 items-center bg-surface-0 border border-border/40 rounded p-3 h-40">
+                  <div className="flex gap-4 items-center bg-surface-0 border border-border-40/60 rounded-mac p-3 h-40">
                     <canvas ref={typeCanvasRef} className="w-[120px] h-[120px] shrink-0" />
                     <div className="flex-1 text-2xs space-y-1.5 max-h-[130px] overflow-y-auto pr-1">
                       {Object.entries(stats.typeCounts)
@@ -367,22 +370,22 @@ export default function AnalyticsDialog({ open, onClose }: AnalyticsDialogProps)
               </div>
 
               {/* Contributors Grid */}
-              <div className="p-4 bg-surface-1 border border-border rounded-mac space-y-3">
+              <div className="p-4 bg-surface-1/30 border border-border-40 rounded-mac space-y-3">
                 <h4 className="text-xs font-semibold text-text-primary">Top Contributors (Latest 300 Commits)</h4>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {stats.topAuthors.map(([author, count], idx) => {
                     const ratio = count / stats.totalCommits;
                     return (
                       <div key={author} className="space-y-1">
                         <div className="flex justify-between text-2xs">
-                          <span className="text-text-primary font-medium">
+                          <span className="text-text-primary font-semibold">
                             {idx + 1}. {author}
                           </span>
-                          <span className="font-mono text-text-muted">
+                          <span className="font-mono text-text-muted font-medium">
                             {count} commits ({Math.round(ratio * 100)}%)
                           </span>
                         </div>
-                        <div className="h-2 w-full bg-surface-0 border border-border/40 rounded-full overflow-hidden">
+                        <div className="h-2 w-full bg-surface-2 border border-border-40/60 rounded-full overflow-hidden">
                           <div
                             className="h-full bg-accent rounded-full transition-all duration-300"
                             style={{ width: `${ratio * 100}%` }}
@@ -398,10 +401,10 @@ export default function AnalyticsDialog({ open, onClose }: AnalyticsDialogProps)
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-2 border-t border-border bg-surface-1 flex justify-end">
+        <div className="px-4 py-2.5 border-t border-border-60 bg-surface-1 flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-1 bg-accent text-accent-fg text-2xs font-semibold rounded-mac hover:opacity-90 transition-opacity"
+            className="h-8 px-4 bg-accent text-accent-fg text-xs font-semibold rounded-mac hover:opacity-90 transition-opacity min-w-[64px]"
           >
             Close
           </button>
