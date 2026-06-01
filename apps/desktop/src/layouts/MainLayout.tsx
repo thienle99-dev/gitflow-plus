@@ -12,6 +12,8 @@ import CommitGraph from "@/components/features/graph/CommitGraph";
 import RightPanel from "@/components/layout/RightPanel";
 import BottomBar from "@/components/layout/BottomBar";
 import { SearchDialog, KeyboardShortcutsModal, CherryPickDialog, SettingsDialog, AnalyticsDialog, CreateBranchDialog } from "@/components/features/dialogs";
+import ErrorBoundary from "@/components/ui/feedback/ErrorBoundary";
+import { AlertOctagon, RefreshCw } from "lucide-react";
 
 export default function MainLayout() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
@@ -187,6 +189,29 @@ export default function MainLayout() {
     analytics: <AnalyticsDialog open={true} onClose={closeDialog} />,
   };
 
+function InlineErrorFallback({ name }: { name: string }) {
+  return (
+    <div className="h-full w-full flex flex-col items-center justify-center p-4 bg-surface-1 text-center space-y-2 border border-dashed border-border select-none animate-in fade-in duration-200">
+      <div className="w-8 h-8 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-[#ff453a] shrink-0">
+        <AlertOctagon size={16} />
+      </div>
+      <div className="space-y-0.5">
+        <h4 className="text-2xs font-semibold text-text-primary">{name} crashed</h4>
+        <p className="text-3xs text-text-muted max-w-[200px] leading-normal mx-auto">
+          An error occurred in this panel. You can reload the app to restore it.
+        </p>
+      </div>
+      <button
+        onClick={() => window.location.reload()}
+        className="h-6 px-2.5 bg-surface-3 hover:bg-surface-4 text-text-primary rounded text-3xs font-semibold flex items-center gap-1 transition-all shadow-2xs mt-1 cursor-pointer"
+      >
+        <RefreshCw size={10} />
+        <span>Reload</span>
+      </button>
+    </div>
+  );
+}
+
   return (
     <div className="h-full min-h-0 flex flex-col">
       <Toolbar />
@@ -196,7 +221,9 @@ export default function MainLayout() {
             <>
               <Panel defaultSize={20} minSize={15} maxSize={35} className="min-h-0">
                 <div className="vibrancy h-full border-r border-border overflow-hidden">
-                  <Sidebar />
+                  <ErrorBoundary fallback={<InlineErrorFallback name="Sidebar" />}>
+                    <Sidebar />
+                  </ErrorBoundary>
                 </div>
               </Panel>
               <PanelResizeHandle className="w-[3px] bg-transparent hover:bg-accent transition-colors cursor-col-resize" />
@@ -204,13 +231,17 @@ export default function MainLayout() {
           )}
           <Panel defaultSize={sidebarOpen ? 50 : 70} minSize={30} className="min-h-0">
             <div className="h-full min-h-0 overflow-hidden bg-surface-0">
-              <CommitGraph />
+              <ErrorBoundary fallback={<InlineErrorFallback name="Commit Graph" />}>
+                <CommitGraph />
+              </ErrorBoundary>
             </div>
           </Panel>
           <PanelResizeHandle className="w-[3px] bg-transparent hover:bg-accent transition-colors cursor-col-resize" />
           <Panel defaultSize={30} minSize={20} maxSize={45} className="min-h-0">
             <div className="h-full min-h-0 overflow-hidden">
-              <RightPanel />
+              <ErrorBoundary fallback={<InlineErrorFallback name="Details Panel" />}>
+                <RightPanel />
+              </ErrorBoundary>
             </div>
           </Panel>
         </PanelGroup>

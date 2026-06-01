@@ -1,7 +1,7 @@
-use std::process::Command;
+use tokio::process::Command;
 
 #[tauri::command]
-pub fn git_pull(
+pub async fn git_pull(
     path: String,
     remote: Option<String>,
     branch: Option<String>,
@@ -23,6 +23,7 @@ pub fn git_pull(
     let output = Command::new("git")
         .args(&args)
         .output()
+        .await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if output.status.success() {
@@ -35,7 +36,7 @@ pub fn git_pull(
 }
 
 #[tauri::command]
-pub fn git_push(
+pub async fn git_push(
     path: String,
     remote: Option<String>,
     branch: Option<String>,
@@ -57,6 +58,7 @@ pub fn git_push(
     let output = Command::new("git")
         .args(&args)
         .output()
+        .await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if output.status.success() {
@@ -69,7 +71,7 @@ pub fn git_push(
 }
 
 #[tauri::command]
-pub fn git_fetch(path: String, remote: Option<String>) -> Result<String, String> {
+pub async fn git_fetch(path: String, remote: Option<String>) -> Result<String, String> {
     let mut args = vec![
         "--no-pager".to_string(),
         "-C".to_string(),
@@ -85,6 +87,7 @@ pub fn git_fetch(path: String, remote: Option<String>) -> Result<String, String>
     let output = Command::new("git")
         .args(&args)
         .output()
+        .await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if output.status.success() {
@@ -103,7 +106,7 @@ pub struct SyncStatus {
 }
 
 #[tauri::command]
-pub fn get_sync_status(path: String) -> Result<SyncStatus, String> {
+pub async fn get_sync_status(path: String) -> Result<SyncStatus, String> {
     let output = Command::new("git")
         .args([
             "--no-pager",
@@ -115,6 +118,7 @@ pub fn get_sync_status(path: String) -> Result<SyncStatus, String> {
             "HEAD...@{u}",
         ])
         .output()
+        .await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if !output.status.success() {

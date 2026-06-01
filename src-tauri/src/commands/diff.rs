@@ -1,5 +1,7 @@
 use std::io::Write;
-use tokio::process::{Command, Stdio};
+use std::process::Stdio;
+use tokio::io::AsyncWriteExt;
+use tokio::process::Command;
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct CommitFileChange {
@@ -9,7 +11,7 @@ pub struct CommitFileChange {
 }
 
 #[tauri::command]
-pub fn file_diff(path: String, file_path: String, context: Option<u32>) -> Result<String, String> {
+pub async fn file_diff(path: String, file_path: String, context: Option<u32>) -> Result<String, String> {
     let context_arg = format!("-U{}", context.unwrap_or(3));
     let output = Command::new("git")
         .args([
@@ -21,7 +23,7 @@ pub fn file_diff(path: String, file_path: String, context: Option<u32>) -> Resul
             "--no-color",
             &file_path,
         ])
-        .output()
+        .output().await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if output.status.success() {
@@ -34,7 +36,7 @@ pub fn file_diff(path: String, file_path: String, context: Option<u32>) -> Resul
 }
 
 #[tauri::command]
-pub fn commit_diff(
+pub async fn commit_diff(
     path: String,
     commit_hash: String,
     file_path: Option<String>,
@@ -60,7 +62,7 @@ pub fn commit_diff(
 
     let output = Command::new("git")
         .args(&args)
-        .output()
+        .output().await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if output.status.success() {
@@ -73,7 +75,7 @@ pub fn commit_diff(
 }
 
 #[tauri::command]
-pub fn commit_changed_files(
+pub async fn commit_changed_files(
     path: String,
     commit_hash: String,
 ) -> Result<Vec<CommitFileChange>, String> {
@@ -90,7 +92,7 @@ pub fn commit_changed_files(
             "--find-renames",
             &commit_hash,
         ])
-        .output()
+        .output().await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if !output.status.success() {
@@ -141,7 +143,7 @@ fn parse_name_status_line(line: &str) -> Option<CommitFileChange> {
 }
 
 #[tauri::command]
-pub fn staged_diff(
+pub async fn staged_diff(
     path: String,
     file_path: Option<String>,
     context: Option<u32>,
@@ -164,7 +166,7 @@ pub fn staged_diff(
 
     let output = Command::new("git")
         .args(&args)
-        .output()
+        .output().await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if output.status.success() {
@@ -177,7 +179,7 @@ pub fn staged_diff(
 }
 
 #[tauri::command]
-pub fn apply_diff_hunk(path: String, patch: String, action: String) -> Result<String, String> {
+pub async fn apply_diff_hunk(path: String, patch: String, action: String) -> Result<String, String> {
     let mut args = vec![
         "--no-pager",
         "-C",
@@ -212,11 +214,13 @@ pub fn apply_diff_hunk(path: String, patch: String, action: String) -> Result<St
     if let Some(stdin) = child.stdin.as_mut() {
         stdin
             .write_all(patch.as_bytes())
+            .await
             .map_err(|e| format!("Failed to write patch: {}", e))?;
     }
 
     let output = child
         .wait_with_output()
+        .await
         .map_err(|e| format!("Failed to wait for git apply: {}", e))?;
 
     if output.status.success() {

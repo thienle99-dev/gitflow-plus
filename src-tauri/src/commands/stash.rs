@@ -8,7 +8,7 @@ pub struct StashEntry {
     pub branch: String,
 }
 
-pub fn git_stash_list(path: &str) -> Result<Vec<StashEntry>, String> {
+pub async fn git_stash_list(path: &str) -> Result<Vec<StashEntry>, String> {
     let output = Command::new("git")
         .args([
             "--no-pager",
@@ -19,6 +19,7 @@ pub fn git_stash_list(path: &str) -> Result<Vec<StashEntry>, String> {
             "--pretty=format:%gd|%gs|%an",
         ])
         .output()
+        .await
         .map_err(|e| format!("Failed to list stashes: {}", e))?;
 
     if !output.status.success() {
@@ -57,7 +58,7 @@ pub fn git_stash_list(path: &str) -> Result<Vec<StashEntry>, String> {
     Ok(entries)
 }
 
-pub fn git_stash_push(
+pub async fn git_stash_push(
     path: &str,
     message: Option<&str>,
     include_untracked: bool,
@@ -74,6 +75,7 @@ pub fn git_stash_push(
     let output = Command::new("git")
         .args(&args)
         .output()
+        .await
         .map_err(|e| format!("Failed to stash: {}", e))?;
 
     if output.status.success() {
@@ -84,7 +86,7 @@ pub fn git_stash_push(
     }
 }
 
-pub fn git_stash_pop(path: &str, index: Option<u32>) -> Result<String, String> {
+pub async fn git_stash_pop(path: &str, index: Option<u32>) -> Result<String, String> {
     let stash_ref = index.map(|idx| format!("stash@{{{}}}", idx));
     let mut args = vec!["--no-pager", "-C", path, "stash", "pop"];
     if let Some(ref s) = stash_ref {
@@ -94,6 +96,7 @@ pub fn git_stash_pop(path: &str, index: Option<u32>) -> Result<String, String> {
     let output = Command::new("git")
         .args(&args)
         .output()
+        .await
         .map_err(|e| format!("Failed to pop stash: {}", e))?;
 
     if output.status.success() {
@@ -103,7 +106,7 @@ pub fn git_stash_pop(path: &str, index: Option<u32>) -> Result<String, String> {
     }
 }
 
-pub fn git_stash_apply(path: &str, index: Option<u32>) -> Result<String, String> {
+pub async fn git_stash_apply(path: &str, index: Option<u32>) -> Result<String, String> {
     let stash_ref = index.map(|idx| format!("stash@{{{}}}", idx));
     let mut args = vec!["--no-pager", "-C", path, "stash", "apply"];
     if let Some(ref s) = stash_ref {
@@ -113,6 +116,7 @@ pub fn git_stash_apply(path: &str, index: Option<u32>) -> Result<String, String>
     let output = Command::new("git")
         .args(&args)
         .output()
+        .await
         .map_err(|e| format!("Failed to apply stash: {}", e))?;
 
     if output.status.success() {
@@ -122,7 +126,7 @@ pub fn git_stash_apply(path: &str, index: Option<u32>) -> Result<String, String>
     }
 }
 
-pub fn git_stash_drop(path: &str, index: Option<u32>) -> Result<String, String> {
+pub async fn git_stash_drop(path: &str, index: Option<u32>) -> Result<String, String> {
     let stash_ref = index.map(|idx| format!("stash@{{{}}}", idx));
     let mut args = vec!["--no-pager", "-C", path, "stash", "drop"];
     if let Some(ref s) = stash_ref {
@@ -132,6 +136,7 @@ pub fn git_stash_drop(path: &str, index: Option<u32>) -> Result<String, String> 
     let output = Command::new("git")
         .args(&args)
         .output()
+        .await
         .map_err(|e| format!("Failed to drop stash: {}", e))?;
 
     if output.status.success() {
@@ -143,12 +148,12 @@ pub fn git_stash_drop(path: &str, index: Option<u32>) -> Result<String, String> 
 
 // Tauri commands
 #[tauri::command]
-pub fn stash_list(path: String) -> Result<Vec<StashEntry>, String> {
-    git_stash_list(&path)
+pub async fn stash_list(path: String) -> Result<Vec<StashEntry>, String> {
+    git_stash_list(&path).await
 }
 
 #[tauri::command]
-pub fn stash_push(
+pub async fn stash_push(
     path: String,
     message: Option<String>,
     include_untracked: Option<bool>,
@@ -158,19 +163,20 @@ pub fn stash_push(
         message.as_deref(),
         include_untracked.unwrap_or(false),
     )
+    .await
 }
 
 #[tauri::command]
-pub fn stash_pop(path: String, index: Option<u32>) -> Result<String, String> {
-    git_stash_pop(&path, index)
+pub async fn stash_pop(path: String, index: Option<u32>) -> Result<String, String> {
+    git_stash_pop(&path, index).await
 }
 
 #[tauri::command]
-pub fn stash_apply(path: String, index: Option<u32>) -> Result<String, String> {
-    git_stash_apply(&path, index)
+pub async fn stash_apply(path: String, index: Option<u32>) -> Result<String, String> {
+    git_stash_apply(&path, index).await
 }
 
 #[tauri::command]
-pub fn stash_drop(path: String, index: Option<u32>) -> Result<String, String> {
-    git_stash_drop(&path, index)
+pub async fn stash_drop(path: String, index: Option<u32>) -> Result<String, String> {
+    git_stash_drop(&path, index).await
 }

@@ -1,5 +1,5 @@
 use serde::Serialize;
-use std::process::Command;
+use tokio::process::Command;
 
 #[derive(Serialize)]
 pub struct BlameLine {
@@ -10,7 +10,7 @@ pub struct BlameLine {
     pub content: String,
 }
 
-pub fn git_blame(path: &str, file_path: &str) -> Result<Vec<BlameLine>, String> {
+pub async fn git_blame(path: &str, file_path: &str) -> Result<Vec<BlameLine>, String> {
     let output = Command::new("git")
         .args([
             "--no-pager",
@@ -22,6 +22,7 @@ pub fn git_blame(path: &str, file_path: &str) -> Result<Vec<BlameLine>, String> 
             file_path,
         ])
         .output()
+        .await
         .map_err(|e| format!("Failed to blame file: {}", e))?;
 
     if !output.status.success() {
@@ -88,6 +89,6 @@ pub fn git_blame(path: &str, file_path: &str) -> Result<Vec<BlameLine>, String> 
 }
 
 #[tauri::command]
-pub fn file_blame(path: String, file_path: String) -> Result<Vec<BlameLine>, String> {
-    git_blame(&path, &file_path)
+pub async fn file_blame(path: String, file_path: String) -> Result<Vec<BlameLine>, String> {
+    git_blame(&path, &file_path).await
 }

@@ -37,7 +37,7 @@ export function ErrorToast({ error, onDismiss, onRetry }: ErrorToastProps) {
           <div className="flex items-center gap-1 shrink-0">
             {error.retryable && onRetry && (
               <button
-                className="ghost p-1 hover:bg-surface-2/50"
+                className="ghost p-1 hover:bg-surface-2-50"
                 onClick={() => { onRetry(); onDismiss(error.key); }}
                 title="Retry"
               >
@@ -45,7 +45,7 @@ export function ErrorToast({ error, onDismiss, onRetry }: ErrorToastProps) {
               </button>
             )}
             <button
-              className="ghost p-1 hover:bg-surface-2/50"
+              className="ghost p-1 hover:bg-surface-2-50"
               onClick={() => onDismiss(error.key)}
               title="Dismiss"
             >

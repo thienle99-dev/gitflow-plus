@@ -1,6 +1,6 @@
 use crate::commands::log::Commit;
 use serde::Serialize;
-use std::process::Command;
+use tokio::process::Command;
 
 #[derive(Serialize)]
 pub struct SearchOptions {
@@ -13,7 +13,7 @@ pub struct SearchOptions {
     pub branch: Option<String>,
 }
 
-pub fn git_log_search(path: &str, opts: &SearchOptions) -> Result<Vec<Commit>, String> {
+pub async fn git_log_search(path: &str, opts: &SearchOptions) -> Result<Vec<Commit>, String> {
     let mut args = vec![
         "--no-pager",
         "-C",
@@ -75,6 +75,7 @@ pub fn git_log_search(path: &str, opts: &SearchOptions) -> Result<Vec<Commit>, S
     let output = Command::new("git")
         .args(&args)
         .output()
+        .await
         .map_err(|e| format!("Failed to search git log: {}", e))?;
 
     if !output.status.success() {
@@ -111,7 +112,7 @@ pub fn git_log_search(path: &str, opts: &SearchOptions) -> Result<Vec<Commit>, S
 }
 
 #[tauri::command]
-pub fn search_commits(
+pub async fn search_commits(
     path: String,
     query: Option<String>,
     author: Option<String>,
@@ -130,5 +131,5 @@ pub fn search_commits(
         max_count,
         branch,
     };
-    git_log_search(&path, &opts)
+    git_log_search(&path, &opts).await
 }

@@ -72,6 +72,7 @@ pub async fn create_branch(
     let output = Command::new("git")
         .args(&args)
         .output()
+        .await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if output.status.success() {
@@ -83,7 +84,7 @@ pub async fn create_branch(
 }
 
 #[tauri::command]
-pub fn checkout_branch(path: String, name: String) -> Result<String, String> {
+pub async fn checkout_branch(path: String, name: String) -> Result<String, String> {
     let mut args = vec![
         "--no-pager".to_string(),
         "-C".to_string(),
@@ -98,6 +99,7 @@ pub fn checkout_branch(path: String, name: String) -> Result<String, String> {
         let local_check = Command::new("git")
             .args(&["--no-pager", "-C", &args[2], "checkout", &name])
             .output()
+            .await
             .map_err(|e| format!("Failed to run git: {}", e))?;
 
         if local_check.status.success() {
@@ -122,6 +124,7 @@ pub fn checkout_branch(path: String, name: String) -> Result<String, String> {
     let output = Command::new("git")
         .args(&args)
         .output()
+        .await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if output.status.success() {
@@ -133,11 +136,12 @@ pub fn checkout_branch(path: String, name: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn delete_branch(path: String, name: String, force: Option<bool>) -> Result<String, String> {
+pub async fn delete_branch(path: String, name: String, force: Option<bool>) -> Result<String, String> {
     let flag = if force.unwrap_or(false) { "-D" } else { "-d" };
     let output = Command::new("git")
         .args(["--no-pager", "-C", &path, "branch", flag, &name])
         .output()
+        .await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if output.status.success() {

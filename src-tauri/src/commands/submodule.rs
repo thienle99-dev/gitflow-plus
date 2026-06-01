@@ -1,5 +1,5 @@
 use serde::Serialize;
-use std::process::Command;
+use tokio::process::Command;
 
 #[derive(Serialize, Clone, Debug)]
 pub struct SubmoduleInfo {
@@ -11,10 +11,11 @@ pub struct SubmoduleInfo {
 }
 
 #[tauri::command]
-pub fn submodule_list(path: String) -> Result<Vec<SubmoduleInfo>, String> {
+pub async fn submodule_list(path: String) -> Result<Vec<SubmoduleInfo>, String> {
     let output = Command::new("git")
         .args(["--no-pager", "-C", &path, "submodule", "status"])
         .output()
+        .await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if !output.status.success() {
@@ -98,7 +99,7 @@ pub fn submodule_list(path: String) -> Result<Vec<SubmoduleInfo>, String> {
 }
 
 #[tauri::command]
-pub fn submodule_init(path: String, submodule_path: Option<String>) -> Result<String, String> {
+pub async fn submodule_init(path: String, submodule_path: Option<String>) -> Result<String, String> {
     let mut args = vec![
         "--no-pager".to_string(),
         "-C".to_string(),
@@ -113,6 +114,7 @@ pub fn submodule_init(path: String, submodule_path: Option<String>) -> Result<St
     let output = Command::new("git")
         .args(&args)
         .output()
+        .await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if output.status.success() {
@@ -124,7 +126,7 @@ pub fn submodule_init(path: String, submodule_path: Option<String>) -> Result<St
 }
 
 #[tauri::command]
-pub fn submodule_update(path: String, submodule_path: Option<String>) -> Result<String, String> {
+pub async fn submodule_update(path: String, submodule_path: Option<String>) -> Result<String, String> {
     let mut args = vec![
         "--no-pager".to_string(),
         "-C".to_string(),
@@ -141,6 +143,7 @@ pub fn submodule_update(path: String, submodule_path: Option<String>) -> Result<
     let output = Command::new("git")
         .args(&args)
         .output()
+        .await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if output.status.success() {
@@ -152,7 +155,7 @@ pub fn submodule_update(path: String, submodule_path: Option<String>) -> Result<
 }
 
 #[tauri::command]
-pub fn submodule_remove(path: String, submodule_path: String) -> Result<String, String> {
+pub async fn submodule_remove(path: String, submodule_path: String) -> Result<String, String> {
     let args = vec![
         "--no-pager".to_string(),
         "-C".to_string(),
@@ -166,6 +169,7 @@ pub fn submodule_remove(path: String, submodule_path: String) -> Result<String, 
     let output = Command::new("git")
         .args(&args)
         .output()
+        .await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if output.status.success() {

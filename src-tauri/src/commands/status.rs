@@ -1,4 +1,4 @@
-use std::process::Command;
+use tokio::process::Command;
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct StatusEntry {
@@ -8,7 +8,7 @@ pub struct StatusEntry {
 }
 
 #[tauri::command]
-pub fn git_status(path: String) -> Result<Vec<StatusEntry>, String> {
+pub async fn git_status(path: String) -> Result<Vec<StatusEntry>, String> {
     let output = Command::new("git")
         .args([
             "--no-pager",
@@ -20,6 +20,7 @@ pub fn git_status(path: String) -> Result<Vec<StatusEntry>, String> {
             "--no-ahead-behind",
         ])
         .output()
+        .await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if !output.status.success() {

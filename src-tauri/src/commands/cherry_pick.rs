@@ -1,5 +1,5 @@
 use serde::Serialize;
-use std::process::Command;
+use tokio::process::Command;
 
 #[derive(Serialize)]
 pub struct CherryPickResult {
@@ -8,7 +8,7 @@ pub struct CherryPickResult {
     pub conflicted_files: Vec<String>,
 }
 
-pub fn git_cherry_pick(
+pub async fn git_cherry_pick(
     path: &str,
     commit_hash: &str,
     no_commit: bool,
@@ -23,6 +23,7 @@ pub fn git_cherry_pick(
     let output = Command::new("git")
         .args(&args)
         .output()
+        .await
         .map_err(|e| format!("Failed to cherry-pick: {}", e))?;
 
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -43,10 +44,11 @@ pub fn git_cherry_pick(
     }
 }
 
-pub fn git_cherry_pick_abort(path: &str) -> Result<String, String> {
+pub async fn git_cherry_pick_abort(path: &str) -> Result<String, String> {
     let output = Command::new("git")
         .args(["--no-pager", "-C", path, "cherry-pick", "--abort"])
         .output()
+        .await
         .map_err(|e| format!("Failed to abort cherry-pick: {}", e))?;
 
     if output.status.success() {
@@ -70,15 +72,15 @@ fn parse_cherry_pick_conflicts(stderr: &str) -> Vec<String> {
 
 // Tauri commands
 #[tauri::command]
-pub fn cherry_pick(
+pub async fn cherry_pick(
     path: String,
     commit_hash: String,
     no_commit: Option<bool>,
 ) -> Result<CherryPickResult, String> {
-    git_cherry_pick(&path, &commit_hash, no_commit.unwrap_or(false))
+    git_cherry_pick(&path, &commit_hash, no_commit.unwrap_or(false)).await
 }
 
 #[tauri::command]
-pub fn cherry_pick_abort(path: String) -> Result<String, String> {
-    git_cherry_pick_abort(&path)
+pub async fn cherry_pick_abort(path: String) -> Result<String, String> {
+    git_cherry_pick_abort(&path).await
 }

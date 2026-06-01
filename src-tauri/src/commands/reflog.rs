@@ -1,5 +1,5 @@
 use serde::Serialize;
-use std::process::Command;
+use tokio::process::Command;
 
 #[derive(Serialize)]
 pub struct ReflogEntry {
@@ -10,7 +10,7 @@ pub struct ReflogEntry {
     pub date: String,
 }
 
-pub fn git_reflog(path: &str, max_count: Option<u32>) -> Result<Vec<ReflogEntry>, String> {
+pub async fn git_reflog(path: &str, max_count: Option<u32>) -> Result<Vec<ReflogEntry>, String> {
     let count_str = max_count.map(|max| format!("-{}", max));
     let mut args = vec![
         "--no-pager",
@@ -26,6 +26,7 @@ pub fn git_reflog(path: &str, max_count: Option<u32>) -> Result<Vec<ReflogEntry>
     let output = Command::new("git")
         .args(&args)
         .output()
+        .await
         .map_err(|e| format!("Failed to read reflog: {}", e))?;
 
     if !output.status.success() {
@@ -59,11 +60,12 @@ pub fn git_reflog(path: &str, max_count: Option<u32>) -> Result<Vec<ReflogEntry>
     Ok(entries)
 }
 
-pub fn git_undo(path: &str) -> Result<String, String> {
+pub async fn git_undo(path: &str) -> Result<String, String> {
     // Undo last commit: git reset --soft HEAD~1
     let output = Command::new("git")
         .args(["--no-pager", "-C", path, "reset", "--soft", "HEAD~1"])
         .output()
+        .await
         .map_err(|e| format!("Failed to undo: {}", e))?;
 
     if output.status.success() {
@@ -101,11 +103,11 @@ fn classify_reflog_action(description: &str) -> String {
 }
 
 #[tauri::command]
-pub fn reflog_list(path: String, max_count: Option<u32>) -> Result<Vec<ReflogEntry>, String> {
-    git_reflog(&path, max_count)
+pub async fn reflog_list(path: String, max_count: Option<u32>) -> Result<Vec<ReflogEntry>, String> {
+    git_reflog(&path, max_count).await
 }
 
 #[tauri::command]
-pub fn undo_last(path: String) -> Result<String, String> {
-    git_undo(&path)
+pub async fn undo_last(path: String) -> Result<String, String> {
+    git_undo(&path).await
 }

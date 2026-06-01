@@ -33,10 +33,11 @@ pub async fn unstage_file(path: String, file_path: String) -> Result<String, Str
 }
 
 #[tauri::command]
-pub fn stage_all(path: String) -> Result<String, String> {
+pub async fn stage_all(path: String) -> Result<String, String> {
     let output = Command::new("git")
         .args(["--no-pager", "-C", &path, "add", "-A"])
         .output()
+        .await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if output.status.success() {
@@ -48,10 +49,11 @@ pub fn stage_all(path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn unstage_all(path: String) -> Result<String, String> {
+pub async fn unstage_all(path: String) -> Result<String, String> {
     let output = Command::new("git")
         .args(["--no-pager", "-C", &path, "restore", "--staged", "."])
         .output()
+        .await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if output.status.success() {
@@ -63,7 +65,7 @@ pub fn unstage_all(path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn discard_file(path: String, file_path: String) -> Result<String, String> {
+pub async fn discard_file(path: String, file_path: String) -> Result<String, String> {
     let restore = Command::new("git")
         .args([
             "--no-pager",
@@ -76,11 +78,13 @@ pub fn discard_file(path: String, file_path: String) -> Result<String, String> {
             &file_path,
         ])
         .output()
+        .await
         .map_err(|e| format!("Failed to run git restore: {}", e))?;
 
     let clean = Command::new("git")
         .args(["--no-pager", "-C", &path, "clean", "-fd", "--", &file_path])
         .output()
+        .await
         .map_err(|e| format!("Failed to run git clean: {}", e))?;
 
     if restore.status.success() || clean.status.success() {
@@ -97,7 +101,7 @@ pub fn discard_file(path: String, file_path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn discard_all(path: String) -> Result<String, String> {
+pub async fn discard_all(path: String) -> Result<String, String> {
     let restore = Command::new("git")
         .args([
             "--no-pager",
@@ -109,11 +113,13 @@ pub fn discard_all(path: String) -> Result<String, String> {
             ".",
         ])
         .output()
+        .await
         .map_err(|e| format!("Failed to run git restore: {}", e))?;
 
     let clean = Command::new("git")
         .args(["--no-pager", "-C", &path, "clean", "-fd", "."])
         .output()
+        .await
         .map_err(|e| format!("Failed to run git clean: {}", e))?;
 
     if restore.status.success() || clean.status.success() {
@@ -130,7 +136,7 @@ pub fn discard_all(path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn commit_changes(
+pub async fn commit_changes(
     path: String,
     message: String,
     amend: Option<bool>,
@@ -151,6 +157,7 @@ pub fn commit_changes(
     let output = Command::new("git")
         .args(&args)
         .output()
+        .await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if output.status.success() {

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::io::Write;
-use std::process::Command;
+use tokio::process::Command;
 
 #[derive(Serialize, Clone, Debug)]
 pub struct RebaseResult {
@@ -18,7 +18,7 @@ pub struct RebaseTodo {
 
 /// Start interactive rebase using GIT_SEQUENCE_EDITOR
 /// Writes a shell script that copies the todo list into the rebase todo file
-pub fn git_rebase_interactive(
+pub async fn git_rebase_interactive(
     path: &str,
     base: &str,
     todos: &[RebaseTodo],
@@ -62,6 +62,7 @@ pub fn git_rebase_interactive(
             script_path.to_str().unwrap_or("/bin/true"),
         )
         .output()
+        .await
         .map_err(|e| format!("Failed to run rebase: {}", e))?;
 
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -86,7 +87,7 @@ pub fn git_rebase_interactive(
     }
 }
 
-pub fn git_rebase_continue(path: &str) -> Result<String, String> {
+pub async fn git_rebase_continue(path: &str) -> Result<String, String> {
     let output = Command::new("git")
         .args([
             "--no-pager",
@@ -97,6 +98,7 @@ pub fn git_rebase_continue(path: &str) -> Result<String, String> {
             "--no-edit",
         ])
         .output()
+        .await
         .map_err(|e| format!("Failed to continue rebase: {}", e))?;
 
     if output.status.success() {
@@ -106,10 +108,11 @@ pub fn git_rebase_continue(path: &str) -> Result<String, String> {
     }
 }
 
-pub fn git_rebase_skip(path: &str) -> Result<String, String> {
+pub async fn git_rebase_skip(path: &str) -> Result<String, String> {
     let output = Command::new("git")
         .args(["--no-pager", "-C", path, "rebase", "--skip"])
         .output()
+        .await
         .map_err(|e| format!("Failed to skip rebase: {}", e))?;
 
     if output.status.success() {
@@ -119,10 +122,11 @@ pub fn git_rebase_skip(path: &str) -> Result<String, String> {
     }
 }
 
-pub fn git_rebase_abort(path: &str) -> Result<String, String> {
+pub async fn git_rebase_abort(path: &str) -> Result<String, String> {
     let output = Command::new("git")
         .args(["--no-pager", "-C", path, "rebase", "--abort"])
         .output()
+        .await
         .map_err(|e| format!("Failed to abort rebase: {}", e))?;
 
     if output.status.success() {
@@ -132,10 +136,11 @@ pub fn git_rebase_abort(path: &str) -> Result<String, String> {
     }
 }
 
-pub fn git_rebase_status(path: &str) -> Result<(bool, Vec<String>), String> {
+pub async fn git_rebase_status(path: &str) -> Result<(bool, Vec<String>), String> {
     let git_dir_output = Command::new("git")
         .args(["--no-pager", "-C", path, "rev-parse", "--git-dir"])
         .output()
+        .await
         .map_err(|e| format!("Git error: {}", e))?;
 
     let git_dir = String::from_utf8_lossy(&git_dir_output.stdout)
@@ -159,6 +164,7 @@ pub fn git_rebase_status(path: &str) -> Result<(bool, Vec<String>), String> {
                 "--untracked-files=no",
             ])
             .output()
+            .await
         {
             for line in String::from_utf8_lossy(&status_output.stdout).lines() {
                 if line.starts_with("UU") || line.starts_with("AA") || line.starts_with("DD") {
@@ -174,7 +180,7 @@ pub fn git_rebase_status(path: &str) -> Result<(bool, Vec<String>), String> {
 }
 
 /// Get commits between base..HEAD for building the todo list
-pub fn git_rebase_todo_range(path: &str, base: &str) -> Result<Vec<RebaseTodo>, String> {
+pub async fn git_rebase_todo_range(path: &str, base: &str) -> Result<Vec<RebaseTodo>, String> {
     let output = Command::new("git")
         .args([
             "--no-pager",
@@ -186,6 +192,7 @@ pub fn git_rebase_todo_range(path: &str, base: &str) -> Result<Vec<RebaseTodo>, 
             format!("{}..HEAD", base).as_str(),
         ])
         .output()
+        .await
         .map_err(|e| format!("Failed to list commits: {}", e))?;
 
     if !output.status.success() {
@@ -227,35 +234,35 @@ fn parse_rebase_conflicts(stderr: &str) -> Vec<String> {
 
 // Tauri commands
 #[tauri::command]
-pub fn rebase_start(
+pub async fn rebase_start(
     path: String,
     base: String,
     todos: Vec<RebaseTodo>,
 ) -> Result<RebaseResult, String> {
-    git_rebase_interactive(&path, &base, &todos)
+    git_rebase_interactive(&path, &base, &todos).await
 }
 
 #[tauri::command]
-pub fn rebase_continue(path: String) -> Result<String, String> {
-    git_rebase_continue(&path)
+pub async fn rebase_continue(path: String) -> Result<String, String> {
+    git_rebase_continue(&path).await
 }
 
 #[tauri::command]
-pub fn rebase_skip(path: String) -> Result<String, String> {
-    git_rebase_skip(&path)
+pub async fn rebase_skip(path: String) -> Result<String, String> {
+    git_rebase_skip(&path).await
 }
 
 #[tauri::command]
-pub fn rebase_abort(path: String) -> Result<String, String> {
-    git_rebase_abort(&path)
+pub async fn rebase_abort(path: String) -> Result<String, String> {
+    git_rebase_abort(&path).await
 }
 
 #[tauri::command]
-pub fn rebase_status(path: String) -> Result<(bool, Vec<String>), String> {
-    git_rebase_status(&path)
+pub async fn rebase_status(path: String) -> Result<(bool, Vec<String>), String> {
+    git_rebase_status(&path).await
 }
 
 #[tauri::command]
-pub fn rebase_todo_list(path: String, base: String) -> Result<Vec<RebaseTodo>, String> {
-    git_rebase_todo_range(&path, &base)
+pub async fn rebase_todo_list(path: String, base: String) -> Result<Vec<RebaseTodo>, String> {
+    git_rebase_todo_range(&path, &base).await
 }

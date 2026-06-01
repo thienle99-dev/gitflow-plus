@@ -1,5 +1,5 @@
 use serde::Serialize;
-use std::process::Command;
+use tokio::process::Command;
 
 #[derive(Serialize)]
 pub struct MergeResult {
@@ -15,7 +15,7 @@ pub struct MergeStatus {
     pub stage_entries: Vec<String>,
 }
 
-pub fn git_merge(
+pub async fn git_merge(
     path: &str,
     branch: &str,
     squash: bool,
@@ -32,6 +32,7 @@ pub fn git_merge(
     let output = Command::new("git")
         .args(&args)
         .output()
+        .await
         .map_err(|e| format!("Failed to execute git merge: {}", e))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
@@ -54,10 +55,11 @@ pub fn git_merge(
     }
 }
 
-pub fn git_merge_abort(path: &str) -> Result<String, String> {
+pub async fn git_merge_abort(path: &str) -> Result<String, String> {
     let output = Command::new("git")
         .args(["--no-pager", "-C", path, "merge", "--abort"])
         .output()
+        .await
         .map_err(|e| format!("Failed to abort merge: {}", e))?;
 
     if output.status.success() {
@@ -67,7 +69,7 @@ pub fn git_merge_abort(path: &str) -> Result<String, String> {
     }
 }
 
-pub fn git_merge_continue(path: &str, message: Option<&str>) -> Result<String, String> {
+pub async fn git_merge_continue(path: &str, message: Option<&str>) -> Result<String, String> {
     let mut args = vec!["--no-pager", "-C", path, "commit"];
     if let Some(msg) = message {
         args.push("-m");
@@ -79,6 +81,7 @@ pub fn git_merge_continue(path: &str, message: Option<&str>) -> Result<String, S
     let output = Command::new("git")
         .args(&args)
         .output()
+        .await
         .map_err(|e| format!("Failed to continue merge: {}", e))?;
 
     if output.status.success() {
@@ -88,11 +91,12 @@ pub fn git_merge_continue(path: &str, message: Option<&str>) -> Result<String, S
     }
 }
 
-pub fn git_merge_status(path: &str) -> Result<MergeStatus, String> {
+pub async fn git_merge_status(path: &str) -> Result<MergeStatus, String> {
     // Check if we're in a merge state
     let output = Command::new("git")
         .args(["--no-pager", "-C", path, "rev-parse", "--git-dir"])
         .output()
+        .await
         .map_err(|e| format!("Git error: {}", e))?;
 
     let git_dir = String::from_utf8_lossy(&output.stdout).trim().to_string();
@@ -111,6 +115,7 @@ pub fn git_merge_status(path: &str) -> Result<MergeStatus, String> {
     let ls_output = Command::new("git")
         .args(["--no-pager", "-C", path, "ls-files", "-u"])
         .output()
+        .await
         .map_err(|e| format!("Git error: {}", e))?;
 
     let output_str = String::from_utf8_lossy(&ls_output.stdout);
@@ -139,6 +144,7 @@ pub fn git_merge_status(path: &str) -> Result<MergeStatus, String> {
             "--untracked-files=no",
         ])
         .output()
+        .await
         .map_err(|e| format!("Git error: {}", e))?;
 
     for line in String::from_utf8_lossy(&status_output.stdout).lines() {
@@ -175,7 +181,7 @@ fn parse_conflicted_files(stderr: &str) -> Vec<String> {
 }
 
 #[tauri::command]
-pub fn merge_branch(
+pub async fn merge_branch(
     path: String,
     branch: String,
     squash: Option<bool>,
@@ -186,20 +192,20 @@ pub fn merge_branch(
         &branch,
         squash.unwrap_or(false),
         no_ff.unwrap_or(false),
-    )
+    ).await
 }
 
 #[tauri::command]
-pub fn merge_abort(path: String) -> Result<String, String> {
-    git_merge_abort(&path)
+pub async fn merge_abort(path: String) -> Result<String, String> {
+    git_merge_abort(&path).await
 }
 
 #[tauri::command]
-pub fn merge_continue(path: String, message: Option<String>) -> Result<String, String> {
-    git_merge_continue(&path, message.as_deref())
+pub async fn merge_continue(path: String, message: Option<String>) -> Result<String, String> {
+    git_merge_continue(&path, message.as_deref()).await
 }
 
 #[tauri::command]
-pub fn merge_status(path: String) -> Result<MergeStatus, String> {
-    git_merge_status(&path)
+pub async fn merge_status(path: String) -> Result<MergeStatus, String> {
+    git_merge_status(&path).await
 }

@@ -1,4 +1,4 @@
-use std::process::Command;
+use tokio::process::Command;
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct Commit {
@@ -18,7 +18,7 @@ pub struct Ref {
 }
 
 #[tauri::command]
-pub fn git_log(
+pub async fn git_log(
     path: String,
     page: Option<usize>,
     per_page: Option<usize>,
@@ -46,6 +46,7 @@ pub fn git_log(
     let output = Command::new("git")
         .args(&args)
         .output()
+        .await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if !output.status.success() {

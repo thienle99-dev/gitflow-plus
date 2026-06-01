@@ -1,5 +1,5 @@
 use serde::Serialize;
-use std::process::Command;
+use tokio::process::Command;
 
 #[derive(Serialize)]
 pub struct Tag {
@@ -11,12 +11,13 @@ pub struct Tag {
     pub date: String,
 }
 
-pub fn git_tag_list(path: &str) -> Result<Vec<Tag>, String> {
+pub async fn git_tag_list(path: &str) -> Result<Vec<Tag>, String> {
     // List tags with details
     let output = Command::new("git")
         .args(["--no-pager", "-C", path, "tag", "--sort=-creatordate",
                "--format=%(refname:short)|%(objectname)|%(subject)|%(authorname)|%(creatordate:iso)|%(objecttype)"])
         .output()
+        .await
         .map_err(|e| format!("Failed to list tags: {}", e))?;
 
     if !output.status.success() {
@@ -47,7 +48,7 @@ pub fn git_tag_list(path: &str) -> Result<Vec<Tag>, String> {
     Ok(tags)
 }
 
-pub fn git_tag_create(
+pub async fn git_tag_create(
     path: &str,
     name: &str,
     target: Option<&str>,
@@ -73,6 +74,7 @@ pub fn git_tag_create(
     let output = Command::new("git")
         .args(&args)
         .output()
+        .await
         .map_err(|e| format!("Failed to create tag: {}", e))?;
 
     if output.status.success() {
@@ -82,10 +84,11 @@ pub fn git_tag_create(
     }
 }
 
-pub fn git_tag_delete(path: &str, name: &str) -> Result<String, String> {
+pub async fn git_tag_delete(path: &str, name: &str) -> Result<String, String> {
     let output = Command::new("git")
         .args(["--no-pager", "-C", path, "tag", "-d", name])
         .output()
+        .await
         .map_err(|e| format!("Failed to delete tag: {}", e))?;
 
     if output.status.success() {
@@ -95,11 +98,12 @@ pub fn git_tag_delete(path: &str, name: &str) -> Result<String, String> {
     }
 }
 
-pub fn git_tag_push(path: &str, name: &str, remote: Option<&str>) -> Result<String, String> {
+pub async fn git_tag_push(path: &str, name: &str, remote: Option<&str>) -> Result<String, String> {
     let remote = remote.unwrap_or("origin");
     let output = Command::new("git")
         .args(["--no-pager", "-C", path, "push", remote, name])
         .output()
+        .await
         .map_err(|e| format!("Failed to push tag: {}", e))?;
 
     if output.status.success() {
@@ -111,26 +115,26 @@ pub fn git_tag_push(path: &str, name: &str, remote: Option<&str>) -> Result<Stri
 
 // Tauri commands
 #[tauri::command]
-pub fn tag_list(path: String) -> Result<Vec<Tag>, String> {
-    git_tag_list(&path)
+pub async fn tag_list(path: String) -> Result<Vec<Tag>, String> {
+    git_tag_list(&path).await
 }
 
 #[tauri::command]
-pub fn tag_create(
+pub async fn tag_create(
     path: String,
     name: String,
     target: Option<String>,
     message: Option<String>,
 ) -> Result<String, String> {
-    git_tag_create(&path, &name, target.as_deref(), message.as_deref())
+    git_tag_create(&path, &name, target.as_deref(), message.as_deref()).await
 }
 
 #[tauri::command]
-pub fn tag_delete(path: String, name: String) -> Result<String, String> {
-    git_tag_delete(&path, &name)
+pub async fn tag_delete(path: String, name: String) -> Result<String, String> {
+    git_tag_delete(&path, &name).await
 }
 
 #[tauri::command]
-pub fn tag_push(path: String, name: String, remote: Option<String>) -> Result<String, String> {
-    git_tag_push(&path, &name, remote.as_deref())
+pub async fn tag_push(path: String, name: String, remote: Option<String>) -> Result<String, String> {
+    git_tag_push(&path, &name, remote.as_deref()).await
 }
