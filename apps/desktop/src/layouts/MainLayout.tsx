@@ -44,6 +44,7 @@ export default function MainLayout() {
       const type = event.payload.event_type;
       if (type === "worktree") {
         queryClient.invalidateQueries({ queryKey: ["git", repoPath, "status"] });
+        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "submodules"] });
       } else if (type === "refs") {
         queryClient.invalidateQueries({ queryKey: ["git", repoPath, "branches"] });
         queryClient.invalidateQueries({ queryKey: ["git", repoPath, "log"] });
