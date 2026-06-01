@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { applyTheme, useRepoStore } from "./stores/repo";
 import RepoView from "./pages/RepoView";
+import TrayPanelView from "./pages/TrayPanelView";
 import { ErrorProvider } from "./lib/ErrorContext";
 import ErrorBoundary from "./components/ui/feedback/ErrorBoundary";
 
@@ -11,10 +12,12 @@ function App() {
     applyTheme(theme);
   }, [theme]);
 
+  const isTrayWindow = window.location.search.includes("window=tray");
+
   return (
     <ErrorBoundary>
       <ErrorProvider>
-        <RepoView />
+        {isTrayWindow ? <TrayPanelView /> : <RepoView />}
       </ErrorProvider>
     </ErrorBoundary>
   );

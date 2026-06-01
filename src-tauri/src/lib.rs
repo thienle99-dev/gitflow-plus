@@ -1,5 +1,6 @@
 use std::sync::Mutex;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
+use tauri::tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState};
 use tauri::Emitter;
 use tauri::Manager;
 
@@ -90,7 +91,7 @@ fn create_menu<R: tauri::Runtime>(app: &tauri::App<R>) -> Result<Menu<R>, tauri:
         "help_docs",
         "GitFlow Desktop Documentation",
         true,
-        None::<&str>,
+        Some("CmdOrCtrl+H"),
     )?)?;
 
     menu.append(&app_submenu)?;
@@ -117,6 +118,60 @@ pub fn run() {
 
             let window = app.get_webview_window("main").unwrap();
             let _ = window.set_decorations(true);
+
+            // Try to build a Tray Icon
+            let tray_icon = app.default_window_icon().cloned().unwrap();
+            let _tray = TrayIconBuilder::new()
+                .icon(tray_icon)
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        rect,
+                        ..
+                    } = event {
+                        let app = tray.app_handle();
+                        if let Some(window) = app.get_webview_window("tray") {
+                            if window.is_visible().unwrap_or(false) {
+                                let _ = window.hide();
+                            } else {
+                                // Calculate position relative to clicked icon
+                                let (pos_x, pos_y) = match rect.position {
+                                    tauri::Position::Physical(p) => (p.x as f64, p.y as f64),
+                                    tauri::Position::Logical(l) => (l.x, l.y),
+                                };
+                                let (size_w, size_h) = match rect.size {
+                                    tauri::Size::Physical(s) => (s.width as f64, s.height as f64),
+                                    tauri::Size::Logical(l) => (l.width, l.height),
+                                };
+
+                                let window_width = 360.0;
+                                let window_height = 460.0;
+                                let x = pos_x + (size_w / 2.0) - (window_width / 2.0);
+                                let y = if pos_y > 500.0 {
+                                    pos_y - window_height
+                                } else {
+                                    pos_y + size_h
+                                };
+                                let _ = window.set_position(tauri::PhysicalPosition::new(x as i32, y as i32));
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                    }
+                })
+                .build(app)?;
+
+            // Window blur event to auto-hide tray window
+            if let Some(tray_win) = app.get_webview_window("tray") {
+                let tray_win_clone = tray_win.clone();
+                tray_win.on_window_event(move |event| {
+                    if let tauri::WindowEvent::Focused(false) = event {
+                        let _ = tray_win_clone.hide();
+                    }
+                });
+            }
+
             Ok(())
         })
         .on_menu_event(|app_handle, event| match event.id.0.as_str() {
