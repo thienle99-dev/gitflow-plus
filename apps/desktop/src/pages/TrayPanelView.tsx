@@ -46,6 +46,7 @@ export default function TrayPanelView() {
   const [commitMessage, setCommitMessage] = useState("");
   const [committing, setCommitting] = useState(false);
   const [syncLoading, setSyncLoading] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   // Branch switcher states
@@ -278,6 +279,20 @@ export default function TrayPanelView() {
     }
   };
 
+  const handleRefresh = async () => {
+    if (!repoPath || refreshing) return;
+    setRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
+      await queryClient.invalidateQueries({ queryKey: ["repo", repoPath] });
+      showToast("Refreshed");
+    } catch (e: any) {
+      showToast(e.message || String(e), "error");
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const handleOpenMainApp = async () => {
     console.log("[Tray] Open Full App clicked");
     try {
@@ -444,6 +459,20 @@ export default function TrayPanelView() {
 
         {/* Action Buttons */}
         <div className="flex items-center gap-1">
+          {repoPath && (
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="p-1.5 rounded hover:bg-surface-2 text-text-muted hover:text-text-primary disabled:opacity-50 transition-all cursor-pointer"
+              title="Refresh"
+            >
+              {refreshing ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <RefreshCw size={13} />
+              )}
+            </button>
+          )}
           <button
             onClick={handleOpenSettings}
             className="p-1.5 rounded hover:bg-surface-2 text-text-muted hover:text-text-primary transition-all cursor-pointer"

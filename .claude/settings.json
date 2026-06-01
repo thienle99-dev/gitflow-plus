@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__neural-memory__nmem_remember_batch"
+    ]
+  }
+}
