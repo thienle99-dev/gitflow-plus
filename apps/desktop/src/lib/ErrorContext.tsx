@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, useRef, type ReactNode } from "react";
 import { classifyGitError, formatShortError, type ClassifiedError, type ErrorCategory } from "@/lib/error-types";
-import { ErrorToast } from "@/components/common/ErrorNotification";
+import { ErrorToast } from "@/components/ui/feedback/ErrorNotification";
 
 interface ToastEntry {
   key: number;

@@ -5,7 +5,7 @@ import { useGitLog } from "@/queries/useGitLog";
 import { computeGraphLayout, type LayoutState } from "@/lib/graph-layout";
 import { api } from "@/api/tauri";
 import { useQueryClient } from "@tanstack/react-query";
-import ContextMenu, { type ContextMenuItem } from "@/components/common/ContextMenu";
+import ContextMenu, { type ContextMenuItem } from "@/components/ui/overlay/ContextMenu";
 import { useCanvasRenderer, type GraphEdgeSegment, type GraphRenderIndex } from "./useCanvasRenderer";
 import { useHitTest } from "./useHitTest";
 import CommitTooltip from "./CommitTooltip";

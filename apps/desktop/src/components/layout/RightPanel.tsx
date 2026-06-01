@@ -4,12 +4,12 @@ import { useRepoStore } from "@/stores/repo";
 import { useGitStatus, useGitDiff } from "@/queries/useGitLog";
 import { useQueryClient } from "@tanstack/react-query";
 import { Eye, Maximize2, Minimize2 } from "lucide-react";
-import WorkingTree from "./WorkingTree";
-import CommitDetail from "./CommitDetail";
-import DiffViewer from "@/components/diff/DiffViewer";
-import StashPanel from "@/components/phase2/StashPanel";
-import TagPanel from "@/components/phase2/TagPanel";
-import SubmoduleDetail from "./SubmoduleDetail";
+import WorkingTree from "@/components/features/working-tree/WorkingTree";
+import CommitDetail from "@/components/features/commit-detail/CommitDetail";
+import DiffViewer from "@/components/features/diff/DiffViewer";
+import StashPanel from "@/components/features/stash/StashPanel";
+import TagPanel from "@/components/features/tags/TagPanel";
+import SubmoduleDetail from "@/components/features/submodules/SubmoduleDetail";
 import { useSubmoduleList } from "@/queries/useSubmoduleList";
 
 export default function RightPanel() {

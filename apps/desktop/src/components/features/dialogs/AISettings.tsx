@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Sparkles, Eye, EyeOff } from "lucide-react";
-import { Input } from "@/components/common/form";
-import Select from "@/components/common/form/Select";
+import { Input, Select } from "@/components/ui/form";
 
 const LS_KEY_API_KEY = "gitflowAiApiKey";
 const LS_KEY_MODEL = "gitflowAiModel";

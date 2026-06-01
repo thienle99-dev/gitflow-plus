@@ -5,7 +5,7 @@ import type { SearchOptions } from "@/queries/useGitSearch";
 import { useGitBranches } from "@/queries/useGitLog";
 import { api } from "@/api/tauri";
 import { Search, X, GitCommit, Calendar, User, FileText, GitBranch, Sparkles, RefreshCw } from "lucide-react";
-import { Input } from "@/components/common/form";
+import { Input } from "@/components/ui/form";
 
 interface SearchDialogProps {
   open: boolean;

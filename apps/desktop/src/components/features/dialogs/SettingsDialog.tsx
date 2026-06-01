@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useRepoStore } from "@/stores/repo";
 import { api } from "@/api/tauri";
-import { Switch } from "@/components/common/form";
+import { Switch } from "@/components/ui/form";
 const LS_KEY_API_KEY = "gitflowAiApiKey";
 const LS_KEY_API_URL = "gitflowAiApiUrl";
 const LS_KEY_MODEL = "gitflowAiModel";

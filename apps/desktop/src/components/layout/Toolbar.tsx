@@ -20,9 +20,9 @@ import {
   Settings,
   BarChart3,
 } from "lucide-react";
-import CreateBranchDialog from "./CreateBranchDialog";
+import CreateBranchDialog from "@/components/features/dialogs/CreateBranchDialog";
 import { useErrorReporter } from "@/lib/ErrorContext";
-import SettingsDropdown from "./SettingsDropdown";
+import SettingsDropdown from "@/components/ui/theme/SettingsDropdown";
 
 export default function Toolbar() {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -170,8 +170,6 @@ export default function Toolbar() {
 
       {showBranchDialog && (
         <CreateBranchDialog
-          repoPath={repoPath}
-          branches={branches || []}
           open={showBranchDialog}
           onClose={() => setShowBranchDialog(false)}
         />

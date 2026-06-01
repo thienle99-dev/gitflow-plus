@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useTagList, useTagCreate, useTagDelete, useTagPush } from "@/queries/useGitTag";
 import { Tag, Plus, Trash2, Upload, GitCommit, User, Calendar } from "lucide-react";
-import { Input } from "@/components/common/form";
+import { Input } from "@/components/ui/form";
 
 export default function TagPanel({ onClose }: { onClose?: () => void }) {
   const repoPath = useRepoStore((s) => s.repoPath);

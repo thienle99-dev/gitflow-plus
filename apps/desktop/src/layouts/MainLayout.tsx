@@ -6,14 +6,12 @@ import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
 import { api } from "@/api/tauri";
-import Toolbar from "@/components/common/Toolbar";
-import Sidebar from "@/components/sidebar/Sidebar";
-import CommitGraph from "@/components/graph/CommitGraph";
-import RightPanel from "@/components/detail/RightPanel";
-import BottomBar from "@/components/common/BottomBar";
-import SearchDialog from "@/components/phase2/SearchDialog";
-import KeyboardShortcutsModal from "@/components/phase2/KeyboardShortcutsModal";
-import { CherryPickDialog, SettingsDialog, AnalyticsDialog, CreateBranchDialog } from "@/components/phase2";
+import Toolbar from "@/components/layout/Toolbar";
+import Sidebar from "@/components/features/sidebar/Sidebar";
+import CommitGraph from "@/components/features/graph/CommitGraph";
+import RightPanel from "@/components/layout/RightPanel";
+import BottomBar from "@/components/layout/BottomBar";
+import { SearchDialog, KeyboardShortcutsModal, CherryPickDialog, SettingsDialog, AnalyticsDialog, CreateBranchDialog } from "@/components/features/dialogs";
 
 export default function MainLayout() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);

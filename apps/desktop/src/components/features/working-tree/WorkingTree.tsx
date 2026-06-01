@@ -6,8 +6,8 @@ import { api, type FileChange } from "@/api/tauri";
 import { useGenerateCommitMessage } from "@/queries/useAI";
 import { generateLocalCommitMessage } from "@/lib/ai";
 import { useQueryClient } from "@tanstack/react-query";
-import ContextMenu, { type ContextMenuItem } from "@/components/common/ContextMenu";
-import UndoButton from "@/components/phase2/UndoButton";
+import ContextMenu, { type ContextMenuItem } from "@/components/ui/overlay/ContextMenu";
+import UndoButton from "@/components/features/actions/UndoButton";
 import {
   Braces,
   Check,
