@@ -10,6 +10,19 @@ const repoOpenMilestones = new Map<
 >();
 
 const REPO_OPEN_REQUIRED = ["log", "status", "branches"];
+const PERF_SUMMARY_INTERVAL = 25;
+const PERF_SLOW_THRESHOLD_MS = 50;
+
+const samples = new Map<
+  string,
+  {
+    count: number;
+    total: number;
+    max: number;
+    last: number;
+  }
+>();
+let totalSamples = 0;
 
 export function isPerformanceLoggingEnabled() {
   if (typeof localStorage === "undefined") return import.meta.env.DEV;
@@ -24,6 +37,11 @@ export function logPerformance(name: string, durationMs: number, metadata: PerfM
     Object.entries(metadata).filter(([, value]) => value !== undefined && value !== null),
   );
   console.debug(`[perf] ${name} ${rounded}ms`, details);
+  recordPerformanceSample(name, durationMs);
+
+  if (durationMs >= PERF_SLOW_THRESHOLD_MS) {
+    console.debug(`[perf:slow] ${name} ${rounded}ms`, details);
+  }
 }
 
 export async function measureAsync<T>(
@@ -86,4 +104,40 @@ export function markRepoOpenMilestone(path: string, milestone: "log" | "status" 
 export function repoName(path: string | null | undefined) {
   if (!path) return "";
   return path.split(/[/\\]/).filter(Boolean).pop() || path;
+}
+
+export function getPerformanceProfile() {
+  return Array.from(samples.entries())
+    .map(([name, sample]) => ({
+      name,
+      count: sample.count,
+      avgMs: Math.round((sample.total / sample.count) * 10) / 10,
+      maxMs: Math.round(sample.max * 10) / 10,
+      lastMs: Math.round(sample.last * 10) / 10,
+    }))
+    .sort((a, b) => b.avgMs - a.avgMs);
+}
+
+function recordPerformanceSample(name: string, durationMs: number) {
+  const sample = samples.get(name) ?? {
+    count: 0,
+    total: 0,
+    max: 0,
+    last: 0,
+  };
+  sample.count += 1;
+  sample.total += durationMs;
+  sample.max = Math.max(sample.max, durationMs);
+  sample.last = durationMs;
+  samples.set(name, sample);
+  totalSamples += 1;
+
+  if (totalSamples % PERF_SUMMARY_INTERVAL === 0) {
+    console.table(getPerformanceProfile().slice(0, 8));
+  }
+}
+
+if (typeof window !== "undefined") {
+  (window as typeof window & { gitflowPerfProfile?: typeof getPerformanceProfile }).gitflowPerfProfile =
+    getPerformanceProfile;
 }

@@ -137,6 +137,14 @@ export const api = {
       refName: refName ?? null,
     }),
 
+  logSince: (path: string, knownHash: string, maxCount?: number, refName?: string | null) =>
+    invoke<Commit[]>("git_log_since", {
+      path,
+      knownHash,
+      maxCount: maxCount ?? 200,
+      refName: refName ?? null,
+    }),
+
   fileHistory: (path: string, filePath: string, maxCount?: number) =>
     invoke<Commit[]>("file_history", {
       path,

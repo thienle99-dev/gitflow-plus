@@ -1,6 +1,7 @@
 /**
  * Parse a unified diff string into structured hunks.
  */
+import { logPerformance } from "@/lib/performance";
 
 export interface DiffHunk {
   oldStart: number;
@@ -19,6 +20,13 @@ export interface DiffLine {
 }
 
 export function parseDiff(diff: string): DiffHunk[] {
+  const cached = diffParseCache.get(diff);
+  if (cached) {
+    logPerformance("diff_parse_cache_hit", 0, { bytes: diff.length, hunks: cached.length });
+    return cached;
+  }
+
+  const startedAt = performance.now();
   const lines = diff.split("\n");
   const hunks: DiffHunk[] = [];
   let currentHunk: DiffHunk | null = null;
@@ -59,6 +67,11 @@ export function parseDiff(diff: string): DiffHunk[] {
   }
 
   if (currentHunk) hunks.push(currentHunk);
+  rememberParsedDiff(diff, hunks);
+  logPerformance("diff_parse", performance.now() - startedAt, {
+    bytes: diff.length,
+    hunks: hunks.length,
+  });
   return hunks;
 }
 
@@ -108,4 +121,17 @@ export function countDiffChanges(files: DiffFile[]): { added: number; removed: n
   }
 
   return { added, removed, files: files.length };
+}
+
+const MAX_DIFF_PARSE_CACHE_ENTRIES = 80;
+const diffParseCache = new Map<string, DiffHunk[]>();
+
+function rememberParsedDiff(diff: string, hunks: DiffHunk[]) {
+  diffParseCache.set(diff, hunks);
+  if (diffParseCache.size <= MAX_DIFF_PARSE_CACHE_ENTRIES) return;
+
+  const oldestKey = diffParseCache.keys().next().value;
+  if (oldestKey !== undefined) {
+    diffParseCache.delete(oldestKey);
+  }
 }

@@ -70,6 +70,44 @@ pub async fn git_log(
     Ok(parse_log_output(&stdout))
 }
 
+#[tauri::command]
+pub async fn git_log_since(
+    path: String,
+    known_hash: String,
+    max_count: Option<usize>,
+    ref_name: Option<String>,
+) -> Result<Vec<Commit>, String> {
+    let limit = max_count.unwrap_or(200).clamp(1, 500);
+    let range = if let Some(ref_name) = ref_name.filter(|name| !name.trim().is_empty()) {
+        format!("{}..{}", known_hash, ref_name)
+    } else {
+        format!("{}..HEAD", known_hash)
+    };
+
+    let output = Command::new("git")
+        .args([
+            "--no-pager",
+            "-C",
+            &path,
+            "log",
+            "--topo-order",
+            &format!("--max-count={}", limit),
+            "--pretty=format:%H|%P|%an|%ae|%ai|%D|%s",
+            &range,
+        ])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run git log: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Git error: {}", stderr.trim()));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(parse_log_output(&stdout))
+}
+
 /// Stream git log output in chunks via Tauri events.
 /// Frontend listens for "git:log-chunk" events and accumulates them.
 #[tauri::command]

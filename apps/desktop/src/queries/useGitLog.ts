@@ -1,8 +1,10 @@
-import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { api, type Commit, type CommitFileChange, type FileChange, type Branch, type RepoInfo, type SyncStatus } from "@/api/tauri";
 import { markRepoOpenMilestone, measureAsync, repoName } from "@/lib/performance";
 
 const PAGE_SIZE = 200;
+const DIFF_CACHE_TIME = 10 * 60_000;
+const LOG_CACHE_TIME = 10 * 60_000;
 
 function getSyncStatusInterval() {
   if (localStorage.getItem("gitflowAutoFetch") === "false") return false;
@@ -12,10 +14,42 @@ function getSyncStatusInterval() {
 }
 
 export function useGitLog(repoPath: string | null, refName?: string | null) {
+  const queryClient = useQueryClient();
+  const queryKey = ["git", repoPath, "log", refName || "all"];
+
   return useInfiniteQuery<Commit[]>({
-    queryKey: ["git", repoPath, "log", refName || "all"],
+    queryKey,
     queryFn: async ({ pageParam }) => {
       const page = pageParam as number;
+      const cached = queryClient.getQueryData<InfiniteData<Commit[]>>(queryKey);
+      const cachedFirstPage = cached?.pages[0] ?? [];
+      const knownHead = cachedFirstPage[0]?.hash;
+
+      if (page === 0 && knownHead) {
+        try {
+          const newerCommits = await measureAsync(
+            "git_log_incremental",
+            () => api.logSince(repoPath!, knownHead, PAGE_SIZE, refName),
+            { repo: repoName(repoPath), knownHead: knownHead.slice(0, 7), ref: refName || "HEAD" },
+          );
+
+          if (newerCommits.length < PAGE_SIZE) {
+            const seen = new Set<string>();
+            const merged = [...newerCommits, ...cachedFirstPage].filter((commit) => {
+              if (seen.has(commit.hash)) return false;
+              seen.add(commit.hash);
+              return true;
+            });
+            if (!refName) {
+              markRepoOpenMilestone(repoPath!, "log");
+            }
+            return merged.slice(0, PAGE_SIZE);
+          }
+        } catch (error) {
+          console.debug("[perf] git_log_incremental fallback", error);
+        }
+      }
+
       const commits = await measureAsync(
         "git_log",
         () => api.log(repoPath!, page, PAGE_SIZE, refName),
@@ -31,6 +65,7 @@ export function useGitLog(repoPath: string | null, refName?: string | null) {
       lastPage.length === PAGE_SIZE ? allPages.length : undefined,
     enabled: !!repoPath,
     staleTime: 30_000,
+    gcTime: LOG_CACHE_TIME,
   });
 }
 
@@ -80,15 +115,28 @@ export function useGitDiff(
     queryFn: () => {
       if (!repoPath || !filePath) return "";
       if (commitHash) {
-        return api.diff.commit(repoPath, commitHash, filePath, context);
+        return measureAsync("git_diff", () => api.diff.commit(repoPath, commitHash, filePath, context), {
+          repo: repoName(repoPath),
+          source: "commit",
+          file: filePath,
+        });
       }
       if (staged) {
-        return api.diff.staged(repoPath, filePath, context);
+        return measureAsync("git_diff", () => api.diff.staged(repoPath, filePath, context), {
+          repo: repoName(repoPath),
+          source: "staged",
+          file: filePath,
+        });
       }
-      return api.diff.file(repoPath, filePath, context);
+      return measureAsync("git_diff", () => api.diff.file(repoPath, filePath, context), {
+        repo: repoName(repoPath),
+        source: "working",
+        file: filePath,
+      });
     },
     enabled: !!repoPath && !!filePath,
-    staleTime: 15_000,
+    staleTime: DIFF_CACHE_TIME,
+    gcTime: DIFF_CACHE_TIME,
   });
 }
 

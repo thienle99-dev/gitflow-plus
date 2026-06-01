@@ -150,9 +150,9 @@
 - [ ] Auto-fetch — background fetch theo interval (configurable, mặc định 5 phút), badge "X commits behind"
 
 ### Performance
-- [ ] Incremental git log — cache commit list, chỉ fetch commits mới hơn HEAD đã biết (`git log <known_HEAD>..HEAD`)
-- [ ] Response caching cho diff — tránh re-parse cùng một diff khi user switch qua lại giữa files
-- [ ] Measure & profile — dùng performance logging từ Phase 1 để xác định bottleneck thực tế trước khi optimize thêm
+- [x] Incremental git log — cache commit list, chỉ fetch commits mới hơn HEAD đã biết (`git log <known_HEAD>..HEAD`)
+- [x] Response caching cho diff — tránh re-parse cùng một diff khi user switch qua lại giữa files
+- [x] Measure & profile — dùng performance logging từ Phase 1 để xác định bottleneck thực tế trước khi optimize thêm
 
 ### AI Features (Cloud LLM API)
 - [x] Settings UI: API key input (Claude/OpenAI), model selector, token limit

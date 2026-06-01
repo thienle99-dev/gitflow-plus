@@ -7,7 +7,7 @@ interface AISettings {
   model: string;
   customUrl: string;
   tokenLimit: number;
-  detailLevel: string;
+  detailLevel: CommitMessageDetailLevel;
   commitStyle: CommitMessageStyle;
   customRules: string;
 }
@@ -19,6 +19,7 @@ interface GeneratedCommitMessage {
 }
 
 type CommitMessageStyle = "conventional" | "plain" | "gitmoji" | "jira";
+type CommitMessageDetailLevel = "minimal" | "medium" | "detailed";
 
 export async function generateCommitMessageWithAI(
   repoPath: string,
@@ -78,6 +79,7 @@ ${diff.slice(0, 8000)}`;
 
 export function generateLocalCommitMessage(files: FileChange[], branchName = "") {
   const commitStyle = readCommitMessageStyle();
+  const detailLevel = readCommitMessageDetailLevel();
   const statusCounts = files.reduce<Record<string, number>>((counts, file) => {
     counts[file.status] = (counts[file.status] || 0) + 1;
     return counts;
@@ -96,7 +98,7 @@ export function generateLocalCommitMessage(files: FileChange[], branchName = "")
     ? `${statusVerb(primaryStatus)} ${getFileName(files[0].path)}`
     : `update ${files.length} files`;
 
-  return formatLocalCommitMessage(commitStyle, type, scope, description, branchName);
+  return formatLocalCommitMessage(commitStyle, detailLevel, type, scope, description, branchName, files);
 }
 
 function readAISettings(): AISettings {
@@ -105,7 +107,7 @@ function readAISettings(): AISettings {
     model: localStorage.getItem("gitflowAiModel") || DEFAULT_MODEL,
     customUrl: localStorage.getItem("gitflowAiApiUrl") || "",
     tokenLimit: Number(localStorage.getItem("gitflowAiTokenLimit") || "4096"),
-    detailLevel: localStorage.getItem("gitflowAiDetailLevel") || "medium",
+    detailLevel: readCommitMessageDetailLevel(),
     commitStyle: readCommitMessageStyle(),
     customRules: localStorage.getItem("gitflowAiCustomRules") || "",
   };
@@ -117,6 +119,14 @@ function readCommitMessageStyle(): CommitMessageStyle {
     return saved;
   }
   return "conventional";
+}
+
+function readCommitMessageDetailLevel(): CommitMessageDetailLevel {
+  const saved = localStorage.getItem("gitflowAiDetailLevel");
+  if (saved === "minimal" || saved === "detailed") {
+    return saved;
+  }
+  return "medium";
 }
 
 function hasProvider(settings: AISettings) {
@@ -174,6 +184,32 @@ function commitStyleInstruction(style: CommitMessageStyle) {
 
 function formatLocalCommitMessage(
   style: CommitMessageStyle,
+  detailLevel: CommitMessageDetailLevel,
+  type: string,
+  scope: string,
+  description: string,
+  branchName: string,
+  files: FileChange[],
+) {
+  const subject = formatCommitSubject(style, type, scope, description, branchName);
+  if (detailLevel === "minimal") {
+    return subject;
+  }
+
+  const changeList = buildLocalChangeList(files, detailLevel === "detailed" ? 8 : 3);
+  if (changeList.length === 0) {
+    return subject;
+  }
+
+  if (detailLevel === "detailed") {
+    return `${subject}\n\nChanges:\n${changeList.map((line) => `- ${line}`).join("\n")}`;
+  }
+
+  return `${subject}\n\n${changeList.map((line) => `- ${line}`).join("\n")}`;
+}
+
+function formatCommitSubject(
+  style: CommitMessageStyle,
   type: string,
   scope: string,
   description: string,
@@ -190,6 +226,10 @@ function formatLocalCommitMessage(
     return ticket ? `${ticket} ${type}${scope}: ${description}` : `${type}${scope}: ${description}`;
   }
   return `${type}${scope}: ${description}`;
+}
+
+function buildLocalChangeList(files: FileChange[], limit: number) {
+  return files.slice(0, limit).map((file) => `${statusVerb(file.status)} ${file.path}`);
 }
 
 function extractTicket(branchName: string) {

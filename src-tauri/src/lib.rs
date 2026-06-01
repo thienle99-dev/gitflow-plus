@@ -218,6 +218,7 @@ pub fn run() {
             commands::app_window::show_main_window,
             commands::app_window::open_settings_window,
             commands::log::git_log,
+            commands::log::git_log_since,
             commands::log::git_log_stream,
             commands::log::file_history,
             commands::status::git_status,
