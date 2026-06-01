@@ -803,14 +803,15 @@ export default function TrayPanelView() {
 
       {/* Floating Toast Notification */}
       {toast && (
-        <div
-          className={`absolute bottom-14 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full shadow-lg text-[9px] font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200 z-50 ${toast.type === "error"
-            ? "bg-[#ff453a] text-white"
-            : "bg-[#30d158] text-white"
-            }`}
-        >
-          {toast.type === "error" ? <AlertCircle size={10} /> : <Check size={10} />}
-          <span>{toast.message}</span>
+        <div className="pointer-events-none absolute bottom-[54px] left-3 right-3 z-50 flex justify-center animate-in fade-in slide-in-from-bottom-1 duration-200">
+          <div className="flex max-w-[260px] items-center gap-1.5 rounded-mac border border-border-60 bg-surface-1/95 px-2.5 py-1.5 text-[9px] font-semibold text-text-primary shadow-xl backdrop-blur">
+            {toast.type === "error" ? (
+              <AlertCircle size={11} className="shrink-0 text-[#ff453a]" />
+            ) : (
+              <Check size={11} className="shrink-0 text-[#30d158]" />
+            )}
+            <span className="min-w-0 truncate whitespace-nowrap">{toast.message}</span>
+          </div>
         </div>
       )}
     </div>
