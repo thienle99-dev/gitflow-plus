@@ -501,485 +501,517 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
   };
 
   return (
-    <div className="h-full flex flex-col bg-surface-0">
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2.5 border-b border-border bg-surface-1">
-        <div className="flex items-center gap-1.5 text-text-primary font-medium text-xs">
-          <Settings size={14} className="text-accent" />
-          <span>Application Settings</span>
+    <div className="flex flex-row h-[480px] w-[600px] bg-surface-0 overflow-hidden select-none">
+      {/* Left Sidebar (180px) */}
+      <div className="w-[180px] shrink-0 border-r border-border-60 bg-surface-1 flex flex-col justify-between p-2">
+        <div className="space-y-3">
+          {/* Header/Title */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 text-text-primary font-semibold text-xs border-b border-border-60">
+            <Settings size={14} className="text-accent" />
+            <span>Settings</span>
+          </div>
+
+          {/* Navigation vertical list */}
+          <div className="space-y-0.5">
+            <button
+              onClick={() => setActiveTab("general")}
+              className={`w-full px-2.5 py-1.5 text-xs font-medium rounded-mac flex items-center gap-2.5 transition-all ${
+                activeTab === "general"
+                  ? "tab-accent-active font-semibold text-text-primary"
+                  : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
+              }`}
+            >
+              <div className="w-5 h-5 rounded-[5px] bg-[#007aff] flex items-center justify-center text-white shrink-0">
+                <Sliders size={12} strokeWidth={2.2} />
+              </div>
+              General
+            </button>
+
+            <button
+              onClick={() => setActiveTab("git")}
+              className={`w-full px-2.5 py-1.5 text-xs font-medium rounded-mac flex items-center gap-2.5 transition-all ${
+                activeTab === "git"
+                  ? "tab-accent-active font-semibold text-text-primary"
+                  : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
+              }`}
+            >
+              <div className="w-5 h-5 rounded-[5px] bg-[#ff2d55] flex items-center justify-center text-white shrink-0">
+                <GitBranch size={12} strokeWidth={2.2} />
+              </div>
+              Git Core
+            </button>
+
+            <button
+              onClick={() => setActiveTab("ai")}
+              className={`w-full px-2.5 py-1.5 text-xs font-medium rounded-mac flex items-center gap-2.5 transition-all ${
+                activeTab === "ai"
+                  ? "tab-accent-active font-semibold text-text-primary"
+                  : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
+              }`}
+            >
+              <div className="w-5 h-5 rounded-[5px] bg-[#ff9500] flex items-center justify-center text-white shrink-0">
+                <Sparkles size={12} strokeWidth={2.2} />
+              </div>
+              AI Assistant
+            </button>
+
+            <button
+              onClick={() => setActiveTab("advanced")}
+              className={`w-full px-2.5 py-1.5 text-xs font-medium rounded-mac flex items-center gap-2.5 transition-all ${
+                activeTab === "advanced"
+                  ? "tab-accent-active font-semibold text-text-primary"
+                  : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
+              }`}
+            >
+              <div className="w-5 h-5 rounded-[5px] bg-[#8e8e93] flex items-center justify-center text-white shrink-0">
+                <Gauge size={12} strokeWidth={2.2} />
+              </div>
+              Advanced
+            </button>
+          </div>
+        </div>
+
+        {/* Sidebar Footer (Troubleshooting actions) */}
+        <div className="pt-2 border-t border-border-60 px-1 space-y-0.5">
+          <button
+            type="button"
+            onClick={handleResetSettings}
+            className="w-full px-2 py-1 text-2xs font-medium text-text-muted hover:text-text-primary rounded-mac transition-colors flex items-center gap-2"
+            title="Reset Settings"
+          >
+            <RotateCcw size={11} />
+            Reset Settings
+          </button>
         </div>
       </div>
 
-      {/* Tabs Row */}
-      <div className="flex px-3 py-1.5 border-b border-border-60 bg-surface-1 gap-1">
-        <button
-          onClick={() => setActiveTab("general")}
-          className={`px-2.5 py-1 text-2xs font-medium rounded-mac flex items-center gap-1 transition-all ${
-            activeTab === "general"
-              ? "tab-accent-active"
-              : "text-text-muted hover:text-text-primary hover:bg-surface-2"
-          }`}
-        >
-          <Sliders size={12} />
-          General
-        </button>
-        <button
-          onClick={() => setActiveTab("git")}
-          className={`px-2.5 py-1 text-2xs font-medium rounded-mac flex items-center gap-1 transition-all ${
-            activeTab === "git"
-              ? "tab-accent-active"
-              : "text-text-muted hover:text-text-primary hover:bg-surface-2"
-          }`}
-        >
-          <GitBranch size={12} />
-          Git
-        </button>
-        <button
-          onClick={() => setActiveTab("ai")}
-          className={`px-2.5 py-1 text-2xs font-medium rounded-mac flex items-center gap-1 transition-all ${
-            activeTab === "ai"
-              ? "tab-accent-active"
-              : "text-text-muted hover:text-text-primary hover:bg-surface-2"
-          }`}
-        >
-          <Sparkles size={12} />
-          AI Integration
-        </button>
-        <button
-          onClick={() => setActiveTab("advanced")}
-          className={`px-2.5 py-1 text-2xs font-medium rounded-mac flex items-center gap-1 transition-all ${
-            activeTab === "advanced"
-              ? "tab-accent-active"
-              : "text-text-muted hover:text-text-primary hover:bg-surface-2"
-          }`}
-        >
-          <Gauge size={12} />
-          Advanced
-        </button>
-      </div>
+      {/* Right Content Area (420px) */}
+      <div className="flex-1 flex flex-col min-w-0 h-full">
+        {/* Dynamic Detail Header */}
+        <div className="px-5 py-3 border-b border-border-60 bg-surface-1/10 shrink-0">
+          <h2 className="text-xs font-semibold text-text-primary">
+            {activeTab === "general" && "General Settings"}
+            {activeTab === "git" && "Git Core Settings"}
+            {activeTab === "ai" && "AI Assistant Integration"}
+            {activeTab === "advanced" && "Advanced Preferences"}
+          </h2>
+        </div>
 
-      {/* Scrollable Container */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        {activeTab === "general" && (
-          <div className="space-y-4">
-            {/* Color Theme Selector */}
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-text-primary">Color Theme</label>
-              <div className="space-y-3">
-                {THEME_GROUPS.map((group) => {
-                  const cards = THEME_CARDS.filter((c) => c.group === group);
-                  return (
-                    <div key={group}>
-                      <div className="text-2xs font-semibold text-text-muted uppercase tracking-wider mb-1.5">
-                        {group}
+        {/* Main Settings Form Scroll Area */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          {activeTab === "general" && (
+            <div className="space-y-4">
+              {/* Color Theme Selector */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-text-primary">Color Theme</label>
+                <div className="space-y-3">
+                  {THEME_GROUPS.map((group) => {
+                    const cards = THEME_CARDS.filter((c) => c.group === group);
+                    return (
+                      <div key={group}>
+                        <div className="text-2xs font-semibold text-text-muted uppercase tracking-wider mb-1.5">
+                          {group}
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {cards.map((card) => (
+                            <ThemeSkeletonCard
+                              key={card.id}
+                              card={card}
+                              selected={theme === card.id}
+                              onClick={() => setSelectedTheme(card.id as any)}
+                            />
+                          ))}
+                        </div>
                       </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {cards.map((card) => (
-                          <ThemeSkeletonCard
-                            key={card.id}
-                            card={card}
-                            selected={theme === card.id}
-                            onClick={() => setSelectedTheme(card.id as any)}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
 
-            {/* Default Diff Mode Selector */}
-            <div className="space-y-1 pt-2">
-              <label className="text-xs font-semibold text-text-primary">Default Diff View Mode</label>
-              <select
-                value={defaultDiffMode}
-                onChange={(e) => setDefaultDiffMode(e.target.value as "split" | "unified")}
-                className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer"
-              >
-                <option value="split">Split View (Side-by-Side)</option>
-                <option value="unified">Unified View (Combined)</option>
-              </select>
-              <p className="text-2xs text-text-muted">
-                Choose the default presentation style when inspecting file differences.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border-40">
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-text-primary">Commit Graph Density</label>
+              {/* Default Diff Mode Selector */}
+              <div className="space-y-1 pt-2">
+                <label className="text-xs font-semibold text-text-primary">Default Diff View Mode</label>
                 <select
-                  value={graphDensity}
-                  onChange={(e) => setGraphDensity(e.target.value as "comfortable" | "compact")}
+                  value={defaultDiffMode}
+                  onChange={(e) => setDefaultDiffMode(e.target.value as "split" | "unified")}
                   className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer"
                 >
-                  <option value="comfortable">Comfortable rows</option>
-                  <option value="compact">Compact rows</option>
+                  <option value="split">Split View (Side-by-Side)</option>
+                  <option value="unified">Unified View (Combined)</option>
                 </select>
+                <p className="text-2xs text-text-muted">
+                  Choose the default presentation style when inspecting file differences.
+                </p>
               </div>
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-text-primary">Diff Context Lines</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={9999}
-                  value={diffContext}
-                  onChange={(e) => setDiffContext(Number(e.target.value))}
-                  className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent"
-                />
-              </div>
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-text-primary">Commit List Columns</label>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  ["Hash", graphShowHash, setGraphShowHash],
-                  ["Author", graphShowAuthor, setGraphShowAuthor],
-                  ["Date", graphShowDate, setGraphShowDate],
-                ].map(([label, checked, setter]) => (
-                  <label key={label as string} className="flex items-center gap-2 text-xs text-text-secondary cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={checked as boolean}
-                      onChange={(e) => (setter as (next: boolean) => void)(e.target.checked)}
-                      className="rounded border-border text-accent focus:ring-accent"
-                    />
-                    {label as string}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none pt-1">
-              <input
-                type="checkbox"
-                checked={diffLineWrap}
-                onChange={(e) => setDiffLineWrap(e.target.checked)}
-                className="rounded border-border text-accent focus:ring-accent"
-              />
-              Wrap long lines in diff viewer
-            </label>
-          </div>
-        )}
-
-        {activeTab === "git" && (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={autoFetch}
-                  onChange={(e) => setAutoFetch(e.target.checked)}
-                  className="rounded border-border text-accent focus:ring-accent"
-                />
-                Enable Background Auto-Fetch
-              </label>
-              <p className="text-2xs text-text-muted pl-5">
-                Periodically refresh upstream status while a repository is open.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-text-primary">Fetch Interval</label>
-                <select
-                  value={fetchInterval}
-                  onChange={(e) => setFetchInterval(Number(e.target.value))}
-                  disabled={!autoFetch}
-                  className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer disabled:opacity-50"
-                >
-                  <option value={5}>Every 5 minutes</option>
-                  <option value={10}>Every 10 minutes</option>
-                  <option value={15}>Every 15 minutes</option>
-                  <option value={30}>Every 30 minutes</option>
-                  <option value={60}>Every hour</option>
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-text-primary">Recent Repositories</label>
-                <input
-                  type="number"
-                  min={3}
-                  max={30}
-                  value={recentRepoLimit}
-                  onChange={(e) => setRecentRepoLimit(Number(e.target.value))}
-                  className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2 pt-2 border-t border-border-40">
-              <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={autoPrune}
-                  onChange={(e) => setAutoPrune(e.target.checked)}
-                  className="rounded border-border text-accent focus:ring-accent"
-                />
-                Prune deleted remote branches during fetch
-              </label>
-              <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={confirmDangerous}
-                  onChange={(e) => setConfirmDangerous(e.target.checked)}
-                  className="rounded border-border text-accent focus:ring-accent"
-                />
-                Confirm destructive actions
-              </label>
-              <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={reopenLastRepo}
-                  onChange={(e) => setReopenLastRepo(e.target.checked)}
-                  className="rounded border-border text-accent focus:ring-accent"
-                />
-                Reopen last repository on launch
-              </label>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "ai" && (
-          <div className="space-y-4">
-            {/* API Key */}
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-text-primary">API Key</label>
-              <div className="relative">
-                <input
-                  type={showKey ? "text" : "password"}
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="sk-..."
-                  className="w-full h-8 pr-7 pl-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary placeholder:text-text-muted outline-none focus:border-accent transition-colors"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowKey(!showKey)}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 ghost p-1"
-                  title={showKey ? "Hide key" : "Show key"}
-                >
-                  {showKey ? <EyeOff size={12} /> : <Eye size={12} />}
-                </button>
-              </div>
-              <p className="text-2xs text-text-muted">
-                {apiKey ? maskKey(apiKey) : "Provide an API key to enable AI-powered Commit Message suggestions."}
-              </p>
-            </div>
-
-            {/* Custom API URL */}
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-text-primary">Custom API URL (Endpoint)</label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={apiUrl}
-                  onChange={(e) => setApiUrl(e.target.value)}
-                  placeholder="https://api.openai.com/v1 or local gateway address"
-                  className="flex-1 h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary placeholder:text-text-muted outline-none focus:border-accent transition-colors"
-                />
-                <button
-                  type="button"
-                  onClick={handleFetchModels}
-                  disabled={fetchingModels || !apiUrl}
-                  className="px-3 h-8 text-2xs font-semibold btn-accent-soft border disabled:opacity-40 rounded-mac transition-all shrink-0 flex items-center justify-center gap-1"
-                >
-                  <RefreshCw size={11} className={fetchingModels ? "animate-spin" : ""} />
-                  {fetchingModels ? "Fetching..." : "Fetch Models"}
-                </button>
-              </div>
-              <p className="text-2xs text-text-muted">
-                Override default provider endpoints (e.g. for proxies, self-hosted gateways, Ollama, etc.). Leave blank for default endpoints.
-              </p>
-            </div>
-
-            {/* Model Selection */}
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-text-primary">AI LLM Model</label>
-              <select
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer"
-              >
-                {fetchedModels.length > 0 && (
-                  <optgroup label="Custom / Local API Models">
-                    {fetchedModels.map((m) => (
-                      <option key={m.id} value={m.id}>{m.label}</option>
-                    ))}
-                  </optgroup>
-                )}
-                <optgroup label="Cloud Models (requires Key)">
-                  {AVAILABLE_MODELS.map((m) => (
-                    <option key={m.id} value={m.id}>{m.label}</option>
-                  ))}
-                </optgroup>
-                <optgroup label="Local Models (Open Source)">
-                  {LOCAL_MODELS.map((m) => (
-                    <option key={m.id} value={m.id}>{m.label}</option>
-                  ))}
-                </optgroup>
-              </select>
-            </div>
-
-            {/* Token Limit */}
-            <div className="space-y-1 pt-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-text-primary">Token Response Limit</label>
-                <span className="text-2xs font-mono text-text-muted">{tokenLimit.toLocaleString()} tokens</span>
-              </div>
-              <input
-                type="range"
-                min={512}
-                max={32768}
-                step={512}
-                value={tokenLimit}
-                onChange={(e) => setTokenLimit(Number(e.target.value))}
-                className="w-full h-1 bg-surface-2 rounded-full appearance-none cursor-pointer accent-accent"
-              />
-              <div className="flex justify-between text-2xs text-text-muted">
-                <span>512</span>
-                <span>4,096 (Default)</span>
-                <span>32,768</span>
-              </div>
-            </div>
-
-            {/* Commit Message Detail Level */}
-            <div className="space-y-1 pt-2">
-              <label className="text-xs font-semibold text-text-primary">Commit Message Style</label>
-              <select
-                value={aiDetailLevel}
-                onChange={(e) => setAiDetailLevel(e.target.value as any)}
-                className="w-full h-7 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary focus:border-accent outline-none"
-              >
-                <option value="minimal">Minimal (Subject only, max 50 chars)</option>
-                <option value="medium">Standard (Subject + brief change list)</option>
-                <option value="detailed">Detailed (Comprehensive conventional format)</option>
-              </select>
-            </div>
-
-            {/* Custom Rules */}
-            <div className="space-y-1 pt-2">
-              <label className="text-xs font-semibold text-text-primary">Custom Guidelines / Prompt Rules</label>
-              <textarea
-                value={customRules}
-                onChange={(e) => setCustomRules(e.target.value)}
-                placeholder="e.g. Always start with Jira ticket number [PROJ-XXXX] extracted from the branch name, or write in Vietnamese."
-                rows={3}
-                className="w-full px-2 py-1.5 text-xs bg-surface-1 border border-border rounded-mac text-text-primary focus:border-accent outline-none resize-y placeholder:text-text-muted/60"
-              />
-            </div>
-          </div>
-        )}
-
-        {activeTab === "advanced" && (
-          <div className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
-                <Gauge size={13} className="text-accent" />
-                Performance
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border-40">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-text-primary">Large Diff Handling</label>
+                  <label className="text-xs font-semibold text-text-primary">Commit Graph Density</label>
                   <select
-                    value={largeDiffMode}
-                    onChange={(e) => setLargeDiffMode(e.target.value as "full" | "prompt" | "summary")}
+                    value={graphDensity}
+                    onChange={(e) => setGraphDensity(e.target.value as "comfortable" | "compact")}
                     className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer"
                   >
-                    <option value="prompt">Ask before opening</option>
-                    <option value="summary">Show summary first</option>
-                    <option value="full">Always render full diff</option>
+                    <option value="comfortable">Comfortable rows</option>
+                    <option value="compact">Compact rows</option>
                   </select>
                 </div>
-                <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none self-end h-8">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-text-primary">Diff Context Lines</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={9999}
+                    value={diffContext}
+                    onChange={(e) => setDiffContext(Number(e.target.value))}
+                    className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-text-primary">Commit List Columns</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    ["Hash", graphShowHash, setGraphShowHash],
+                    ["Author", graphShowAuthor, setGraphShowAuthor],
+                    ["Date", graphShowDate, setGraphShowDate],
+                  ].map(([label, checked, setter]) => (
+                    <label key={label as string} className="flex items-center gap-2 text-xs text-text-secondary cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={checked as boolean}
+                        onChange={(e) => (setter as (next: boolean) => void)(e.target.checked)}
+                        className="rounded border-border text-accent focus:ring-accent"
+                      />
+                      {label as string}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none pt-1">
+                <input
+                  type="checkbox"
+                  checked={diffLineWrap}
+                  onChange={(e) => setDiffLineWrap(e.target.checked)}
+                  className="rounded border-border text-accent focus:ring-accent"
+                />
+                Wrap long lines in diff viewer
+              </label>
+            </div>
+          )}
+
+          {activeTab === "git" && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none">
                   <input
                     type="checkbox"
-                    checked={reducedMotion}
-                    onChange={(e) => setReducedMotion(e.target.checked)}
+                    checked={autoFetch}
+                    onChange={(e) => setAutoFetch(e.target.checked)}
                     className="rounded border-border text-accent focus:ring-accent"
                   />
-                  Reduce animations
+                  Enable Background Auto-Fetch
+                </label>
+                <p className="text-2xs text-text-muted pl-5">
+                  Periodically refresh upstream status while a repository is open.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-text-primary">Fetch Interval</label>
+                  <select
+                    value={fetchInterval}
+                    onChange={(e) => setFetchInterval(Number(e.target.value))}
+                    disabled={!autoFetch}
+                    className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer disabled:opacity-50"
+                  >
+                    <option value={5}>Every 5 minutes</option>
+                    <option value={10}>Every 10 minutes</option>
+                    <option value={15}>Every 15 minutes</option>
+                    <option value={30}>Every 30 minutes</option>
+                    <option value={60}>Every hour</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-text-primary">Recent Repositories</label>
+                  <input
+                    type="number"
+                    min={3}
+                    max={30}
+                    value={recentRepoLimit}
+                    onChange={(e) => setRecentRepoLimit(Number(e.target.value))}
+                    className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-border-40">
+                <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={autoPrune}
+                    onChange={(e) => setAutoPrune(e.target.checked)}
+                    className="rounded border-border text-accent focus:ring-accent"
+                  />
+                  Prune deleted remote branches during fetch
+                </label>
+                <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={confirmDangerous}
+                    onChange={(e) => setConfirmDangerous(e.target.checked)}
+                    className="rounded border-border text-accent focus:ring-accent"
+                  />
+                  Confirm destructive actions
+                </label>
+                <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={reopenLastRepo}
+                    onChange={(e) => setReopenLastRepo(e.target.checked)}
+                    className="rounded border-border text-accent focus:ring-accent"
+                  />
+                  Reopen last repository on launch
                 </label>
               </div>
             </div>
+          )}
 
-            <div className="space-y-3 pt-3 border-t border-border-40">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
-                <Keyboard size={13} className="text-accent" />
-                Keyboard Shortcuts
+          {activeTab === "ai" && (
+            <div className="space-y-4">
+              {/* API Key */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-text-primary">API Key</label>
+                <div className="relative">
+                  <input
+                    type={showKey ? "text" : "password"}
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder="sk-..."
+                    className="w-full h-8 pr-7 pl-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary placeholder:text-text-muted outline-none focus:border-accent transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowKey(!showKey)}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 ghost p-1"
+                    title={showKey ? "Hide key" : "Show key"}
+                  >
+                    {showKey ? <EyeOff size={12} /> : <Eye size={12} />}
+                  </button>
+                </div>
+                <p className="text-2xs text-text-muted">
+                  {apiKey ? maskKey(apiKey) : "Provide an API key to enable AI-powered Commit Message suggestions."}
+                </p>
               </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-                {[
-                  ["Toggle sidebar", "Cmd+B"],
-                  ["Close dialog", "Esc"],
-                  ["Commit staged changes", "Cmd+Enter"],
-                  ["Open search", "Toolbar"],
-                ].map(([label, shortcut]) => (
-                  <div key={label} className="flex items-center justify-between gap-3">
-                    <span className="text-text-secondary">{label}</span>
-                    <span className="font-mono text-2xs text-text-muted bg-surface-1 border border-border rounded px-1.5 py-0.5">
-                      {shortcut}
-                    </span>
+
+              {/* Custom API URL */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-text-primary">Custom API URL (Endpoint)</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={apiUrl}
+                    onChange={(e) => setApiUrl(e.target.value)}
+                    placeholder="https://api.openai.com/v1 or local gateway address"
+                    className="flex-1 h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary placeholder:text-text-muted outline-none focus:border-accent transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleFetchModels}
+                    disabled={fetchingModels || !apiUrl}
+                    className="px-3 h-8 text-2xs font-semibold btn-accent-soft border disabled:opacity-40 rounded-mac transition-all shrink-0 flex items-center justify-center gap-1"
+                  >
+                    <RefreshCw size={11} className={fetchingModels ? "animate-spin" : ""} />
+                    {fetchingModels ? "Fetching..." : "Fetch Models"}
+                  </button>
+                </div>
+                <p className="text-2xs text-text-muted">
+                  Override default provider endpoints (e.g. for proxies, self-hosted gateways, Ollama, etc.). Leave blank for default endpoints.
+                </p>
+              </div>
+
+              {/* Model Selection */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-text-primary">AI LLM Model</label>
+                <select
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer"
+                >
+                  {fetchedModels.length > 0 && (
+                    <optgroup label="Custom / Local API Models">
+                      {fetchedModels.map((m) => (
+                        <option key={m.id} value={m.id}>{m.label}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  <optgroup label="Cloud Models (requires Key)">
+                    {AVAILABLE_MODELS.map((m) => (
+                      <option key={m.id} value={m.id}>{m.label}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Local Models (Open Source)">
+                    {LOCAL_MODELS.map((m) => (
+                      <option key={m.id} value={m.id}>{m.label}</option>
+                    ))}
+                  </optgroup>
+                </select>
+              </div>
+
+              {/* Token Limit */}
+              <div className="space-y-1 pt-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-text-primary">Token Response Limit</label>
+                  <span className="text-2xs font-mono text-text-muted">{tokenLimit.toLocaleString()} tokens</span>
+                </div>
+                <input
+                  type="range"
+                  min={512}
+                  max={32768}
+                  step={512}
+                  value={tokenLimit}
+                  onChange={(e) => setTokenLimit(Number(e.target.value))}
+                  className="w-full h-1 bg-surface-2 rounded-full appearance-none cursor-pointer accent-accent"
+                />
+                <div className="flex justify-between text-2xs text-text-muted">
+                  <span>512</span>
+                  <span>4,096 (Default)</span>
+                  <span>32,768</span>
+                </div>
+              </div>
+
+              {/* Commit Message Detail Level */}
+              <div className="space-y-1 pt-2">
+                <label className="text-xs font-semibold text-text-primary">Commit Message Style</label>
+                <select
+                  value={aiDetailLevel}
+                  onChange={(e) => setAiDetailLevel(e.target.value as any)}
+                  className="w-full h-7 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary focus:border-accent outline-none"
+                >
+                  <option value="minimal">Minimal (Subject only, max 50 chars)</option>
+                  <option value="medium">Standard (Subject + brief change list)</option>
+                  <option value="detailed">Detailed (Comprehensive conventional format)</option>
+                </select>
+              </div>
+
+              {/* Custom Rules */}
+              <div className="space-y-1 pt-2">
+                <label className="text-xs font-semibold text-text-primary">Custom Guidelines / Prompt Rules</label>
+                <textarea
+                  value={customRules}
+                  onChange={(e) => setCustomRules(e.target.value)}
+                  placeholder="e.g. Always start with Jira ticket number [PROJ-XXXX] extracted from the branch name, or write in Vietnamese."
+                  rows={3}
+                  className="w-full px-2 py-1.5 text-xs bg-surface-1 border border-border rounded-mac text-text-primary focus:border-accent outline-none resize-y placeholder:text-text-muted/60"
+                />
+              </div>
+            </div>
+          )}
+
+          {activeTab === "advanced" && (
+            <div className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
+                  <Gauge size={13} className="text-accent" />
+                  Performance
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-text-primary">Large Diff Handling</label>
+                    <select
+                      value={largeDiffMode}
+                      onChange={(e) => setLargeDiffMode(e.target.value as "full" | "prompt" | "summary")}
+                      className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer"
+                    >
+                      <option value="prompt">Ask before opening</option>
+                      <option value="summary">Show summary first</option>
+                      <option value="full">Always render full diff</option>
+                    </select>
                   </div>
-                ))}
+                  <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none self-end h-8">
+                    <input
+                      type="checkbox"
+                      checked={reducedMotion}
+                      onChange={(e) => setReducedMotion(e.target.checked)}
+                      className="rounded border-border text-accent focus:ring-accent"
+                    />
+                    Reduce animations
+                  </label>
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-3 border-t border-border-40">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
+                  <Keyboard size={13} className="text-accent" />
+                  Keyboard Shortcuts
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                  {[
+                    ["Toggle sidebar", "Cmd+B"],
+                    ["Close dialog", "Esc"],
+                    ["Commit staged changes", "Cmd+Enter"],
+                    ["Open search", "Toolbar"],
+                  ].map(([label, shortcut]) => (
+                    <div key={label} className="flex items-center justify-between gap-3">
+                      <span className="text-text-secondary">{label}</span>
+                      <span className="font-mono text-2xs text-text-muted bg-surface-1 border border-border rounded px-1.5 py-0.5">
+                        {shortcut}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-3 border-t border-border-40">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
+                  <ShieldAlert size={13} className="text-[#ff9f0a]" />
+                  Maintenance
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={handleClearAiCredentials}
+                    className="h-8 px-2 text-2xs font-semibold border border-border rounded-mac text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors flex items-center justify-center gap-1"
+                  >
+                    <Database size={12} />
+                    Clear AI Credentials
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleClearRecentRepos}
+                    className="h-8 px-2 text-2xs font-semibold border border-border rounded-mac text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors flex items-center justify-center gap-1"
+                  >
+                    <Trash2 size={12} />
+                    Clear Recent Repositories
+                  </button>
+                </div>
+                <p className="text-2xs text-text-muted">
+                  Maintenance actions apply immediately. Saved preferences remain local to this device.
+                </p>
               </div>
             </div>
+          )}
+        </div>
 
-            <div className="space-y-3 pt-3 border-t border-border-40">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
-                <ShieldAlert size={13} className="text-[#ff9f0a]" />
-                Maintenance
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={handleClearAiCredentials}
-                  className="h-8 px-2 text-2xs font-semibold border border-border rounded-mac text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors flex items-center justify-center gap-1"
-                >
-                  <Database size={12} />
-                  Clear AI
-                </button>
-                <button
-                  type="button"
-                  onClick={handleClearRecentRepos}
-                  className="h-8 px-2 text-2xs font-semibold border border-border rounded-mac text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors flex items-center justify-center gap-1"
-                >
-                  <Trash2 size={12} />
-                  Clear Recent
-                </button>
-                <button
-                  type="button"
-                  onClick={handleResetSettings}
-                  className="h-8 px-2 text-2xs font-semibold border border-[#ff453a]/30 rounded-mac text-[#ff453a] hover:bg-[#ff453a]/10 transition-colors flex items-center justify-center gap-1"
-                >
-                  <RotateCcw size={12} />
-                  Reset
-                </button>
-              </div>
-              <p className="text-2xs text-text-muted">
-                Maintenance actions apply immediately. Saved preferences remain local to this device.
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Footer */}
-      <div className="flex items-center gap-2 px-3 py-2 border-t border-border bg-surface-1">
-        <button
-          onClick={handleSave}
-          disabled={!hasChanges}
-          className="flex-1 px-3 py-1 bg-accent text-accent-fg text-xs font-medium rounded-mac disabled:opacity-40 hover:opacity-90 transition-opacity"
-        >
-          Save
-        </button>
-        <button
-          onClick={handleCancel}
-          className="flex-1 px-3 py-1 text-xs text-text-muted hover:text-text-primary border border-border rounded-mac transition-colors"
-        >
-          Cancel
-        </button>
+        {/* Action Footer */}
+        <div className="px-5 py-2.5 border-t border-border-60 bg-surface-1 flex items-center justify-end gap-2 shrink-0">
+          <button
+            onClick={handleCancel}
+            className="px-4 py-1 text-xs text-text-secondary hover:text-text-primary hover:bg-surface-2 border border-border rounded-mac transition-colors min-w-[64px]"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!hasChanges}
+            className="px-4 py-1 bg-accent text-accent-fg text-xs font-semibold rounded-mac disabled:opacity-40 hover:opacity-90 transition-opacity min-w-[64px]"
+          >
+            Save
+          </button>
+        </div>
       </div>
 
       {toast && <div className="toast">{toast}</div>}
