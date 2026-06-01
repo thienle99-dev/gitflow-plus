@@ -121,7 +121,7 @@ function readCommitMessageStyle(): CommitMessageStyle {
   return "conventional";
 }
 
-function readCommitMessageDetailLevel(): CommitMessageDetailLevel {
+export function readCommitMessageDetailLevel(): CommitMessageDetailLevel {
   const saved = localStorage.getItem("gitflowAiDetailLevel");
   const validLevels: CommitMessageDetailLevel[] = ["ultra-minimal", "minimal", "medium", "detailed", "comprehensive"];
   if (saved && validLevels.includes(saved as CommitMessageDetailLevel)) {
