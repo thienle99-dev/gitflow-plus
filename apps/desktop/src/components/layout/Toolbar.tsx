@@ -71,7 +71,7 @@ export default function Toolbar() {
           {changes && changes.length > 0 ? (
             <button
               onClick={showChanges}
-              className="flex items-center gap-2.5 px-3.5 h-8 text-2xs font-bold rounded-full bg-accent/10 border border-accent/20 hover:bg-accent/15 text-text-primary transition-all cursor-pointer shadow-2xs shrink-0"
+              className="flex items-center gap-2.5 px-3.5 h-8 text-2xs font-bold rounded-full bg-accent-10 border border-accent-20 hover:bg-accent-15 text-text-primary transition-all cursor-pointer shadow-2xs shrink-0"
               title={`${changes.filter(c => c.staged).length} staged, ${changes.filter(c => !c.staged).length} unstaged — click to view`}
             >
               <FileDiff size={12} className="text-accent" />
@@ -94,7 +94,7 @@ export default function Toolbar() {
           ) : (
             <button
               onClick={showChanges}
-              className="flex items-center gap-2.5 px-3.5 h-8 text-2xs font-semibold rounded-full bg-surface-2/60 border border-border-40 hover:bg-surface-2 text-text-secondary hover:text-text-primary transition-all cursor-pointer shadow-2xs shrink-0"
+              className="flex items-center gap-2.5 px-3.5 h-8 text-2xs font-semibold rounded-full bg-surface-2-60 border border-border-40 hover:bg-surface-2 text-text-secondary hover:text-text-primary transition-all cursor-pointer shadow-2xs shrink-0"
               title="Show current changes"
             >
               <FileDiff size={12} className="text-text-muted" />
@@ -106,7 +106,7 @@ export default function Toolbar() {
         {/* Middle Side: Action Button Segment Groups */}
         <div className="flex items-center gap-3">
           {/* Sync Segment Group (Pull, Fetch, Push) */}
-          <div className="flex items-center bg-surface-2/40 border border-border-40 rounded-mac p-0.5 shadow-2xs">
+          <div className="flex items-center bg-surface-2-40 border border-border-40 rounded-mac p-0.5 shadow-2xs">
             <button
               className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all disabled:opacity-40 cursor-pointer"
               onClick={() => doAction("pull", () => api.remote.pull(repoPath!))}
@@ -149,7 +149,7 @@ export default function Toolbar() {
           </div>
 
           {/* Git Operations Segment Group (Branch, Merge, Stash) */}
-          <div className="flex items-center bg-surface-2/40 border border-border-40 rounded-mac p-0.5 shadow-2xs">
+          <div className="flex items-center bg-surface-2-40 border border-border-40 rounded-mac p-0.5 shadow-2xs">
             <button
               className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer"
               onClick={() => setShowBranchDialog(true)}
@@ -182,7 +182,7 @@ export default function Toolbar() {
           </div>
 
           {/* Utilities Segment Group (Search, Analytics, Undo) */}
-          <div className="flex items-center bg-surface-2/40 border border-border-40 rounded-mac p-0.5 shadow-2xs">
+          <div className="flex items-center bg-surface-2-40 border border-border-40 rounded-mac p-0.5 shadow-2xs">
             <button
               className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer"
               onClick={() => openDialog("search")}

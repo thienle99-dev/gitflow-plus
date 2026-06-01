@@ -234,29 +234,29 @@ export default function WorkingTree() {
 
   const ctxItems: ContextMenuItem[] = ctxMenu
     ? [
-        {
-          label: "View diff",
-          action: () => selectFile(ctxMenu.file.path, ctxMenu.stage),
-        },
-        {
-          label: ctxMenu.stage === "staged" ? "Unstage file" : "Stage file",
-          icon: <Check size={13} />,
-          action: () =>
-            ctxMenu.stage === "staged"
-              ? handleUnstage(ctxMenu.file.path)
-              : handleStage(ctxMenu.file.path),
-        },
-        {
-          label: "Discard changes",
-          icon: <Trash2 size={13} />,
-          action: () => handleDiscard(ctxMenu.file.path),
-        },
-      ]
+      {
+        label: "View diff",
+        action: () => selectFile(ctxMenu.file.path, ctxMenu.stage),
+      },
+      {
+        label: ctxMenu.stage === "staged" ? "Unstage file" : "Stage file",
+        icon: <Check size={13} />,
+        action: () =>
+          ctxMenu.stage === "staged"
+            ? handleUnstage(ctxMenu.file.path)
+            : handleStage(ctxMenu.file.path),
+      },
+      {
+        label: "Discard changes",
+        icon: <Trash2 size={13} />,
+        action: () => handleDiscard(ctxMenu.file.path),
+      },
+    ]
     : [];
 
   const totalChanges = staged.length + unstaged.length;
   const isAllOpen = stagedOpen || unstagedOpen;
-  
+
   const handleToggleAllSections = () => {
     if (isAllOpen) {
       setStagedOpen(false);
@@ -271,26 +271,26 @@ export default function WorkingTree() {
     <div className="h-full flex flex-col bg-surface-0">
       {/* Master Changes Header */}
       <div className="h-9 px-3 border-b border-border flex items-center justify-between shrink-0 bg-surface-1/40 hover:bg-surface-1/70 transition-colors">
-        <div 
+        <div
           className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-text-primary uppercase tracking-wider select-none"
           onClick={handleToggleAllSections}
           title={isAllOpen ? "Collapse all" : "Expand all"}
         >
-          <ChevronDown 
-            size={13} 
-            className={`text-text-secondary transition-transform duration-150 ${isAllOpen ? "" : "-rotate-90"}`} 
+          <ChevronDown
+            size={13}
+            className={`text-text-secondary transition-transform duration-150 ${isAllOpen ? "" : "-rotate-90"}`}
           />
           Changes
         </div>
         <div className="flex items-center gap-1">
-          <button 
-            className="ghost p-1 rounded hover:bg-surface-2 transition-colors" 
-            onClick={invalidate} 
+          <button
+            className="ghost p-1 rounded hover:bg-surface-2 transition-colors"
+            onClick={invalidate}
             title="Refresh changes"
           >
             <RefreshCw size={13} />
           </button>
-          <button 
+          <button
             className={`ghost p-1 rounded hover:bg-surface-2 transition-colors ${generateCommit.isPending ? "opacity-50 cursor-not-allowed text-accent" : ""}`}
             onClick={handleGenerateCommit}
             disabled={generateCommit.isPending}
@@ -302,7 +302,7 @@ export default function WorkingTree() {
               <Sparkles size={13} />
             )}
           </button>
-          <button 
+          <button
             className="ghost p-1 rounded hover:bg-surface-2 transition-colors text-text-secondary hover:text-accent disabled:opacity-40"
             onClick={handleStageAll}
             disabled={unstaged.length === 0}
@@ -310,7 +310,7 @@ export default function WorkingTree() {
           >
             <Plus size={13} />
           </button>
-          <button 
+          <button
             className="ghost p-1 rounded hover:bg-surface-2 transition-colors text-text-secondary hover:text-[#ff375f] disabled:opacity-40"
             onClick={handleDiscardAll}
             disabled={totalChanges === 0}
@@ -363,7 +363,7 @@ export default function WorkingTree() {
           grow
         />
         {selectedFiles.size > 0 && (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-accent/5 border-b border-accent/20 shrink-0">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-accent-5 border-b border-accent-20 shrink-0">
             <span className="text-2xs text-text-muted">{selectedFiles.size} selected</span>
             <button onClick={handleBatchStage} className="text-2xs font-medium text-accent hover:underline">
               Stage selected
@@ -378,8 +378,8 @@ export default function WorkingTree() {
         )}
       </div>
 
-      <div className="px-4 py-3 border-t border-border-60 bg-surface-1/10 space-y-2.5 shrink-0">
-        <div className="relative bg-surface-2/30 border border-border-40 rounded-mac p-2 focus-within:border-accent/60 focus-within:ring-1 focus-within:ring-accent/15 transition-all shadow-2xs">
+      <div className="px-4 py-3 border-t border-border-60 bg-surface-1-10 space-y-2.5 shrink-0">
+        <div className="relative bg-surface-2-30 border border-border-40 rounded-mac p-2 focus-within:border-accent-60 focus-within:ring-1 focus-within:ring-accent-15 transition-all shadow-2xs">
           <textarea
             ref={textareaRef}
             value={commitMessage}
@@ -388,9 +388,8 @@ export default function WorkingTree() {
             className="w-full h-[58px] text-xs bg-transparent text-text-primary placeholder:text-text-muted/60 resize-none outline-none border-none p-0 leading-relaxed"
           />
           <button
-            className={`absolute right-2 bottom-2 p-1.5 rounded-full hover:bg-accent/15 text-text-muted hover:text-accent transition-all active:scale-95 cursor-pointer ${
-              generateCommit.isPending ? "opacity-50 cursor-not-allowed text-accent" : ""
-            }`}
+            className={`absolute right-2 bottom-2 p-1.5 rounded-full hover:bg-accent-15 text-text-muted hover:text-accent transition-all active:scale-95 cursor-pointer ${generateCommit.isPending ? "opacity-50 cursor-not-allowed text-accent" : ""
+              }`}
             onClick={handleGenerateCommit}
             disabled={generateCommit.isPending}
             title={generateCommit.isPending ? "Generating..." : "Generate commit message (AI)"}
@@ -406,11 +405,10 @@ export default function WorkingTree() {
           <button
             onClick={handleCommit}
             disabled={!commitMessage.trim() || staged.length === 0 || committing}
-            className={`flex-1 h-8 inline-flex items-center justify-center gap-1.5 px-4 text-2xs font-semibold rounded-[5px] transition-all shadow-2xs cursor-pointer select-none ${
-              commitMessage.trim() && staged.length > 0
-                ? "bg-accent text-accent-fg hover:opacity-90 active:scale-[0.99] shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]"
-                : "bg-surface-3 text-text-muted opacity-40 cursor-not-allowed"
-            } ${committing ? "opacity-60" : ""}`}
+            className={`flex-1 h-8 inline-flex items-center justify-center gap-1.5 px-4 text-2xs font-semibold rounded-[5px] transition-all shadow-2xs cursor-pointer select-none ${commitMessage.trim() && staged.length > 0
+              ? "bg-accent text-accent-fg hover:opacity-90 active:scale-[0.99] shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]"
+              : "bg-surface-3 text-text-muted opacity-40 cursor-not-allowed"
+              } ${committing ? "opacity-60" : ""}`}
             title={
               !commitMessage.trim()
                 ? "Enter a commit message"
@@ -428,11 +426,10 @@ export default function WorkingTree() {
           <button
             type="button"
             onClick={() => setAmend(!amend)}
-            className={`h-8 px-3 rounded-[5px] border text-2xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
-              amend
-                ? "bg-[#ff9f0a]/10 border-[#ff9f0a]/30 text-[#ff9f0a]"
-                : "bg-surface-2/40 border-border-40 text-text-muted hover:text-text-primary hover:bg-surface-3"
-            }`}
+            className={`h-8 px-3 rounded-[5px] border text-2xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${amend
+              ? "bg-[#ff9f0a]/10 border-[#ff9f0a]/30 text-[#ff9f0a]"
+              : "bg-surface-2-40 border-border-40 text-text-muted hover:text-text-primary hover:bg-surface-3"
+              }`}
             title="Amend last commit"
           >
             <GitCommit size={11} className={amend ? "text-[#ff9f0a]" : "text-text-muted"} />
@@ -502,11 +499,10 @@ function ChangeSection({
           <ChevronDown size={13} className={`transition-transform duration-150 ${open ? "" : "-rotate-90"}`} />
         </button>
         <button
-          className={`h-3.5 w-3.5 rounded-[4px] border flex items-center justify-center transition-all ${
-            checked
-              ? "bg-accent border-accent text-accent-fg"
-              : "border-border text-transparent hover:border-text-secondary hover:bg-surface-2"
-          }`}
+          className={`h-3.5 w-3.5 rounded-[4px] border flex items-center justify-center transition-all ${checked
+            ? "bg-accent border-accent text-accent-fg"
+            : "border-border text-transparent hover:border-text-secondary hover:bg-surface-2"
+            }`}
           onClick={onToggleAll}
           title={checked ? "Unstage all (⌘U)" : "Stage all (⌘⇧A)"}
           disabled={files.length === 0}
@@ -525,25 +521,25 @@ function ChangeSection({
       </div>
 
       {open && (
-      <div className="flex-1 overflow-y-auto py-1">
-        {files.length === 0 ? (
-          <div className="px-3 py-2 text-xs text-text-muted">{empty}</div>
-        ) : (
-          files.map((file) => (
-            <ChangeRow
-              key={`${stage}:${file.path}`}
-              file={file}
-              checked={checked}
-              selected={selectedFile === file.path && selectedStage === stage}
-              multiSelected={multiSelectedFiles.has(file.path)}
-              onSelect={() => onSelect(file.path)}
-              onToggle={() => onToggleFile(file.path)}
-              onMenu={(x, y) => onMenu(x, y, file)}
-              onMultiClick={(e) => onFileMultiClick(file.path, e)}
-            />
-          ))
-        )}
-      </div>
+        <div className="flex-1 overflow-y-auto py-1">
+          {files.length === 0 ? (
+            <div className="px-3 py-2 text-xs text-text-muted">{empty}</div>
+          ) : (
+            files.map((file) => (
+              <ChangeRow
+                key={`${stage}:${file.path}`}
+                file={file}
+                checked={checked}
+                selected={selectedFile === file.path && selectedStage === stage}
+                multiSelected={multiSelectedFiles.has(file.path)}
+                onSelect={() => onSelect(file.path)}
+                onToggle={() => onToggleFile(file.path)}
+                onMenu={(x, y) => onMenu(x, y, file)}
+                onMultiClick={(e) => onFileMultiClick(file.path, e)}
+              />
+            ))
+          )}
+        </div>
       )}
     </div>
   );
@@ -562,7 +558,7 @@ interface ChangeRowProps {
 
 function StatusBadge({ status, selected }: { status: string; selected: boolean }) {
   const label = statusLabel(status);
-  
+
   let badgeClass = "";
   if (selected) {
     badgeClass = "text-accent-fg opacity-90";
@@ -600,9 +596,8 @@ function ChangeRow({ file, checked, selected, multiSelected, onSelect, onToggle,
 
   return (
     <div
-      className={`tree-item group w-full grid grid-cols-[14px_16px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-1 text-left ${
-        multiSelected ? "ring-1 ring-accent bg-accent/5" : selected ? "selected" : ""
-      }`}
+      className={`tree-item group w-full grid grid-cols-[14px_16px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-1 text-left ${multiSelected ? "ring-1 ring-accent bg-accent/5" : selected ? "selected" : ""
+        }`}
       onClick={(e) => {
         if (onMultiClick) {
           onMultiClick(e);
@@ -625,15 +620,14 @@ function ChangeRow({ file, checked, selected, multiSelected, onSelect, onToggle,
       }}
     >
       <span
-        className={`h-3.5 w-3.5 rounded-[4px] border flex items-center justify-center transition-all cursor-pointer ${
-          checked
-            ? selected
-              ? "bg-accent-fg border-accent-fg text-accent"
-              : "bg-accent border-accent text-accent-fg"
-            : selected
-              ? "border-accent-fg/40 hover:border-accent-fg hover:bg-accent-fg/10 text-transparent"
-              : "border-border hover:border-text-secondary hover:bg-surface-2 text-transparent"
-        }`}
+        className={`h-3.5 w-3.5 rounded-[4px] border flex items-center justify-center transition-all cursor-pointer ${checked
+          ? selected
+            ? "bg-accent-fg border-accent-fg text-accent"
+            : "bg-accent border-accent text-accent-fg"
+          : selected
+            ? "border-accent-fg/40 hover:border-accent-fg hover:bg-accent-fg/10 text-transparent"
+            : "border-border hover:border-text-secondary hover:bg-surface-2 text-transparent"
+          }`}
         onClick={(e) => {
           e.stopPropagation();
           onToggle();
@@ -659,9 +653,8 @@ function ChangeRow({ file, checked, selected, multiSelected, onSelect, onToggle,
       <span className="flex items-center justify-end gap-1.5 min-w-[48px]">
         <StatusBadge status={file.status} selected={selected} />
         <span
-          className={`h-5 w-5 flex items-center justify-center rounded transition-all cursor-pointer opacity-0 group-hover:opacity-100 ${
-            selected ? "hover:bg-accent-fg/20 text-accent-fg" : "text-text-muted hover:bg-surface-2"
-          }`}
+          className={`h-5 w-5 flex items-center justify-center rounded transition-all cursor-pointer opacity-0 group-hover:opacity-100 ${selected ? "hover:bg-accent-fg/20 text-accent-fg" : "text-text-muted hover:bg-surface-2"
+            }`}
           onClick={(e) => {
             e.stopPropagation();
             onMenu(e.clientX, e.clientY);
