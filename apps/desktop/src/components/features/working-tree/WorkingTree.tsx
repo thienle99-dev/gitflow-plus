@@ -378,25 +378,27 @@ export default function WorkingTree() {
         )}
       </div>
 
-      <div className="px-3 py-2 border-t border-border space-y-2 shrink-0">
-        <div className="relative">
+      <div className="px-4 py-3 border-t border-border-60 bg-surface-1/10 space-y-2.5 shrink-0">
+        <div className="relative bg-surface-2/30 border border-border-40 rounded-mac p-2 focus-within:border-accent/60 focus-within:ring-1 focus-within:ring-accent/15 transition-all shadow-2xs">
           <textarea
             ref={textareaRef}
             value={commitMessage}
             onChange={(e) => setCommitMessage(e.target.value)}
             placeholder="Commit message"
-            className="w-full h-[64px] text-xs bg-surface-1 border border-border rounded-mac pl-2 pr-9 py-1.5 text-text-primary placeholder:text-text-muted resize-none outline-none focus:border-accent transition-colors"
+            className="w-full h-[58px] text-xs bg-transparent text-text-primary placeholder:text-text-muted/60 resize-none outline-none border-none p-0 leading-relaxed"
           />
           <button
-            className={`absolute right-1.5 top-1.5 ghost p-1 ${generateCommit.isPending ? "opacity-50 cursor-not-allowed text-accent" : ""}`}
+            className={`absolute right-2 bottom-2 p-1.5 rounded-full hover:bg-accent/15 text-text-muted hover:text-accent transition-all active:scale-95 cursor-pointer ${
+              generateCommit.isPending ? "opacity-50 cursor-not-allowed text-accent" : ""
+            }`}
             onClick={handleGenerateCommit}
             disabled={generateCommit.isPending}
-            title={generateCommit.isPending ? "Generating..." : "Generate commit message"}
+            title={generateCommit.isPending ? "Generating..." : "Generate commit message (AI)"}
           >
             {generateCommit.isPending ? (
-              <RefreshCw size={14} className="animate-spin" />
+              <RefreshCw size={13} className="animate-spin" />
             ) : (
-              <Sparkles size={14} />
+              <Sparkles size={13} />
             )}
           </button>
         </div>
@@ -404,10 +406,10 @@ export default function WorkingTree() {
           <button
             onClick={handleCommit}
             disabled={!commitMessage.trim() || staged.length === 0 || committing}
-            className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-mac transition-all ${
+            className={`flex-1 h-8 inline-flex items-center justify-center gap-1.5 px-4 text-2xs font-semibold rounded-[5px] transition-all shadow-2xs cursor-pointer select-none ${
               commitMessage.trim() && staged.length > 0
-                ? "bg-accent text-accent-fg shadow-sm shadow-accent/30 hover:opacity-90"
-                : "bg-surface-2 text-text-muted cursor-not-allowed"
+                ? "bg-accent text-accent-fg hover:opacity-90 active:scale-[0.99] shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]"
+                : "bg-surface-3 text-text-muted opacity-40 cursor-not-allowed"
             } ${committing ? "opacity-60" : ""}`}
             title={
               !commitMessage.trim()
@@ -417,19 +419,25 @@ export default function WorkingTree() {
                   : "Commit (⌘↵)"
             }
           >
-            <Check size={13} />
-            {committing ? "Committing..." : "Commit"}
+            <Check size={12} className={commitMessage.trim() && staged.length > 0 ? "text-accent-fg" : "text-text-muted"} />
+            <span>{committing ? "Committing..." : "Commit"}</span>
           </button>
+
           <UndoButton onUndoComplete={invalidate} />
-          <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer shrink-0 select-none">
-            <input
-              type="checkbox"
-              checked={amend}
-              onChange={(e) => setAmend(e.target.checked)}
-              className="rounded"
-            />
+
+          <button
+            type="button"
+            onClick={() => setAmend(!amend)}
+            className={`h-8 px-3 rounded-[5px] border text-2xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
+              amend
+                ? "bg-[#ff9f0a]/10 border-[#ff9f0a]/30 text-[#ff9f0a]"
+                : "bg-surface-2/40 border-border-40 text-text-muted hover:text-text-primary hover:bg-surface-3"
+            }`}
+            title="Amend last commit"
+          >
+            <GitCommit size={11} className={amend ? "text-[#ff9f0a]" : "text-text-muted"} />
             <span>Amend</span>
-          </label>
+          </button>
         </div>
       </div>
 

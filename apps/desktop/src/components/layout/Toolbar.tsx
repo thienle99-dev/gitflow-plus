@@ -64,14 +64,14 @@ export default function Toolbar() {
 
   return (
     <>
-      <div className="vibrancy h-[44px] border-b border-border-60 bg-surface-1/40 backdrop-blur-md flex items-center justify-between px-4.5 select-none animate-in fade-in duration-200">
+      <div className="vibrancy h-[44px] border-b border-border-60 bg-surface-1/40 backdrop-blur-md flex items-center justify-between px-4 select-none animate-in fade-in duration-200">
         
         {/* Left Side: Status Capsule Badge */}
         <div className="flex items-center gap-3">
           {changes && changes.length > 0 ? (
             <button
               onClick={showChanges}
-              className="flex items-center gap-2.5 px-3.5 h-7.5 text-2xs font-bold rounded-full bg-accent/10 border border-accent/20 hover:bg-accent/15 text-text-primary transition-all cursor-pointer shadow-2xs shrink-0"
+              className="flex items-center gap-2.5 px-3.5 h-8 text-2xs font-bold rounded-full bg-accent/10 border border-accent/20 hover:bg-accent/15 text-text-primary transition-all cursor-pointer shadow-2xs shrink-0"
               title={`${changes.filter(c => c.staged).length} staged, ${changes.filter(c => !c.staged).length} unstaged — click to view`}
             >
               <FileDiff size={12} className="text-accent" />
@@ -94,7 +94,7 @@ export default function Toolbar() {
           ) : (
             <button
               onClick={showChanges}
-              className="flex items-center gap-2.5 px-3.5 h-7.5 text-2xs font-semibold rounded-full bg-surface-2/60 border border-border-40 hover:bg-surface-2 text-text-secondary hover:text-text-primary transition-all cursor-pointer shadow-2xs shrink-0"
+              className="flex items-center gap-2.5 px-3.5 h-8 text-2xs font-semibold rounded-full bg-surface-2/60 border border-border-40 hover:bg-surface-2 text-text-secondary hover:text-text-primary transition-all cursor-pointer shadow-2xs shrink-0"
               title="Show current changes"
             >
               <FileDiff size={12} className="text-text-muted" />
@@ -218,7 +218,7 @@ export default function Toolbar() {
         <div className="flex items-center gap-3">
           {/* PR Trigger */}
           <button
-            className="ghost h-7.5 w-7.5 flex items-center justify-center text-text-muted hover:text-text-primary rounded-mac transition-all"
+            className="ghost h-8 w-8 flex items-center justify-center text-text-muted hover:text-text-primary rounded-mac transition-all"
             disabled
             title="Pull Requests (Coming soon)"
           >
