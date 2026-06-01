@@ -197,20 +197,38 @@ function formatLocalCommitMessage(
   files: FileChange[],
 ) {
   const subject = formatCommitSubject(style, type, scope, description, branchName);
+
+  if (detailLevel === "ultra-minimal") {
+    return subject;
+  }
+
   if (detailLevel === "minimal") {
     return subject;
   }
 
-  const changeList = buildLocalChangeList(files, detailLevel === "detailed" ? 8 : 3);
+  const changeList = buildLocalChangeList(
+    files,
+    detailLevel === "detailed" || detailLevel === "comprehensive" ? 8 : 3
+  );
+
   if (changeList.length === 0) {
     return subject;
+  }
+
+  if (detailLevel === "medium") {
+    return `${subject}\n\n${changeList.map((line) => `- ${line}`).join("\n")}`;
   }
 
   if (detailLevel === "detailed") {
     return `${subject}\n\nChanges:\n${changeList.map((line) => `- ${line}`).join("\n")}`;
   }
 
-  return `${subject}\n\n${changeList.map((line) => `- ${line}`).join("\n")}`;
+  if (detailLevel === "comprehensive") {
+    const reasoning = "See branch name and diff for context.";
+    return `${subject}\n\nChanges:\n${changeList.map((line) => `- ${line}`).join("\n")}\n\nReasoning:\n${reasoning}`;
+  }
+
+  return subject;
 }
 
 function formatCommitSubject(
