@@ -327,8 +327,19 @@ export default function WorkingTree() {
         <div className="flex items-center gap-2">
           <button
             onClick={handleCommit}
-            disabled={!commitMessage.trim() || committing || staged.length === 0}
-            className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-accent text-accent-fg text-xs font-medium rounded-mac disabled:opacity-40 hover:opacity-90 transition-opacity"
+            disabled={!commitMessage.trim() || staged.length === 0 || committing}
+            className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-mac transition-all ${
+              commitMessage.trim() && staged.length > 0
+                ? "bg-accent text-accent-fg shadow-sm shadow-accent/30 hover:opacity-90"
+                : "bg-surface-2 text-text-muted cursor-not-allowed"
+            } ${committing ? "opacity-60" : ""}`}
+            title={
+              !commitMessage.trim()
+                ? "Enter a commit message"
+                : staged.length === 0
+                  ? "Stage files to commit first"
+                  : "Commit (⌘↵)"
+            }
           >
             <Check size={13} />
             {committing ? "Committing..." : "Commit"}
