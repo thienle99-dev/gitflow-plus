@@ -31,7 +31,7 @@ export default function SettingsDropdown({ onOpenSettings, onOpenKeyboardShortcu
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setOpen(!open)}
-        className="ghost text-xs p-1 hover:bg-surface-2 rounded transition-colors"
+        className="ghost h-8 w-8 flex items-center justify-center text-text-muted hover:text-text-primary rounded-mac hover:bg-surface-2 transition-all cursor-pointer"
         title="Settings & quick actions"
       >
         <Settings size={14} />

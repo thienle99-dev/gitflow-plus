@@ -81,6 +81,16 @@ const VALIDATION_PATTERNS = [
 export function classifyGitError(error: unknown): ClassifiedError {
   const message = error instanceof Error ? error.message : String(error);
 
+  // Auth errors (checked first to prevent 401/403 access issues from matching generic network patterns)
+  if (AUTH_PATTERNS.some((p) => p.test(message))) {
+    return {
+      message: "Credential Required",
+      category: "auth",
+      detail: `Authentication failed (401/403 or permission denied). Please verify your remote credentials, SSH keys, or access token. (${message.replace(/^fatal:\s*/i, "").trim().slice(0, 120)})`,
+      retryable: false,
+    };
+  }
+
   // Network errors
   if (NETWORK_PATTERNS.some((p) => p.test(message))) {
     return {
@@ -88,16 +98,6 @@ export function classifyGitError(error: unknown): ClassifiedError {
       category: "network",
       detail: "Check your internet connection and remote URL. The operation may succeed if you try again.",
       retryable: true,
-    };
-  }
-
-  // Auth errors
-  if (AUTH_PATTERNS.some((p) => p.test(message))) {
-    return {
-      message,
-      category: "auth",
-      detail: "Check your credentials and remote access permissions. You may need to configure SSH keys or a credential helper.",
-      retryable: false,
     };
   }
 

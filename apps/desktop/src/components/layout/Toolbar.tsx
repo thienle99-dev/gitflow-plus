@@ -236,10 +236,10 @@ export default function Toolbar() {
           {/* PR Trigger */}
           <button
             onClick={() => openDialog("merge-request")}
-            className="ghost h-8 w-8 flex items-center justify-center text-text-muted hover:text-text-primary rounded-mac transition-all cursor-pointer"
+            className="ghost h-8 w-8 flex items-center justify-center text-text-muted hover:text-text-primary rounded-mac hover:bg-surface-2 transition-all cursor-pointer"
             title="Merge / Pull Requests"
           >
-            <GitPullRequest size={13} />
+            <GitPullRequest size={14} />
           </button>
 
           <div className="w-[1px] h-3.5 bg-border-40/60" />
