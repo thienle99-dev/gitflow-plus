@@ -3,6 +3,7 @@ export { default as AnalyticsDialog } from "./AnalyticsDialog";
 export { default as CherryPickDialog } from "./CherryPickDialog";
 export { default as ConflictResolver } from "./ConflictResolver";
 export { default as CreateBranchDialog } from "./CreateBranchDialog";
+export { default as CloneDialog } from "./CloneDialog";
 export { default as KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
 export { default as SearchDialog } from "./SearchDialog";
 export { default as SettingsDialog } from "./SettingsDialog";

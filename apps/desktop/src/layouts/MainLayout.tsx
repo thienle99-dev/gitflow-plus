@@ -11,7 +11,7 @@ import Sidebar from "@/components/features/sidebar/Sidebar";
 import CommitGraph from "@/components/features/graph/CommitGraph";
 import RightPanel from "@/components/layout/RightPanel";
 import BottomBar from "@/components/layout/BottomBar";
-import { SearchDialog, KeyboardShortcutsModal, CherryPickDialog, SettingsDialog, AnalyticsDialog, CreateBranchDialog, MergeRequestDialog } from "@/components/features/dialogs";
+import { SearchDialog, KeyboardShortcutsModal, CherryPickDialog, SettingsDialog, AnalyticsDialog, CreateBranchDialog, MergeRequestDialog, CloneDialog } from "@/components/features/dialogs";
 import ErrorBoundary from "@/components/ui/feedback/ErrorBoundary";
 import { AlertOctagon, RefreshCw, Trash2 } from "lucide-react";
 
@@ -229,6 +229,7 @@ export default function MainLayout() {
     "create-branch": <CreateBranchDialog open={true} onClose={closeDialog} />,
     analytics: <AnalyticsDialog open={true} onClose={closeDialog} />,
     "merge-request": <MergeRequestDialog onClose={closeDialog} />,
+    "clone": <CloneDialog open={true} onClose={closeDialog} />,
   };
 
 function InlineErrorFallback({ name }: { name: string }) {

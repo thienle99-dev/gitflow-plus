@@ -3,7 +3,7 @@
     {
       "identifier": "default",
       "description": "Default capability set for GitFlow Desktop",
-      "windows": ["main"],
+      "windows": ["main", "tray"],
       "permissions": [
         "core:default",
         "core:event:default",

@@ -190,6 +190,9 @@ export default function WorkingTree() {
     if (!commitMessage.trim()) return;
     setCommitting(true);
     try {
+      if (staged.length === 0 && unstaged.length > 0) {
+        await api.commit.stageAll(repoPath!);
+      }
       const result = await api.commit.commit(repoPath!, commitMessage, amend);
       showToast(result);
       setCommitMessage("");
@@ -204,18 +207,24 @@ export default function WorkingTree() {
 
   const handleGenerateCommit = async () => {
     if (generateCommit.isPending) return;
-    if (staged.length === 0) {
-      showToast("Stage changes before generating a commit message");
+    if (!changes || changes.length === 0) {
+      showToast("No changes to generate a commit message");
       return;
     }
 
-    showToast("Generating commit message...");
+    const filesForMessage = staged.length > 0 ? staged : changes;
+
+    showToast(
+      staged.length > 0
+        ? "Generating commit message..."
+        : "Generating commit message for all changes..."
+    );
     try {
-      const result = await generateCommit.mutateAsync({ files: staged });
+      const result = await generateCommit.mutateAsync({ files: filesForMessage });
       setCommitMessage(result.message);
       showToast(result.fallback ? `Generated message using local template${result.reason ? ` (${result.reason})` : ""}` : "AI commit message generated");
     } catch (err: any) {
-      setCommitMessage(generateLocalCommitMessage(staged));
+      setCommitMessage(generateLocalCommitMessage(filesForMessage));
       showToast(`AI failed: ${err.message || err}. Used local fallback.`);
     } finally {
       requestAnimationFrame(() => textareaRef.current?.focus());
@@ -404,21 +413,23 @@ export default function WorkingTree() {
         <div className="flex items-center gap-2">
           <button
             onClick={handleCommit}
-            disabled={!commitMessage.trim() || staged.length === 0 || committing}
-            className={`flex-1 h-8 inline-flex items-center justify-center gap-1.5 px-4 text-2xs font-semibold rounded-[5px] transition-all shadow-2xs cursor-pointer select-none ${commitMessage.trim() && staged.length > 0
+            disabled={!commitMessage.trim() || (staged.length === 0 && unstaged.length === 0) || committing}
+            className={`flex-1 h-8 inline-flex items-center justify-center gap-1.5 px-4 text-2xs font-semibold rounded-[5px] transition-all shadow-2xs cursor-pointer select-none ${commitMessage.trim() && (staged.length > 0 || unstaged.length > 0)
               ? "bg-accent text-accent-fg hover:opacity-90 active:scale-[0.99] shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]"
               : "bg-surface-3 text-text-muted opacity-40 cursor-not-allowed"
               } ${committing ? "opacity-60" : ""}`}
             title={
               !commitMessage.trim()
                 ? "Enter a commit message"
-                : staged.length === 0
-                  ? "Stage files to commit first"
+                : staged.length === 0 && unstaged.length === 0
+                  ? "No changes to commit"
+                  : staged.length === 0
+                    ? "Commit all changes"
                   : "Commit (⌘↵)"
             }
           >
-            <Check size={12} className={commitMessage.trim() && staged.length > 0 ? "text-accent-fg" : "text-text-muted"} />
-            <span>{committing ? "Committing..." : "Commit"}</span>
+            <Check size={12} className={commitMessage.trim() && (staged.length > 0 || unstaged.length > 0) ? "text-accent-fg" : "text-text-muted"} />
+            <span>{committing ? "Committing..." : staged.length === 0 && unstaged.length > 0 ? "Commit All" : "Commit"}</span>
           </button>
 
           <UndoButton onUndoComplete={invalidate} />

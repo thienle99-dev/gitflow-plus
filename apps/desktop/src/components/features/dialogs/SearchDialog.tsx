@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useGitSearch } from "@/queries/useGitSearch";
 import type { SearchOptions } from "@/queries/useGitSearch";
@@ -48,6 +48,14 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
   };
 
   const { data: results, isLoading } = useGitSearch(repoPath, searchOpts);
+
+  const branchGroups = useMemo(() => {
+    const allBranches = branches || [];
+    return {
+      local: allBranches.filter((b) => !b.remote),
+      remote: allBranches.filter((b) => b.remote),
+    };
+  }, [branches]);
 
   // Focus input on open
   useEffect(() => {
@@ -367,9 +375,24 @@ CRITICAL INSTRUCTIONS:
                     className="w-full h-7 pl-7 pr-7 text-2xs bg-surface-2/40 border border-border-40 hover:border-border rounded-[5px] text-text-primary outline-none focus:border-accent appearance-none cursor-pointer font-medium transition-colors"
                   >
                     <option value="">All branches</option>
-                    {branches?.map((b) => (
-                      <option key={b.name} value={b.name}>{b.name}</option>
-                    ))}
+                    {branchGroups.local.length > 0 && (
+                      <optgroup label="Local branches">
+                        {branchGroups.local.map((b) => (
+                          <option key={`local:${b.name}`} value={b.name}>
+                            {b.current ? `${b.name} (HEAD)` : b.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {branchGroups.remote.length > 0 && (
+                      <optgroup label="Remote branches">
+                        {branchGroups.remote.map((b) => (
+                          <option key={`remote:${b.name}`} value={b.name}>
+                            {b.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
                   </select>
                   <ChevronDown size={11} strokeWidth={2.5} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted" />
                 </div>

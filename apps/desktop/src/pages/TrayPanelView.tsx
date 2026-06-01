@@ -1,10 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useGitStatus, useGitBranches } from "@/queries/useGitLog";
-import { api, type FileChange, type Commit, type StashEntry } from "@/api/tauri";
-import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { api, type FileChange, type Commit, type StashEntry, type RepoInfo } from "@/api/tauri";
+import { useQueryClient, useQuery, useQueries } from "@tanstack/react-query";
 import { useGenerateCommitMessage } from "@/queries/useAI";
-import { WebviewWindow, getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import {
   ChevronDown,
   ChevronUp,
@@ -91,6 +90,15 @@ export default function TrayPanelView() {
     staleTime: 10_000,
   });
 
+  const repoInfoResults = useQueries({
+    queries: recentRepos.map((path) => ({
+      queryKey: ["repo", path, "info"],
+      queryFn: () => api.repo.info(path),
+      staleTime: 60_000,
+      retry: false,
+    })),
+  });
+
   const handleCheckoutBranch = async (branchName: string) => {
     if (!repoPath) return;
     setCheckingOutBranch(branchName);
@@ -148,6 +156,23 @@ export default function TrayPanelView() {
     branch.name.toLowerCase().includes(branchSearchQuery.toLowerCase())
   );
 
+  const groupedBranches = useMemo(() => {
+    return filteredBranches.reduce(
+      (groups, branchItem) => {
+        if (branchItem.remote) {
+          groups.remote.push(branchItem);
+        } else {
+          groups.local.push(branchItem);
+        }
+        return groups;
+      },
+      {
+        local: [] as NonNullable<typeof branches>,
+        remote: [] as NonNullable<typeof branches>,
+      }
+    );
+  }, [filteredBranches, branches]);
+
   const showToast = (message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
@@ -199,13 +224,20 @@ export default function TrayPanelView() {
   };
 
   const handleAICommitMessage = async () => {
-    if (!repoPath || staged.length === 0) {
-      showToast("Please stage some files first", "error");
+    if (!repoPath || !changes || changes.length === 0) {
+      showToast("No changes to generate a commit message", "error");
       return;
     }
+
+    const filesForMessage = staged.length > 0 ? staged : changes;
     try {
-      showToast("Generating message with AI...", "success");
-      const msg = await generateCommit.mutateAsync({ files: staged });
+      showToast(
+        staged.length > 0
+          ? "Generating message with AI..."
+          : "Generating message for all changes...",
+        "success"
+      );
+      const msg = await generateCommit.mutateAsync({ files: filesForMessage });
       setCommitMessage(msg.message);
     } catch (e: any) {
       showToast(e.message || "Failed to generate commit message", "error");
@@ -216,6 +248,9 @@ export default function TrayPanelView() {
     if (!repoPath || !commitMessage.trim()) return;
     setCommitting(true);
     try {
+      if (staged.length === 0 && unstaged.length > 0) {
+        await api.commit.stageAll(repoPath);
+      }
       await api.commit.commit(repoPath, commitMessage, false);
       setCommitMessage("");
       invalidate();
@@ -252,27 +287,8 @@ export default function TrayPanelView() {
   const handleOpenMainApp = async () => {
     console.log("[Tray] Open Full App clicked");
     try {
-      // Try to get the main window via label
-      let mainWin = await WebviewWindow.getByLabel("main");
-      if (mainWin) {
-        await mainWin.show();
-        await mainWin.unminimize();
-        await mainWin.setFocus();
-        console.log("[Tray] Main window shown via label");
-      } else {
-        console.warn("[Tray] Main window label not found, using getCurrent fallback");
-        const current = getCurrentWebviewWindow();
-        await current.show();
-        await current.unminimize();
-        await current.setFocus();
-        console.log("[Tray] Current window shown via fallback");
-      }
-      // Hide tray popover
-      const trayWin = await WebviewWindow.getByLabel("tray");
-      if (trayWin) {
-        await trayWin.hide();
-        console.log("[Tray] Tray window hidden");
-      }
+      await api.window.showMain();
+      console.log("[Tray] Main window shown");
     } catch (e) {
       console.error("[Tray] Error opening full app:", e);
     }
@@ -281,22 +297,8 @@ export default function TrayPanelView() {
   const handleOpenSettings = async () => {
     console.log("[Tray] Open Settings clicked");
     try {
-      const mainWin = await WebviewWindow.getByLabel("main");
-      if (mainWin) {
-        await mainWin.show();
-        await mainWin.unminimize();
-        await mainWin.setFocus();
-        // Emit a custom event that MainLayout listens for
-        await mainWin.emit("open-dialog", "settings");
-        console.log("[Tray] Emitted open-dialog to main window");
-      } else {
-        console.warn("[Tray] Main window not found");
-      }
-      const trayWin = await WebviewWindow.getByLabel("tray");
-      if (trayWin) {
-        await trayWin.hide();
-        console.log("[Tray] Tray window hidden");
-      }
+      await api.window.openSettings();
+      console.log("[Tray] Settings opened");
     } catch (e) {
       console.error("[Tray] Error opening settings:", e);
     }
@@ -307,9 +309,99 @@ export default function TrayPanelView() {
     path.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const repoInfoByPath = useMemo(() => {
+    return recentRepos.reduce((infoMap, path, index) => {
+      infoMap.set(path, repoInfoResults[index]?.data as RepoInfo | undefined);
+      return infoMap;
+    }, new Map<string, RepoInfo | undefined>());
+  }, [recentRepos, repoInfoResults]);
+
+  const groupedRepos = useMemo(() => {
+    return filteredRepos.reduce(
+      (groups, path) => {
+        const info = repoInfoByPath.get(path);
+        if (info?.remote) {
+          groups.remote.push(path);
+        } else {
+          groups.local.push(path);
+        }
+        return groups;
+      },
+      { local: [] as string[], remote: [] as string[] }
+    );
+  }, [filteredRepos, repoInfoByPath]);
+
   const getRepoName = (path: string | null) => {
     if (!path) return "No Repository";
     return path.split("/").pop() || path;
+  };
+
+  const selectRepo = (path: string) => {
+    openRepo(path);
+    setRepoDropdownOpen(false);
+    setSearchQuery("");
+    invalidate();
+  };
+
+  const renderRepoItem = (path: string) => {
+    const remote = repoInfoByPath.get(path)?.remote;
+
+    return (
+      <button
+        key={path}
+        onClick={() => selectRepo(path)}
+        className={`w-full text-left px-3 py-1.5 text-[10px] hover:bg-accent hover:text-accent-fg transition-colors flex flex-col gap-0.5 ${repoPath === path ? "bg-surface-2 font-semibold" : "text-text-secondary"
+          }`}
+      >
+        <span className="font-medium truncate">{path.split("/").pop()}</span>
+        <span className="text-[8px] opacity-75 truncate">{remote || path}</span>
+      </button>
+    );
+  };
+
+  const renderRepoGroup = (label: string, paths: string[]) => {
+    if (paths.length === 0) return null;
+
+    return (
+      <div className="py-1">
+        <div className="px-3 py-1 text-[8px] font-bold uppercase tracking-wider text-text-muted/80 flex items-center justify-between">
+          <span>{label}</span>
+          <span>{paths.length}</span>
+        </div>
+        {paths.map(renderRepoItem)}
+      </div>
+    );
+  };
+
+  const renderBranchItem = (branchItem: NonNullable<typeof branches>[number]) => (
+    <button
+      key={`${branchItem.remote || "local"}:${branchItem.name}`}
+      onClick={() => handleCheckoutBranch(branchItem.name)}
+      disabled={checkingOutBranch !== null}
+      className={`w-full text-left px-3 py-1.5 text-[9px] hover:bg-accent hover:text-accent-fg transition-colors flex items-center justify-between gap-1.5 ${branchItem.current ? "bg-surface-2 font-semibold text-accent" : "text-text-secondary"
+        }`}
+    >
+      <span className="truncate flex-1">{branchItem.name}</span>
+      {checkingOutBranch === branchItem.name ? (
+        <Loader2 size={9} className="animate-spin text-accent" />
+      ) : branchItem.current ? (
+        <Check size={9} className="text-accent" />
+      ) : null}
+    </button>
+  );
+
+  const renderBranchGroup = (label: string, branchItems: NonNullable<typeof branches>) => {
+    if (branchItems.length === 0) return null;
+
+    return (
+      <div className="py-1">
+        <div className="px-3 py-1 text-[8px] font-bold uppercase tracking-wider text-text-muted/80 flex items-center justify-between">
+          <span>{label}</span>
+          <span>{branchItems.length}</span>
+        </div>
+        {branchItems.map(renderBranchItem)}
+      </div>
+    );
   };
 
   return (
@@ -346,22 +438,10 @@ export default function TrayPanelView() {
                     No repositories found
                   </div>
                 ) : (
-                  filteredRepos.map((path) => (
-                    <button
-                      key={path}
-                      onClick={() => {
-                        openRepo(path);
-                        setRepoDropdownOpen(false);
-                        setSearchQuery("");
-                        invalidate();
-                      }}
-                      className={`w-full text-left px-3 py-1.5 text-[10px] hover:bg-accent hover:text-accent-fg transition-colors flex flex-col gap-0.5 ${repoPath === path ? "bg-surface-2 font-semibold" : "text-text-secondary"
-                        }`}
-                    >
-                      <span className="font-medium truncate">{path.split("/").pop()}</span>
-                      <span className="text-[8px] opacity-75 truncate">{path}</span>
-                    </button>
-                  ))
+                  <>
+                    {renderRepoGroup("Remote", groupedRepos.remote)}
+                    {renderRepoGroup("Local", groupedRepos.local)}
+                  </>
                 )}
               </div>
             </div>
@@ -526,9 +606,13 @@ export default function TrayPanelView() {
                 <div className="flex items-center justify-between gap-2 border-t border-border-40 pt-1.5">
                   <button
                     onClick={handleAICommitMessage}
-                    disabled={staged.length === 0 || generateCommit.isPending}
+                    disabled={(changes?.length || 0) === 0 || generateCommit.isPending}
                     className="text-[9px] font-bold text-accent hover:opacity-85 disabled:opacity-40 transition-all flex items-center gap-1 cursor-pointer"
-                    title="Generate message using AI"
+                    title={
+                      staged.length > 0
+                        ? "Generate message using staged changes"
+                        : "Generate message using all changes"
+                    }
                   >
                     {generateCommit.isPending ? (
                       <Loader2 size={10} className="animate-spin" />
@@ -548,7 +632,7 @@ export default function TrayPanelView() {
                     ) : (
                       <GitCommit size={10} />
                     )}
-                    <span>Commit {staged.length > 0 ? `(${staged.length})` : ""}</span>
+                    <span>Commit {staged.length > 0 ? `(${staged.length})` : unstaged.length > 0 ? "(all)" : ""}</span>
                   </button>
                 </div>
               </div>
@@ -638,22 +722,10 @@ export default function TrayPanelView() {
                       No branches found
                     </div>
                   ) : (
-                    filteredBranches.map((branch) => (
-                      <button
-                        key={branch.name}
-                        onClick={() => handleCheckoutBranch(branch.name)}
-                        disabled={checkingOutBranch !== null}
-                        className={`w-full text-left px-3 py-1.5 text-[9px] hover:bg-accent hover:text-accent-fg transition-colors flex items-center justify-between gap-1.5 ${branch.current ? "bg-surface-2 font-semibold text-accent" : "text-text-secondary"
-                          }`}
-                      >
-                        <span className="truncate flex-1">{branch.name}</span>
-                        {checkingOutBranch === branch.name ? (
-                          <Loader2 size={9} className="animate-spin text-accent" />
-                        ) : branch.current ? (
-                          <Check size={9} className="text-accent" />
-                        ) : null}
-                      </button>
-                    ))
+                    <>
+                      {renderBranchGroup("Local", groupedBranches.local)}
+                      {renderBranchGroup("Remote", groupedBranches.remote)}
+                    </>
                   )}
                 </div>
               </div>

@@ -123,6 +123,13 @@ pub fn run() {
 
             let window = app.get_webview_window("main").unwrap();
             let _ = window.set_decorations(true);
+            let main_window = window.clone();
+            window.on_window_event(move |event| {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                    let _ = main_window.hide();
+                }
+            });
 
             // Try to build a Tray Icon
             let tray_icon = app.default_window_icon().cloned().unwrap();
@@ -206,6 +213,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::repo::open_repo,
             commands::repo::get_repo_info,
+            commands::window::show_main_window,
+            commands::window::open_settings_window,
             commands::log::git_log,
 commands::log::file_history,
             commands::status::git_status,

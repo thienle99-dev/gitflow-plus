@@ -20,6 +20,7 @@ import {
   LogOut,
   Trash2,
   GitPullRequest,
+  Download,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -120,6 +121,17 @@ export default function Sidebar() {
               >
                 <Plus size={12} />
                 <span>Open Repository...</span>
+              </button>
+              <button
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text-primary hover:bg-accent hover:text-accent-fg text-left"
+                onClick={() => {
+                  openDialogState("clone");
+                  setRepoMenuOpen(false);
+                  setRepoSearchQuery("");
+                }}
+              >
+                <Download size={12} />
+                <span>Clone Repository...</span>
               </button>
               <button
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text-primary hover:bg-accent hover:text-accent-fg text-left"

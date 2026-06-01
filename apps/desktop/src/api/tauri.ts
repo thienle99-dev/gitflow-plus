@@ -110,6 +110,15 @@ export const api = {
       invoke<RepoInfo>("open_repo", { path }),
     info: (path: string) =>
       invoke<RepoInfo>("get_repo_info", { path }),
+    clone: (url: string, destination: string) =>
+      invoke<string>("git_clone", { url, destination }),
+  },
+
+  window: {
+    showMain: () =>
+      invoke<void>("show_main_window"),
+    openSettings: () =>
+      invoke<void>("open_settings_window"),
   },
 
   log: (path: string, page?: number, perPage?: number, refName?: string | null) =>
