@@ -524,6 +524,17 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
           General
         </button>
         <button
+          onClick={() => setActiveTab("git")}
+          className={`px-2.5 py-1 text-2xs font-medium rounded-mac flex items-center gap-1 transition-all ${
+            activeTab === "git"
+              ? "bg-accent/10 text-accent font-semibold"
+              : "text-text-muted hover:text-text-primary hover:bg-surface-2"
+          }`}
+        >
+          <GitBranch size={12} />
+          Git
+        </button>
+        <button
           onClick={() => setActiveTab("ai")}
           className={`px-2.5 py-1 text-2xs font-medium rounded-mac flex items-center gap-1 transition-all ${
             activeTab === "ai"
@@ -533,6 +544,17 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
         >
           <Sparkles size={12} />
           AI Integration
+        </button>
+        <button
+          onClick={() => setActiveTab("advanced")}
+          className={`px-2.5 py-1 text-2xs font-medium rounded-mac flex items-center gap-1 transition-all ${
+            activeTab === "advanced"
+              ? "bg-accent/10 text-accent font-semibold"
+              : "text-text-muted hover:text-text-primary hover:bg-surface-2"
+          }`}
+        >
+          <Gauge size={12} />
+          Advanced
         </button>
       </div>
 
@@ -583,8 +605,67 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
               </p>
             </div>
 
-            {/* Auto Fetch Toggle */}
-            <div className="space-y-2 pt-2 border-t border-border/40 mt-2">
+            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/40">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-text-primary">Commit Graph Density</label>
+                <select
+                  value={graphDensity}
+                  onChange={(e) => setGraphDensity(e.target.value as "comfortable" | "compact")}
+                  className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer"
+                >
+                  <option value="comfortable">Comfortable rows</option>
+                  <option value="compact">Compact rows</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-text-primary">Diff Context Lines</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={9999}
+                  value={diffContext}
+                  onChange={(e) => setDiffContext(Number(e.target.value))}
+                  className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-text-primary">Commit List Columns</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  ["Hash", graphShowHash, setGraphShowHash],
+                  ["Author", graphShowAuthor, setGraphShowAuthor],
+                  ["Date", graphShowDate, setGraphShowDate],
+                ].map(([label, checked, setter]) => (
+                  <label key={label as string} className="flex items-center gap-2 text-xs text-text-secondary cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={checked as boolean}
+                      onChange={(e) => (setter as (next: boolean) => void)(e.target.checked)}
+                      className="rounded border-border text-accent focus:ring-accent"
+                    />
+                    {label as string}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none pt-1">
+              <input
+                type="checkbox"
+                checked={diffLineWrap}
+                onChange={(e) => setDiffLineWrap(e.target.checked)}
+                className="rounded border-border text-accent focus:ring-accent"
+              />
+              Wrap long lines in diff viewer
+            </label>
+          </div>
+        )}
+
+        {activeTab === "git" && (
+          <div className="space-y-4">
+            <div className="space-y-2">
               <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none">
                 <input
                   type="checkbox"
@@ -595,8 +676,67 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
                 Enable Background Auto-Fetch
               </label>
               <p className="text-2xs text-text-muted pl-5">
-                Automatically queries git remote servers periodically to keep the branch commits and upstream status up-to-date.
+                Periodically refresh upstream status while a repository is open.
               </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-text-primary">Fetch Interval</label>
+                <select
+                  value={fetchInterval}
+                  onChange={(e) => setFetchInterval(Number(e.target.value))}
+                  disabled={!autoFetch}
+                  className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer disabled:opacity-50"
+                >
+                  <option value={5}>Every 5 minutes</option>
+                  <option value={10}>Every 10 minutes</option>
+                  <option value={15}>Every 15 minutes</option>
+                  <option value={30}>Every 30 minutes</option>
+                  <option value={60}>Every hour</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-text-primary">Recent Repositories</label>
+                <input
+                  type="number"
+                  min={3}
+                  max={30}
+                  value={recentRepoLimit}
+                  onChange={(e) => setRecentRepoLimit(Number(e.target.value))}
+                  className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-2 border-t border-border/40">
+              <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={autoPrune}
+                  onChange={(e) => setAutoPrune(e.target.checked)}
+                  className="rounded border-border text-accent focus:ring-accent"
+                />
+                Prune deleted remote branches during fetch
+              </label>
+              <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={confirmDangerous}
+                  onChange={(e) => setConfirmDangerous(e.target.checked)}
+                  className="rounded border-border text-accent focus:ring-accent"
+                />
+                Confirm destructive actions
+              </label>
+              <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={reopenLastRepo}
+                  onChange={(e) => setReopenLastRepo(e.target.checked)}
+                  className="rounded border-border text-accent focus:ring-accent"
+                />
+                Reopen last repository on launch
+              </label>
             </div>
           </div>
         )}
@@ -728,6 +868,98 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
                 rows={3}
                 className="w-full px-2 py-1.5 text-xs bg-surface-1 border border-border rounded-mac text-text-primary focus:border-accent outline-none resize-y placeholder:text-text-muted/60"
               />
+            </div>
+          </div>
+        )}
+
+        {activeTab === "advanced" && (
+          <div className="space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
+                <Gauge size={13} className="text-accent" />
+                Performance
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-text-primary">Large Diff Handling</label>
+                  <select
+                    value={largeDiffMode}
+                    onChange={(e) => setLargeDiffMode(e.target.value as "full" | "prompt" | "summary")}
+                    className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer"
+                  >
+                    <option value="prompt">Ask before opening</option>
+                    <option value="summary">Show summary first</option>
+                    <option value="full">Always render full diff</option>
+                  </select>
+                </div>
+                <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none self-end h-8">
+                  <input
+                    type="checkbox"
+                    checked={reducedMotion}
+                    onChange={(e) => setReducedMotion(e.target.checked)}
+                    className="rounded border-border text-accent focus:ring-accent"
+                  />
+                  Reduce animations
+                </label>
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-3 border-t border-border/40">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
+                <Keyboard size={13} className="text-accent" />
+                Keyboard Shortcuts
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                {[
+                  ["Toggle sidebar", "Cmd+B"],
+                  ["Close dialog", "Esc"],
+                  ["Commit staged changes", "Cmd+Enter"],
+                  ["Open search", "Toolbar"],
+                ].map(([label, shortcut]) => (
+                  <div key={label} className="flex items-center justify-between gap-3">
+                    <span className="text-text-secondary">{label}</span>
+                    <span className="font-mono text-2xs text-text-muted bg-surface-1 border border-border rounded px-1.5 py-0.5">
+                      {shortcut}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-3 border-t border-border/40">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
+                <ShieldAlert size={13} className="text-[#ff9f0a]" />
+                Maintenance
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={handleClearAiCredentials}
+                  className="h-8 px-2 text-2xs font-semibold border border-border rounded-mac text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors flex items-center justify-center gap-1"
+                >
+                  <Database size={12} />
+                  Clear AI
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClearRecentRepos}
+                  className="h-8 px-2 text-2xs font-semibold border border-border rounded-mac text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors flex items-center justify-center gap-1"
+                >
+                  <Trash2 size={12} />
+                  Clear Recent
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetSettings}
+                  className="h-8 px-2 text-2xs font-semibold border border-[#ff453a]/30 rounded-mac text-[#ff453a] hover:bg-[#ff453a]/10 transition-colors flex items-center justify-center gap-1"
+                >
+                  <RotateCcw size={12} />
+                  Reset
+                </button>
+              </div>
+              <p className="text-2xs text-text-muted">
+                Maintenance actions apply immediately. Saved preferences remain local to this device.
+              </p>
             </div>
           </div>
         )}
