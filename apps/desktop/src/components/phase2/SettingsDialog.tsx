@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import {
+  ChevronDown,
   Database,
   Eye,
   EyeOff,
@@ -133,6 +134,41 @@ function ThemeSkeletonCard({ card, selected, onClick }: {
     </button>
   );
 }
+
+function Switch({
+  checked,
+  onChange,
+  label,
+  description,
+  disabled = false,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+  description?: string;
+  disabled?: boolean;
+}) {
+  return (
+    <label className={`flex items-center justify-between gap-4 py-1.5 select-none ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}>
+      <div className="flex flex-col min-w-0">
+        <span className="text-xs font-semibold text-text-primary">{label}</span>
+        {description && <span className="text-2xs text-text-muted mt-0.5 leading-normal">{description}</span>}
+      </div>
+      <div className="relative shrink-0">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => !disabled && onChange(e.target.checked)}
+          disabled={disabled}
+          className="sr-only peer"
+        />
+        <div className="w-8 h-[18px] bg-surface-3 rounded-full transition-colors duration-200 peer-checked:bg-accent"></div>
+        <div className="absolute left-[2px] top-[2px] bg-white w-[14px] h-[14px] rounded-full shadow-sm transition-transform duration-200 peer-checked:translate-x-3.5"></div>
+      </div>
+    </label>
+  );
+}
+
 
 const AVAILABLE_MODELS = [
   { id: "claude-sonnet-4-20250514", label: "Claude Sonnet 4" },
@@ -601,363 +637,404 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {activeTab === "general" && (
             <div className="space-y-4">
-              {/* Color Theme Selector */}
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-text-primary">Color Theme</label>
-                <div className="space-y-3">
-                  {THEME_GROUPS.map((group) => {
-                    const cards = THEME_CARDS.filter((c) => c.group === group);
-                    return (
-                      <div key={group}>
-                        <div className="text-2xs font-semibold text-text-muted uppercase tracking-wider mb-1.5">
-                          {group}
+              {/* Color Theme Card */}
+              <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-text-primary">Color Theme</label>
+                  <div className="space-y-3">
+                    {THEME_GROUPS.map((group) => {
+                      const cards = THEME_CARDS.filter((c) => c.group === group);
+                      return (
+                        <div key={group}>
+                          <div className="text-2xs font-semibold text-text-muted uppercase tracking-wider mb-1.5">
+                            {group}
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {cards.map((card) => (
+                              <ThemeSkeletonCard
+                                key={card.id}
+                                card={card}
+                                selected={theme === card.id}
+                                onClick={() => setSelectedTheme(card.id as any)}
+                              />
+                            ))}
+                          </div>
                         </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {cards.map((card) => (
-                            <ThemeSkeletonCard
-                              key={card.id}
-                              card={card}
-                              selected={theme === card.id}
-                              onClick={() => setSelectedTheme(card.id as any)}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
-              {/* Default Diff Mode Selector */}
-              <div className="space-y-1 pt-2">
-                <label className="text-xs font-semibold text-text-primary">Default Diff View Mode</label>
-                <select
-                  value={defaultDiffMode}
-                  onChange={(e) => setDefaultDiffMode(e.target.value as "split" | "unified")}
-                  className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer"
-                >
-                  <option value="split">Split View (Side-by-Side)</option>
-                  <option value="unified">Unified View (Combined)</option>
-                </select>
-                <p className="text-2xs text-text-muted">
-                  Choose the default presentation style when inspecting file differences.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border-40">
+              {/* Diff & Graph Preferences Card */}
+              <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
+                {/* Default Diff Mode Selector */}
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-text-primary">Commit Graph Density</label>
-                  <select
-                    value={graphDensity}
-                    onChange={(e) => setGraphDensity(e.target.value as "comfortable" | "compact")}
-                    className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer"
-                  >
-                    <option value="comfortable">Comfortable rows</option>
-                    <option value="compact">Compact rows</option>
-                  </select>
+                  <label className="text-xs font-semibold text-text-primary">Default Diff View Mode</label>
+                  <div className="relative">
+                    <select
+                      value={defaultDiffMode}
+                      onChange={(e) => setDefaultDiffMode(e.target.value as "split" | "unified")}
+                      className="w-full h-8 pl-2.5 pr-8 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer hover:bg-surface-2 transition-all"
+                    >
+                      <option value="split">Split View (Side-by-Side)</option>
+                      <option value="unified">Unified View (Combined)</option>
+                    </select>
+                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
+                      <ChevronDown size={11} strokeWidth={2.5} />
+                    </div>
+                  </div>
+                  <p className="text-2xs text-text-muted">
+                    Choose the default presentation style when inspecting file differences.
+                  </p>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-text-primary">Diff Context Lines</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={9999}
-                    value={diffContext}
-                    onChange={(e) => setDiffContext(Number(e.target.value))}
-                    className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent"
+
+                <div className="border-t border-border-40 pt-2.5">
+                  <Switch
+                    checked={diffLineWrap}
+                    onChange={setDiffLineWrap}
+                    label="Wrap long lines in diff viewer"
+                    description="Automatically wrap excessively long source code lines in the diff panel."
                   />
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-text-primary">Commit List Columns</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    ["Hash", graphShowHash, setGraphShowHash],
-                    ["Author", graphShowAuthor, setGraphShowAuthor],
-                    ["Date", graphShowDate, setGraphShowDate],
-                  ].map(([label, checked, setter]) => (
-                    <label key={label as string} className="flex items-center gap-2 text-xs text-text-secondary cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={checked as boolean}
-                        onChange={(e) => (setter as (next: boolean) => void)(e.target.checked)}
-                        className="rounded border-border text-accent focus:ring-accent"
-                      />
-                      {label as string}
-                    </label>
-                  ))}
+                <div className="grid grid-cols-2 gap-3 border-t border-border-40 pt-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-text-primary">Commit Graph Density</label>
+                    <div className="relative">
+                      <select
+                        value={graphDensity}
+                        onChange={(e) => setGraphDensity(e.target.value as "comfortable" | "compact")}
+                        className="w-full h-8 pl-2.5 pr-8 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer hover:bg-surface-2 transition-all"
+                      >
+                        <option value="comfortable">Comfortable rows</option>
+                        <option value="compact">Compact rows</option>
+                      </select>
+                      <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
+                        <ChevronDown size={11} strokeWidth={2.5} />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-text-primary">Diff Context Lines</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={9999}
+                      value={diffContext}
+                      onChange={(e) => setDiffContext(Number(e.target.value))}
+                      className="w-full h-8 px-2.5 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent hover:bg-surface-2 transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 border-t border-border-40 pt-3">
+                  <label className="text-xs font-semibold text-text-primary">Commit List Columns</label>
+                  <div className="grid grid-cols-3 gap-2 bg-surface-1/40 rounded-mac p-2 border border-border-40">
+                    {[
+                      ["Hash", graphShowHash, setGraphShowHash],
+                      ["Author", graphShowAuthor, setGraphShowAuthor],
+                      ["Date", graphShowDate, setGraphShowDate],
+                    ].map(([label, checked, setter]) => (
+                      <label key={label as string} className="flex items-center gap-2 text-xs text-text-secondary cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={checked as boolean}
+                          onChange={(e) => (setter as (next: boolean) => void)(e.target.checked)}
+                          className="rounded border-border text-accent focus:ring-accent"
+                        />
+                        {label as string}
+                      </label>
+                    ))}
+                  </div>
                 </div>
               </div>
-
-              <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none pt-1">
-                <input
-                  type="checkbox"
-                  checked={diffLineWrap}
-                  onChange={(e) => setDiffLineWrap(e.target.checked)}
-                  className="rounded border-border text-accent focus:ring-accent"
-                />
-                Wrap long lines in diff viewer
-              </label>
             </div>
           )}
 
           {activeTab === "git" && (
             <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none">
-                  <input
-                    type="checkbox"
+              {/* Background Synchronization Card */}
+              <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
+                <div>
+                  <Switch
                     checked={autoFetch}
-                    onChange={(e) => setAutoFetch(e.target.checked)}
-                    className="rounded border-border text-accent focus:ring-accent"
+                    onChange={setAutoFetch}
+                    label="Enable Background Auto-Fetch"
+                    description="Periodically refresh upstream status while a repository is open."
                   />
-                  Enable Background Auto-Fetch
-                </label>
-                <p className="text-2xs text-text-muted pl-5">
-                  Periodically refresh upstream status while a repository is open.
-                </p>
+                </div>
+                <div className={`border-t border-border-40 pt-3 flex items-center justify-between gap-4 transition-opacity ${!autoFetch ? "opacity-40" : ""}`}>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-semibold text-text-primary">Fetch Interval</span>
+                    <span className="text-2xs text-text-muted mt-0.5 leading-normal">How frequently GitFlow queries remotes for background updates.</span>
+                  </div>
+                  <div className="relative w-40 shrink-0">
+                    <select
+                      value={fetchInterval}
+                      onChange={(e) => setFetchInterval(Number(e.target.value))}
+                      disabled={!autoFetch}
+                      className="w-full h-8 pl-2.5 pr-8 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer hover:bg-surface-2 transition-all disabled:cursor-not-allowed"
+                    >
+                      <option value={5}>Every 5 minutes</option>
+                      <option value={10}>Every 10 minutes</option>
+                      <option value={15}>Every 15 minutes</option>
+                      <option value={30}>Every 30 minutes</option>
+                      <option value={60}>Every hour</option>
+                    </select>
+                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
+                      <ChevronDown size={11} strokeWidth={2.5} />
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-text-primary">Fetch Interval</label>
-                  <select
-                    value={fetchInterval}
-                    onChange={(e) => setFetchInterval(Number(e.target.value))}
-                    disabled={!autoFetch}
-                    className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer disabled:opacity-50"
-                  >
-                    <option value={5}>Every 5 minutes</option>
-                    <option value={10}>Every 10 minutes</option>
-                    <option value={15}>Every 15 minutes</option>
-                    <option value={30}>Every 30 minutes</option>
-                    <option value={60}>Every hour</option>
-                  </select>
+              {/* Operations & Launch Preferences Card */}
+              <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3">
+                <Switch
+                  checked={autoPrune}
+                  onChange={setAutoPrune}
+                  label="Prune deleted remote branches during fetch"
+                  description="Automatically clean up stale remote-tracking references during fetch operations."
+                />
+                
+                <div className="border-t border-border-40 pt-2.5">
+                  <Switch
+                    checked={confirmDangerous}
+                    onChange={setConfirmDangerous}
+                    label="Confirm destructive actions"
+                    description="Show confirmation modals before carrying out dangerous Git tasks (force push, discard shifts)."
+                  />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-text-primary">Recent Repositories</label>
+
+                <div className="border-t border-border-40 pt-2.5">
+                  <Switch
+                    checked={reopenLastRepo}
+                    onChange={setReopenLastRepo}
+                    label="Reopen last repository on launch"
+                    description="Automatically load the workspace you were last working on when opening GitFlow."
+                  />
+                </div>
+
+                <div className="border-t border-border-40 pt-3 flex items-center justify-between gap-4">
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-semibold text-text-primary">Recent Repositories Limit</span>
+                    <span className="text-2xs text-text-muted mt-0.5 leading-normal">Maximum number of entries in the recent workspaces list.</span>
+                  </div>
                   <input
                     type="number"
                     min={3}
                     max={30}
                     value={recentRepoLimit}
                     onChange={(e) => setRecentRepoLimit(Number(e.target.value))}
-                    className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent"
+                    className="w-20 h-8 px-2.5 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent hover:bg-surface-2 transition-all shrink-0 text-center"
                   />
                 </div>
-              </div>
-
-              <div className="space-y-2 pt-2 border-t border-border-40">
-                <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={autoPrune}
-                    onChange={(e) => setAutoPrune(e.target.checked)}
-                    className="rounded border-border text-accent focus:ring-accent"
-                  />
-                  Prune deleted remote branches during fetch
-                </label>
-                <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={confirmDangerous}
-                    onChange={(e) => setConfirmDangerous(e.target.checked)}
-                    className="rounded border-border text-accent focus:ring-accent"
-                  />
-                  Confirm destructive actions
-                </label>
-                <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={reopenLastRepo}
-                    onChange={(e) => setReopenLastRepo(e.target.checked)}
-                    className="rounded border-border text-accent focus:ring-accent"
-                  />
-                  Reopen last repository on launch
-                </label>
               </div>
             </div>
           )}
 
           {activeTab === "ai" && (
             <div className="space-y-4">
-              {/* API Key */}
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-text-primary">API Key</label>
-                <div className="relative">
+              {/* AI Provider Configuration Card */}
+              <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
+                {/* API Key */}
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-text-primary">API Key</label>
+                  <div className="relative">
+                    <input
+                      type={showKey ? "text" : "password"}
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      placeholder="sk-..."
+                      className="w-full h-8 pr-7 pl-2.5 text-xs bg-surface-1 border border-border rounded-mac text-text-primary placeholder:text-text-muted outline-none focus:border-accent transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowKey(!showKey)}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 ghost p-1 text-text-muted hover:text-text-primary"
+                      title={showKey ? "Hide key" : "Show key"}
+                    >
+                      {showKey ? <EyeOff size={12} /> : <Eye size={12} />}
+                    </button>
+                  </div>
+                  <p className="text-2xs text-text-muted">
+                    {apiKey ? maskKey(apiKey) : "Provide an API key to enable AI-powered Commit Message suggestions."}
+                  </p>
+                </div>
+
+                {/* Custom API URL */}
+                <div className="space-y-1 border-t border-border-40 pt-3">
+                  <label className="text-xs font-semibold text-text-primary">Custom API URL (Endpoint)</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={apiUrl}
+                      onChange={(e) => setApiUrl(e.target.value)}
+                      placeholder="https://api.openai.com/v1 or local gateway address"
+                      className="flex-1 h-8 px-2.5 text-xs bg-surface-1 border border-border rounded-mac text-text-primary placeholder:text-text-muted outline-none focus:border-accent transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleFetchModels}
+                      disabled={fetchingModels || !apiUrl}
+                      className="px-3 h-8 text-2xs font-semibold btn-accent-soft border border-border-60 disabled:opacity-40 rounded-mac transition-all shrink-0 flex items-center justify-center gap-1"
+                    >
+                      <RefreshCw size={11} className={fetchingModels ? "animate-spin" : ""} />
+                      {fetchingModels ? "Fetching..." : "Fetch Models"}
+                    </button>
+                  </div>
+                  <p className="text-2xs text-text-muted">
+                    Override default provider endpoints (e.g. for proxies, self-hosted gateways, Ollama). Leave blank for default endpoints.
+                  </p>
+                </div>
+
+                {/* Model Selection */}
+                <div className="space-y-1 border-t border-border-40 pt-3">
+                  <label className="text-xs font-semibold text-text-primary">AI LLM Model</label>
+                  <div className="relative">
+                    <select
+                      value={model}
+                      onChange={(e) => setModel(e.target.value)}
+                      className="w-full h-8 pl-2.5 pr-8 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer hover:bg-surface-2 transition-all"
+                    >
+                      {fetchedModels.length > 0 && (
+                        <optgroup label="Custom / Local API Models">
+                          {fetchedModels.map((m) => (
+                            <option key={m.id} value={m.id}>{m.label}</option>
+                          ))}
+                        </optgroup>
+                      )}
+                      <optgroup label="Cloud Models (requires Key)">
+                        {AVAILABLE_MODELS.map((m) => (
+                          <option key={m.id} value={m.id}>{m.label}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="Local Models (Open Source)">
+                        {LOCAL_MODELS.map((m) => (
+                          <option key={m.id} value={m.id}>{m.label}</option>
+                        ))}
+                      </optgroup>
+                    </select>
+                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
+                      <ChevronDown size={11} strokeWidth={2.5} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Token Limit */}
+                <div className="space-y-1 border-t border-border-40 pt-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-text-primary">Token Response Limit</label>
+                    <span className="text-2xs font-mono text-accent font-semibold">{tokenLimit.toLocaleString()} tokens</span>
+                  </div>
                   <input
-                    type={showKey ? "text" : "password"}
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder="sk-..."
-                    className="w-full h-8 pr-7 pl-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary placeholder:text-text-muted outline-none focus:border-accent transition-colors"
+                    type="range"
+                    min={512}
+                    max={32768}
+                    step={512}
+                    value={tokenLimit}
+                    onChange={(e) => setTokenLimit(Number(e.target.value))}
+                    className="w-full h-1 bg-surface-2 rounded-full appearance-none cursor-pointer accent-accent my-2"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowKey(!showKey)}
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 ghost p-1"
-                    title={showKey ? "Hide key" : "Show key"}
-                  >
-                    {showKey ? <EyeOff size={12} /> : <Eye size={12} />}
-                  </button>
+                  <div className="flex justify-between text-3xs text-text-muted">
+                    <span>512</span>
+                    <span>4,096 (Default)</span>
+                    <span>32,768</span>
+                  </div>
                 </div>
-                <p className="text-2xs text-text-muted">
-                  {apiKey ? maskKey(apiKey) : "Provide an API key to enable AI-powered Commit Message suggestions."}
-                </p>
               </div>
 
-              {/* Custom API URL */}
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-text-primary">Custom API URL (Endpoint)</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={apiUrl}
-                    onChange={(e) => setApiUrl(e.target.value)}
-                    placeholder="https://api.openai.com/v1 or local gateway address"
-                    className="flex-1 h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary placeholder:text-text-muted outline-none focus:border-accent transition-colors"
+              {/* Suggestion Preferences Card */}
+              <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
+                {/* Commit Message Detail Level */}
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-text-primary">Commit Message Style</label>
+                  <div className="relative">
+                    <select
+                      value={aiDetailLevel}
+                      onChange={(e) => setAiDetailLevel(e.target.value as any)}
+                      className="w-full h-8 pl-2.5 pr-8 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer hover:bg-surface-2 transition-all"
+                    >
+                      <option value="minimal">Minimal (Subject only, max 50 chars)</option>
+                      <option value="medium">Standard (Subject + brief change list)</option>
+                      <option value="detailed">Detailed (Comprehensive conventional format)</option>
+                    </select>
+                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
+                      <ChevronDown size={11} strokeWidth={2.5} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Custom Rules */}
+                <div className="space-y-1 border-t border-border-40 pt-3">
+                  <label className="text-xs font-semibold text-text-primary">Custom Guidelines / Prompt Rules</label>
+                  <textarea
+                    value={customRules}
+                    onChange={(e) => setCustomRules(e.target.value)}
+                    placeholder="e.g. Always start with Jira ticket number [PROJ-XXXX] extracted from the branch name, or write in Vietnamese."
+                    rows={3}
+                    className="w-full px-2.5 py-1.5 text-xs bg-surface-1 border border-border rounded-mac text-text-primary focus:border-accent outline-none resize-y placeholder:text-text-muted/60 hover:bg-surface-2 transition-all"
                   />
-                  <button
-                    type="button"
-                    onClick={handleFetchModels}
-                    disabled={fetchingModels || !apiUrl}
-                    className="px-3 h-8 text-2xs font-semibold btn-accent-soft border disabled:opacity-40 rounded-mac transition-all shrink-0 flex items-center justify-center gap-1"
-                  >
-                    <RefreshCw size={11} className={fetchingModels ? "animate-spin" : ""} />
-                    {fetchingModels ? "Fetching..." : "Fetch Models"}
-                  </button>
                 </div>
-                <p className="text-2xs text-text-muted">
-                  Override default provider endpoints (e.g. for proxies, self-hosted gateways, Ollama, etc.). Leave blank for default endpoints.
-                </p>
-              </div>
-
-              {/* Model Selection */}
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-text-primary">AI LLM Model</label>
-                <select
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer"
-                >
-                  {fetchedModels.length > 0 && (
-                    <optgroup label="Custom / Local API Models">
-                      {fetchedModels.map((m) => (
-                        <option key={m.id} value={m.id}>{m.label}</option>
-                      ))}
-                    </optgroup>
-                  )}
-                  <optgroup label="Cloud Models (requires Key)">
-                    {AVAILABLE_MODELS.map((m) => (
-                      <option key={m.id} value={m.id}>{m.label}</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Local Models (Open Source)">
-                    {LOCAL_MODELS.map((m) => (
-                      <option key={m.id} value={m.id}>{m.label}</option>
-                    ))}
-                  </optgroup>
-                </select>
-              </div>
-
-              {/* Token Limit */}
-              <div className="space-y-1 pt-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-text-primary">Token Response Limit</label>
-                  <span className="text-2xs font-mono text-text-muted">{tokenLimit.toLocaleString()} tokens</span>
-                </div>
-                <input
-                  type="range"
-                  min={512}
-                  max={32768}
-                  step={512}
-                  value={tokenLimit}
-                  onChange={(e) => setTokenLimit(Number(e.target.value))}
-                  className="w-full h-1 bg-surface-2 rounded-full appearance-none cursor-pointer accent-accent"
-                />
-                <div className="flex justify-between text-2xs text-text-muted">
-                  <span>512</span>
-                  <span>4,096 (Default)</span>
-                  <span>32,768</span>
-                </div>
-              </div>
-
-              {/* Commit Message Detail Level */}
-              <div className="space-y-1 pt-2">
-                <label className="text-xs font-semibold text-text-primary">Commit Message Style</label>
-                <select
-                  value={aiDetailLevel}
-                  onChange={(e) => setAiDetailLevel(e.target.value as any)}
-                  className="w-full h-7 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary focus:border-accent outline-none"
-                >
-                  <option value="minimal">Minimal (Subject only, max 50 chars)</option>
-                  <option value="medium">Standard (Subject + brief change list)</option>
-                  <option value="detailed">Detailed (Comprehensive conventional format)</option>
-                </select>
-              </div>
-
-              {/* Custom Rules */}
-              <div className="space-y-1 pt-2">
-                <label className="text-xs font-semibold text-text-primary">Custom Guidelines / Prompt Rules</label>
-                <textarea
-                  value={customRules}
-                  onChange={(e) => setCustomRules(e.target.value)}
-                  placeholder="e.g. Always start with Jira ticket number [PROJ-XXXX] extracted from the branch name, or write in Vietnamese."
-                  rows={3}
-                  className="w-full px-2 py-1.5 text-xs bg-surface-1 border border-border rounded-mac text-text-primary focus:border-accent outline-none resize-y placeholder:text-text-muted/60"
-                />
               </div>
             </div>
           )}
 
           {activeTab === "advanced" && (
             <div className="space-y-4">
-              <div className="space-y-3">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
+              {/* Performance Tuning Card */}
+              <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary mb-1">
                   <Gauge size={13} className="text-accent" />
-                  Performance
+                  Performance Tuning
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-text-primary">Large Diff Handling</label>
+                <div className="flex items-center justify-between gap-4 pt-1">
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-semibold text-text-primary">Large Diff Handling</span>
+                    <span className="text-2xs text-text-muted mt-0.5 leading-normal">Behavior when rendering exceptionally large changes.</span>
+                  </div>
+                  <div className="relative w-44 shrink-0">
                     <select
                       value={largeDiffMode}
                       onChange={(e) => setLargeDiffMode(e.target.value as "full" | "prompt" | "summary")}
-                      className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer"
+                      className="w-full h-8 pl-2.5 pr-8 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer hover:bg-surface-2 transition-all"
                     >
                       <option value="prompt">Ask before opening</option>
                       <option value="summary">Show summary first</option>
                       <option value="full">Always render full diff</option>
                     </select>
+                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
+                      <ChevronDown size={11} strokeWidth={2.5} />
+                    </div>
                   </div>
-                  <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer select-none self-end h-8">
-                    <input
-                      type="checkbox"
-                      checked={reducedMotion}
-                      onChange={(e) => setReducedMotion(e.target.checked)}
-                      className="rounded border-border text-accent focus:ring-accent"
-                    />
-                    Reduce animations
-                  </label>
+                </div>
+                <div className="border-t border-border-40 pt-2.5">
+                  <Switch
+                    checked={reducedMotion}
+                    onChange={setReducedMotion}
+                    label="Reduce animations"
+                    description="Disable cosmetic transitions and UI animations to speed up navigation response."
+                  />
                 </div>
               </div>
 
-              <div className="space-y-3 pt-3 border-t border-border-40">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
+              {/* System Keyboard Shortcuts Card */}
+              <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary mb-1">
                   <Keyboard size={13} className="text-accent" />
-                  Keyboard Shortcuts
+                  System Shortcuts
                 </div>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs pt-1">
                   {[
                     ["Toggle sidebar", "Cmd+B"],
                     ["Close dialog", "Esc"],
                     ["Commit staged changes", "Cmd+Enter"],
                     ["Open search", "Toolbar"],
                   ].map(([label, shortcut]) => (
-                    <div key={label} className="flex items-center justify-between gap-3">
-                      <span className="text-text-secondary">{label}</span>
-                      <span className="font-mono text-2xs text-text-muted bg-surface-1 border border-border rounded px-1.5 py-0.5">
+                    <div key={label} className="flex items-center justify-between gap-3 bg-surface-1/40 border border-border-40/50 rounded-mac px-2.5 py-1.5">
+                      <span className="text-text-secondary text-2xs font-medium">{label}</span>
+                      <span className="font-mono text-3xs font-semibold text-text-muted bg-surface-2 border border-border rounded px-1.5 py-0.5">
                         {shortcut}
                       </span>
                     </div>
@@ -965,31 +1042,32 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
                 </div>
               </div>
 
-              <div className="space-y-3 pt-3 border-t border-border-40">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
+              {/* Diagnostics & Maintenance Card */}
+              <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary mb-1">
                   <ShieldAlert size={13} className="text-[#ff9f0a]" />
-                  Maintenance
+                  Maintenance & Diagnostics
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2 pt-1">
                   <button
                     type="button"
                     onClick={handleClearAiCredentials}
-                    className="h-8 px-2 text-2xs font-semibold border border-border rounded-mac text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors flex items-center justify-center gap-1"
+                    className="h-8 px-2 text-2xs font-semibold border border-border rounded-mac text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors flex items-center justify-center gap-1.5"
                   >
-                    <Database size={12} />
+                    <Database size={12} className="text-accent" />
                     Clear AI Credentials
                   </button>
                   <button
                     type="button"
                     onClick={handleClearRecentRepos}
-                    className="h-8 px-2 text-2xs font-semibold border border-border rounded-mac text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors flex items-center justify-center gap-1"
+                    className="h-8 px-2 text-2xs font-semibold border border-border rounded-mac text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors flex items-center justify-center gap-1.5"
                   >
-                    <Trash2 size={12} />
+                    <Trash2 size={12} className="text-[#ff453a]" />
                     Clear Recent Repositories
                   </button>
                 </div>
-                <p className="text-2xs text-text-muted">
-                  Maintenance actions apply immediately. Saved preferences remain local to this device.
+                <p className="text-3xs text-text-muted leading-normal pt-1">
+                  Warning: Diagnostic operations apply immediately. Local credentials and recently accessed work lists will be completely reset.
                 </p>
               </div>
             </div>
