@@ -96,6 +96,58 @@ pub async fn git_log(
     Ok(commits)
 }
 
+#[tauri::command]
+pub async fn file_history(path: String, file_path: String, max_count: Option<usize>) -> Result<Vec<Commit>, String> {
+    let limit = max_count.unwrap_or(100).clamp(1, 500);
+
+    let output = Command::new("git")
+        .args([
+            "--no-pager",
+            "-C",
+            &path,
+            "log",
+            "--oneline",
+            "--pretty=format:%H|%P|%an|%ae|%ai|%D|%s",
+            format!("--max-count={}", limit).as_str(),
+            "--follow",
+            "--",
+            &file_path,
+        ])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run git: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Git error: {}", stderr.trim()));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut commits: Vec<Commit> = Vec::new();
+
+    for line in stdout.lines() {
+        if line.is_empty() {
+            continue;
+        }
+        let parts: Vec<&str> = line.splitn(7, '|').collect();
+        if parts.len() < 7 {
+            continue;
+        }
+
+        commits.push(Commit {
+            hash: parts[0].to_string(),
+            parents: if parts[1].is_empty() { vec![] } else { parts[1].split(' ').map(|s| s.to_string()).collect() },
+            author: parts[2].to_string(),
+            email: parts[3].to_string(),
+            date: parts[4].to_string(),
+            refs: parse_refs(parts[5]),
+            message: parts[6].to_string(),
+        });
+    }
+
+    Ok(commits)
+}
+
 pub fn parse_refs(refs_str: &str) -> Vec<Ref> {
     if refs_str.trim().is_empty() {
         return vec![];

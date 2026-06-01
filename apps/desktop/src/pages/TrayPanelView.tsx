@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { useRepoStore } from "@/stores/repo";
-import { useGitStatus } from "@/queries/useGitLog";
+import { useGitStatus, useGitBranches } from "@/queries/useGitLog";
 import { api, type FileChange } from "@/api/tauri";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGenerateCommitMessage } from "@/queries/useAI";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import {
   ChevronDown,
+  ChevronUp,
+  GitBranch,
   File,
   GitCommit,
   Sparkles,
@@ -30,7 +32,10 @@ export default function TrayPanelView() {
   const queryClient = useQueryClient();
 
   const { data: changes, isLoading: isLoadingStatus } = useGitStatus(repoPath);
+  const { data: branches } = useGitBranches(repoPath);
   const generateCommit = useGenerateCommitMessage(repoPath);
+
+  const currentBranch = branches?.find((b) => b.current)?.name || "";
 
   // States
   const [repoDropdownOpen, setRepoDropdownOpen] = useState(false);
@@ -40,18 +45,47 @@ export default function TrayPanelView() {
   const [syncLoading, setSyncLoading] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  // Branch switcher states
+  const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
+  const [branchSearchQuery, setBranchSearchQuery] = useState("");
+  const [checkingOutBranch, setCheckingOutBranch] = useState<string | null>(null);
 
-  // Close dropdown on click outside
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const branchDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns on click outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setRepoDropdownOpen(false);
       }
+      if (branchDropdownRef.current && !branchDropdownRef.current.contains(event.target as Node)) {
+        setBranchDropdownOpen(false);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const handleCheckoutBranch = async (branchName: string) => {
+    if (!repoPath) return;
+    setCheckingOutBranch(branchName);
+    try {
+      await api.branches.checkout(repoPath, branchName);
+      invalidate();
+      showToast(`Switched to branch: ${branchName}`);
+      setBranchDropdownOpen(false);
+      setBranchSearchQuery("");
+    } catch (e: any) {
+      showToast(e.message || `Failed to checkout ${branchName}`, "error");
+    } finally {
+      setCheckingOutBranch(null);
+    }
+  };
+
+  const filteredBranches = (branches || []).filter((branch) =>
+    branch.name.toLowerCase().includes(branchSearchQuery.toLowerCase())
+  );
 
   const showToast = (message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
@@ -378,10 +412,63 @@ export default function TrayPanelView() {
       </div>
 
       {/* Footer Git Actions Bar */}
-      <div className="h-12 border-t border-border-60 bg-surface-1 flex items-center justify-between px-3.5 shrink-0">
-        <span className="text-[9px] font-mono text-text-muted truncate max-w-[150px]">
-          {repoPath ? `Branch: ${changes?.[0] ? "Changes active" : "Up to date"}` : "Ready"}
-        </span>
+      <div className="h-12 border-t border-border-60 bg-surface-1 flex items-center justify-between px-3.5 shrink-0 relative">
+        {/* Branch Switcher (Upwards Dropdown) */}
+        {repoPath ? (
+          <div className="relative" ref={branchDropdownRef}>
+            <button
+              onClick={() => setBranchDropdownOpen(!branchDropdownOpen)}
+              className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-surface-2 text-[10px] font-semibold text-text-primary transition-all max-w-[150px]"
+            >
+              <GitBranch size={11} className="text-accent shrink-0" />
+              <span className="truncate">{currentBranch || "no branch"}</span>
+              <ChevronUp size={10} className="text-text-muted shrink-0" />
+            </button>
+
+            {branchDropdownOpen && (
+              <div className="absolute left-0 bottom-full mb-1 w-56 bg-surface-1 border border-border-60 rounded-mac shadow-xl z-50 py-1.5 animate-in fade-in slide-in-from-bottom-1 duration-150">
+                <div className="px-2 pb-1.5 border-b border-border-40 flex items-center gap-1.5">
+                  <Search size={10} className="text-text-muted" />
+                  <input
+                    type="text"
+                    placeholder="Search branches..."
+                    value={branchSearchQuery}
+                    onChange={(e) => setBranchSearchQuery(e.target.value)}
+                    className="w-full bg-transparent text-[9px] text-text-primary outline-none"
+                    autoFocus
+                  />
+                </div>
+                <div className="max-h-40 overflow-y-auto mt-1">
+                  {filteredBranches.length === 0 ? (
+                    <div className="px-3 py-2 text-[9px] text-text-muted italic">
+                      No branches found
+                    </div>
+                  ) : (
+                    filteredBranches.map((branch) => (
+                      <button
+                        key={branch.name}
+                        onClick={() => handleCheckoutBranch(branch.name)}
+                        disabled={checkingOutBranch !== null}
+                        className={`w-full text-left px-3 py-1.5 text-[9px] hover:bg-accent hover:text-accent-fg transition-colors flex items-center justify-between gap-1.5 ${
+                          branch.current ? "bg-surface-2 font-semibold text-accent" : "text-text-secondary"
+                        }`}
+                      >
+                        <span className="truncate flex-1">{branch.name}</span>
+                        {checkingOutBranch === branch.name ? (
+                          <Loader2 size={9} className="animate-spin text-accent" />
+                        ) : branch.current ? (
+                          <Check size={9} className="text-accent" />
+                        ) : null}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <span className="text-[9px] font-mono text-text-muted">Ready</span>
+        )}
 
         {repoPath && (
           <div className="flex items-center gap-1.5">

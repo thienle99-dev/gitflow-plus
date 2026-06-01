@@ -120,6 +120,13 @@ export const api = {
       refName: refName ?? null,
     }),
 
+  fileHistory: (path: string, filePath: string, maxCount?: number) =>
+    invoke<Commit[]>("file_history", {
+      path,
+      filePath,
+      maxCount: maxCount ?? null,
+    }),
+
   status: (path: string) =>
     invoke<FileChange[]>("git_status", { path }),
 

@@ -202,6 +202,7 @@ pub fn run() {
             commands::repo::open_repo,
             commands::repo::get_repo_info,
             commands::log::git_log,
+commands::log::file_history,
             commands::status::git_status,
             commands::branch::list_branches,
             commands::branch::create_branch,
