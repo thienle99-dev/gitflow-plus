@@ -25,6 +25,7 @@ import {
   Search,
   Archive,
   History,
+  Settings,
 } from "lucide-react";
 
 export default function TrayPanelView() {
@@ -266,6 +267,30 @@ export default function TrayPanelView() {
     }
   };
 
+  const handleOpenSettings = async () => {
+    console.log("[Tray] Open Settings clicked");
+    try {
+      const mainWin = await WebviewWindow.getByLabel("main");
+      if (mainWin) {
+        await mainWin.show();
+        await mainWin.unminimize();
+        await mainWin.setFocus();
+        // Emit a custom event that MainLayout listens for
+        await mainWin.emit("open-dialog", "settings");
+        console.log("[Tray] Emitted open-dialog to main window");
+      } else {
+        console.warn("[Tray] Main window not found");
+      }
+      const trayWin = await WebviewWindow.getByLabel("tray");
+      if (trayWin) {
+        await trayWin.hide();
+        console.log("[Tray] Tray window hidden");
+      }
+    } catch (e) {
+      console.error("[Tray] Error opening settings:", e);
+    }
+  };
+
   // Filter repos based on query
   const filteredRepos = recentRepos.filter((path) =>
     path.toLowerCase().includes(searchQuery.toLowerCase())
@@ -333,14 +358,23 @@ export default function TrayPanelView() {
           )}
         </div>
 
-        {/* Action: Open Main App */}
-        <button
-          onClick={handleOpenMainApp}
-          className="p-1.5 rounded hover:bg-surface-2 text-text-muted hover:text-text-primary transition-all"
-          title="Open Full App"
-        >
-          <ExternalLink size={13} />
-        </button>
+        {/* Action Buttons */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handleOpenSettings}
+            className="p-1.5 rounded hover:bg-surface-2 text-text-muted hover:text-text-primary transition-all cursor-pointer"
+            title="Settings"
+          >
+            <Settings size={13} />
+          </button>
+          <button
+            onClick={handleOpenMainApp}
+            className="p-1.5 rounded hover:bg-surface-2 text-text-muted hover:text-text-primary transition-all cursor-pointer"
+            title="Open Full App"
+          >
+            <ExternalLink size={13} />
+          </button>
+        </div>
       </div>
 
       {/* Segmented Tab Control */}
@@ -472,11 +506,17 @@ export default function TrayPanelView() {
             </div>
 
             {/* Commit Form Section */}
-            <div className="border border-border-40 bg-surface-1/40 rounded-mac p-2.5 flex flex-col gap-2 shrink-0">
-              <div className="flex items-center justify-between border-b border-border-40 pb-1.5">
-                <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
-                  Commit message
-                </span>
+            <div className="border border-border-40 focus-within:border-accent/80 bg-surface-2 rounded-mac p-2 flex flex-col gap-2 shrink-0 transition-colors">
+              <textarea
+                value={commitMessage}
+                onChange={(e) => setCommitMessage(e.target.value)}
+                placeholder="Commit message (or generate with AI...)"
+                rows={2}
+                className="w-full bg-transparent border-none text-[10px] text-text-primary placeholder-text-muted resize-none leading-relaxed font-mono p-0.5"
+                style={{ outline: "none", border: "none", boxShadow: "none" }}
+              />
+
+              <div className="flex items-center justify-between gap-2 border-t border-border-40 pt-1.5">
                 <button
                   onClick={handleAICommitMessage}
                   disabled={staged.length === 0 || generateCommit.isPending}
@@ -490,28 +530,20 @@ export default function TrayPanelView() {
                   )}
                   <span>AI Message</span>
                 </button>
+
+                <button
+                  onClick={handleCommit}
+                  disabled={committing || !commitMessage.trim()}
+                  className="h-6 px-3 bg-accent text-accent-fg text-[9px] font-bold rounded hover:opacity-95 disabled:opacity-40 transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                >
+                  {committing ? (
+                    <Loader2 size={10} className="animate-spin" />
+                  ) : (
+                    <GitCommit size={10} />
+                  )}
+                  <span>Commit {staged.length > 0 ? `(${staged.length})` : ""}</span>
+                </button>
               </div>
-
-              <textarea
-                value={commitMessage}
-                onChange={(e) => setCommitMessage(e.target.value)}
-                placeholder="Write a message or generate with AI..."
-                rows={2}
-                className="w-full bg-surface-2 border border-border-40 rounded px-2 py-1 text-[10px] text-text-primary placeholder-text-muted outline-none focus:border-accent resize-none leading-relaxed font-mono"
-              />
-
-              <button
-                onClick={handleCommit}
-                disabled={committing || !commitMessage.trim()}
-                className="w-full h-7 bg-accent text-accent-fg text-[10px] font-bold rounded hover:opacity-95 disabled:opacity-40 transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
-              >
-                {committing ? (
-                  <Loader2 size={11} className="animate-spin" />
-                ) : (
-                  <GitCommit size={11} />
-                )}
-                <span>Commit {staged.length > 0 ? `(${staged.length} files)` : ""}</span>
-              </button>
             </div>
           </>
         ) : (

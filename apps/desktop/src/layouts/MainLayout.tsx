@@ -81,6 +81,16 @@ export default function MainLayout() {
     return () => { unlisten.then((f) => f()); };
   }, [repoPath, scheduleInvalidate]);
 
+  // Listen for open-dialog requests from other windows (e.g. tray popover)
+  useEffect(() => {
+    const unlisten = listen<string>("open-dialog", (event) => {
+      openDialogState(event.payload);
+    });
+    return () => {
+      unlisten.then((f) => f());
+    };
+  }, [openDialogState]);
+
   const handleOpenRepo = async () => {
     try {
       const selected = await openDialog({ directory: true, multiple: false });

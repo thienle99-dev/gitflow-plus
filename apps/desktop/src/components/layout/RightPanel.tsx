@@ -11,6 +11,7 @@ import StashPanel from "@/components/features/stash/StashPanel";
 import TagPanel from "@/components/features/tags/TagPanel";
 import SubmoduleDetail from "@/components/features/submodules/SubmoduleDetail";
 import { useSubmoduleList } from "@/queries/useSubmoduleList";
+import FileHistoryPanel from "./FileHistoryPanel";
 
 export default function RightPanel() {
   const selectedCommit = useUIStore((s) => s.selectedCommit);
@@ -50,6 +51,7 @@ function DiffViewerPanel() {
   const selectedFileStage = useUIStore((s) => s.selectedFileStage);
   const [showFullContext, setShowFullContext] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [showFileHistory, setShowFileHistory] = useState(false);
   
   const { data: diff, isLoading } = useGitDiff(
     repoPath,
@@ -139,9 +141,22 @@ function DiffViewerPanel() {
             {isFullScreen ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
             <span>{isFullScreen ? "Exit Full Screen" : "Full Screen"}</span>
           </button>
+
+          {!selectedCommit && (
+            <button
+              className={`ghost text-2xs px-2.5 py-1 hover:bg-surface-2 border border-border-40 rounded flex items-center gap-1 transition-colors ${showFileHistory ? "text-[#0a84ff]" : ""}`}
+              onClick={() => setShowFileHistory(!showFileHistory)}
+              title="Show file history"
+            >
+              <History size={12} />
+              <span>History</span>
+            </button>
+          )}
         </div>
       </div>
-      {isLoading ? (
+      {showFileHistory && !selectedCommit ? (
+        <FileHistoryPanel />
+      ) : isLoading ? (
         <div className="flex-1 flex items-center justify-center text-text-muted text-xs">
           Loading diff...
         </div>
