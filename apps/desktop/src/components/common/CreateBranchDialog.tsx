@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { api, type Branch } from "@/api/tauri";
 import { useQueryClient } from "@tanstack/react-query";
 import { Sparkles, RefreshCw } from "lucide-react";
+import { Input } from "@/components/common/form";
 
 interface CreateBranchDialogProps {
   repoPath: string;
@@ -244,12 +245,13 @@ CRITICAL INSTRUCTIONS:
                 <span>AI Suggest</span>
               </button>
             </div>
-            <input
+            <Input
               ref={inputRef}
+              variant="surface-0"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="feature/..."
-              className="w-full text-xs bg-surface-0 border border-border rounded-mac px-2.5 py-1.5 text-text-primary placeholder:text-text-muted outline-none focus:border-accent"
+              className="text-xs"
               onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }}
             />
           </div>

@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { Sparkles, Eye, EyeOff } from "lucide-react";
+import { Input } from "@/components/common/form";
+import Select from "@/components/common/form/Select";
 
 const LS_KEY_API_KEY = "gitflowAiApiKey";
 const LS_KEY_MODEL = "gitflowAiModel";
@@ -105,12 +107,13 @@ export default function AISettings({ onClose }: AISettingsProps) {
         <div className="space-y-1">
           <label className="text-xs font-medium text-text-primary">API Key</label>
           <div className="relative">
-            <input
+            <Input
               type={showKey ? "text" : "password"}
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="sk-..."
-              className="w-full h-8 pr-7 pl-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary placeholder:text-text-muted outline-none focus:border-accent transition-colors"
+              variant="surface-1"
+              className="h-8 pr-7 pl-2 text-xs"
             />
             <button
               onClick={() => setShowKey(!showKey)}
@@ -128,10 +131,11 @@ export default function AISettings({ onClose }: AISettingsProps) {
         {/* Model selector */}
         <div className="space-y-1">
           <label className="text-xs font-medium text-text-primary">Model</label>
-          <select
+          <Select
             value={model}
             onChange={(e) => setModel(e.target.value)}
-            className="w-full h-8 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer"
+            variant="surface-1"
+            className="h-8 px-2 text-xs"
           >
             <optgroup label="Cloud Models">
               {AVAILABLE_MODELS.map((m) => (
@@ -143,7 +147,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
                 <option key={m.id} value={m.id}>{m.label}</option>
               ))}
             </optgroup>
-          </select>
+          </Select>
         </div>
 
         {/* Token limit slider */}

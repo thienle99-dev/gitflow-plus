@@ -5,6 +5,7 @@ import type { SearchOptions } from "@/queries/useGitSearch";
 import { useGitBranches } from "@/queries/useGitLog";
 import { api } from "@/api/tauri";
 import { Search, X, GitCommit, Calendar, User, FileText, GitBranch, Sparkles, RefreshCw } from "lucide-react";
+import { Input } from "@/components/common/form";
 
 interface SearchDialogProps {
   open: boolean;
@@ -283,11 +284,12 @@ CRITICAL INSTRUCTIONS:
           <form onSubmit={handleSemanticSearch} className="px-3 py-3 space-y-2 border-b border-border">
             <div className="relative">
               <Sparkles size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-accent" />
-              <input
+              <Input
+                variant="surface-1"
                 value={semanticQuery}
                 onChange={(e) => setSemanticQuery(e.target.value)}
                 placeholder="Ask AI using natural language (e.g. Find where I fixed CORS yesterday)..."
-                className="w-full h-8 pl-8 pr-20 text-xs bg-surface-1 border border-border rounded-mac text-text-primary placeholder:text-text-muted/60 outline-none focus:border-accent transition-colors"
+                className="h-8 pl-8 pr-20 text-xs placeholder:text-text-muted/60"
               />
               <button
                 type="submit"
@@ -313,12 +315,13 @@ CRITICAL INSTRUCTIONS:
             {/* Query input — prominent */}
             <div className="relative">
               <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-text-muted" />
-              <input
+              <Input
                 ref={inputRef}
+                variant="surface-1"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search commit messages..."
-                className="w-full h-8 pl-7 pr-7 text-sm bg-surface-1 border border-border rounded-mac text-text-primary placeholder:text-text-muted outline-none focus:border-accent transition-colors"
+                className="h-8 pl-7 pr-7 text-sm"
               />
               {query && (
                 <button onClick={() => setQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 ghost p-0.5">
@@ -332,11 +335,12 @@ CRITICAL INSTRUCTIONS:
               {/* Author */}
               <div className="relative flex-1 min-w-[120px]">
                 <User size={10} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-text-muted" />
-                <input
+                <Input
+                  variant="surface-1"
                   value={author}
                   onChange={(e) => setAuthor(e.target.value)}
                   placeholder="Author"
-                  className="w-full h-6 pl-5 pr-1 text-2xs bg-surface-1 border border-border rounded-mac text-text-primary placeholder:text-text-muted outline-none focus:border-accent"
+                  className="h-6 pl-5 pr-1 text-2xs"
                 />
               </div>
               {/* Branch selector */}
@@ -359,43 +363,47 @@ CRITICAL INSTRUCTIONS:
               {/* File path */}
               <div className="relative flex-[2] min-w-[150px]">
                 <FileText size={10} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-text-muted" />
-                <input
+                <Input
+                  variant="surface-1"
                   value={file}
                   onChange={(e) => setFile(e.target.value)}
                   placeholder="File path"
-                  className="w-full h-6 pl-5 pr-1 text-2xs bg-surface-1 border border-border rounded-mac text-text-primary placeholder:text-text-muted outline-none focus:border-accent"
+                  className="h-6 pl-5 pr-1 text-2xs"
                 />
               </div>
               {/* Since date */}
               <div className="relative flex-1 min-w-[100px]">
                 <Calendar size={10} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-text-muted" />
-                <input
+                <Input
+                  variant="surface-1"
                   type="date"
                   value={since}
                   onChange={(e) => setSince(e.target.value)}
-                  className="w-full h-6 pl-5 pr-1 text-2xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent [color-scheme:dark]"
+                  className="h-6 pl-5 pr-1 text-2xs [color-scheme:dark]"
                 />
               </div>
               {/* Until date */}
               <div className="relative flex-1 min-w-[100px]">
                 <Calendar size={10} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-text-muted" />
-                <input
+                <Input
+                  variant="surface-1"
                   type="date"
                   value={until}
                   onChange={(e) => setUntil(e.target.value)}
-                  className="w-full h-6 pl-5 pr-1 text-2xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent [color-scheme:dark]"
+                  className="h-6 pl-5 pr-1 text-2xs [color-scheme:dark]"
                 />
               </div>
               {/* Max results */}
               <div className="flex-1 min-w-[60px]">
-                <input
+                <Input
+                  variant="surface-1"
                   type="number"
                   value={maxCount}
                   onChange={(e) => setMaxCount(Number(e.target.value))}
                   placeholder="Max"
                   min={1}
                   max={500}
-                  className="w-full h-6 px-1.5 text-2xs bg-surface-1 border border-border rounded-mac text-text-primary placeholder:text-text-muted outline-none focus:border-accent"
+                  className="h-6 px-1.5 text-2xs"
                 />
               </div>
             </div>

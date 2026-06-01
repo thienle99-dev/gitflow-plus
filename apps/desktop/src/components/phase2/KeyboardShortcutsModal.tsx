@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { Keyboard, X } from "lucide-react";
 
 interface KeyboardShortcutsModalProps {
   open: boolean;
@@ -32,34 +32,49 @@ export default function KeyboardShortcutsModal({ open, onClose }: KeyboardShortc
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-surface-0 rounded-mac shadow-xl border border-border w-[600px] max-h-[80vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#000000]/45 animate-in fade-in duration-200">
+      <div className="bg-surface-0 rounded-mac shadow-2xl border border-border w-[500px] max-h-[80vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
-          <h2 className="text-sm font-semibold text-text-primary">Keyboard Shortcuts</h2>
+        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-surface-1/40">
+          <Keyboard size={15} className="text-accent shrink-0" />
+          <span className="text-xs font-semibold text-text-primary flex-1">
+            Keyboard Shortcuts
+          </span>
           <button
             onClick={onClose}
-            className="ghost text-xs p-1 hover:bg-surface-2 rounded transition-colors"
+            className="ghost p-1 text-text-muted hover:text-text-primary"
             title="Close (Esc)"
           >
-            <X size={14} />
+            <X size={13} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 pr-3.5">
           {shortcuts.map((section) => (
-            <div key={section.category}>
-              <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+            <div key={section.category} className="space-y-2">
+              <h3 className="text-3xs font-semibold text-text-muted uppercase tracking-wider pl-1">
                 {section.category}
               </h3>
-              <div className="space-y-1.5">
-                {section.items.map((item) => (
-                  <div key={item.label} className="flex items-center justify-between gap-4 text-xs">
-                    <span className="text-text-secondary">{item.label}</span>
-                    <span className="font-mono text-2xs text-text-muted bg-surface-1 border border-border rounded px-2 py-1 whitespace-nowrap">
-                      {item.keys}
-                    </span>
+              <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3">
+                {section.items.map((item, idx) => (
+                  <div
+                    key={item.label}
+                    className={`flex items-center justify-between gap-4 text-xs ${
+                      idx > 0 ? "border-t border-border-40 pt-2.5" : ""
+                    }`}
+                  >
+                    <span className="text-text-secondary font-medium">{item.label}</span>
+                    <div className="flex gap-1 flex-wrap justify-end">
+                      {item.keys.split("+").map((key, keyIdx) => (
+                        <kbd
+                          key={keyIdx}
+                          className="font-mono text-3xs font-semibold text-text-muted bg-surface-2 border border-border rounded px-1.5 py-0.5 shadow-sm min-w-[20px] text-center"
+                        >
+                          {key}
+                        </kbd>
+                      ))}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -68,8 +83,16 @@ export default function KeyboardShortcutsModal({ open, onClose }: KeyboardShortc
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-2 border-t border-border/40 bg-surface-1 text-2xs text-text-muted">
-          Press <span className="font-mono bg-surface-0 border border-border rounded px-1">Esc</span> to close
+        <div className="px-4 py-2.5 border-t border-border-60 bg-surface-1 text-2xs text-text-muted flex justify-between items-center">
+          <span>
+            Press <kbd className="font-mono bg-surface-2 border border-border rounded px-1 py-0.5 text-3xs shadow-sm">Esc</kbd> to close
+          </span>
+          <button
+            onClick={onClose}
+            className="h-7 px-3 text-2xs text-text-secondary hover:text-text-primary border border-border hover:bg-surface-2 rounded-mac transition-colors"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>

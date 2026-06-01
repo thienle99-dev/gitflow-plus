@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useTagList, useTagCreate, useTagDelete, useTagPush } from "@/queries/useGitTag";
 import { Tag, Plus, Trash2, Upload, GitCommit, User, Calendar } from "lucide-react";
+import { Input } from "@/components/common/form";
 
 export default function TagPanel({ onClose }: { onClose?: () => void }) {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -84,23 +85,26 @@ export default function TagPanel({ onClose }: { onClose?: () => void }) {
       {/* Create tag form (collapsible) */}
       {showCreate && (
         <div className="px-3 py-2 border-b border-border space-y-1.5 bg-surface-1">
-          <input
+          <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Tag name *"
-            className="w-full text-xs bg-surface-2 border border-border rounded-mac px-2 py-1 text-text-primary placeholder:text-text-muted outline-none focus:border-accent"
+            variant="surface-1"
+            className="text-xs px-2 py-1"
           />
-          <input
+          <Input
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             placeholder="Target commit hash (optional — defaults to HEAD)"
-            className="w-full text-xs bg-surface-2 border border-border rounded-mac px-2 py-1 text-text-primary placeholder:text-text-muted outline-none focus:border-accent"
+            variant="surface-1"
+            className="text-xs px-2 py-1"
           />
-          <input
+          <Input
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Message (optional — creates annotated tag)"
-            className="w-full text-xs bg-surface-2 border border-border rounded-mac px-2 py-1 text-text-primary placeholder:text-text-muted outline-none focus:border-accent"
+            variant="surface-1"
+            className="text-xs px-2 py-1"
           />
           <div className="flex gap-1.5">
             <button
