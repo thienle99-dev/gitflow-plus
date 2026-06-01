@@ -112,6 +112,30 @@ export default function MainLayout() {
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
+      // Stage/unstage shortcuts (only when no dialog is open)
+      if (!activeDialog) {
+        if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === "a" || e.key === "A")) {
+          e.preventDefault();
+          api.commit.stageAll(repoPath!).then(() =>
+            queryClient.invalidateQueries({ queryKey: ["git", repoPath] })
+          ).catch(console.error);
+          return;
+        }
+        if ((e.metaKey || e.ctrlKey) && !e.shiftKey && (e.key === "s" || e.key === "S")) {
+          e.preventDefault();
+          api.commit.stageAll(repoPath!).then(() =>
+            queryClient.invalidateQueries({ queryKey: ["git", repoPath] })
+          ).catch(console.error);
+          return;
+        }
+        if ((e.metaKey || e.ctrlKey) && !e.shiftKey && (e.key === "u" || e.key === "U")) {
+          e.preventDefault();
+          api.commit.unstageAll(repoPath!).then(() =>
+            queryClient.invalidateQueries({ queryKey: ["git", repoPath] })
+          ).catch(console.error);
+          return;
+        }
+      }
       if ((e.metaKey || e.ctrlKey) && e.key === "b") {
         e.preventDefault();
         toggleSidebar();
@@ -122,7 +146,7 @@ export default function MainLayout() {
         closeDialog();
       }
     },
-    [toggleSidebar, activeDialog, closeDialog],
+    [toggleSidebar, activeDialog, closeDialog, repoPath, queryClient],
   );
 
   useEffect(() => {
