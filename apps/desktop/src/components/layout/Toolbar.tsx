@@ -2,6 +2,7 @@ import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { api } from "@/api/tauri";
 import { useGitBranches, useGitStatus, useGitSyncStatus } from "@/queries/useGitLog";
+import { useGitLfsStatus } from "@/queries/useGitLfs";
 import { useMergeStatus } from "@/queries/useGitMerge";
 import { useUndoLast } from "@/queries/useGitReflog";
 import { useState } from "react";
@@ -20,6 +21,7 @@ import {
   Settings,
   BarChart3,
   LogOut,
+  Database,
 } from "lucide-react";
 import CreateBranchDialog from "@/components/features/dialogs/CreateBranchDialog";
 import { useErrorReporter } from "@/lib/ErrorContext";
@@ -35,6 +37,7 @@ export default function Toolbar() {
   const { data: branches } = useGitBranches(repoPath);
   const { data: changes } = useGitStatus(repoPath);
   const { data: syncStatus } = useGitSyncStatus(repoPath);
+  const { data: lfsStatus } = useGitLfsStatus(repoPath);
   const { data: mergeStatus } = useMergeStatus(repoPath);
   const undoLast = useUndoLast(repoPath);
   const { reportError } = useErrorReporter();
@@ -50,6 +53,10 @@ export default function Toolbar() {
       if (action === "pull" || action === "push" || action === "fetch") {
         queryClient.invalidateQueries({ queryKey: ["git", repoPath, "sync-status"] });
       }
+      if (action.startsWith("lfs-")) {
+        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "lfs"] });
+        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "status"] });
+      }
     } catch (e) {
       reportError(e, action, () => doAction(action, fn));
     } finally {
@@ -63,6 +70,8 @@ export default function Toolbar() {
   };
 
   const inMerge = mergeStatus?.merging;
+  const hasLfsFiles = !!lfsStatus?.installed && lfsStatus.tracked_files.length > 0;
+  const lfsDirtyCount = lfsStatus?.dirty_files.length ?? 0;
 
   return (
     <>
@@ -165,6 +174,46 @@ export default function Toolbar() {
               )}
             </button>
           </div>
+
+          {hasLfsFiles && (
+            <div className="flex items-center bg-surface-2-40 border border-border-40 rounded-mac p-0.5 shadow-2xs">
+              <div
+                className="h-7 px-2.5 flex items-center gap-1.5 text-2xs font-semibold text-text-secondary"
+                title={`${lfsStatus.tracked_files.length} Git LFS tracked file${lfsStatus.tracked_files.length === 1 ? "" : "s"}${lfsDirtyCount > 0 ? `, ${lfsDirtyCount} changed` : ""}`}
+              >
+                <Database size={13} className="text-accent" />
+                <span>LFS</span>
+                <span className="ml-0.5 rounded-[3px] bg-accent-10 px-1.5 py-0.5 text-[9px] font-bold text-accent">
+                  {lfsStatus.tracked_files.length}
+                </span>
+                {lfsDirtyCount > 0 && (
+                  <span className="rounded-[3px] bg-[#ff9f0a]/15 px-1.5 py-0.5 text-[9px] font-bold text-[#ff9f0a]">
+                    {lfsDirtyCount}
+                  </span>
+                )}
+              </div>
+              <div className="w-[1px] h-3.5 bg-border-40/50" />
+              <button
+                className="h-7 px-2.5 flex items-center gap-1.5 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all disabled:opacity-40 cursor-pointer"
+                onClick={() => doAction("lfs-pull", () => api.lfs.pull(repoPath!))}
+                disabled={!!loading}
+                title="Pull Git LFS objects"
+              >
+                <ArrowDownToLine size={13} className="text-text-muted" />
+                <span>Pull</span>
+              </button>
+              <div className="w-[1px] h-3.5 bg-border-40/50" />
+              <button
+                className="h-7 px-2.5 flex items-center gap-1.5 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all disabled:opacity-40 cursor-pointer"
+                onClick={() => doAction("lfs-push", () => api.lfs.push(repoPath!))}
+                disabled={!!loading}
+                title="Push Git LFS objects"
+              >
+                <ArrowUpFromLine size={13} className="text-text-muted" />
+                <span>Push</span>
+              </button>
+            </div>
+          )}
 
           {/* Git Operations Segment Group (Branch, Merge, Stash) */}
           <div className="flex items-center bg-surface-2-40 border border-border-40 rounded-mac p-0.5 shadow-2xs">

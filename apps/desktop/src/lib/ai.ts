@@ -143,7 +143,7 @@ async function getCurrentBranchName(repoPath: string) {
   }
 }
 
-function buildCommitPrompt(diff: string, settings: AISettings, branchName: string) {
+export function buildCommitPrompt(diff: string, settings: AISettings, branchName: string) {
   const formatInstruction = commitStyleInstruction(settings.commitStyle);
   const styleInstruction = settings.detailLevel === "ultra-minimal"
     ? "3. Return ONLY a single line (the subject line). No body."

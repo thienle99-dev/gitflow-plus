@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { readCommitMessageDetailLevel } from "./ai";
+import { readCommitMessageDetailLevel, buildCommitPrompt } from "./ai";
 
 describe("readCommitMessageDetailLevel", () => {
   let store: Record<string, string> = {};
@@ -71,5 +71,77 @@ describe("readCommitMessageDetailLevel", () => {
     store["gitflowAiDetailLevel"] = "";
     const result = readCommitMessageDetailLevel();
     expect(result).toBe("medium");
+  });
+});
+
+describe("buildCommitPrompt", () => {
+  it("includes ultra-minimal instruction for ultra-minimal level", () => {
+    const settings = {
+      apiKey: "test",
+      model: "claude-sonnet-4-20250514",
+      customUrl: "",
+      tokenLimit: 4096,
+      detailLevel: "ultra-minimal" as const,
+      commitStyle: "conventional" as const,
+      customRules: "",
+    };
+    const prompt = buildCommitPrompt("diff content", settings, "main");
+    expect(prompt).toContain("Return ONLY a single line");
+  });
+
+  it("includes minimal instruction for minimal level", () => {
+    const settings = {
+      apiKey: "test",
+      model: "claude-sonnet-4-20250514",
+      customUrl: "",
+      tokenLimit: 4096,
+      detailLevel: "minimal" as const,
+      commitStyle: "conventional" as const,
+      customRules: "",
+    };
+    const prompt = buildCommitPrompt("diff content", settings, "main");
+    expect(prompt).toContain("1-2 lines of brief explanation");
+  });
+
+  it("includes medium instruction for medium level", () => {
+    const settings = {
+      apiKey: "test",
+      model: "claude-sonnet-4-20250514",
+      customUrl: "",
+      tokenLimit: 4096,
+      detailLevel: "medium" as const,
+      commitStyle: "conventional" as const,
+      customRules: "",
+    };
+    const prompt = buildCommitPrompt("diff content", settings, "main");
+    expect(prompt).toContain("If the changes are complex");
+  });
+
+  it("includes detailed instruction for detailed level", () => {
+    const settings = {
+      apiKey: "test",
+      model: "claude-sonnet-4-20250514",
+      customUrl: "",
+      tokenLimit: 4096,
+      detailLevel: "detailed" as const,
+      commitStyle: "conventional" as const,
+      customRules: "",
+    };
+    const prompt = buildCommitPrompt("diff content", settings, "main");
+    expect(prompt).toContain("detailed commit message with a body");
+  });
+
+  it("includes comprehensive instruction for comprehensive level", () => {
+    const settings = {
+      apiKey: "test",
+      model: "claude-sonnet-4-20250514",
+      customUrl: "",
+      tokenLimit: 4096,
+      detailLevel: "comprehensive" as const,
+      commitStyle: "conventional" as const,
+      customRules: "",
+    };
+    const prompt = buildCommitPrompt("diff content", settings, "main");
+    expect(prompt).toContain("reasoning section");
   });
 });

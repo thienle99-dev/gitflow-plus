@@ -81,6 +81,18 @@ export interface SubmoduleInfo {
   desc: string;
 }
 
+export interface LfsFile {
+  path: string;
+  oid: string;
+  state: string;
+}
+
+export interface LfsStatus {
+  installed: boolean;
+  tracked_files: LfsFile[];
+  dirty_files: string[];
+}
+
 export interface CherryPickResult {
   success: boolean;
   message: string;
@@ -205,6 +217,15 @@ export const api = {
       invoke<string>("git_fetch", { path, remote: remote ?? null }),
     getSyncStatus: (path: string) =>
       invoke<SyncStatus>("get_sync_status", { path }),
+  },
+
+  lfs: {
+    status: (path: string) =>
+      invoke<LfsStatus>("lfs_status", { path }),
+    pull: (path: string) =>
+      invoke<string>("lfs_pull", { path }),
+    push: (path: string) =>
+      invoke<string>("lfs_push", { path }),
   },
 
   watcher: {

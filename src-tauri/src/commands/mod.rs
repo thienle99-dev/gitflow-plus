@@ -6,6 +6,7 @@ pub mod cherry_pick;
 pub mod clone;
 pub mod commit;
 pub mod diff;
+pub mod lfs;
 pub mod log;
 pub mod merge;
 pub mod rebase;

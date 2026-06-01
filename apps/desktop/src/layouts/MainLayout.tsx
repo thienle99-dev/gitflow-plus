@@ -67,6 +67,7 @@ export default function MainLayout() {
       if (type === "worktree") {
         scheduleInvalidate(["git", repoPath, "status"]);
         scheduleInvalidate(["git", repoPath, "submodules"]);
+        scheduleInvalidate(["git", repoPath, "lfs"]);
       } else if (type === "refs") {
         scheduleInvalidate(["git", repoPath, "branches"]);
         scheduleInvalidate(["git", repoPath, "log"]);
@@ -147,6 +148,7 @@ export default function MainLayout() {
         scheduleInvalidate(["git", repoPath, "status"]);
         scheduleInvalidate(["git", repoPath, "sync-status"]);
         scheduleInvalidate(["git", repoPath, "branches"]);
+        scheduleInvalidate(["git", repoPath, "lfs"]);
       }
     };
     window.addEventListener("focus", handleFocus);

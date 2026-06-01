@@ -196,7 +196,7 @@
 - [ ] Branch comparison — so sánh 2 branches side-by-side (ahead/behind + diff)
 - [ ] Gitignore editor — visual editor cho `.gitignore`, browse files, add patterns, test matching
 - [ ] Patch export/import — export commits thành `.patch` file, apply patch từ file
-- [ ] Git LFS support — detect LFS-tracked files, show LFS status, hỗ trợ lfs pull/push
+- [x] Git LFS support — detect LFS-tracked files, show LFS status, hỗ trợ lfs pull/push
 - [ ] Repository health check — scan large files không LFS-tracked, sensitive data patterns, broken symlinks
 
 ## Phase 5: Plugin System & Extensibility (future)
