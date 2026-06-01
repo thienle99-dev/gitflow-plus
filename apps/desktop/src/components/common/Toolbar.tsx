@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import CreateBranchDialog from "./CreateBranchDialog";
 import { useErrorReporter } from "@/lib/ErrorContext";
-import ThemePicker from "./ThemePicker";
+import SettingsDropdown from "./SettingsDropdown";
 
 export default function Toolbar() {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -154,11 +154,6 @@ export default function Toolbar() {
           <RotateCcw size={14} /> Undo
         </button>
 
-        {/* Settings */}
-        <button className="ghost text-xs" onClick={() => openDialog("settings")} title="Application settings">
-          <Settings size={14} /> Settings
-        </button>
-
         <div className="flex-1" />
 
         {/* PR (Phase 3) */}
@@ -166,8 +161,11 @@ export default function Toolbar() {
           <GitPullRequest size={14} /> PR
         </button>
 
-        {/* Theme picker */}
-        <ThemePicker />
+        {/* Settings & Quick Actions */}
+        <SettingsDropdown
+          onOpenSettings={() => openDialog("settings")}
+          onOpenKeyboardShortcuts={() => openDialog("keyboard-shortcuts")}
+        />
       </div>
 
       {showBranchDialog && (

@@ -12,6 +12,7 @@ import CommitGraph from "@/components/graph/CommitGraph";
 import RightPanel from "@/components/detail/RightPanel";
 import BottomBar from "@/components/common/BottomBar";
 import SearchDialog from "@/components/phase2/SearchDialog";
+import KeyboardShortcutsModal from "@/components/phase2/KeyboardShortcutsModal";
 import { CherryPickDialog, SettingsDialog, AnalyticsDialog, CreateBranchDialog } from "@/components/phase2";
 
 export default function MainLayout() {
@@ -140,6 +141,14 @@ export default function MainLayout() {
         e.preventDefault();
         toggleSidebar();
       }
+      if ((e.metaKey || e.ctrlKey) && e.key === ",") {
+        e.preventDefault();
+        openDialogState("settings");
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === "?") {
+        e.preventDefault();
+        openDialogState("keyboard-shortcuts");
+      }
       // Escape closes dialogs
       if (e.key === "Escape" && activeDialog) {
         e.preventDefault();
@@ -167,6 +176,7 @@ export default function MainLayout() {
     search: <SearchDialog open={true} onClose={closeDialog} />,
     settings: <SettingsDialog onClose={closeDialog} />,
     "ai-settings": <SettingsDialog onClose={closeDialog} />,
+    "keyboard-shortcuts": <KeyboardShortcutsModal open={true} onClose={closeDialog} />,
     "cherry-pick": (
       <CherryPickDialog
         open={true}
