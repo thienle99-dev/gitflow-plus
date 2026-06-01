@@ -4,7 +4,7 @@ import { useGitStatus, useGitBranches } from "@/queries/useGitLog";
 import { api, type FileChange, type Commit, type StashEntry } from "@/api/tauri";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useGenerateCommitMessage } from "@/queries/useAI";
-import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { WebviewWindow, getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import {
   ChevronDown,
   ChevronUp,
@@ -252,20 +252,20 @@ export default function TrayPanelView() {
   const handleOpenMainApp = async () => {
     console.log("[Tray] Open Full App clicked");
     try {
+      // Try to get the main window via label
       let mainWin = await WebviewWindow.getByLabel("main");
-      if (!mainWin) {
-        console.warn("[Tray] Main window not found, creating it");
-        // Create the main window using the default config (label "main")
-        // eslint-disable-next-line no-new
-        new WebviewWindow("main", { url: "index.html" });
-        // Give Tauri a moment to register the window, then retrieve it
-        mainWin = await WebviewWindow.getByLabel("main");
-      }
       if (mainWin) {
         await mainWin.show();
         await mainWin.unminimize();
         await mainWin.setFocus();
-        console.log("[Tray] Main window shown and focused");
+        console.log("[Tray] Main window shown via label");
+      } else {
+        console.warn("[Tray] Main window label not found, using getCurrent fallback");
+        const current = getCurrentWebviewWindow();
+        await current.show();
+        await current.unminimize();
+        await current.setFocus();
+        console.log("[Tray] Current window shown via fallback");
       }
       // Hide tray popover
       const trayWin = await WebviewWindow.getByLabel("tray");
@@ -355,9 +355,8 @@ export default function TrayPanelView() {
                         setSearchQuery("");
                         invalidate();
                       }}
-                      className={`w-full text-left px-3 py-1.5 text-[10px] hover:bg-accent hover:text-accent-fg transition-colors flex flex-col gap-0.5 ${
-                        repoPath === path ? "bg-surface-2 font-semibold" : "text-text-secondary"
-                      }`}
+                      className={`w-full text-left px-3 py-1.5 text-[10px] hover:bg-accent hover:text-accent-fg transition-colors flex flex-col gap-0.5 ${repoPath === path ? "bg-surface-2 font-semibold" : "text-text-secondary"
+                        }`}
                     >
                       <span className="font-medium truncate">{path.split("/").pop()}</span>
                       <span className="text-[8px] opacity-75 truncate">{path}</span>
@@ -394,17 +393,15 @@ export default function TrayPanelView() {
           <div className="flex bg-surface-1 p-0.5 rounded border border-border-40">
             <button
               onClick={() => setActiveTab("changes")}
-              className={`flex-1 py-1 text-[10px] font-bold rounded transition-all cursor-pointer ${
-                activeTab === "changes" ? "bg-surface-2 text-accent shadow-sm" : "text-text-muted hover:text-text-primary"
-              }`}
+              className={`flex-1 py-1 text-[10px] font-bold rounded transition-all cursor-pointer ${activeTab === "changes" ? "bg-surface-2 text-accent shadow-sm" : "text-text-muted hover:text-text-primary"
+                }`}
             >
               Changes ({changes?.length || 0})
             </button>
             <button
               onClick={() => setActiveTab("commits")}
-              className={`flex-1 py-1 text-[10px] font-bold rounded transition-all cursor-pointer ${
-                activeTab === "commits" ? "bg-surface-2 text-accent shadow-sm" : "text-text-muted hover:text-text-primary"
-              }`}
+              className={`flex-1 py-1 text-[10px] font-bold rounded transition-all cursor-pointer ${activeTab === "commits" ? "bg-surface-2 text-accent shadow-sm" : "text-text-muted hover:text-text-primary"
+                }`}
             >
               Recent Commits
             </button>
@@ -469,144 +466,143 @@ export default function TrayPanelView() {
                   </div>
                 </div>
 
-              {/* Scrollable File List */}
-              <div className="flex-1 overflow-y-auto mt-2 space-y-1 pr-1">
-                {isLoadingStatus ? (
-                  <div className="h-full flex items-center justify-center py-4 text-text-muted gap-1.5">
-                    <Loader2 size={12} className="animate-spin text-accent" />
-                    <span className="text-[10px]">Loading status...</span>
-                  </div>
-                ) : changes && changes.length > 0 ? (
-                  changes.map((file) => (
-                    <div
-                      key={file.path}
-                      className="flex items-center justify-between py-1 px-1.5 rounded hover:bg-surface-2 transition-all text-[10px]"
-                    >
-                      <button
-                        onClick={() => handleToggleStage(file)}
-                        className="flex items-center gap-2 min-w-0 flex-1 text-left"
+                {/* Scrollable File List */}
+                <div className="flex-1 overflow-y-auto mt-2 space-y-1 pr-1">
+                  {isLoadingStatus ? (
+                    <div className="h-full flex items-center justify-center py-4 text-text-muted gap-1.5">
+                      <Loader2 size={12} className="animate-spin text-accent" />
+                      <span className="text-[10px]">Loading status...</span>
+                    </div>
+                  ) : changes && changes.length > 0 ? (
+                    changes.map((file) => (
+                      <div
+                        key={file.path}
+                        className="flex items-center justify-between py-1 px-1.5 rounded hover:bg-surface-2 transition-all text-[10px]"
                       >
-                        {file.staged ? (
-                          <CheckSquare size={12} className="text-accent shrink-0" />
-                        ) : (
-                          <Square size={12} className="text-text-muted shrink-0" />
-                        )}
-                        <File size={11} className="text-text-secondary shrink-0" />
-                        <span className="text-text-primary truncate font-medium">{file.path}</span>
-                      </button>
-                      <span
-                        className={`text-[8px] font-bold uppercase px-1 rounded shrink-0 ${
-                          file.status === "added" || file.status === "untracked"
+                        <button
+                          onClick={() => handleToggleStage(file)}
+                          className="flex items-center gap-2 min-w-0 flex-1 text-left"
+                        >
+                          {file.staged ? (
+                            <CheckSquare size={12} className="text-accent shrink-0" />
+                          ) : (
+                            <Square size={12} className="text-text-muted shrink-0" />
+                          )}
+                          <File size={11} className="text-text-secondary shrink-0" />
+                          <span className="text-text-primary truncate font-medium">{file.path}</span>
+                        </button>
+                        <span
+                          className={`text-[8px] font-bold uppercase px-1 rounded shrink-0 ${file.status === "added" || file.status === "untracked"
                             ? "text-[#30d158]/80"
                             : file.status === "deleted"
-                            ? "text-[#ff453a]/80"
-                            : "text-[#ff9f0a]/80"
-                        }`}
-                      >
-                        {file.status.slice(0, 1).toUpperCase()}
-                      </span>
+                              ? "text-[#ff453a]/80"
+                              : "text-[#ff9f0a]/80"
+                            }`}
+                        >
+                          {file.status.slice(0, 1).toUpperCase()}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center py-8 text-center text-text-muted space-y-1.5">
+                      <Check size={16} className="text-[#30d158]" />
+                      <span className="text-[10px] font-medium">Working directory clean</span>
                     </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Commit Form Section */}
+              <div className="border border-border-40 focus-within:border-accent/80 bg-surface-2 rounded-mac p-2 flex flex-col gap-2 shrink-0 transition-colors">
+                <textarea
+                  value={commitMessage}
+                  onChange={(e) => setCommitMessage(e.target.value)}
+                  placeholder="Commit message (or generate with AI...)"
+                  rows={2}
+                  className="w-full bg-transparent border-none text-[10px] text-text-primary placeholder-text-muted resize-none leading-relaxed font-mono p-0.5"
+                  style={{ outline: "none", border: "none", boxShadow: "none" }}
+                />
+
+                <div className="flex items-center justify-between gap-2 border-t border-border-40 pt-1.5">
+                  <button
+                    onClick={handleAICommitMessage}
+                    disabled={staged.length === 0 || generateCommit.isPending}
+                    className="text-[9px] font-bold text-accent hover:opacity-85 disabled:opacity-40 transition-all flex items-center gap-1 cursor-pointer"
+                    title="Generate message using AI"
+                  >
+                    {generateCommit.isPending ? (
+                      <Loader2 size={10} className="animate-spin" />
+                    ) : (
+                      <Sparkles size={10} />
+                    )}
+                    <span>AI Message</span>
+                  </button>
+
+                  <button
+                    onClick={handleCommit}
+                    disabled={committing || !commitMessage.trim()}
+                    className="h-6 px-3 bg-accent text-accent-fg text-[9px] font-bold rounded hover:opacity-95 disabled:opacity-40 transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                  >
+                    {committing ? (
+                      <Loader2 size={10} className="animate-spin" />
+                    ) : (
+                      <GitCommit size={10} />
+                    )}
+                    <span>Commit {staged.length > 0 ? `(${staged.length})` : ""}</span>
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col border border-border-40 bg-surface-1/40 rounded-mac p-2.5 overflow-hidden">
+              <div className="flex items-center justify-between border-b border-border-40 pb-1.5 shrink-0">
+                <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
+                  Recent Commits
+                </span>
+                <span className="text-[8px] text-text-muted">Click commit to copy hash</span>
+              </div>
+
+              <div className="flex-1 overflow-y-auto mt-2 space-y-1.5 pr-1 animate-in fade-in duration-200">
+                {isLoadingCommits ? (
+                  <div className="h-full flex items-center justify-center py-8 text-text-muted gap-1.5">
+                    <Loader2 size={12} className="animate-spin text-accent" />
+                    <span className="text-[10px]">Loading commits...</span>
+                  </div>
+                ) : recentCommits && recentCommits.length > 0 ? (
+                  recentCommits.map((commit) => (
+                    <button
+                      key={commit.hash}
+                      onClick={() => copyToClipboard(commit.hash)}
+                      className="w-full text-left p-2 rounded hover:bg-surface-2 active:bg-surface-3 transition-all flex flex-col gap-1 border border-transparent hover:border-border-40 cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between gap-1.5 w-full">
+                        <span className="text-[10px] text-text-primary font-semibold truncate flex-1">
+                          {commit.message.split("\n")[0]}
+                        </span>
+                        <span className="text-[8px] font-mono bg-surface-3 px-1 rounded text-text-muted shrink-0">
+                          {commit.hash.slice(0, 7)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[8px] text-text-muted w-full">
+                        <span className="truncate max-w-[120px]">{commit.author}</span>
+                        <span>{new Date(commit.date).toLocaleDateString()}</span>
+                      </div>
+                    </button>
                   ))
                 ) : (
-                  <div className="h-full flex flex-col items-center justify-center py-8 text-center text-text-muted space-y-1.5">
-                    <Check size={16} className="text-[#30d158]" />
-                    <span className="text-[10px] font-medium">Working directory clean</span>
+                  <div className="h-full flex flex-col items-center justify-center py-8 text-center text-text-muted">
+                    <span className="text-[10px]">No commits found</span>
                   </div>
                 )}
               </div>
             </div>
-
-            {/* Commit Form Section */}
-            <div className="border border-border-40 focus-within:border-accent/80 bg-surface-2 rounded-mac p-2 flex flex-col gap-2 shrink-0 transition-colors">
-              <textarea
-                value={commitMessage}
-                onChange={(e) => setCommitMessage(e.target.value)}
-                placeholder="Commit message (or generate with AI...)"
-                rows={2}
-                className="w-full bg-transparent border-none text-[10px] text-text-primary placeholder-text-muted resize-none leading-relaxed font-mono p-0.5"
-                style={{ outline: "none", border: "none", boxShadow: "none" }}
-              />
-
-              <div className="flex items-center justify-between gap-2 border-t border-border-40 pt-1.5">
-                <button
-                  onClick={handleAICommitMessage}
-                  disabled={staged.length === 0 || generateCommit.isPending}
-                  className="text-[9px] font-bold text-accent hover:opacity-85 disabled:opacity-40 transition-all flex items-center gap-1 cursor-pointer"
-                  title="Generate message using AI"
-                >
-                  {generateCommit.isPending ? (
-                    <Loader2 size={10} className="animate-spin" />
-                  ) : (
-                    <Sparkles size={10} />
-                  )}
-                  <span>AI Message</span>
-                </button>
-
-                <button
-                  onClick={handleCommit}
-                  disabled={committing || !commitMessage.trim()}
-                  className="h-6 px-3 bg-accent text-accent-fg text-[9px] font-bold rounded hover:opacity-95 disabled:opacity-40 transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
-                >
-                  {committing ? (
-                    <Loader2 size={10} className="animate-spin" />
-                  ) : (
-                    <GitCommit size={10} />
-                  )}
-                  <span>Commit {staged.length > 0 ? `(${staged.length})` : ""}</span>
-                </button>
-              </div>
-            </div>
-          </>
+          )
         ) : (
-          <div className="flex-1 flex flex-col border border-border-40 bg-surface-1/40 rounded-mac p-2.5 overflow-hidden">
-            <div className="flex items-center justify-between border-b border-border-40 pb-1.5 shrink-0">
-              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
-                Recent Commits
-              </span>
-              <span className="text-[8px] text-text-muted">Click commit to copy hash</span>
-            </div>
-
-            <div className="flex-1 overflow-y-auto mt-2 space-y-1.5 pr-1 animate-in fade-in duration-200">
-              {isLoadingCommits ? (
-                <div className="h-full flex items-center justify-center py-8 text-text-muted gap-1.5">
-                  <Loader2 size={12} className="animate-spin text-accent" />
-                  <span className="text-[10px]">Loading commits...</span>
-                </div>
-              ) : recentCommits && recentCommits.length > 0 ? (
-                recentCommits.map((commit) => (
-                  <button
-                    key={commit.hash}
-                    onClick={() => copyToClipboard(commit.hash)}
-                    className="w-full text-left p-2 rounded hover:bg-surface-2 active:bg-surface-3 transition-all flex flex-col gap-1 border border-transparent hover:border-border-40 cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between gap-1.5 w-full">
-                      <span className="text-[10px] text-text-primary font-semibold truncate flex-1">
-                        {commit.message.split("\n")[0]}
-                      </span>
-                      <span className="text-[8px] font-mono bg-surface-3 px-1 rounded text-text-muted shrink-0">
-                        {commit.hash.slice(0, 7)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-[8px] text-text-muted w-full">
-                      <span className="truncate max-w-[120px]">{commit.author}</span>
-                      <span>{new Date(commit.date).toLocaleDateString()}</span>
-                    </div>
-                  </button>
-                ))
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center py-8 text-center text-text-muted">
-                  <span className="text-[10px]">No commits found</span>
-                </div>
-              )}
-            </div>
+          <div className="flex-1 flex flex-col items-center justify-center text-center text-text-muted gap-2">
+            <FolderOpen size={24} className="opacity-45" />
+            <span className="text-xs font-semibold">Select a Repository to start</span>
           </div>
-        )
-      ) : (
-        <div className="flex-1 flex flex-col items-center justify-center text-center text-text-muted gap-2">
-          <FolderOpen size={24} className="opacity-45" />
-          <span className="text-xs font-semibold">Select a Repository to start</span>
-        </div>
-      )}
+        )}
       </div>
 
       {/* Footer Git Actions Bar */}
@@ -647,9 +643,8 @@ export default function TrayPanelView() {
                         key={branch.name}
                         onClick={() => handleCheckoutBranch(branch.name)}
                         disabled={checkingOutBranch !== null}
-                        className={`w-full text-left px-3 py-1.5 text-[9px] hover:bg-accent hover:text-accent-fg transition-colors flex items-center justify-between gap-1.5 ${
-                          branch.current ? "bg-surface-2 font-semibold text-accent" : "text-text-secondary"
-                        }`}
+                        className={`w-full text-left px-3 py-1.5 text-[9px] hover:bg-accent hover:text-accent-fg transition-colors flex items-center justify-between gap-1.5 ${branch.current ? "bg-surface-2 font-semibold text-accent" : "text-text-secondary"
+                          }`}
                       >
                         <span className="truncate flex-1">{branch.name}</span>
                         {checkingOutBranch === branch.name ? (
@@ -716,11 +711,10 @@ export default function TrayPanelView() {
       {/* Floating Toast Notification */}
       {toast && (
         <div
-          className={`absolute bottom-14 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full shadow-lg text-[9px] font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200 z-50 ${
-            toast.type === "error"
-              ? "bg-[#ff453a] text-white"
-              : "bg-[#30d158] text-white"
-          }`}
+          className={`absolute bottom-14 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full shadow-lg text-[9px] font-bold flex items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200 z-50 ${toast.type === "error"
+            ? "bg-[#ff453a] text-white"
+            : "bg-[#30d158] text-white"
+            }`}
         >
           {toast.type === "error" ? <AlertCircle size={10} /> : <Check size={10} />}
           <span>{toast.message}</span>

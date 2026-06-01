@@ -108,7 +108,12 @@ fn create_menu<R: tauri::Runtime>(app: &tauri::App<R>) -> Result<Menu<R>, tauri:
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_window_state::Builder::new().build())
+        .plugin(
+            tauri_plugin_window_state::Builder::new()
+                .skip_initial_state("tray")
+                .with_filter(|label| label != "tray")
+                .build(),
+        )
         .manage(WatcherState(Mutex::new(Some(
             watcher::fs_watcher::RepoWatcher::new(),
         ))))
@@ -253,6 +258,7 @@ commands::log::file_history,
             commands::rebase::rebase_status,
             commands::rebase::rebase_todo_list,
             commands::ai::ai_http_request,
+            commands::clone::git_clone,
             commands::submodule::submodule_list,
             commands::submodule::submodule_init,
             commands::submodule::submodule_update,
