@@ -1,5 +1,3 @@
-use tokio::process::Command;
-
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct Commit {
     pub hash: String,
@@ -17,6 +15,19 @@ pub struct Ref {
     pub ref_type: String,
 }
 
+use tokio::io::AsyncBufReadExt;
+use tokio::process::Command;
+use tauri::{AppHandle, Emitter};
+
+const CHUNK_SIZE: usize = 50;
+
+#[derive(Clone, serde::Serialize)]
+pub struct LogChunk {
+    pub commits: Vec<Commit>,
+    pub total_so_far: usize,
+    pub is_last: bool,
+}
+
 #[tauri::command]
 pub async fn git_log(
     path: String,
@@ -30,24 +41,25 @@ pub async fn git_log(
     let mut args = vec![
         "--no-pager".to_string(),
         "-C".to_string(),
-        path.clone(),
+        path,
         "log".to_string(),
         "--topo-order".to_string(),
         format!("--skip={}", skip),
         format!("--max-count={}", limit),
-        // %D = ref names (same as --decorate but inline, empty if none)
         "--pretty=format:%H|%P|%an|%ae|%ai|%D|%s".to_string(),
     ];
+
     if let Some(ref_name) = ref_name.filter(|name| !name.trim().is_empty()) {
         args.push(ref_name);
     } else {
         args.push("--all".to_string());
     }
+
     let output = Command::new("git")
         .args(&args)
         .output()
         .await
-        .map_err(|e| format!("Failed to run git: {}", e))?;
+        .map_err(|e| format!("Failed to run git log: {}", e))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -55,46 +67,98 @@ pub async fn git_log(
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let mut commits: Vec<Commit> = Vec::new();
+    Ok(parse_log_output(&stdout))
+}
 
-    for line in stdout.lines() {
+/// Stream git log output in chunks via Tauri events.
+/// Frontend listens for "git:log-chunk" events and accumulates them.
+#[tauri::command]
+pub async fn git_log_stream(
+    path: String,
+    page: Option<usize>,
+    per_page: Option<usize>,
+    ref_name: Option<String>,
+    app: AppHandle,
+) -> Result<String, String> {
+    let limit = per_page.unwrap_or(200).clamp(1, 500);
+    let skip = page.unwrap_or(0) * limit;
+
+    let mut args = vec![
+        "--no-pager".to_string(),
+        "-C".to_string(),
+        path.clone(),
+        "log".to_string(),
+        "--topo-order".to_string(),
+        format!("--skip={}", skip),
+        format!("--max-count={}", limit),
+        "--pretty=format:%H|%P|%an|%ae|%ai|%D|%s".to_string(),
+    ];
+    if let Some(ref_name) = ref_name.filter(|name| !name.trim().is_empty()) {
+        args.push(ref_name);
+    } else {
+        args.push("--all".to_string());
+    }
+
+    let mut child = Command::new("git")
+        .args(&args)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("Failed to spawn git log: {}", e))?;
+
+    let stdout = child.stdout.take()
+        .ok_or_else(|| "Failed to capture stdout".to_string())?;
+
+    let reader = tokio::io::BufReader::new(stdout);
+    let mut lines = reader.lines();
+    let mut batch = Vec::with_capacity(CHUNK_SIZE);
+    let mut total = 0usize;
+
+    while let Ok(Some(line)) = lines.next_line().await {
         if line.is_empty() {
             continue;
         }
-        // Split into 7 parts: hash|parents|author|email|date|refs|message
+
         let parts: Vec<&str> = line.splitn(7, '|').collect();
         if parts.len() < 7 {
             continue;
         }
 
-        let hash = parts[0].to_string();
-        let parent_str = parts[1];
-        let parents: Vec<String> = if parent_str.is_empty() {
-            vec![]
-        } else {
-            parent_str.split(' ').map(|s| s.to_string()).collect()
+        let commit = Commit {
+            hash: parts[0].to_string(),
+            parents: if parts[1].is_empty() { vec![] } else { parts[1].split(' ').map(|s| s.to_string()).collect() },
+            author: parts[2].to_string(),
+            email: parts[3].to_string(),
+            date: parts[4].to_string(),
+            refs: parse_refs(parts[5]),
+            message: parts[6].to_string(),
         };
-        let author = parts[2].to_string();
-        let email = parts[3].to_string();
-        let date = parts[4].to_string();
-        let refs_str = parts[5];
-        let message = parts[6].to_string();
+        batch.push(commit);
+        total += 1;
 
-        let refs = parse_refs(refs_str);
-
-        commits.push(Commit {
-            hash,
-            parents,
-            author,
-            email,
-            date,
-            message,
-            refs,
-        });
+        if batch.len() >= CHUNK_SIZE {
+            let chunk = LogChunk {
+                commits: batch.drain(..).collect(),
+                total_so_far: total,
+                is_last: false,
+            };
+            app.emit("git:log-chunk", chunk).map_err(|e| format!("Emit error: {}", e))?;
+        }
     }
 
-    Ok(commits)
-}
+    // Send remaining + final marker
+    let last = LogChunk {
+        commits: batch,
+        total_so_far: total,
+        is_last: true,
+    };
+    app.emit("git:log-chunk", last).map_err(|e| format!("Emit error: {}", e))?;
+
+    // Wait for child to finish
+    child.wait().await.map_err(|e| format!("Wait error: {}", e))?;
+
+    Ok(format!("Streamed {} commits", total))
+} 
 
 #[tauri::command]
 pub async fn file_history(path: String, file_path: String, max_count: Option<usize>) -> Result<Vec<Commit>, String> {
@@ -123,29 +187,34 @@ pub async fn file_history(path: String, file_path: String, max_count: Option<usi
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let mut commits: Vec<Commit> = Vec::new();
+    Ok(parse_log_output(&stdout))
+}
 
-    for line in stdout.lines() {
-        if line.is_empty() {
-            continue;
-        }
-        let parts: Vec<&str> = line.splitn(7, '|').collect();
-        if parts.len() < 7 {
-            continue;
-        }
+fn parse_log_output(stdout: &str) -> Vec<Commit> {
+    stdout
+        .lines()
+        .filter(|line| !line.is_empty())
+        .filter_map(|line| {
+            let parts: Vec<&str> = line.splitn(7, '|').collect();
+            if parts.len() < 7 {
+                return None;
+            }
 
-        commits.push(Commit {
-            hash: parts[0].to_string(),
-            parents: if parts[1].is_empty() { vec![] } else { parts[1].split(' ').map(|s| s.to_string()).collect() },
-            author: parts[2].to_string(),
-            email: parts[3].to_string(),
-            date: parts[4].to_string(),
-            refs: parse_refs(parts[5]),
-            message: parts[6].to_string(),
-        });
-    }
-
-    Ok(commits)
+            Some(Commit {
+                hash: parts[0].to_string(),
+                parents: if parts[1].is_empty() {
+                    vec![]
+                } else {
+                    parts[1].split(' ').map(|s| s.to_string()).collect()
+                },
+                author: parts[2].to_string(),
+                email: parts[3].to_string(),
+                date: parts[4].to_string(),
+                refs: parse_refs(parts[5]),
+                message: parts[6].to_string(),
+            })
+        })
+        .collect()
 }
 
 pub fn parse_refs(refs_str: &str) -> Vec<Ref> {

@@ -1,4 +1,5 @@
 pub mod ai;
+pub mod app_window;
 pub mod blame;
 pub mod branch;
 pub mod cherry_pick;
@@ -17,4 +18,3 @@ pub mod status;
 pub mod submodule;
 pub mod tag;
 pub mod watcher;
-pub mod window;
