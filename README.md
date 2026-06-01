@@ -85,6 +85,23 @@ pnpm test          # run once (Vitest)
 pnpm test:watch    # watch mode
 ```
 
+## Releasing
+
+GitFlow Desktop uses a two-part release system:
+
+1. **Local release script** — bumps version, commits, tags, and pushes:
+   ```bash
+   python3 scripts/release.py
+   ```
+   This updates version in `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`, and `apps/desktop/package.json`, then creates a git tag and pushes to origin.
+
+2. **GitHub Actions workflow** — builds and publishes cross-platform binaries:
+   - Triggered automatically when a version tag (`v*.*.*`) is pushed
+   - Builds for macOS, Windows, and Ubuntu
+   - Creates a GitHub Release with platform-specific artifacts (`.dmg`, `.msi`, `.exe`, `.deb`, `.AppImage`)
+
+See [`docs/superpowers/specs/2026-06-01-release-script-design.md`](docs/superpowers/specs/2026-06-01-release-script-design.md) for full release system design.
+
 ## Project structure
 
 ```
