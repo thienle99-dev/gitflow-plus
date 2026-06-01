@@ -270,7 +270,7 @@ export default function WorkingTree() {
   return (
     <div className="h-full flex flex-col bg-surface-0">
       {/* Master Changes Header */}
-      <div className="h-9 px-3 border-b border-border flex items-center justify-between shrink-0 bg-surface-1/40 hover:bg-surface-1/70 transition-colors">
+      <div className="h-9 px-3 border-b border-border flex items-center justify-between shrink-0 bg-surface-1-40 hover:bg-surface-1-70 transition-colors">
         <div
           className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-text-primary uppercase tracking-wider select-none"
           onClick={handleToggleAllSections}

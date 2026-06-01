@@ -1,10 +1,11 @@
-use std::process::Command;
+use tokio::process::Command;
 
 #[tauri::command]
-pub fn stage_file(path: String, file_path: String) -> Result<String, String> {
+pub async fn stage_file(path: String, file_path: String) -> Result<String, String> {
     let output = Command::new("git")
         .args(["--no-pager", "-C", &path, "add", &file_path])
         .output()
+        .await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if output.status.success() {
@@ -16,10 +17,11 @@ pub fn stage_file(path: String, file_path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn unstage_file(path: String, file_path: String) -> Result<String, String> {
+pub async fn unstage_file(path: String, file_path: String) -> Result<String, String> {
     let output = Command::new("git")
         .args(["--no-pager", "-C", &path, "restore", "--staged", &file_path])
         .output()
+        .await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if output.status.success() {

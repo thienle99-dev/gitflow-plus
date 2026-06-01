@@ -1,4 +1,4 @@
-use std::process::Command;
+use tokio::process::Command;
 
 #[derive(serde::Serialize, Clone, Debug)]
 pub struct BranchInfo {
@@ -8,10 +8,11 @@ pub struct BranchInfo {
 }
 
 #[tauri::command]
-pub fn list_branches(path: String) -> Result<Vec<BranchInfo>, String> {
+pub async fn list_branches(path: String) -> Result<Vec<BranchInfo>, String> {
     let output = Command::new("git")
         .args(["--no-pager", "-C", &path, "branch", "-a"])
         .output()
+        .await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if !output.status.success() {
@@ -52,7 +53,7 @@ pub fn list_branches(path: String) -> Result<Vec<BranchInfo>, String> {
 }
 
 #[tauri::command]
-pub fn create_branch(
+pub async fn create_branch(
     path: String,
     name: String,
     base_ref: Option<String>,
