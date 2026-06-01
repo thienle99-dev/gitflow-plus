@@ -409,7 +409,7 @@ function ChangeSection({
               : "border-border text-transparent hover:border-text-secondary hover:bg-surface-2"
           }`}
           onClick={onToggleAll}
-          title={checked ? "Unstage all" : "Stage all"}
+          title={checked ? "Unstage all (⌘U)" : "Stage all (⌘⇧A)"}
           disabled={files.length === 0}
         >
           {checked && <Check size={9} strokeWidth={3.5} />}
@@ -418,7 +418,8 @@ function ChangeSection({
           {title} ({files.length})
         </div>
         {files.length > 0 && (
-          <button className="ghost text-2xs font-medium" onClick={onToggleAll}>
+          <button className="ghost text-2xs font-medium" onClick={onToggleAll}
+            title={checked ? "Unstage all (⌘U)" : "Stage all (⌘⇧A)"}>
             {checked ? "Unstage all" : "Stage all"}
           </button>
         )}
@@ -532,7 +533,8 @@ function ChangeRow({ file, checked, selected, onSelect, onToggle, onMenu }: Chan
       >
         {checked && <Check size={9} strokeWidth={3.5} />}
       </span>
-      <span className="h-4 w-4 flex items-center justify-center shrink-0">
+      <span title={checked ? "Unstage (⌘U)" : "Stage (⌘S)"}
+        className="h-4 w-4 flex items-center justify-center shrink-0">
         {fileIcon(file.path, file.status)}
       </span>
       <span className="min-w-0 flex flex-col justify-center">
