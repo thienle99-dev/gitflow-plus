@@ -3,6 +3,8 @@ import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useGitBranches } from "@/queries/useGitLog";
 import { useTagList } from "@/queries/useGitTag";
+import { useSubmoduleList } from "@/queries/useSubmoduleList";
+import SubmoduleEntry from "./SubmoduleEntry";
 import { api } from "@/api/tauri";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import {
@@ -22,9 +24,11 @@ export default function Sidebar() {
   const repoPath = useRepoStore((s) => s.repoPath);
   const selectedRef = useRepoStore((s) => s.selectedRef);
   const selectRef = useRepoStore((s) => s.selectRef);
+  const selectedFile = useUIStore((s) => s.selectedFile);
   const openDialogState = useUIStore((s) => s.openDialog);
   const { data: branches } = useGitBranches(repoPath);
   const { data: tags } = useTagList(repoPath);
+  const { data: submodules } = useSubmoduleList(repoPath);
   const [branchesOpen, setBranchesOpen] = useState(true);
   const [remotesOpen, setRemotesOpen] = useState(true);
   const [tagsOpen, setTagsOpen] = useState(true);
@@ -223,6 +227,25 @@ export default function Sidebar() {
               <span className="text-xs">No tags</span>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Submodules Section */}
+      {submodules && submodules.length > 0 && (
+        <div className="px-2 mt-3 space-y-1">
+          <div className="text-xs font-semibold text-text-muted px-2 py-1">
+            Submodules ({submodules.length})
+          </div>
+          {submodules.map((sub) => (
+            <SubmoduleEntry
+              key={sub.path}
+              submodule={sub}
+              isSelected={selectedFile === sub.path}
+              onContextMenu={(e) => {
+                e.preventDefault();
+              }}
+            />
+          ))}
         </div>
       )}
 
