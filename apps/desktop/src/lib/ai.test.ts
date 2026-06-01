@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { readCommitMessageDetailLevel, buildCommitPrompt } from "./ai";
+import { readCommitMessageDetailLevel, buildCommitPrompt, formatLocalCommitMessage } from "./ai";
 
 describe("readCommitMessageDetailLevel", () => {
   let store: Record<string, string> = {};
@@ -143,5 +143,86 @@ describe("buildCommitPrompt", () => {
     };
     const prompt = buildCommitPrompt("diff content", settings, "main");
     expect(prompt).toContain("reasoning section");
+  });
+});
+
+describe("formatLocalCommitMessage", () => {
+  const mockFiles = [
+    { path: "src/auth.ts", status: "modified" },
+    { path: "src/api.ts", status: "modified" },
+    { path: "tests/auth.test.ts", status: "added" },
+  ];
+
+  it("returns subject only for ultra-minimal level", () => {
+    const result = formatLocalCommitMessage(
+      "conventional",
+      "ultra-minimal",
+      "feat",
+      "(auth)",
+      "add JWT refresh",
+      "main",
+      mockFiles
+    );
+    expect(result).toBe("feat(auth): add JWT refresh");
+    expect(result).not.toContain("\n");
+  });
+
+  it("returns subject only for minimal level", () => {
+    const result = formatLocalCommitMessage(
+      "conventional",
+      "minimal",
+      "feat",
+      "(auth)",
+      "add JWT refresh",
+      "main",
+      mockFiles
+    );
+    expect(result).toBe("feat(auth): add JWT refresh");
+  });
+
+  it("returns subject + 3 bullets for medium level", () => {
+    const result = formatLocalCommitMessage(
+      "conventional",
+      "medium",
+      "feat",
+      "(auth)",
+      "add JWT refresh",
+      "main",
+      mockFiles
+    );
+    expect(result).toContain("feat(auth): add JWT refresh");
+    expect(result).toContain("- update src/auth.ts");
+    expect(result).toContain("- update src/api.ts");
+    expect(result).toContain("- add tests/auth.test.ts");
+  });
+
+  it("returns subject + body + 8 bullets for detailed level", () => {
+    const result = formatLocalCommitMessage(
+      "conventional",
+      "detailed",
+      "feat",
+      "(auth)",
+      "add JWT refresh",
+      "main",
+      mockFiles
+    );
+    expect(result).toContain("feat(auth): add JWT refresh");
+    expect(result).toContain("Changes:");
+    expect(result).toContain("- update src/auth.ts");
+  });
+
+  it("returns subject + body + bullets + reasoning for comprehensive level", () => {
+    const result = formatLocalCommitMessage(
+      "conventional",
+      "comprehensive",
+      "feat",
+      "(auth)",
+      "add JWT refresh",
+      "main",
+      mockFiles
+    );
+    expect(result).toContain("feat(auth): add JWT refresh");
+    expect(result).toContain("Changes:");
+    expect(result).toContain("Reasoning:");
   });
 });

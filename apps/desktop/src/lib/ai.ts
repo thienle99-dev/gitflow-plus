@@ -187,7 +187,7 @@ function commitStyleInstruction(style: CommitMessageStyle) {
   }
 }
 
-function formatLocalCommitMessage(
+export function formatLocalCommitMessage(
   style: CommitMessageStyle,
   detailLevel: CommitMessageDetailLevel,
   type: string,
