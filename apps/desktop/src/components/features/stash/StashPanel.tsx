@@ -143,7 +143,7 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
                 onClick={() => setSelectedStashIndex(stash.index)}
                 className={`px-3 py-2 text-xs cursor-pointer border-b border-border/20 transition-colors ${
                   selectedStashIndex === stash.index
-                    ? "bg-accent/20 text-accent"
+                    ? "bg-accent-20 text-accent"
                     : "hover:bg-surface-2/40 text-text-primary"
                 }`}
               >

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useRepoStore } from "@/stores/repo";
-import { useGitStatus, useGitBranches } from "@/queries/useGitLog";
+import { useGitStatus, useGitBranches, useGitSyncStatus } from "@/queries/useGitLog";
 import { api, type FileChange, type Commit, type StashEntry, type RepoInfo } from "@/api/tauri";
 import { useQueryClient, useQuery, useQueries } from "@tanstack/react-query";
 import { useGenerateCommitMessage } from "@/queries/useAI";
@@ -25,7 +25,26 @@ import {
   Archive,
   History,
   Settings,
+  Copy,
+  MessageSquare,
 } from "lucide-react";
+
+function formatTrayCommitDate(date: string) {
+  const normalized = date.replace(
+    /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) ([+-]\d{2})(\d{2})$/,
+    "$1T$2$3:$4",
+  );
+  const parsed = new Date(normalized);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return date.slice(0, 16);
+  }
+
+  return parsed.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+}
 
 export default function TrayPanelView() {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -35,6 +54,7 @@ export default function TrayPanelView() {
 
   const { data: changes, isLoading: isLoadingStatus } = useGitStatus(repoPath);
   const { data: branches } = useGitBranches(repoPath);
+  const { data: syncStatus } = useGitSyncStatus(repoPath);
   const generateCommit = useGenerateCommitMessage(repoPath);
 
   const currentBranch = branches?.find((b) => b.current)?.name || "";
@@ -144,12 +164,12 @@ export default function TrayPanelView() {
     }
   };
 
-  const copyToClipboard = async (text: string) => {
+  const copyToClipboard = async (text: string, successMessage = "Copied to clipboard") => {
     try {
       await navigator.clipboard.writeText(text);
-      showToast("Commit hash copied to clipboard!");
+      showToast(successMessage);
     } catch (err) {
-      showToast("Failed to copy hash", "error");
+      showToast("Failed to copy", "error");
     }
   };
 
@@ -616,7 +636,7 @@ export default function TrayPanelView() {
               </div>
 
               {/* Commit Form Section */}
-              <div className="border border-border-40 focus-within:border-accent/80 bg-surface-2 rounded-mac p-2 flex flex-col gap-2 shrink-0 transition-colors">
+              <div className="border border-border-40 focus-within:border-accent-60 bg-surface-2 rounded-mac p-2 flex flex-col gap-2 shrink-0 transition-colors">
                 <textarea
                   value={commitMessage}
                   onChange={(e) => setCommitMessage(e.target.value)}
@@ -675,24 +695,69 @@ export default function TrayPanelView() {
                   </div>
                 ) : recentCommits && recentCommits.length > 0 ? (
                   recentCommits.map((commit) => (
-                    <button
+                    <div
                       key={commit.hash}
-                      onClick={() => copyToClipboard(commit.hash)}
-                      className="w-full text-left p-2 rounded hover:bg-surface-2 active:bg-surface-3 transition-all flex flex-col gap-1 border border-transparent hover:border-border-40 cursor-pointer"
+                      onClick={() => copyToClipboard(commit.hash, "Commit hash copied")}
+                      className="group w-full text-left p-2 rounded hover:bg-surface-2 active:bg-surface-3 transition-all flex flex-col gap-1 border border-transparent hover:border-border-40 cursor-pointer"
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          copyToClipboard(commit.hash, "Commit hash copied");
+                        }
+                      }}
                     >
                       <div className="flex items-center justify-between gap-1.5 w-full">
                         <span className="text-[10px] text-text-primary font-semibold truncate flex-1">
                           {commit.message.split("\n")[0]}
                         </span>
-                        <span className="text-[8px] font-mono bg-surface-3 px-1 rounded text-text-muted shrink-0">
+                        <span className="text-[8px] font-mono bg-accent-10 border border-accent-20 px-1.5 py-0.5 rounded text-accent shrink-0">
                           {commit.hash.slice(0, 7)}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-[8px] text-text-muted w-full">
-                        <span className="truncate max-w-[120px]">{commit.author}</span>
-                        <span>{new Date(commit.date).toLocaleDateString()}</span>
+                      <div className="flex items-center justify-between text-[8px] w-full">
+                        <span className="truncate max-w-[120px] text-text-secondary">{commit.author}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-text-secondary">{formatTrayCommitDate(commit.date)}</span>
+                          <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                copyToClipboard(commit.hash, "Commit hash copied");
+                              }}
+                              className="p-0.5 rounded hover:bg-surface-3 text-text-muted hover:text-accent transition-colors"
+                              title="Copy hash"
+                            >
+                              <Copy size={9} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                copyToClipboard(commit.message.split("\n")[0], "Commit message copied");
+                              }}
+                              className="p-0.5 rounded hover:bg-surface-3 text-text-muted hover:text-accent transition-colors"
+                              title="Copy message"
+                            >
+                              <MessageSquare size={9} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleOpenMainApp();
+                              }}
+                              className="p-0.5 rounded hover:bg-surface-3 text-text-muted hover:text-accent transition-colors"
+                              title="Open full app"
+                            >
+                              <ExternalLink size={9} />
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                    </button>
+                    </div>
                   ))
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center py-8 text-center text-text-muted">
@@ -714,13 +779,22 @@ export default function TrayPanelView() {
       <div className="h-12 border-t border-border-60 bg-surface-1 flex items-center justify-between px-3.5 shrink-0 relative">
         {/* Branch Switcher (Upwards Dropdown) */}
         {repoPath ? (
-          <div className="relative" ref={branchDropdownRef}>
+          <div className="relative min-w-0" ref={branchDropdownRef}>
             <button
               onClick={() => setBranchDropdownOpen(!branchDropdownOpen)}
-              className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-surface-2 text-[10px] font-semibold text-text-primary transition-all max-w-[150px]"
+              className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-surface-2 text-[10px] font-semibold text-text-primary transition-all max-w-[145px]"
             >
               <GitBranch size={11} className="text-accent shrink-0" />
               <span className="truncate">{currentBranch || "no branch"}</span>
+              {syncStatus && (syncStatus.ahead > 0 || syncStatus.behind > 0) && (
+                <span
+                  className="flex items-center gap-1 rounded bg-accent-10 px-1 py-0.5 text-[8px] font-bold text-accent shrink-0"
+                  title={`${syncStatus.ahead} ahead, ${syncStatus.behind} behind`}
+                >
+                  {syncStatus.ahead > 0 && <span>↑{syncStatus.ahead}</span>}
+                  {syncStatus.behind > 0 && <span>↓{syncStatus.behind}</span>}
+                </span>
+              )}
               <ChevronUp size={10} className="text-text-muted shrink-0" />
             </button>
 
@@ -810,7 +884,9 @@ export default function TrayPanelView() {
             ) : (
               <Check size={11} className="shrink-0 text-[#30d158]" />
             )}
-            <span className="min-w-0 truncate whitespace-nowrap">{toast.message}</span>
+            <span className="min-w-0 truncate whitespace-nowrap" title={toast.message}>
+              {toast.message}
+            </span>
           </div>
         </div>
       )}

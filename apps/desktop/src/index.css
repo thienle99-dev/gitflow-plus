@@ -454,6 +454,9 @@ button.ghost:active {
 .border-accent-20 {
   border-color: color-mix(in srgb, var(--accent) 20%, transparent) !important;
 }
+.border-accent-30 {
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent) !important;
+}
 .border-accent-40 {
   border-color: color-mix(in srgb, var(--accent) 40%, transparent) !important;
 }

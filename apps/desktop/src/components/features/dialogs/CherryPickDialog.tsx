@@ -121,7 +121,7 @@ export default function CherryPickDialog({
           <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-2.5">
             <div className="flex items-center gap-2">
               <span className="text-2xs font-mono text-text-muted">commit</span>
-              <code className="text-xs font-mono text-accent bg-accent/10 px-1.5 py-0.5 rounded-sm font-semibold">
+              <code className="text-xs font-mono text-accent bg-accent-10 px-1.5 py-0.5 rounded-sm font-semibold">
                 {commitHash.slice(0, 7)}
               </code>
               <button

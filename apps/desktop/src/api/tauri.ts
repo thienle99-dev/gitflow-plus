@@ -121,6 +121,14 @@ export const api = {
       invoke<void>("open_settings_window"),
   },
 
+  logStream: (path: string, page?: number, perPage?: number, refName?: string | null) =>
+    invoke<string>("git_log_stream", {
+      path,
+      page: page ?? 0,
+      perPage: perPage ?? 200,
+      refName: refName ?? null,
+    }),
+
   log: (path: string, page?: number, perPage?: number, refName?: string | null) =>
     invoke<Commit[]>("git_log", {
       path,

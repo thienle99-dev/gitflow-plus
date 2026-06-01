@@ -464,7 +464,7 @@ CRITICAL INSTRUCTIONS:
                   <div className="min-w-0 flex-1">
                     <div className="text-xs font-medium text-text-primary truncate">{commit.message}</div>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-2xs font-mono text-accent bg-accent/10 px-1 py-0.5 rounded-sm font-semibold">
+                      <span className="text-2xs font-mono text-accent bg-accent-10 px-1 py-0.5 rounded-sm font-semibold">
                         {commit.hash.slice(0, 7)}
                       </span>
                       <span className="text-2xs text-text-muted font-medium">{commit.author}</span>
@@ -494,7 +494,7 @@ CRITICAL INSTRUCTIONS:
                   <div className="min-w-0 flex-1">
                     <div className="text-xs font-medium text-text-primary truncate">{commit.message}</div>
                     <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                      <span className="text-2xs font-mono text-accent bg-accent/10 px-1 py-0.5 rounded-sm font-semibold">
+                      <span className="text-2xs font-mono text-accent bg-accent-10 px-1 py-0.5 rounded-sm font-semibold">
                         {commit.hash.slice(0, 7)}
                       </span>
                       <span className="text-2xs text-text-muted font-medium">{commit.author}</span>

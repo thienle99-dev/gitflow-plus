@@ -220,7 +220,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                   onClick={() => setSelectedMr(mr)}
                   className={`w-full p-2.5 rounded-mac border text-left flex flex-col gap-1 transition-all cursor-pointer ${
                     isSelected
-                      ? "bg-accent/10 border-accent/30 shadow-2xs"
+                      ? "bg-accent-10 border-accent-30 shadow-2xs"
                       : "bg-surface-1/40 hover:bg-surface-2 border-transparent"
                   }`}
                 >

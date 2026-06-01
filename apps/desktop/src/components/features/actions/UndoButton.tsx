@@ -88,7 +88,7 @@ export default function UndoButton({ expanded: controlledExpanded, onUndoComplet
                 className="flex items-center gap-2 px-3 py-2 border-b border-border-40 hover:bg-surface-2/40 transition-colors"
               >
                 <GitCommit size={10} className="shrink-0 text-text-muted" />
-                <span className="text-[10px] font-mono font-bold text-accent bg-accent/10 px-1 py-0.5 rounded-[3px] shrink-0">
+                <span className="text-[10px] font-mono font-bold text-accent bg-accent-10 px-1 py-0.5 rounded-[3px] shrink-0">
                   {entry.commit_hash?.slice(0, 7)}
                 </span>
                 <div className="min-w-0 flex-1">
