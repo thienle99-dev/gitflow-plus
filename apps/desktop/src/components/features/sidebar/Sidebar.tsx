@@ -19,6 +19,7 @@ import {
   Plus,
   LogOut,
   Trash2,
+  GitPullRequest,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -31,9 +32,10 @@ export default function Sidebar() {
   const { data: tags } = useTagList(repoPath);
   const { data: submodules } = useSubmoduleList(repoPath);
   const [branchesOpen, setBranchesOpen] = useState(true);
-  const [remotesOpen, setRemotesOpen] = useState(true);
-  const [tagsOpen, setTagsOpen] = useState(true);
+  const [remotesOpen, setRemotesOpen] = useState(false);
+  const [tagsOpen, setTagsOpen] = useState(false);
   const [repoMenuOpen, setRepoMenuOpen] = useState(false);
+  const [repoSearchQuery, setRepoSearchQuery] = useState("");
 
   const openRepo = useRepoStore((s) => s.openRepo);
   const closeRepo = useRepoStore((s) => s.closeRepo);
@@ -102,14 +104,18 @@ export default function Sidebar() {
           <>
             <div
               className="fixed inset-0 z-40"
-              onClick={() => setRepoMenuOpen(false)}
+              onClick={() => {
+                setRepoMenuOpen(false);
+                setRepoSearchQuery("");
+              }}
             />
-            <div className="absolute left-2 right-2 mt-1 z-50 py-1 bg-surface-1 border border-border rounded-mac shadow-lg overflow-hidden animate-toast-in">
+            <div className="absolute top-full left-2 right-2 mt-1 z-50 py-1 bg-surface-1 border border-border rounded-mac shadow-lg overflow-hidden animate-toast-in">
               <button
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text-primary hover:bg-accent hover:text-accent-fg text-left"
                 onClick={() => {
                   handleOpenRepo();
                   setRepoMenuOpen(false);
+                  setRepoSearchQuery("");
                 }}
               >
                 <Plus size={12} />
@@ -126,6 +132,7 @@ export default function Sidebar() {
                     activeDialog: null,
                   });
                   setRepoMenuOpen(false);
+                  setRepoSearchQuery("");
                 }}
               >
                 <LogOut size={12} />
@@ -135,40 +142,71 @@ export default function Sidebar() {
               {recentRepos.length > 1 && (
                 <>
                   <div className="h-[1px] bg-border my-1" />
+                  <div className="px-2 py-1">
+                    <input
+                      type="text"
+                      value={repoSearchQuery}
+                      onChange={(e) => setRepoSearchQuery(e.target.value)}
+                      placeholder="Search recent repos..."
+                      className="w-full h-7 px-2.5 bg-surface-2 border border-border-40 focus:border-accent rounded-mac text-xs text-text-primary outline-none transition-all placeholder:text-text-muted"
+                      onClick={(e) => e.stopPropagation()}
+                      autoFocus
+                    />
+                  </div>
+                  <div className="h-[1px] bg-border my-1" />
                   <div className="px-3 py-1 text-[9px] font-bold text-text-muted uppercase tracking-wider">
                     Recent Repositories
                   </div>
-                  {recentRepos.filter(path => path !== repoPath).map((path) => {
-                    const name = path.split(/[/\\]/).filter(Boolean).pop() || path;
-                    return (
-                      <div
-                        key={path}
-                        className="group flex items-center justify-between px-3 py-1 text-xs text-text-secondary hover:bg-surface-2"
-                      >
-                        <button
-                          title={path}
-                          className="flex-1 flex items-center gap-2 py-1 text-left truncate hover:text-text-primary transition-colors cursor-pointer"
-                          onClick={() => {
-                            openRepo(path);
-                            setRepoMenuOpen(false);
-                          }}
-                        >
-                          <Folder size={12} className="opacity-75 shrink-0" />
-                          <span className="truncate flex-1">{name}</span>
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeRecentRepo(path);
-                          }}
-                          className="h-5 w-5 flex items-center justify-center rounded hover:bg-surface-3 text-text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all cursor-pointer shrink-0"
-                          title="Remove from list"
-                        >
-                          <Trash2 size={11} />
-                        </button>
+                  <div className="max-h-[220px] overflow-y-auto">
+                    {recentRepos
+                      .filter(path => path !== repoPath)
+                      .filter(path => {
+                        const name = path.split(/[/\\]/).filter(Boolean).pop() || path;
+                        return name.toLowerCase().includes(repoSearchQuery.toLowerCase()) ||
+                               path.toLowerCase().includes(repoSearchQuery.toLowerCase());
+                      })
+                      .map((path) => {
+                        const name = path.split(/[/\\]/).filter(Boolean).pop() || path;
+                        return (
+                          <div
+                            key={path}
+                            className="group flex items-center justify-between px-3 py-1 text-xs text-text-secondary hover:bg-surface-2"
+                          >
+                            <button
+                              title={path}
+                              className="flex-1 flex items-center gap-2 py-1 text-left truncate hover:text-text-primary transition-colors cursor-pointer"
+                              onClick={() => {
+                                openRepo(path);
+                                setRepoMenuOpen(false);
+                                setRepoSearchQuery("");
+                              }}
+                            >
+                              <Folder size={12} className="opacity-75 shrink-0" />
+                              <span className="truncate flex-1">{name}</span>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeRecentRepo(path);
+                              }}
+                              className="h-5 w-5 flex items-center justify-center rounded hover:bg-surface-3 text-text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all cursor-pointer shrink-0"
+                              title="Remove from list"
+                            >
+                              <Trash2 size={11} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    {recentRepos.filter(path => path !== repoPath).filter(path => {
+                      const name = path.split(/[/\\]/).filter(Boolean).pop() || path;
+                      return name.toLowerCase().includes(repoSearchQuery.toLowerCase()) ||
+                             path.toLowerCase().includes(repoSearchQuery.toLowerCase());
+                    }).length === 0 && (
+                      <div className="px-3 py-2 text-xs text-text-muted italic">
+                        No repositories found
                       </div>
-                    );
-                  })}
+                    )}
+                  </div>
                 </>
               )}
             </div>
@@ -219,6 +257,41 @@ export default function Sidebar() {
           ))}
         </div>
       )}
+
+      {/* Quick actions */}
+      <SectionHeader title="Actions" open={true} onToggle={() => {}} />
+      <div className="space-y-[1px] px-4 pb-2">
+        <button
+          className="tree-item w-full flex items-center gap-2 px-2 py-[3px]"
+          onClick={() => openDialogState("search")}
+        >
+          <Search size={12} className="text-text-muted" />
+          <span className="text-xs text-text-secondary">Search Commits</span>
+        </button>
+        <button
+          className="tree-item w-full flex items-center gap-2 px-2 py-[3px]"
+          onClick={() => openDialogState("stash")}
+        >
+          <Archive size={12} className="text-text-muted" />
+          <span className="text-xs text-text-secondary">Stash</span>
+        </button>
+        <button
+          className="tree-item w-full flex items-center gap-2 px-2 py-[3px]"
+          onClick={() => openDialogState("tag")}
+        >
+          <Package size={12} className="text-text-muted" />
+          <span className="text-xs text-text-secondary">Manage Tags</span>
+        </button>
+        <button
+          className="tree-item w-full flex items-center gap-2 px-2 py-[3px]"
+          onClick={() => openDialogState("merge-request")}
+        >
+          <GitPullRequest size={12} className="text-text-muted" />
+          <span className="text-xs text-text-secondary">Merge Requests</span>
+        </button>
+      </div>
+
+      <div className="my-1 mx-4 border-t border-border" />
 
       {/* Remotes */}
       <SectionHeader title="Remotes" open={remotesOpen} onToggle={() => setRemotesOpen(!remotesOpen)} />
@@ -285,35 +358,6 @@ export default function Sidebar() {
           ))}
         </div>
       )}
-
-      {/* Quick actions spacer */}
-      <div className="my-1 mx-4 border-t border-border" />
-
-      {/* Quick actions */}
-      <SectionHeader title="Actions" open={true} onToggle={() => {}} />
-      <div className="space-y-[1px] px-4">
-        <button
-          className="tree-item w-full flex items-center gap-2 px-2 py-[3px]"
-          onClick={() => openDialogState("search")}
-        >
-          <Search size={12} className="text-text-muted" />
-          <span className="text-xs text-text-secondary">Search Commits</span>
-        </button>
-        <button
-          className="tree-item w-full flex items-center gap-2 px-2 py-[3px]"
-          onClick={() => openDialogState("stash")}
-        >
-          <Archive size={12} className="text-text-muted" />
-          <span className="text-xs text-text-secondary">Stash</span>
-        </button>
-        <button
-          className="tree-item w-full flex items-center gap-2 px-2 py-[3px]"
-          onClick={() => openDialogState("tag")}
-        >
-          <Package size={12} className="text-text-muted" />
-          <span className="text-xs text-text-secondary">Manage Tags</span>
-        </button>
-      </div>
     </div>
   );
 }

@@ -8,6 +8,7 @@ interface AISettings {
   customUrl: string;
   tokenLimit: number;
   detailLevel: string;
+  commitStyle: CommitMessageStyle;
   customRules: string;
 }
 
@@ -17,12 +18,15 @@ interface GeneratedCommitMessage {
   reason?: string;
 }
 
+type CommitMessageStyle = "conventional" | "plain" | "gitmoji" | "jira";
+
 export async function generateCommitMessageWithAI(
   repoPath: string,
   files: FileChange[],
 ): Promise<GeneratedCommitMessage> {
-  const fallback = generateLocalCommitMessage(files);
   const settings = readAISettings();
+  const branchName = await getCurrentBranchName(repoPath);
+  const fallback = generateLocalCommitMessage(files, branchName);
 
   if (!hasProvider(settings)) {
     return {
@@ -41,7 +45,6 @@ export async function generateCommitMessageWithAI(
     };
   }
 
-  const branchName = await getCurrentBranchName(repoPath);
   const prompt = buildCommitPrompt(diff, settings, branchName);
   const message = cleanAIText(await requestAIText(prompt, settings));
   if (!message) {
@@ -73,7 +76,8 @@ ${diff.slice(0, 8000)}`;
   return review;
 }
 
-export function generateLocalCommitMessage(files: FileChange[]) {
+export function generateLocalCommitMessage(files: FileChange[], branchName = "") {
+  const commitStyle = readCommitMessageStyle();
   const statusCounts = files.reduce<Record<string, number>>((counts, file) => {
     counts[file.status] = (counts[file.status] || 0) + 1;
     return counts;
@@ -88,11 +92,11 @@ export function generateLocalCommitMessage(files: FileChange[]) {
       : "chore";
   const scope = primaryScope ? `(${primaryScope})` : "";
 
-  if (files.length === 1) {
-    return `${type}${scope}: ${statusVerb(primaryStatus)} ${getFileName(files[0].path)}`;
-  }
+  const description = files.length === 1
+    ? `${statusVerb(primaryStatus)} ${getFileName(files[0].path)}`
+    : `update ${files.length} files`;
 
-  return `${type}${scope}: update ${files.length} files`;
+  return formatLocalCommitMessage(commitStyle, type, scope, description, branchName);
 }
 
 function readAISettings(): AISettings {
@@ -102,8 +106,17 @@ function readAISettings(): AISettings {
     customUrl: localStorage.getItem("gitflowAiApiUrl") || "",
     tokenLimit: Number(localStorage.getItem("gitflowAiTokenLimit") || "4096"),
     detailLevel: localStorage.getItem("gitflowAiDetailLevel") || "medium",
+    commitStyle: readCommitMessageStyle(),
     customRules: localStorage.getItem("gitflowAiCustomRules") || "",
   };
+}
+
+function readCommitMessageStyle(): CommitMessageStyle {
+  const saved = localStorage.getItem("gitflowCommitMessageStyle");
+  if (saved === "plain" || saved === "gitmoji" || saved === "jira") {
+    return saved;
+  }
+  return "conventional";
 }
 
 function hasProvider(settings: AISettings) {
@@ -120,6 +133,7 @@ async function getCurrentBranchName(repoPath: string) {
 }
 
 function buildCommitPrompt(diff: string, settings: AISettings, branchName: string) {
+  const formatInstruction = commitStyleInstruction(settings.commitStyle);
   const styleInstruction = settings.detailLevel === "minimal"
     ? "3. Return ONLY a single line (the subject line). Do NOT add a body."
     : settings.detailLevel === "detailed"
@@ -132,10 +146,10 @@ function buildCommitPrompt(diff: string, settings: AISettings, branchName: strin
     ? `\nUSER CUSTOM RULES:\n${settings.customRules.trim()}\n`
     : "";
 
-  return `You are an expert developer. Generate a professional Git commit message following Conventional Commits based on the staged diff below.
+  return `You are an expert developer. Generate a professional Git commit message using the selected style based on the staged diff below.
 
 CRITICAL INSTRUCTIONS:
-1. Format: <type>(<optional-scope>): <description in imperative mood, lowercase, no period>
+1. ${formatInstruction}
 2. Keep the subject under 50 characters.
 ${styleInstruction}
 4. No markdown code blocks, no introductory text, no quotes. Return ONLY the raw commit message.
@@ -143,6 +157,56 @@ ${styleInstruction}
 ${branchContext}${customRules}
 Staged diff:
 ${diff.slice(0, 8000)}`;
+}
+
+function commitStyleInstruction(style: CommitMessageStyle) {
+  switch (style) {
+    case "plain":
+      return "Format: short imperative subject without a Conventional Commit prefix.";
+    case "gitmoji":
+      return "Format: start the subject with one relevant gitmoji, then a Conventional Commit subject.";
+    case "jira":
+      return "Format: start with a Jira ticket from the branch name when present, then a Conventional Commit subject.";
+    default:
+      return "Format: <type>(<optional-scope>): <description in imperative mood, lowercase, no period>";
+  }
+}
+
+function formatLocalCommitMessage(
+  style: CommitMessageStyle,
+  type: string,
+  scope: string,
+  description: string,
+  branchName: string,
+) {
+  if (style === "plain") {
+    return description;
+  }
+  if (style === "gitmoji") {
+    return `${gitmojiForType(type)} ${type}${scope}: ${description}`;
+  }
+  if (style === "jira") {
+    const ticket = extractTicket(branchName);
+    return ticket ? `${ticket} ${type}${scope}: ${description}` : `${type}${scope}: ${description}`;
+  }
+  return `${type}${scope}: ${description}`;
+}
+
+function extractTicket(branchName: string) {
+  return branchName.match(/[A-Z][A-Z0-9]+-\d+/)?.[0] || "";
+}
+
+function gitmojiForType(type: string) {
+  switch (type) {
+    case "feat":
+      return "✨";
+    case "fix":
+      return "🐛";
+    case "refactor":
+      return "♻️";
+    default:
+      return "🔧";
+  }
 }
 
 async function requestAIText(prompt: string, settings: AISettings) {

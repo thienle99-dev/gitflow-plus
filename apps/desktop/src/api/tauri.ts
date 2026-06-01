@@ -205,6 +205,8 @@ export const api = {
       invoke<string>("stash_apply", { path, index: index ?? null }),
     drop: (path: string, index?: number) =>
       invoke<string>("stash_drop", { path, index: index ?? null }),
+    diff: (path: string, index: number) =>
+      invoke<string>("stash_diff", { path, index }),
   },
 
   tag: {

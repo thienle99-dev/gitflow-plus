@@ -6,3 +6,4 @@ export { default as CreateBranchDialog } from "./CreateBranchDialog";
 export { default as KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
 export { default as SearchDialog } from "./SearchDialog";
 export { default as SettingsDialog } from "./SettingsDialog";
+export { default as MergeRequestDialog } from "./MergeRequestDialog";

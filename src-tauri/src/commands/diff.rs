@@ -10,7 +10,11 @@ pub struct CommitFileChange {
 }
 
 #[tauri::command]
-pub async fn file_diff(path: String, file_path: String, context: Option<u32>) -> Result<String, String> {
+pub async fn file_diff(
+    path: String,
+    file_path: String,
+    context: Option<u32>,
+) -> Result<String, String> {
     let context_arg = format!("-U{}", context.unwrap_or(3));
     let output = Command::new("git")
         .args([
@@ -22,7 +26,8 @@ pub async fn file_diff(path: String, file_path: String, context: Option<u32>) ->
             "--no-color",
             &file_path,
         ])
-        .output().await
+        .output()
+        .await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if output.status.success() {
@@ -61,7 +66,8 @@ pub async fn commit_diff(
 
     let output = Command::new("git")
         .args(&args)
-        .output().await
+        .output()
+        .await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if output.status.success() {
@@ -91,7 +97,8 @@ pub async fn commit_changed_files(
             "--find-renames",
             &commit_hash,
         ])
-        .output().await
+        .output()
+        .await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if !output.status.success() {
@@ -165,7 +172,8 @@ pub async fn staged_diff(
 
     let output = Command::new("git")
         .args(&args)
-        .output().await
+        .output()
+        .await
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if output.status.success() {
@@ -178,7 +186,11 @@ pub async fn staged_diff(
 }
 
 #[tauri::command]
-pub async fn apply_diff_hunk(path: String, patch: String, action: String) -> Result<String, String> {
+pub async fn apply_diff_hunk(
+    path: String,
+    patch: String,
+    action: String,
+) -> Result<String, String> {
     let mut args = vec![
         "--no-pager",
         "-C",

@@ -61,3 +61,51 @@ export function parseDiff(diff: string): DiffHunk[] {
   if (currentHunk) hunks.push(currentHunk);
   return hunks;
 }
+
+/**
+ * File-level diff parsing for stash diff viewer and file history.
+ */
+export interface DiffFile {
+  path: string;
+  status: "added" | "modified" | "deleted";
+  hunks: DiffHunk[];
+}
+
+export function parseDiffFiles(diffOutput: string): DiffFile[] {
+  const fileChunks = diffOutput.split(/(?=^diff --git)/m).filter(Boolean);
+  const result: DiffFile[] = [];
+
+  for (const chunk of fileChunks) {
+    const firstLine = chunk.split("\n")[0];
+    const match = firstLine.match(/diff --git a\/(.*) b\/(.*)/);
+    if (!match) continue;
+
+    const path = match[2];
+    const hunks = parseDiff(chunk);
+    const status: DiffFile["status"] = chunk.includes("new file mode")
+      ? "added"
+      : chunk.includes("deleted file mode")
+        ? "deleted"
+        : "modified";
+
+    result.push({ path, status, hunks });
+  }
+
+  return result;
+}
+
+export function countDiffChanges(files: DiffFile[]): { added: number; removed: number; files: number } {
+  let added = 0;
+  let removed = 0;
+
+  for (const file of files) {
+    for (const hunk of file.hunks) {
+      for (const line of hunk.lines) {
+        if (line.type === "add") added++;
+        if (line.type === "delete") removed++;
+      }
+    }
+  }
+
+  return { added, removed, files: files.length };
+}

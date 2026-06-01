@@ -180,3 +180,24 @@ pub async fn stash_apply(path: String, index: Option<u32>) -> Result<String, Str
 pub async fn stash_drop(path: String, index: Option<u32>) -> Result<String, String> {
     git_stash_drop(&path, index).await
 }
+
+pub async fn git_stash_diff(path: &str, index: u32) -> Result<String, String> {
+    let stash_ref = format!("stash@{{{}}}", index);
+    let output = Command::new("git")
+        .args(["--no-pager", "-C", path, "stash", "show", "-p", &stash_ref])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to get stash diff: {}", e))?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Failed to get stash diff: {}", stderr.trim()))
+    }
+}
+
+#[tauri::command]
+pub async fn stash_diff(path: String, index: u32) -> Result<String, String> {
+    git_stash_diff(&path, index).await
+}

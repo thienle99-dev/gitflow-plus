@@ -179,6 +179,7 @@ pub fn run() {
             commands::stash::stash_pop,
             commands::stash::stash_apply,
             commands::stash::stash_drop,
+            commands::stash::stash_diff,
             commands::tag::tag_list,
             commands::tag::tag_create,
             commands::tag::tag_delete,

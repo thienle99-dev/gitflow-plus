@@ -11,7 +11,7 @@ import Sidebar from "@/components/features/sidebar/Sidebar";
 import CommitGraph from "@/components/features/graph/CommitGraph";
 import RightPanel from "@/components/layout/RightPanel";
 import BottomBar from "@/components/layout/BottomBar";
-import { SearchDialog, KeyboardShortcutsModal, CherryPickDialog, SettingsDialog, AnalyticsDialog, CreateBranchDialog } from "@/components/features/dialogs";
+import { SearchDialog, KeyboardShortcutsModal, CherryPickDialog, SettingsDialog, AnalyticsDialog, CreateBranchDialog, MergeRequestDialog } from "@/components/features/dialogs";
 import ErrorBoundary from "@/components/ui/feedback/ErrorBoundary";
 import { AlertOctagon, RefreshCw, Trash2 } from "lucide-react";
 
@@ -218,6 +218,7 @@ export default function MainLayout() {
     ),
     "create-branch": <CreateBranchDialog open={true} onClose={closeDialog} />,
     analytics: <AnalyticsDialog open={true} onClose={closeDialog} />,
+    "merge-request": <MergeRequestDialog onClose={closeDialog} />,
   };
 
 function InlineErrorFallback({ name }: { name: string }) {
@@ -282,7 +283,9 @@ function InlineErrorFallback({ name }: { name: string }) {
       {/* Dialog overlays */}
       {overlayDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-surface-0 rounded-mac shadow-xl border border-border min-w-[480px] max-w-[600px] max-h-[80vh] overflow-hidden">
+          <div className={`bg-surface-0 rounded-mac shadow-xl border border-border overflow-hidden ${
+            overlayDialog === "merge-request" ? "w-[760px] h-[520px]" : "min-w-[480px] max-w-[600px] max-h-[80vh]"
+          }`}>
             {dialogComponents[overlayDialog] || (
               <div className="p-4 text-text-muted text-sm">
                 Unknown dialog: {overlayDialog}

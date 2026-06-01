@@ -7,6 +7,7 @@ import {
   Gauge,
   GitBranch,
   Keyboard,
+  Link,
   RefreshCw,
   RotateCcw,
   Settings,
@@ -26,6 +27,7 @@ const LS_KEY_DIFF_MODE = "gitflowDefaultDiffViewMode";
 const LS_KEY_AUTO_FETCH = "gitflowAutoFetch";
 const LS_KEY_FETCHED_MODELS = "gitflowAiFetchedModels";
 const LS_KEY_AI_DETAIL_LEVEL = "gitflowAiDetailLevel";
+const LS_KEY_COMMIT_STYLE = "gitflowCommitMessageStyle";
 const LS_KEY_AI_CUSTOM_RULES = "gitflowAiCustomRules";
 const LS_KEY_FETCH_INTERVAL = "gitflowFetchIntervalMinutes";
 const LS_KEY_AUTO_PRUNE = "gitflowAutoPruneOnFetch";
@@ -40,6 +42,9 @@ const LS_KEY_DIFF_CONTEXT = "gitflowDiffContextLines";
 const LS_KEY_DIFF_LINE_WRAP = "gitflowDiffLineWrap";
 const LS_KEY_LARGE_DIFF_MODE = "gitflowLargeDiffMode";
 const LS_KEY_REDUCED_MOTION = "gitflowReducedMotion";
+const LS_KEY_GITHUB_TOKEN = "gitflowGithubToken";
+const LS_KEY_GITLAB_TOKEN = "gitflowGitlabToken";
+const LS_KEY_GITLAB_HOST = "gitflowGitlabHost";
 
 const SETTINGS_KEYS = [
   LS_KEY_DIFF_MODE,
@@ -63,7 +68,11 @@ const SETTINGS_KEYS = [
   LS_KEY_TOKEN_LIMIT,
   LS_KEY_FETCHED_MODELS,
   LS_KEY_AI_DETAIL_LEVEL,
+  LS_KEY_COMMIT_STYLE,
   LS_KEY_AI_CUSTOM_RULES,
+  LS_KEY_GITHUB_TOKEN,
+  LS_KEY_GITLAB_TOKEN,
+  LS_KEY_GITLAB_HOST,
 ];
 
 interface SettingsDialogProps {
@@ -148,11 +157,18 @@ const LOCAL_MODELS = [
   { id: "llama.cpp", label: "llama.cpp (local)" },
 ];
 
+const COMMIT_MESSAGE_STYLES = [
+  { id: "conventional", label: "Conventional Commits" },
+  { id: "plain", label: "Plain imperative" },
+  { id: "gitmoji", label: "Gitmoji Conventional" },
+  { id: "jira", label: "Jira ticket prefix" },
+] as const;
+
 export default function SettingsDialog({ onClose }: SettingsDialogProps) {
   const currentTheme = useRepoStore((s) => s.theme);
   const setTheme = useRepoStore((s) => s.setTheme);
 
-  const [activeTab, setActiveTab] = useState<"general" | "git" | "ai" | "advanced">("general");
+  const [activeTab, setActiveTab] = useState<"general" | "git" | "accounts" | "ai" | "advanced">("general");
   
   // General Tab States
   const [theme, setSelectedTheme] = useState<typeof currentTheme>(currentTheme);
@@ -181,11 +197,17 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
   const [fetchedModels, setFetchedModels] = useState<{ id: string; label: string }[]>([]);
   const [fetchingModels, setFetchingModels] = useState(false);
   const [aiDetailLevel, setAiDetailLevel] = useState<"minimal" | "medium" | "detailed">("medium");
+  const [commitStyle, setCommitStyle] = useState<"conventional" | "plain" | "gitmoji" | "jira">("conventional");
   const [customRules, setCustomRules] = useState("");
 
   // Advanced Tab States
   const [largeDiffMode, setLargeDiffMode] = useState<"full" | "prompt" | "summary">("prompt");
   const [reducedMotion, setReducedMotion] = useState(false);
+
+  // Accounts Tab States
+  const [githubToken, setGithubToken] = useState("");
+  const [gitlabToken, setGitlabToken] = useState("");
+  const [gitlabHost, setGitlabHost] = useState("");
 
   const [hasChanges, setHasChanges] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -219,6 +241,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       const savedLimit = localStorage.getItem(LS_KEY_TOKEN_LIMIT);
       const savedFetched = localStorage.getItem(LS_KEY_FETCHED_MODELS);
       const savedDetailLevel = localStorage.getItem(LS_KEY_AI_DETAIL_LEVEL) as "minimal" | "medium" | "detailed";
+      const savedCommitStyle = localStorage.getItem(LS_KEY_COMMIT_STYLE) as "conventional" | "plain" | "gitmoji" | "jira";
       const savedCustomRules = localStorage.getItem(LS_KEY_AI_CUSTOM_RULES) || "";
 
       if (savedDiffMode) setDefaultDiffMode(savedDiffMode);
@@ -246,7 +269,16 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
         } catch {}
       }
       if (savedDetailLevel) setAiDetailLevel(savedDetailLevel);
+      if (savedCommitStyle) setCommitStyle(savedCommitStyle);
       setCustomRules(savedCustomRules);
+      
+      const savedGithubToken = localStorage.getItem(LS_KEY_GITHUB_TOKEN);
+      const savedGitlabToken = localStorage.getItem(LS_KEY_GITLAB_TOKEN);
+      const savedGitlabHost = localStorage.getItem(LS_KEY_GITLAB_HOST);
+      if (savedGithubToken) setGithubToken(savedGithubToken);
+      if (savedGitlabToken) setGitlabToken(savedGitlabToken);
+      if (savedGitlabHost) setGitlabHost(savedGitlabHost);
+
       setSelectedTheme(currentTheme);
     } catch {
       // localStorage is not available
@@ -256,7 +288,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
   // Check for unsaved changes
   useEffect(() => {
     const storedDiffMode = (localStorage.getItem(LS_KEY_DIFF_MODE) as "split" | "unified") || "split";
-    const storedAutoFetch = localStorage.getItem(LS_KEY_AUTO_FETCH) !== "false"; // default to true
+    const storedAutoFetch = localStorage.getItem(LS_KEY_AUTO_FETCH) !== "false";
     const storedFetchInterval = localStorage.getItem(LS_KEY_FETCH_INTERVAL) || "10";
     const storedAutoPrune = localStorage.getItem(LS_KEY_AUTO_PRUNE) === "true";
     const storedConfirmDangerous = localStorage.getItem(LS_KEY_CONFIRM_DANGEROUS) !== "false";
@@ -276,7 +308,11 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
     const storedLimit = localStorage.getItem(LS_KEY_TOKEN_LIMIT) || "4096";
     const storedFetched = localStorage.getItem(LS_KEY_FETCHED_MODELS) || "[]";
     const storedDetailLevel = (localStorage.getItem(LS_KEY_AI_DETAIL_LEVEL) as "minimal" | "medium" | "detailed") || "medium";
+    const storedCommitStyle = (localStorage.getItem(LS_KEY_COMMIT_STYLE) as "conventional" | "plain" | "gitmoji" | "jira") || "conventional";
     const storedCustomRules = localStorage.getItem(LS_KEY_AI_CUSTOM_RULES) || "";
+    const storedGithubToken = localStorage.getItem(LS_KEY_GITHUB_TOKEN) || "";
+    const storedGitlabToken = localStorage.getItem(LS_KEY_GITLAB_TOKEN) || "";
+    const storedGitlabHost = localStorage.getItem(LS_KEY_GITLAB_HOST) || "";
 
     setHasChanges(
       theme !== currentTheme ||
@@ -301,7 +337,11 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       tokenLimit !== Number(storedLimit) ||
       JSON.stringify(fetchedModels) !== storedFetched ||
       aiDetailLevel !== storedDetailLevel ||
-      customRules !== storedCustomRules
+      commitStyle !== storedCommitStyle ||
+      customRules !== storedCustomRules ||
+      githubToken !== storedGithubToken ||
+      gitlabToken !== storedGitlabToken ||
+      gitlabHost !== storedGitlabHost
     );
   }, [
     theme,
@@ -327,7 +367,11 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
     tokenLimit,
     fetchedModels,
     aiDetailLevel,
+    commitStyle,
     customRules,
+    githubToken,
+    gitlabToken,
+    gitlabHost,
   ]);
 
   const handleFetchModels = async () => {
@@ -433,7 +477,11 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       localStorage.setItem(LS_KEY_TOKEN_LIMIT, String(tokenLimit));
       localStorage.setItem(LS_KEY_FETCHED_MODELS, JSON.stringify(fetchedModels));
       localStorage.setItem(LS_KEY_AI_DETAIL_LEVEL, aiDetailLevel);
+      localStorage.setItem(LS_KEY_COMMIT_STYLE, commitStyle);
       localStorage.setItem(LS_KEY_AI_CUSTOM_RULES, customRules);
+      localStorage.setItem(LS_KEY_GITHUB_TOKEN, githubToken);
+      localStorage.setItem(LS_KEY_GITLAB_TOKEN, gitlabToken);
+      localStorage.setItem(LS_KEY_GITLAB_HOST, gitlabHost);
       
       setHasChanges(false);
       showToast("Settings saved successfully");
@@ -486,7 +534,11 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
     setTokenLimit(4096);
     setFetchedModels([]);
     setAiDetailLevel("medium");
+    setCommitStyle("conventional");
     setCustomRules("");
+    setGithubToken("");
+    setGitlabToken("");
+    setGitlabHost("");
     showToast("Settings reset to defaults");
     window.dispatchEvent(new Event("gitflow-settings-updated"));
   };
@@ -543,6 +595,20 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
             </button>
 
             <button
+              onClick={() => setActiveTab("accounts")}
+              className={`w-full px-2.5 py-1.5 text-xs font-medium rounded-mac flex items-center gap-2.5 transition-all ${
+                activeTab === "accounts"
+                  ? "tab-accent-active font-semibold text-text-primary"
+                  : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
+              }`}
+            >
+              <div className="w-5 h-5 rounded-[5px] bg-[#5856d6] flex items-center justify-center text-white shrink-0">
+                <Link size={12} strokeWidth={2.2} />
+              </div>
+              Accounts
+            </button>
+
+            <button
               onClick={() => setActiveTab("ai")}
               className={`w-full px-2.5 py-1.5 text-xs font-medium rounded-mac flex items-center gap-2.5 transition-all ${
                 activeTab === "ai"
@@ -593,6 +659,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
           <h2 className="text-xs font-semibold text-text-primary">
             {activeTab === "general" && "General Settings"}
             {activeTab === "git" && "Git Core Settings"}
+            {activeTab === "accounts" && "Accounts & Hosting Integrations"}
             {activeTab === "ai" && "AI Assistant Integration"}
             {activeTab === "advanced" && "Advanced Preferences"}
           </h2>
@@ -799,6 +866,78 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
             </div>
           )}
 
+          {activeTab === "accounts" && (
+            <div className="space-y-4">
+              {/* GitHub Card */}
+              <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-[5px] bg-[#24292f] dark:bg-[#e6edf2] flex items-center justify-center text-white dark:text-[#24292f] shrink-0">
+                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 16 16">
+                      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+                    </svg>
+                  </div>
+                  <span className="text-xs font-semibold text-text-primary">GitHub Integration</span>
+                </div>
+                <div className="space-y-1.5 pt-1">
+                  <label className="block text-2xs font-semibold text-text-secondary">
+                    Personal Access Token (PAT)
+                  </label>
+                  <input
+                    type="password"
+                    value={githubToken}
+                    onChange={(e) => setGithubToken(e.target.value)}
+                    placeholder="ghp_..."
+                    className="w-full h-8 px-2.5 bg-surface-1 hover:bg-surface-2 focus:bg-surface-0 border border-border focus:border-accent rounded-mac text-xs text-text-primary outline-none transition-all placeholder:text-text-muted"
+                  />
+                  <p className="text-3xs text-text-muted leading-normal">
+                    Requires `repo` scope to list pull requests, view diffs, and fetch branches.
+                  </p>
+                </div>
+              </div>
+
+              {/* GitLab Card */}
+              <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-[5px] bg-[#e24329] flex items-center justify-center text-white shrink-0">
+                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 16 16">
+                      <path d="M15.97 9.076a.54.54 0 00-.196-.606l-1.07-1.075L8 14.7l6.705-7.305-1.07-1.075a.54.54 0 00-.197-.606L8 1 2.563 6.015a.54.54 0 00-.196.606l-1.07 1.075L8 14.7.227 6.315a.54.54 0 00-.197-.606L8 1l5.437 5.015z" />
+                    </svg>
+                  </div>
+                  <span className="text-xs font-semibold text-text-primary">GitLab Integration</span>
+                </div>
+                <div className="space-y-3 pt-1">
+                  <div className="space-y-1.5">
+                    <label className="block text-2xs font-semibold text-text-secondary">
+                      Personal Access Token (PAT)
+                    </label>
+                    <input
+                      type="password"
+                      value={gitlabToken}
+                      onChange={(e) => setGitlabToken(e.target.value)}
+                      placeholder="glpat-..."
+                      className="w-full h-8 px-2.5 bg-surface-1 hover:bg-surface-2 focus:bg-surface-0 border border-border focus:border-accent rounded-mac text-xs text-text-primary outline-none transition-all placeholder:text-text-muted"
+                    />
+                  </div>
+                  <div className="space-y-1.5 border-t border-border-40 pt-3">
+                    <label className="block text-2xs font-semibold text-text-secondary">
+                      Custom Host / Self-Hosted Instance (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={gitlabHost}
+                      onChange={(e) => setGitlabHost(e.target.value)}
+                      placeholder="e.g. https://gitlab.yourcompany.com"
+                      className="w-full h-8 px-2.5 bg-surface-1 hover:bg-surface-2 focus:bg-surface-0 border border-border focus:border-accent rounded-mac text-xs text-text-primary outline-none transition-all placeholder:text-text-muted"
+                    />
+                    <p className="text-3xs text-text-muted leading-normal">
+                      Leave blank to use public cloud GitLab (https://gitlab.com).
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === "ai" && (
             <div className="space-y-4">
               {/* AI Provider Configuration Card */}
@@ -912,9 +1051,28 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
 
               {/* Suggestion Preferences Card */}
               <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
-                {/* Commit Message Detail Level */}
+                {/* Commit Message Style */}
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-text-primary">Commit Message Style</label>
+                  <div className="relative">
+                    <select
+                      value={commitStyle}
+                      onChange={(e) => setCommitStyle(e.target.value as any)}
+                      className="w-full h-8 pl-2.5 pr-8 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer hover:bg-surface-2 transition-all"
+                    >
+                      {COMMIT_MESSAGE_STYLES.map((style) => (
+                        <option key={style.id} value={style.id}>{style.label}</option>
+                      ))}
+                    </select>
+                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
+                      <ChevronDown size={11} strokeWidth={2.5} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Commit Message Detail Level */}
+                <div className="space-y-1 border-t border-border-40 pt-3">
+                  <label className="text-xs font-semibold text-text-primary">Commit Message Detail</label>
                   <div className="relative">
                     <select
                       value={aiDetailLevel}
