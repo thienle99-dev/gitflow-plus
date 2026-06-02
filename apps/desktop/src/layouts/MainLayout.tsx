@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useQueryClient } from "@tanstack/react-query";
+import type { Commit, FileChange, Branch, RepoInfo, SyncStatus } from "@/api/tauri";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { useUIStore } from "@/stores/ui";
@@ -65,6 +66,39 @@ export default function MainLayout() {
       api.watcher.stop().catch(console.error);
     };
   }, [repoPath]);
+
+  // Parallel startup prefetch — warm critical query caches immediately on repo open
+  useEffect(() => {
+    if (!repoPath) return;
+    Promise.all([
+      queryClient.prefetchQuery<Commit[]>({
+        queryKey: ["git", repoPath, "log"],
+        queryFn: () => api.log(repoPath, 0, 200),
+        staleTime: 30_000,
+      }),
+      queryClient.prefetchQuery<FileChange[]>({
+        queryKey: ["git", repoPath, "status"],
+        queryFn: () => api.status(repoPath),
+        staleTime: 0,
+      }),
+      queryClient.prefetchQuery<Branch[]>({
+        queryKey: ["git", repoPath, "branches"],
+        queryFn: () => api.branches.list(repoPath),
+        staleTime: 15_000,
+      }),
+      queryClient.prefetchQuery<RepoInfo>({
+        queryKey: ["git", repoPath, "info"],
+        queryFn: () => api.repo.info(repoPath),
+      }),
+      queryClient.prefetchQuery<SyncStatus>({
+        queryKey: ["git", repoPath, "sync-status"],
+        queryFn: () => api.remote.getSyncStatus(repoPath),
+        staleTime: 5_000,
+      }),
+    ]).catch((err) => {
+      console.debug("[prefetch] startup queries failed", err);
+    });
+  }, [repoPath, queryClient]);
 
   // Listen for file watcher events and invalidate queries
   useEffect(() => {

@@ -281,12 +281,12 @@ setScopeSuggestion(prev => {
 
 ## Verification Checklist
 
-- [ ] `npx tsc --noEmit` passes
-- [ ] Scope analysis triggers when ≥5 files across ≥2 top-level dirs
-- [ ] Scope analysis skipped when pre-filter fails
-- [ ] Scope analysis skipped when no API key configured
-- [ ] "Use this" unstages all, stages group files, sets commit message
-- [ ] "Commit All as One" dismisses suggestion and uses overall message
-- [ ] Dismiss button hides the suggestion panel
-- [ ] Invalid AI JSON response is handled gracefully (no crash)
-- [ ] Suggestion panel has proper styling matching existing UI
+- [x] `npx tsc --noEmit` passes
+- [x] Scope analysis triggers when ≥5 files across ≥2 top-level dirs
+- [x] Scope analysis skipped when pre-filter fails
+- [x] Scope analysis skipped when no API key configured
+- [x] "Use this" unstages all, stages group files, sets commit message
+- [x] "Commit All as One" dismisses suggestion and uses overall message
+- [x] Dismiss button hides the suggestion panel
+- [x] Invalid AI JSON response is handled gracefully (no crash)
+- [x] Suggestion panel has proper styling matching existing UI

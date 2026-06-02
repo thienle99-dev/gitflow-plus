@@ -31,7 +31,7 @@
 - [x] `queries/useGitBranches.ts`
 - [x] `queries/useGitDiff.ts`
 - [x] TanStack Query provider setup
-- [ ] Parallel startup queries — `Promise.all` cho git_log + git_status + git_branches khi mở repo
+- [x] Parallel startup queries — `Promise.all` cho git_log + git_status + git_branches khi mở repo
 
 ### Step 4: Layout Shell
 - [x] `layouts/MainLayout.tsx` — 3-panel + bottom bar
@@ -162,7 +162,7 @@
 - [x] **AI Commit Message** — phân tích staged diff, generate conventional commit (type: subject + body)
 - [x] **AI Explain Changes** — giải thích commit/diff bằng ngôn ngữ tự nhiên
 - [x] **AI Code Review Assist** — flag bugs, suggest improvements, đề xuất test cases
-- [ ] **AI Commit Scope Suggestion** — gợi ý tách commit nếu staged changes quá lớn/không liên quan
+- [x] **AI Commit Scope Suggestion** — gợi ý tách commit nếu staged changes quá lớn/không liên quan
 - [ ] **AI Branch Naming** — suggest branch name từ description
 - [ ] Context-aware prompts — gửi kèm project conventions (.cursorrules, CLAUDE.md) nếu có
 - [ ] Rate limiting + response caching cho cùng diff
