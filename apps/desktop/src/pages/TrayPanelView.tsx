@@ -857,6 +857,11 @@ export default function TrayPanelView() {
                 <Download size={10} />
               )}
               <span>Pull</span>
+              {!!syncStatus?.behind && (
+                <span className="ml-0.5 rounded-[3px] bg-[#0a84ff]/15 px-1 py-0.5 text-[8px] font-bold leading-none text-[#0a84ff]">
+                  {syncStatus.behind}
+                </span>
+              )}
             </button>
             <button
               onClick={() => handleGitAction("push")}
@@ -870,6 +875,11 @@ export default function TrayPanelView() {
                 <Upload size={10} />
               )}
               <span>Push</span>
+              {!!syncStatus?.ahead && (
+                <span className="ml-0.5 rounded-[3px] bg-[#30d158]/15 px-1 py-0.5 text-[8px] font-bold leading-none text-[#30d158]">
+                  {syncStatus.ahead}
+                </span>
+              )}
             </button>
           </div>
         )}
