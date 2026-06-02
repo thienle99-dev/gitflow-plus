@@ -273,19 +273,21 @@ button.ghost:active {
   font-weight: 600;
 }
 
-/* Inline Word/Character Diff Highlighting */
+/* Inline Word-Level Diff Highlighting */
 .diff-inline-added {
-  background-color: rgba(48, 209, 88, 0.28) !important;
-  border-radius: 2px;
+  background-color: rgba(48, 209, 88, 0.30) !important;
+  border-radius: 3px;
   font-weight: 500;
+  box-shadow: 0 0 0 1px rgba(48, 209, 88, 0.15);
 }
 
 .diff-inline-deleted {
-  background-color: rgba(255, 55, 95, 0.28) !important;
-  border-radius: 2px;
+  background-color: rgba(255, 55, 95, 0.30) !important;
+  border-radius: 3px;
   font-weight: 500;
   text-decoration: line-through;
   opacity: 0.85;
+  box-shadow: 0 0 0 1px rgba(255, 55, 95, 0.15);
 }
 
 /* Diff Prefix Widgets (Copy-safe Gutter Markers) */

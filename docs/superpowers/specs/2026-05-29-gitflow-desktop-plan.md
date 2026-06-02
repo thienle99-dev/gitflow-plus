@@ -84,7 +84,7 @@
 - [x] Segmented control toggle (split/unified)
 - [x] Syntax highlight auto-detect by extension
 - [x] Edge cases: binary, large file, new/deleted
-- [ ] Word-level diff highlighting — highlight từng từ thay đổi trong một dòng, không chỉ cả dòng
+- [x] Word-level diff highlighting — highlight từng từ thay đổi trong một dòng, không chỉ cả dòng
 - [ ] Lazy load CodeMirror — chỉ import khi user click xem diff, không load upfront (~500KB saved)
 
 ### Step 10: Git Actions

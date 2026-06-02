@@ -491,31 +491,116 @@ class PrefixWidget extends WidgetType {
   }
 }
 
-function computeMismatch(oldStr: string, newStr: string) {
-  // Skip first char (+ or -)
-  const oldText = oldStr.slice(1);
-  const newText = newStr.slice(1);
-  
+/**
+ * Compute word-level diff between two diff lines (with +/- prefix).
+ * Returns multiple character ranges for changed words in each line.
+ * Ranges are offsets from the start of the line string (including prefix).
+ */
+function computeWordDiffRanges(
+  oldLine: string,
+  newLine: string,
+): { oldRanges: Array<{ from: number; to: number }>; newRanges: Array<{ from: number; to: number }> } {
+  const oldText = oldLine.slice(1); // strip +/- prefix
+  const newText = newLine.slice(1);
+
+  // For very long lines, fall back to simple character-level mismatch
+  if (oldText.length > 800 || newText.length > 800) {
+    const m = computeMismatchFallback(oldText, newText);
+    return {
+      oldRanges: m.suffixLen < oldText.length ? [{ from: m.prefixLen, to: oldText.length + 1 - m.suffixLen }] : [],
+      newRanges: m.suffixLen < newText.length ? [{ from: m.prefixLen, to: newText.length + 1 - m.suffixLen }] : [],
+    };
+  }
+
+  // Tokenize into word and whitespace tokens
+  const tokenize = (text: string): Array<{ word: string; start: number; len: number }> => {
+    const tokens: Array<{ word: string; start: number; len: number }> = [];
+    const re = /\S+|\s+/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text)) !== null) {
+      tokens.push({ word: m[0], start: m.index, len: m[0].length });
+    }
+    return tokens;
+  };
+
+  const oldTokens = tokenize(oldText);
+  const newTokens = tokenize(newText);
+  const oldLen = oldTokens.length;
+  const newLen = newTokens.length;
+
+  // LCS on word tokens
+  const dp: number[][] = Array.from({ length: oldLen + 1 }, () => new Array(newLen + 1).fill(0));
+  for (let i = 1; i <= oldLen; i++) {
+    for (let j = 1; j <= newLen; j++) {
+      dp[i][j] =
+        oldTokens[i - 1].word === newTokens[j - 1].word
+          ? dp[i - 1][j - 1] + 1
+          : Math.max(dp[i - 1][j], dp[i][j - 1]);
+    }
+  }
+
+  // Backtrack to find changed token indices
+  const oldChanged = new Set<number>();
+  const newChanged = new Set<number>();
+  let i = oldLen;
+  let j = newLen;
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && oldTokens[i - 1].word === newTokens[j - 1].word) {
+      i--;
+      j--;
+    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+      newChanged.add(j - 1);
+      j--;
+    } else {
+      oldChanged.add(i - 1);
+      i--;
+    }
+  }
+
+  // Convert changed token indices to merged character ranges (offset by +1 for prefix)
+  const toRanges = (
+    changed: Set<number>,
+    tokens: Array<{ start: number; len: number }>,
+  ): Array<{ from: number; to: number }> => {
+    const sorted = Array.from(changed).sort((a, b) => a - b);
+    if (sorted.length === 0) return [];
+    const ranges: Array<{ from: number; to: number }> = [];
+    let from = tokens[sorted[0]].start + 1; // +1 for +/- prefix
+    let to = from + tokens[sorted[0]].len;
+    for (let k = 1; k < sorted.length; k++) {
+      const tFrom = tokens[sorted[k]].start + 1;
+      const tTo = tFrom + tokens[sorted[k]].len;
+      if (tFrom <= to) {
+        to = tTo; // merge adjacent
+      } else {
+        ranges.push({ from, to });
+        from = tFrom;
+        to = tTo;
+      }
+    }
+    ranges.push({ from, to });
+    return ranges;
+  };
+
+  return {
+    oldRanges: toRanges(oldChanged, oldTokens),
+    newRanges: toRanges(newChanged, newTokens),
+  };
+}
+
+/** Simple character-level prefix/suffix mismatch for fallback on long lines. */
+function computeMismatchFallback(oldText: string, newText: string) {
   let prefixLen = 0;
   const minLen = Math.min(oldText.length, newText.length);
   while (prefixLen < minLen && oldText[prefixLen] === newText[prefixLen]) {
     prefixLen++;
   }
-  
   let suffixLen = 0;
   const maxSuffix = minLen - prefixLen;
-  while (
-    suffixLen < maxSuffix && 
-    oldText[oldText.length - 1 - suffixLen] === newText[newText.length - 1 - suffixLen]
-  ) {
+  while (suffixLen < maxSuffix && oldText[oldText.length - 1 - suffixLen] === newText[newText.length - 1 - suffixLen]) {
     suffixLen++;
   }
-  
-  // Return character offset (adding 1 back to account for the leading + or - character)
-  return {
-    prefixLen: prefixLen + 1,
-    suffixLen: suffixLen,
-  };
+  return { prefixLen: prefixLen + 1, suffixLen };
 }
 
 class HunkActionsWidget extends WidgetType {
@@ -713,19 +798,13 @@ function getDiffHighlightExtension(
             );
           }
 
-          // Inline highlight for side-by-side split view
+          // Inline word-level highlight for side-by-side split view
           if (side === "new" && oldLines && newLines && i <= oldLines.length) {
             const oldText = oldLines[i - 1];
             if (oldText && oldText.startsWith("-")) {
-              const { prefixLen, suffixLen } = computeMismatch(oldText, text);
-              const fromNew = line.from + prefixLen;
-              const toNew = line.to - suffixLen;
-              if (toNew > fromNew) {
-                builder.add(
-                  fromNew,
-                  toNew,
-                  Decoration.mark({ class: "diff-inline-added" }),
-                );
+              const { newRanges } = computeWordDiffRanges(oldText, text);
+              for (const range of newRanges) {
+                builder.add(line.from + range.from, line.from + range.to, Decoration.mark({ class: "diff-inline-added" }));
               }
             }
           }
@@ -761,34 +840,22 @@ function getDiffHighlightExtension(
             );
           }
           
-          // Inline highlight for side-by-side split view
+          // Inline word-level highlight for side-by-side split view
           if (side === "old" && oldLines && newLines && i <= newLines.length) {
             const newText = newLines[i - 1];
             if (newText && newText.startsWith("+")) {
-              const { prefixLen, suffixLen } = computeMismatch(text, newText);
-              const fromOld = line.from + prefixLen;
-              const toOld = line.to - suffixLen;
-              if (toOld > fromOld) {
-                builder.add(
-                  fromOld,
-                  toOld,
-                  Decoration.mark({ class: "diff-inline-deleted" }),
-                );
+              const { oldRanges } = computeWordDiffRanges(text, newText);
+              for (const range of oldRanges) {
+                builder.add(line.from + range.from, line.from + range.to, Decoration.mark({ class: "diff-inline-deleted" }));
               }
             }
           } else if (!side && i < doc.lines) {
-            // Check if next line is an added line to pair for inline highlights (Unified mode)
+            // Check if next line is an added line to pair for word-level inline highlights (Unified mode)
             const nextLine = doc.line(i + 1);
             if (nextLine.text.startsWith("+")) {
-              const { prefixLen, suffixLen } = computeMismatch(text, nextLine.text);
-              const fromOld = line.from + prefixLen;
-              const toOld = line.to - suffixLen;
-              if (toOld > fromOld) {
-                builder.add(
-                  fromOld,
-                  toOld,
-                  Decoration.mark({ class: "diff-inline-deleted" }),
-                );
+              const { oldRanges } = computeWordDiffRanges(text, nextLine.text);
+              for (const range of oldRanges) {
+                builder.add(line.from + range.from, line.from + range.to, Decoration.mark({ class: "diff-inline-deleted" }));
               }
             }
           }
@@ -834,19 +901,13 @@ function getDiffHighlightExtension(
           hunkIndex++;
         }
         
-        // Check if previous line is a deleted line to pair for inline highlights (Unified mode)
+        // Check if previous line is a deleted line to pair for word-level inline highlights (Unified mode)
         if (!side && text.startsWith("+") && i > 1) {
           const prevLine = doc.line(i - 1);
           if (prevLine.text.startsWith("-")) {
-            const { prefixLen, suffixLen } = computeMismatch(prevLine.text, text);
-            const fromNew = line.from + prefixLen;
-            const toNew = line.to - suffixLen;
-            if (toNew > fromNew) {
-              builder.add(
-                fromNew,
-                toNew,
-                Decoration.mark({ class: "diff-inline-added" }),
-              );
+            const { newRanges } = computeWordDiffRanges(prevLine.text, text);
+            for (const range of newRanges) {
+              builder.add(line.from + range.from, line.from + range.to, Decoration.mark({ class: "diff-inline-added" }));
             }
           }
         }
