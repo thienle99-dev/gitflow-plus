@@ -461,6 +461,272 @@ button.ghost:active {
   color: transparent;
 }
 
+/* ====================== Conflict Resolver Styles ====================== */
+
+/* Context blocks (unchanged lines between conflicts) */
+.conflict-context-block {
+  border-bottom: 1px solid var(--border);
+  opacity: 0.6;
+}
+
+.conflict-context-header {
+  padding: 4px 16px;
+  background: var(--surface-1);
+}
+
+.conflict-context-lines {
+  font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+  font-size: 11px;
+  line-height: 18px;
+  padding: 4px 16px;
+  background: var(--surface-0);
+}
+
+.conflict-line.context {
+  color: var(--text-muted);
+  white-space: pre;
+}
+
+.conflict-line.context-more {
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 2px 0;
+}
+
+/* Conflict block container */
+.conflict-block {
+  border-bottom: 2px solid rgba(255, 69, 58, 0.3);
+}
+
+.conflict-block-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: rgba(255, 69, 58, 0.06);
+  border-bottom: 1px solid rgba(255, 69, 58, 0.15);
+}
+
+.conflict-block-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 150ms ease;
+  user-select: none;
+}
+
+.conflict-block-btn.accept-ours {
+  background: rgba(48, 209, 88, 0.1);
+  color: #30d158;
+  border-color: rgba(48, 209, 88, 0.2);
+}
+
+.conflict-block-btn.accept-ours:hover {
+  background: rgba(48, 209, 88, 0.25);
+}
+
+.conflict-block-btn.accept-theirs {
+  background: rgba(255, 159, 10, 0.1);
+  color: #ff9f0a;
+  border-color: rgba(255, 159, 10, 0.2);
+}
+
+.conflict-block-btn.accept-theirs:hover {
+  background: rgba(255, 159, 10, 0.25);
+}
+
+.conflict-block-btn.accept-both {
+  background: rgba(10, 132, 255, 0.1);
+  color: var(--accent);
+  border-color: rgba(10, 132, 255, 0.2);
+}
+
+.conflict-block-btn.accept-both:hover {
+  background: rgba(10, 132, 255, 0.25);
+}
+
+/* Conflict block body: 3-column grid */
+.conflict-block-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0;
+  min-height: 60px;
+  max-height: 300px;
+}
+
+.conflict-side-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+}
+
+.conflict-side-panel:last-child {
+  border-right: none;
+}
+
+.conflict-side-panel.resolved {
+  background: color-mix(in srgb, var(--accent) 3%, transparent);
+}
+
+.conflict-side-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-1);
+  flex-shrink: 0;
+}
+
+.conflict-side-header.ours {
+  border-bottom-color: rgba(48, 209, 88, 0.2);
+}
+
+.conflict-side-header.theirs {
+  border-bottom-color: rgba(255, 159, 10, 0.2);
+}
+
+.conflict-lines-list {
+  flex: 1;
+  overflow-y: auto;
+  font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.conflict-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  white-space: pre;
+  min-height: 18px;
+  transition: background-color 100ms ease;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  color: var(--text-primary);
+}
+
+.conflict-line.ours {
+  background: rgba(48, 209, 88, 0.04);
+}
+
+.conflict-line.ours:hover {
+  background: rgba(48, 209, 88, 0.12);
+}
+
+.conflict-line.ours.selected {
+  background: rgba(48, 209, 88, 0.18);
+  border-left: 3px solid #30d158;
+  padding-left: 7px;
+}
+
+.conflict-line.theirs {
+  background: rgba(255, 159, 10, 0.04);
+}
+
+.conflict-line.theirs:hover {
+  background: rgba(255, 159, 10, 0.12);
+}
+
+.conflict-line.theirs.selected {
+  background: rgba(255, 159, 10, 0.18);
+  border-left: 3px solid #ff9f0a;
+  padding-left: 7px;
+}
+
+.conflict-line.resolved {
+  cursor: default;
+}
+
+.conflict-line.empty {
+  cursor: default;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.conflict-line-indicator {
+  flex-shrink: 0;
+  width: 12px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 10px;
+}
+
+.conflict-line.ours .conflict-line-indicator {
+  color: #30d158;
+}
+
+.conflict-line.theirs .conflict-line-indicator {
+  color: #ff9f0a;
+}
+
+.conflict-line-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Bulk action buttons */
+.conflict-bulk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 150ms ease;
+  user-select: none;
+}
+
+.conflict-bulk-btn.accept-ours {
+  background: rgba(48, 209, 88, 0.1);
+  color: #30d158;
+  border-color: rgba(48, 209, 88, 0.2);
+}
+
+.conflict-bulk-btn.accept-ours:hover {
+  background: rgba(48, 209, 88, 0.25);
+}
+
+.conflict-bulk-btn.accept-theirs {
+  background: rgba(255, 159, 10, 0.1);
+  color: #ff9f0a;
+  border-color: rgba(255, 159, 10, 0.2);
+}
+
+.conflict-bulk-btn.accept-theirs:hover {
+  background: rgba(255, 159, 10, 0.25);
+}
+
+.conflict-bulk-btn.accept-both {
+  background: rgba(10, 132, 255, 0.1);
+  color: var(--accent);
+  border-color: rgba(10, 132, 255, 0.2);
+}
+
+.conflict-bulk-btn.accept-both:hover {
+  background: rgba(10, 132, 255, 0.25);
+}
+
 /* Custom Settings Dialog Theme Utilities (resolving HEX opacity issues) */
 .btn-accent-soft {
   background-color: color-mix(in srgb, var(--accent) 15%, transparent) !important;

@@ -79,6 +79,7 @@ describe("buildCommitPrompt", () => {
     const settings = {
       apiKey: "test",
       model: "claude-sonnet-4-20250514",
+      reviewModel: "claude-sonnet-4-20250514",
       customUrl: "",
       tokenLimit: 4096,
       detailLevel: "ultra-minimal" as const,
@@ -94,6 +95,7 @@ describe("buildCommitPrompt", () => {
     const settings = {
       apiKey: "test",
       model: "claude-sonnet-4-20250514",
+      reviewModel: "claude-sonnet-4-20250514",
       customUrl: "",
       tokenLimit: 4096,
       detailLevel: "minimal" as const,
@@ -109,6 +111,7 @@ describe("buildCommitPrompt", () => {
     const settings = {
       apiKey: "test",
       model: "claude-sonnet-4-20250514",
+      reviewModel: "claude-sonnet-4-20250514",
       customUrl: "",
       tokenLimit: 4096,
       detailLevel: "medium" as const,
@@ -124,6 +127,7 @@ describe("buildCommitPrompt", () => {
     const settings = {
       apiKey: "test",
       model: "claude-sonnet-4-20250514",
+      reviewModel: "claude-sonnet-4-20250514",
       customUrl: "",
       tokenLimit: 4096,
       detailLevel: "detailed" as const,
@@ -139,6 +143,7 @@ describe("buildCommitPrompt", () => {
     const settings = {
       apiKey: "test",
       model: "claude-sonnet-4-20250514",
+      reviewModel: "claude-sonnet-4-20250514",
       customUrl: "",
       tokenLimit: 4096,
       detailLevel: "comprehensive" as const,

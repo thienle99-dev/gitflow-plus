@@ -6,6 +6,7 @@ const DEFAULT_MODEL = "claude-sonnet-4-20250514";
 interface AISettings {
   apiKey: string;
   model: string;
+  reviewModel: string;
   customUrl: string;
   tokenLimit: number;
   detailLevel: CommitMessageDetailLevel;
@@ -97,7 +98,7 @@ ${languageInstruction}
 Diff:
 ${diff.slice(0, 8000)}`;
 
-  const review = cleanAIText(await requestAIText(prompt, settings));
+  const review = cleanAIText(await requestAIText(prompt, withReviewModel(settings)));
   if (!review) {
     throw new Error("Empty response from AI reviewer");
   }
@@ -140,7 +141,7 @@ INSTRUCTIONS:
 5. Be concise and direct. No markdown code blocks.
 ${languageInstruction}`;
 
-  const explanation = cleanAIText(await requestAIText(prompt, settings));
+  const explanation = cleanAIText(await requestAIText(prompt, withReviewModel(settings)));
   if (!explanation) {
     throw new Error("Empty response from AI");
   }
@@ -194,7 +195,7 @@ INSTRUCTIONS:
 4. Keep it useful for code review. No code blocks.
 ${languageInstruction}`;
 
-  const explanation = cleanAIText(await requestAIText(prompt, settings));
+  const explanation = cleanAIText(await requestAIText(prompt, withReviewModel(settings)));
   if (!explanation) {
     throw new Error("Empty response from AI");
   }
@@ -249,7 +250,7 @@ INSTRUCTIONS:
 5. Be concise and practical. Use markdown bullets, no code blocks.
 ${languageInstruction}`;
 
-  const review = cleanAIText(await requestAIText(prompt, settings));
+  const review = cleanAIText(await requestAIText(prompt, withReviewModel(settings)));
   if (!review) {
     throw new Error("Empty response from AI reviewer");
   }
@@ -347,6 +348,9 @@ function readAISettings(): AISettings {
   return {
     apiKey: localStorage.getItem("gitflowAiApiKey") || "",
     model: localStorage.getItem("gitflowAiModel") || DEFAULT_MODEL,
+    reviewModel: localStorage.getItem("gitflowAiReviewModel")
+      || localStorage.getItem("gitflowAiModel")
+      || DEFAULT_MODEL,
     customUrl: localStorage.getItem("gitflowAiApiUrl") || "",
     tokenLimit: Number(localStorage.getItem("gitflowAiTokenLimit") || "4096"),
     detailLevel: readCommitMessageDetailLevel(),
@@ -412,7 +416,18 @@ function buildReviewLanguageInstruction(language: AIReviewLanguage) {
 }
 
 function hasProvider(settings: AISettings) {
-  return !!settings.apiKey || settings.model === "ollama" || settings.model === "llama.cpp";
+  return !!settings.apiKey
+    || settings.model === "ollama"
+    || settings.model === "llama.cpp"
+    || settings.reviewModel === "ollama"
+    || settings.reviewModel === "llama.cpp";
+}
+
+function withReviewModel(settings: AISettings): AISettings {
+  return {
+    ...settings,
+    model: settings.reviewModel || settings.model,
+  };
 }
 
 async function getCurrentBranchName(repoPath: string) {

@@ -19,6 +19,8 @@ import {
   ArrowRight,
   Sparkles,
   MessageSquareText,
+  AlertTriangle,
+  Check,
 } from "lucide-react";
 import {
   fetchMergeRequests,
@@ -238,6 +240,58 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
     return "text-text-secondary";
   };
 
+  const renderAIText = (text: string) => {
+    return text.split("\n").map((line, index) => {
+      const trimmed = line.trim();
+      const isFinding =
+        /severity|risk|bug|security|regression|request changes|blocking/i.test(trimmed);
+      const isPositive =
+        /no blocking|approve|looks good|no concrete issues/i.test(trimmed) && !/request changes/i.test(trimmed);
+
+      if (!trimmed) {
+        return <div key={index} className="h-2" />;
+      }
+      if (trimmed.startsWith("### ")) {
+        return (
+          <div key={index} className="pt-2 text-xs font-bold text-text-primary">
+            {trimmed.slice(4)}
+          </div>
+        );
+      }
+      if (trimmed.startsWith("## ")) {
+        return (
+          <div key={index} className="pt-2 text-xs font-bold text-accent">
+            {trimmed.slice(3)}
+          </div>
+        );
+      }
+      if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+        return (
+          <div
+            key={index}
+            className={`rounded-mac border px-2.5 py-1.5 ${
+              isFinding
+                ? "border-[#ff9f0a]/25 bg-[#ff9f0a]/10 text-text-primary"
+                : isPositive
+                  ? "border-[#30d158]/25 bg-[#30d158]/10 text-text-primary"
+                  : "border-border-40 bg-surface-0/60 text-text-secondary"
+            }`}
+          >
+            <span className="mr-1 text-text-muted">•</span>
+            {trimmed.slice(2)}
+          </div>
+        );
+      }
+      return (
+        <p key={index} className="text-text-secondary">
+          {trimmed}
+        </p>
+      );
+    });
+  };
+
+  const aiPanelKind = aiReviewResult ? "review" : aiExplanation ? "explain" : null;
+
   const providerReviewUrl = useMemo(() => {
     if (!selectedMr) return "";
     if (remoteInfo?.provider === "github") return `${selectedMr.webUrl}/files`;
@@ -257,9 +311,9 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
   }, [filteredMrs]);
 
   return (
-    <div className="flex h-full w-full flex-row bg-surface-0 overflow-hidden select-none">
-      {/* Sidebar - MR List (280px) */}
-      <div className="w-[360px] shrink-0 border-r border-border-60 bg-surface-1 flex flex-col h-full">
+    <div className="flex h-full w-full flex-col md:flex-row bg-surface-0 overflow-hidden select-none">
+      {/* Sidebar - MR List */}
+      <div className="w-full md:w-[360px] md:min-w-[280px] shrink-0 border-b md:border-b-0 md:border-r border-border-60 bg-surface-1 flex flex-col h-[40%] md:h-full">
         {/* Header */}
         <div className="px-3.5 py-3 border-b border-border-60 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
@@ -284,12 +338,23 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
             <button
               key={tab}
               onClick={() => setFilterState(tab)}
-              className={`flex-1 py-1 text-[10px] font-bold rounded capitalize border border-transparent transition-all cursor-pointer ${
+              className={`flex-1 py-1 text-[10px] font-bold rounded capitalize border border-transparent transition-all cursor-pointer flex items-center justify-center gap-1 ${
                 filterState === tab
-                  ? "bg-surface-2 text-text-primary shadow-2xs border-border-40 font-bold"
+                  ? `bg-surface-2 text-text-primary shadow-2xs border-border-40 font-bold ${
+                      tab === "open" ? "ring-1 ring-[#30d158]/30" : tab === "merged" ? "ring-1 ring-[#bf5af2]/30" : "ring-1 ring-[#ff453a]/30"
+                    }`
                   : "text-text-muted hover:text-text-primary"
               }`}
             >
+              <span
+                className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                  tab === "open"
+                    ? "bg-[#30d158]"
+                    : tab === "merged"
+                    ? "bg-[#bf5af2]"
+                    : "bg-[#ff453a]"
+                }`}
+              />
               {tab}
             </button>
           ))}
@@ -346,9 +411,27 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                       ? "bg-accent-10 border-accent-30 shadow-2xs"
                       : "bg-surface-1/40 hover:bg-surface-2 border-transparent"
                   }`}
+                  style={{
+                    borderLeftWidth: "3px",
+                    borderLeftColor: isSelected
+                      ? undefined
+                      : mr.state === "open"
+                      ? "#30d158"
+                      : mr.state === "merged"
+                      ? "#bf5af2"
+                      : "#ff453a",
+                  }}
                 >
                   <div className="flex justify-between items-start gap-1">
-                    <span className="text-3xs font-bold font-mono text-text-muted shrink-0">
+                    <span
+                      className={`text-3xs font-bold font-mono shrink-0 ${
+                        mr.state === "open"
+                          ? "text-[#30d158]"
+                          : mr.state === "merged"
+                          ? "text-[#bf5af2]"
+                          : "text-[#ff453a]"
+                      }`}
+                    >
                       #{mr.iid}
                     </span>
                     <span className="text-2xs font-semibold text-text-primary truncate flex-1 leading-snug">
@@ -356,16 +439,16 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between mt-0.5">
-                    <div className="flex items-center gap-1 text-[10px] text-text-muted font-mono truncate max-w-[180px]">
-                      <span className="truncate bg-surface-2 px-1 py-0.5 rounded-[3px]">
-                        {mr.sourceBranch}
-                      </span>
-                      <ArrowRight size={8} className="shrink-0" />
-                      <span className="truncate text-text-secondary bg-surface-2 px-1 py-0.5 rounded-[3px]">
-                        {mr.targetBranch}
-                      </span>
-                    </div>
+                  <div className="flex items-center justify-between mt-0.5 gap-1">
+                  <div className="flex items-center gap-1 text-[10px] text-text-muted font-mono min-w-0 flex-1 overflow-hidden">
+                    <span className="truncate bg-[#30d158]/10 text-[#30d158] px-1 py-0.5 rounded-[3px] border border-[#30d158]/15 max-w-[45%]">
+                      {mr.sourceBranch}
+                    </span>
+                    <ArrowRight size={8} className="shrink-0 text-accent" />
+                    <span className="truncate bg-[#0a84ff]/10 text-[#0a84ff] px-1 py-0.5 rounded-[3px] border border-[#0a84ff]/15 max-w-[45%]">
+                      {mr.targetBranch}
+                    </span>
+                  </div>
 
                     {/* Pipeline Status Dot */}
                     {mr.pipelineStatus && (
@@ -391,10 +474,17 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
       </div>
 
       {/* Main Panel - MR Details */}
-      <div className="flex-1 flex flex-col h-full bg-surface-0">
+      <div className="flex-1 min-w-0 flex flex-col h-[60%] md:h-full bg-surface-0">
         {/* Header */}
         <div className="px-4 py-3 border-b border-border-60 flex items-center justify-between shrink-0 bg-surface-1/10">
-          <span className="text-xs font-semibold text-text-secondary">MR Details</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-text-secondary">MR Details</span>
+            {selectedMr && (
+              <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[10px] font-bold text-text-muted">
+                #{selectedMr.iid}
+              </span>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="p-1 rounded-mac hover:bg-surface-3 text-text-muted hover:text-text-primary transition-all cursor-pointer"
@@ -404,7 +494,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4">
           {selectedMr ? (
             <>
               {/* Title & Status Badge */}
@@ -421,7 +511,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                   >
                     {selectedMr.state}
                   </span>
-                  <h3 className="text-sm font-semibold text-text-primary leading-snug">
+                  <h3 className="text-base font-semibold text-text-primary leading-snug">
                     {selectedMr.title}
                   </h3>
                 </div>
@@ -445,14 +535,14 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
               </div>
 
               {/* Branch Connection Card */}
-              <div className="flex items-center justify-between p-3 bg-surface-1/40 border border-border-40 rounded-mac">
-                <div className="flex items-center gap-2 text-xs">
-                  <GitBranch size={13} className="text-text-muted shrink-0" />
-                  <span className="font-mono font-semibold text-text-primary bg-surface-2 px-1.5 py-0.5 rounded-[4px]">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3 p-3 bg-surface-1/40 border border-border-40 rounded-mac">
+                <div className="min-w-0 flex items-center gap-2 text-xs flex-1 overflow-hidden">
+                  <GitBranch size={13} className="text-accent shrink-0" />
+                  <span className="min-w-0 max-w-[50%] truncate font-mono font-semibold bg-[#30d158]/10 text-[#30d158] px-1.5 py-0.5 rounded-[4px] border border-[#30d158]/20">
                     {selectedMr.sourceBranch}
                   </span>
-                  <span className="text-text-muted">merges into</span>
-                  <span className="font-mono font-semibold text-text-secondary bg-surface-2 px-1.5 py-0.5 rounded-[4px]">
+                  <ArrowRight size={12} className="text-accent shrink-0" />
+                  <span className="min-w-0 max-w-[35%] truncate font-mono font-semibold bg-[#0a84ff]/10 text-[#0a84ff] px-1.5 py-0.5 rounded-[4px] border border-[#0a84ff]/20">
                     {selectedMr.targetBranch}
                   </span>
                 </div>
@@ -487,15 +577,20 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
 
               {/* Changed Files */}
               <div className="space-y-2 border-t border-border-60 pt-3">
-                <div className="flex items-center justify-between gap-2">
-                  <h4 className="text-2xs font-bold text-text-muted uppercase tracking-wider">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                  <h4 className="text-2xs font-bold text-[#ff9f0a] uppercase tracking-wider flex items-center gap-1.5">
+                    <FileText size={10} className="text-[#ff9f0a]" />
                     Changed Files {changedFiles.length > 0 ? `(${changedFiles.length})` : ""}
                   </h4>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <button
                       onClick={handleExplainMergeRequest}
                       disabled={aiExplain.isPending || loadingFiles || !selectedMr}
-                      className="h-7 px-2.5 rounded border border-border-40 bg-surface-2 text-[10px] font-bold text-text-primary hover:bg-surface-3 disabled:opacity-45 transition-colors flex items-center gap-1.5"
+                      className={`h-8 px-3 rounded-mac border text-[11px] font-bold transition-colors flex items-center gap-1.5 disabled:opacity-45 ${
+                        aiExplanation && !aiReviewResult
+                          ? "border-accent-30 bg-accent-10 text-accent"
+                          : "border-border-40 bg-surface-2 text-text-primary hover:bg-surface-3"
+                      }`}
                       title="Explain this merge request with AI"
                     >
                       {aiExplain.isPending ? (
@@ -508,7 +603,11 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                     <button
                       onClick={handleReviewMergeRequest}
                       disabled={aiReview.isPending || loadingFiles || changedFiles.length === 0 || !selectedMr}
-                      className="h-7 px-2.5 rounded border border-accent-30 bg-accent-10 text-[10px] font-bold text-accent hover:bg-accent-20 disabled:opacity-45 transition-colors flex items-center gap-1.5"
+                      className={`h-8 px-3 rounded-mac border text-[11px] font-bold transition-colors flex items-center gap-1.5 disabled:opacity-45 ${
+                        aiReviewResult
+                          ? "border-accent-40 bg-accent text-accent-fg"
+                          : "border-accent-30 bg-accent-10 text-accent hover:bg-accent-20"
+                      }`}
                       title="Review this merge request with AI"
                     >
                       {aiReview.isPending ? (
@@ -535,8 +634,8 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                     No changed files returned by the provider.
                   </div>
                 ) : (
-                  <div className="rounded-mac border border-border-40 bg-surface-1/20">
-                    <div className="max-h-[150px] overflow-y-auto">
+                  <div className="rounded-mac border border-border-40 bg-surface-1/20 min-w-0">
+                    <div className="max-h-[190px] overflow-y-auto">
                       {changedFiles.map((file) => {
                         const isFileSelected =
                           selectedChangedFile?.path === file.path &&
@@ -547,7 +646,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                           <button
                             key={`${file.status}:${file.path}:${file.oldPath || ""}`}
                             onClick={() => setSelectedChangedFile(file)}
-                            className={`flex w-full items-center justify-between gap-2 border-b border-border-40 px-2.5 py-1.5 text-left last:border-b-0 transition-colors ${
+                            className={`flex w-full items-center justify-between gap-2 border-b border-border-40 px-3 py-2 text-left last:border-b-0 transition-colors ${
                               isFileSelected
                                 ? "bg-accent-10"
                                 : "hover:bg-surface-2/70"
@@ -558,7 +657,15 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                               <FileText
                                 size={11}
                                 className={`shrink-0 ${
-                                  isFileSelected ? "text-accent" : "text-text-muted"
+                                  file.status === "added"
+                                    ? "text-[#30d158]"
+                                    : file.status === "deleted"
+                                    ? "text-[#ff453a]"
+                                    : file.status === "renamed"
+                                    ? "text-[#64d2ff]"
+                                    : isFileSelected
+                                    ? "text-accent"
+                                    : "text-[#ff9f0a]"
                                 }`}
                               />
                               <div className="min-w-0">
@@ -625,7 +732,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                         </div>
 
                         {selectedChangedFile.patch ? (
-                          <div className="max-h-[240px] overflow-auto bg-[#0b0c0f] py-2 font-mono text-[10px] leading-5">
+                          <div className="max-h-[320px] overflow-auto bg-[#0b0c0f] py-2 font-mono text-[11px] leading-5">
                             {selectedChangedFile.patch.split("\n").map((line, index) => (
                               <div
                                 key={`${selectedChangedFile.path}:${index}`}
@@ -656,18 +763,46 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                     {aiReview.error.message || "Failed to review merge request"}
                   </div>
                 )}
-                {aiExplanation && (
-                  <div className="max-h-[180px] overflow-y-auto rounded-mac border border-accent-20 bg-accent-5 p-3 text-2xs leading-relaxed text-text-secondary whitespace-pre-wrap">
-                    {aiExplanation}
-                  </div>
-                )}
-                {aiReviewResult && (
-                  <div className="max-h-[220px] overflow-y-auto rounded-mac border border-accent-30 bg-surface-1 p-3 text-2xs leading-relaxed text-text-secondary whitespace-pre-wrap select-text">
-                    <div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-accent">
-                      <MessageSquareText size={12} />
-                      <span>AI Review</span>
+                {aiPanelKind && (
+                  <div className="overflow-hidden rounded-mac border border-accent-30 bg-surface-1 select-text">
+                    <div className="flex items-center justify-between gap-2 border-b border-border-40 bg-surface-2/70 px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-mac bg-accent-10 text-accent">
+                          {aiPanelKind === "review" ? (
+                            <MessageSquareText size={14} />
+                          ) : (
+                            <Sparkles size={14} />
+                          )}
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-text-primary">
+                            {aiPanelKind === "review" ? "AI Review Report" : "AI Explanation"}
+                          </div>
+                          <div className="text-[10px] text-text-muted">
+                            {aiPanelKind === "review"
+                              ? "Findings, risks, tests, and recommendation"
+                              : "Summary, motivation, and important changes"}
+                          </div>
+                        </div>
+                      </div>
+                      <div
+                        className={`flex items-center gap-1 rounded px-2 py-1 text-[10px] font-bold ${
+                          aiPanelKind === "review"
+                            ? "bg-[#ff9f0a]/10 text-[#ff9f0a]"
+                            : "bg-[#30d158]/10 text-[#30d158]"
+                        }`}
+                      >
+                        {aiPanelKind === "review" ? (
+                          <AlertTriangle size={11} />
+                        ) : (
+                          <Check size={11} />
+                        )}
+                        <span>{aiPanelKind === "review" ? "Review" : "Explain"}</span>
+                      </div>
                     </div>
-                    {aiReviewResult}
+                    <div className="max-h-[280px] space-y-1.5 overflow-y-auto p-3 text-2xs leading-relaxed">
+                      {renderAIText(aiPanelKind === "review" ? aiReviewResult : aiExplanation)}
+                    </div>
                   </div>
                 )}
               </div>
@@ -675,7 +810,10 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
               {/* Description */}
               {selectedMr.description && (
                 <div className="space-y-1.5 border-t border-border-60 pt-3">
-                  <h4 className="text-2xs font-bold text-text-muted uppercase tracking-wider">Description</h4>
+                  <h4 className="text-2xs font-bold text-accent uppercase tracking-wider flex items-center gap-1.5">
+                    <MessageSquareText size={10} className="text-accent" />
+                    Description
+                  </h4>
                   <div className="text-2xs text-text-secondary leading-relaxed bg-surface-1/20 border border-border-40 rounded-mac p-3 max-h-[120px] overflow-y-auto font-normal break-words whitespace-pre-line">
                     {selectedMr.description}
                   </div>
@@ -684,7 +822,10 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
 
               {/* Checks & Pipelines Section */}
               <div className="space-y-2 border-t border-border-60 pt-3">
-                <h4 className="text-2xs font-bold text-text-muted uppercase tracking-wider">CI/CD Status</h4>
+                <h4 className="text-2xs font-bold text-[#0a84ff] uppercase tracking-wider flex items-center gap-1.5">
+                  <CheckCircle2 size={10} className="text-[#0a84ff]" />
+                  CI/CD Status
+                </h4>
                 
                 {/* GitLab Pipeline Info */}
                 {remoteInfo?.provider === "gitlab" && (
@@ -724,7 +865,13 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                         {checkRuns.map((run) => (
                           <div
                             key={run.name}
-                            className="flex items-center justify-between p-1.5 hover:bg-surface-2 rounded transition-colors text-3xs"
+                            className={`flex items-center justify-between p-1.5 hover:bg-surface-2 rounded transition-colors text-3xs border-l-2 ${
+                              run.conclusion === "success"
+                                ? "border-l-[#30d158]"
+                                : run.conclusion === "failure"
+                                ? "border-l-[#ff453a]"
+                                : "border-l-[#0a84ff]"
+                            }`}
                           >
                             <div className="flex items-center gap-2 truncate">
                               {run.conclusion === "success" ? (
@@ -765,7 +912,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
 
         {/* Footer Actions */}
         {selectedMr && (
-          <div className="px-4 py-3 border-t border-border-60 bg-surface-1 flex justify-end gap-2 shrink-0">
+          <div className="px-4 py-3 border-t border-border-60 bg-surface-1 flex flex-wrap justify-end gap-2 shrink-0">
             <a
               href={providerReviewUrl}
               target="_blank"

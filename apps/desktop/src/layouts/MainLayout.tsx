@@ -278,6 +278,8 @@ export default function MainLayout() {
       <div className={`bg-surface-0 rounded-mac shadow-xl border border-border overflow-hidden ${
         overlayDialog === "merge-request"
           ? "h-[min(760px,88vh)] w-[min(1180px,92vw)]"
+          : overlayDialog === "settings" || overlayDialog === "ai-settings"
+            ? "h-[min(680px,88vh)] w-[min(900px,90vw)]"
           : "min-w-[480px] max-w-[600px] max-h-[80vh]"
       }`}>
         {dialogComponents[overlayDialog] || (

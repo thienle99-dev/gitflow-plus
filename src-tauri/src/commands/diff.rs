@@ -281,3 +281,16 @@ pub async fn apply_diff_hunk(
         Err(format!("Apply hunk failed: {}", stderr.trim()))
     }
 }
+
+#[tauri::command]
+pub async fn write_file_content(
+    path: String,
+    file_path: String,
+    content: String,
+) -> Result<String, String> {
+    let full_path = std::path::Path::new(&path).join(&file_path);
+    tokio::fs::write(&full_path, &content)
+        .await
+        .map_err(|e| format!("Failed to write file: {}", e))?;
+    Ok(format!("Wrote {} bytes to {}", content.len(), file_path))
+}

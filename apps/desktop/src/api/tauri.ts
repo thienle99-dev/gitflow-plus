@@ -208,6 +208,8 @@ export const api = {
       invoke<string>("staged_diff", { path, filePath: filePath ?? null, context: context ?? null }),
     applyHunk: (path: string, patch: string, action: "stage" | "unstage" | "discard") =>
       invoke<string>("apply_diff_hunk", { path, patch, action }),
+    writeContent: (path: string, filePath: string, content: string) =>
+      invoke<string>("write_file_content", { path, filePath, content }),
   },
 
   remote: {

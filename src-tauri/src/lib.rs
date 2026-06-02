@@ -239,6 +239,7 @@ pub fn run() {
             commands::diff::staged_diff,
             commands::diff::commit_changed_files,
             commands::diff::apply_diff_hunk,
+            commands::diff::write_file_content,
             commands::lfs::lfs_status,
             commands::lfs::lfs_pull,
             commands::lfs::lfs_push,

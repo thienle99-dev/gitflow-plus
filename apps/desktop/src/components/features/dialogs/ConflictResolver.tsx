@@ -1,11 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { api } from "@/api/tauri";
-import { Check, Combine, ArrowLeft, Sparkles, RefreshCw } from "lucide-react";
-import { EditorView, basicSetup } from "codemirror";
-import { EditorState } from "@codemirror/state";
-import { oneDark } from "@codemirror/theme-one-dark";
-import { javascript } from "@codemirror/lang-javascript";
+import { Check, Combine, ArrowLeft, Sparkles, RefreshCw, X, ChevronDown, ChevronRight } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface ConflictResolverProps {
@@ -14,15 +10,247 @@ interface ConflictResolverProps {
   onCancel: () => void;
 }
 
+/** A single conflict block parsed from the file */
+interface ConflictBlock {
+  id: number;
+  ours: string[];
+  theirs: string[];
+  /** Current resolution: which lines are selected */
+  resolvedLines: string[];
+  /** "ours" | "theirs" | "both" | "custom" */
+  resolution: "ours" | "theirs" | "both" | "custom";
+  expanded: boolean;
+}
+
+/** Parsed result: non-conflict context + conflict blocks in order */
+interface ParsedFile {
+  segments: (
+    | { type: "context"; lines: string[] }
+    | { type: "conflict"; block: ConflictBlock }
+  )[];
+}
+
+function parseConflictMarkers(raw: string): ParsedFile {
+  const lines = raw.split("\n");
+  const segments: ParsedFile["segments"] = [];
+  const contextLines: string[] = [];
+  let blockId = 0;
+
+  let inOurs = false;
+  let inTheirs = false;
+  let ours: string[] = [];
+  let theirs: string[] = [];
+
+  const flushContext = () => {
+    if (contextLines.length > 0) {
+      segments.push({ type: "context", lines: [...contextLines] });
+      contextLines.length = 0;
+    }
+  };
+
+  for (const line of lines) {
+    if (line.startsWith("<<<<<<<")) {
+      flushContext();
+      inOurs = true;
+      inTheirs = false;
+      ours = [];
+      continue;
+    }
+    if (line.startsWith("=======") && inOurs) {
+      inOurs = false;
+      inTheirs = true;
+      continue;
+    }
+    if (line.startsWith(">>>>>>>")) {
+      inTheirs = false;
+      const block: ConflictBlock = {
+        id: blockId++,
+        ours,
+        theirs,
+        resolvedLines: [...ours], // Default: accept ours
+        resolution: "ours",
+        expanded: true,
+      };
+      segments.push({ type: "conflict", block });
+      ours = [];
+      theirs = [];
+      continue;
+    }
+    if (inOurs) {
+      ours.push(line);
+    } else if (inTheirs) {
+      theirs.push(line);
+    } else {
+      contextLines.push(line);
+    }
+  }
+
+  flushContext();
+  return { segments };
+}
+
+function buildResolvedContent(segments: ParsedFile["segments"]): string {
+  const result: string[] = [];
+  for (const seg of segments) {
+    if (seg.type === "context") {
+      result.push(...seg.lines);
+    } else {
+      result.push(...seg.block.resolvedLines);
+    }
+  }
+  return result.join("\n");
+}
+
 export default function ConflictResolver({ filePath, onComplete, onCancel }: ConflictResolverProps) {
   const repoPath = useRepoStore((s) => s.repoPath);
   const queryClient = useQueryClient();
-  const [oursContent, setOursContent] = useState("");
-  const [theirsContent, setTheirsContent] = useState("");
-  const [resultContent, setResultContent] = useState("");
+  const [segments, setSegments] = useState<ParsedFile["segments"]>([]);
+  const [rawContent, setRawContent] = useState("");
   const [resolving, setResolving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  // Fetch conflicted file content
+  useEffect(() => {
+    if (!repoPath) return;
+    (async () => {
+      try {
+        // Read the actual file content (not diff) to get conflict markers
+        const content = await api.diff.file(repoPath, filePath);
+        setRawContent(content);
+        const parsed = parseConflictMarkers(content);
+        setSegments(parsed.segments);
+      } catch (e: any) {
+        showToast(`Error loading conflict: ${e}`);
+      }
+    })();
+  }, [repoPath, filePath]);
+
+  const conflictBlocks = useMemo(
+    () => segments.filter((s) => s.type === "conflict").map((s) => s.block),
+    [segments],
+  );
+
+  const resolvedContent = useMemo(() => buildResolvedContent(segments), [segments]);
+
+  // Update a single conflict block's resolution
+  const updateBlock = useCallback(
+    (blockId: number, updates: Partial<ConflictBlock> | ((block: ConflictBlock) => Partial<ConflictBlock>)) => {
+      setSegments((prev) =>
+        prev.map((seg) => {
+          if (seg.type === "conflict" && seg.block.id === blockId) {
+            const resolved = typeof updates === "function" ? updates(seg.block) : updates;
+            return { type: "conflict" as const, block: { ...seg.block, ...resolved } };
+          }
+          return seg;
+        }),
+      );
+    },
+    [],
+  );
+
+  // Accept ours for a specific block
+  const acceptOurs = useCallback(
+    (blockId: number) => {
+      updateBlock(blockId, (prev) => ({
+        resolvedLines: [...prev.ours],
+        resolution: "ours" as const,
+      }));
+    },
+    [updateBlock],
+  );
+
+  // Accept theirs for a specific block
+  const acceptTheirs = useCallback(
+    (blockId: number) => {
+      updateBlock(blockId, (prev) => ({
+        resolvedLines: [...prev.theirs],
+        resolution: "theirs" as const,
+      }));
+    },
+    [updateBlock],
+  );
+
+  // Accept both for a specific block
+  const acceptBoth = useCallback(
+    (blockId: number) => {
+      updateBlock(blockId, (prev) => ({
+        resolvedLines: [...prev.ours, ...prev.theirs],
+        resolution: "both" as const,
+      }));
+    },
+    [updateBlock],
+  );
+
+  // Toggle a specific line from ours/theirs into the resolved lines
+  const toggleLine = useCallback(
+    (blockId: number, line: string, source: "ours" | "theirs") => {
+      setSegments((prev) =>
+        prev.map((seg) => {
+          if (seg.type !== "conflict" || seg.block.id !== blockId) return seg;
+          const block = seg.block;
+          const idx = block.resolvedLines.indexOf(line);
+          let newResolved: string[];
+          if (idx >= 0) {
+            // Remove the line
+            newResolved = block.resolvedLines.filter((_, i) => i !== idx);
+          } else {
+            // Add the line at the end
+            newResolved = [...block.resolvedLines, line];
+          }
+          return {
+            type: "conflict" as const,
+            block: { ...block, resolvedLines: newResolved, resolution: "custom" as const },
+          };
+        }),
+      );
+    },
+    [],
+  );
+
+  // Accept all ours
+  const acceptAllOurs = useCallback(() => {
+    setSegments((prev) =>
+      prev.map((seg) => {
+        if (seg.type !== "conflict") return seg;
+        return {
+          type: "conflict" as const,
+          block: { ...seg.block, resolvedLines: [...seg.block.ours], resolution: "ours" as const },
+        };
+      }),
+    );
+  }, []);
+
+  // Accept all theirs
+  const acceptAllTheirs = useCallback(() => {
+    setSegments((prev) =>
+      prev.map((seg) => {
+        if (seg.type !== "conflict") return seg;
+        return {
+          type: "conflict" as const,
+          block: { ...seg.block, resolvedLines: [...seg.block.theirs], resolution: "theirs" as const },
+        };
+      }),
+    );
+  }, []);
+
+  // Accept all both
+  const acceptAllBoth = useCallback(() => {
+    setSegments((prev) =>
+      prev.map((seg) => {
+        if (seg.type !== "conflict") return seg;
+        return {
+          type: "conflict" as const,
+          block: { ...seg.block, resolvedLines: [...seg.block.ours, ...seg.block.theirs], resolution: "both" as const },
+        };
+      }),
+    );
+  }, []);
 
   const handleAiResolveConflict = async () => {
     setLoadingAi(true);
@@ -33,16 +261,20 @@ export default function ConflictResolver({ filePath, onComplete, onCancel }: Con
       const customUrl = localStorage.getItem("gitflowAiApiUrl") || "";
       const limit = Number(localStorage.getItem("gitflowAiTokenLimit") || "4096");
 
+      // Build ours/theirs content from all blocks
+      const allOurs = conflictBlocks.map((b) => b.ours.join("\n")).join("\n\n");
+      const allTheirs = conflictBlocks.map((b) => b.theirs.join("\n")).join("\n\n");
+
       const prompt = `You are an elite, highly experienced lead software engineer. We have a merge conflict in the file "${filePath}".
 Please merge the following two versions of code changes intelligently. Solve all conflicts, preserve key logic from both branches where applicable, and ensure correct syntax with no compiler errors.
 
 ==================================================
 OURS VERSION (Your current active working branch changes):
-${oursContent}
+${allOurs}
 
 ==================================================
 THEIRS VERSION (Incoming changes from target branch):
-${theirsContent}
+${allTheirs}
 
 ==================================================
 CRITICAL INSTRUCTIONS:
@@ -158,7 +390,22 @@ CRITICAL INSTRUCTIONS:
           }
           resolved = lines.join("\n");
         }
-        setResultContent(resolved);
+        // Apply AI result to all conflict blocks as "custom"
+        const aiLines = resolved.split("\n");
+        // Distribute AI result evenly across blocks (simple approach)
+        const linesPerBlock = Math.ceil(aiLines.length / conflictBlocks.length);
+        setSegments((prev) => {
+          let offset = 0;
+          return prev.map((seg) => {
+            if (seg.type !== "conflict") return seg;
+            const blockLines = aiLines.slice(offset, offset + linesPerBlock);
+            offset += linesPerBlock;
+            return {
+              type: "conflict" as const,
+              block: { ...seg.block, resolvedLines: blockLines, resolution: "custom" as const },
+            };
+          });
+        });
         showToast("AI resolved conflict successfully!");
       } else {
         throw new Error("AI returned empty resolution code.");
@@ -171,99 +418,12 @@ CRITICAL INSTRUCTIONS:
     }
   };
 
-  const oursRef = useRef<HTMLDivElement>(null);
-  const theirsRef = useRef<HTMLDivElement>(null);
-  const resultRef = useRef<HTMLDivElement>(null);
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  };
-
-  // Fetch conflicted file content (ours / theirs from conflict markers in the working tree)
-  useEffect(() => {
-    if (!repoPath) return;
-    (async () => {
-      try {
-        const rawDiff = await api.diff.file(repoPath, filePath);
-        const lines = rawDiff.split("\n");
-        const ours: string[] = [];
-        const theirs: string[] = [];
-        let inOurs = false;
-        let inTheirs = false;
-
-        for (const line of lines) {
-          if (line.startsWith("<<<<<<<")) {
-            inOurs = true;
-            continue;
-          }
-          if (line.startsWith("=======")) {
-            inOurs = false;
-            inTheirs = true;
-            continue;
-          }
-          if (line.startsWith(">>>>>>>")) {
-            inTheirs = false;
-            continue;
-          }
-          if (inOurs) ours.push(line);
-          if (inTheirs) theirs.push(line);
-        }
-
-        setOursContent(ours.join("\n"));
-        setTheirsContent(theirs.join("\n"));
-        // Default result is OURS
-        setResultContent(ours.join("\n"));
-      } catch (e: any) {
-        showToast(`Error loading conflict: ${e}`);
-      }
-    })();
-  }, [repoPath, filePath]);
-
-  // Initialize CodeMirror editors
-  useEffect(() => {
-    if (!oursRef.current || !theirsRef.current || !resultRef.current) return;
-
-    const readOnlyExtensions = [
-      basicSetup,
-      oneDark,
-      javascript(),
-      EditorView.editable.of(false),
-    ];
-
-    const oursView = new EditorView({
-      state: EditorState.create({ doc: oursContent, extensions: readOnlyExtensions }),
-      parent: oursRef.current,
-    });
-
-    const theirsView = new EditorView({
-      state: EditorState.create({ doc: theirsContent, extensions: readOnlyExtensions }),
-      parent: theirsRef.current,
-    });
-
-    const resultView = new EditorView({
-      state: EditorState.create({
-        doc: resultContent,
-        extensions: [basicSetup, oneDark, javascript()],
-      }),
-      parent: resultRef.current,
-    });
-
-    return () => {
-      oursView.destroy();
-      theirsView.destroy();
-      resultView.destroy();
-    };
-  }, [oursContent, theirsContent, resultContent]);
-
-  const acceptOurs = () => setResultContent(oursContent);
-  const acceptTheirs = () => setResultContent(theirsContent);
-  const acceptBoth = () => setResultContent(`${oursContent}\n\n${theirsContent}`);
-
   const handleComplete = async () => {
     if (!repoPath) return;
     setResolving(true);
     try {
+      // Write resolved content (without conflict markers) to the file
+      await api.diff.writeContent(repoPath, filePath, resolvedContent);
       // Stage the resolved file so the merge machinery picks it up
       await api.commit.stage(repoPath, filePath);
       await api.merge.continue(repoPath);
@@ -277,6 +437,8 @@ CRITICAL INSTRUCTIONS:
     }
   };
 
+  const allResolved = conflictBlocks.every((b) => b.resolvedLines.length > 0 || (b.ours.length === 0 && b.theirs.length === 0));
+
   return (
     <div className="h-full flex flex-col bg-surface-0">
       {/* Header */}
@@ -287,88 +449,239 @@ CRITICAL INSTRUCTIONS:
         <span className="text-xs font-semibold text-text-primary truncate flex-1">
           Resolve Conflict: {filePath}
         </span>
+        <span className="text-3xs text-text-muted">
+          {conflictBlocks.length} conflict{conflictBlocks.length !== 1 ? "s" : ""}
+        </span>
       </div>
 
-      {/* 3-panel content area */}
-      <div className="flex-1 grid grid-rows-[1fr_1fr_1fr] gap-0 overflow-hidden">
-        {/* OURS panel */}
-        <div className="flex flex-col border-b border-border-40 overflow-hidden">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-1/60 border-b border-border-40">
-            <span className="text-3xs font-bold text-[#30d158] uppercase tracking-wider">OURS (current branch)</span>
-            <div className="flex-1" />
-            <button
-              className="h-6 px-2.5 rounded bg-[#30d158]/10 text-[#30d158] hover:bg-[#30d158]/20 text-3xs font-semibold flex items-center gap-1 transition-all"
-              onClick={acceptOurs}
-            >
-              <Check size={10} />
-              <span>Accept Ours</span>
-            </button>
-          </div>
-          <div ref={oursRef} className="flex-1 overflow-auto" />
-        </div>
+      {/* Global actions bar */}
+      <div className="flex items-center gap-2 px-4 py-2 border-b border-border-40 bg-surface-1/30">
+        <span className="text-3xs text-text-muted font-medium mr-1">Bulk:</span>
+        <button
+          className="conflict-bulk-btn accept-ours"
+          onClick={acceptAllOurs}
+          title="Accept all ours for every conflict block"
+        >
+          <Check size={10} />
+          <span>All Ours</span>
+        </button>
+        <button
+          className="conflict-bulk-btn accept-theirs"
+          onClick={acceptAllTheirs}
+          title="Accept all theirs for every conflict block"
+        >
+          <Check size={10} />
+          <span>All Theirs</span>
+        </button>
+        <button
+          className="conflict-bulk-btn accept-both"
+          onClick={acceptAllBoth}
+          title="Accept both sides for every conflict block"
+        >
+          <Combine size={10} />
+          <span>All Both</span>
+        </button>
+        <div className="flex-1" />
+        <button
+          className="h-6 px-3 bg-accent text-accent-fg hover:opacity-90 disabled:opacity-40 text-3xs font-semibold rounded flex items-center gap-1 transition-all shadow-sm"
+          onClick={handleAiResolveConflict}
+          disabled={loadingAi}
+        >
+          {loadingAi ? (
+            <RefreshCw size={10} className="animate-spin text-accent-fg" />
+          ) : (
+            <Sparkles size={10} className="text-accent-fg" />
+          )}
+          <span>AI Auto Resolve</span>
+        </button>
+      </div>
 
-        {/* THEIRS panel */}
-        <div className="flex flex-col border-b border-border-40 overflow-hidden">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-1/60 border-b border-border-40">
-            <span className="text-3xs font-bold text-[#ff9f0a] uppercase tracking-wider">THEIRS (incoming changes)</span>
-            <div className="flex-1" />
-            <button
-              className="h-6 px-2.5 rounded bg-[#ff9f0a]/10 text-[#ff9f0a] hover:bg-[#ff9f0a]/20 text-3xs font-semibold flex items-center gap-1 transition-all"
-              onClick={acceptTheirs}
-            >
-              <Check size={10} />
-              <span>Accept Theirs</span>
-            </button>
-          </div>
-          <div ref={theirsRef} className="flex-1 overflow-auto" />
-        </div>
+      {/* Conflict blocks list */}
+      <div className="flex-1 overflow-y-auto">
+        {segments.map((seg, idx) => {
+          if (seg.type === "context") {
+            return (
+              <div key={`ctx-${idx}`} className="conflict-context-block">
+                <div className="conflict-context-header">
+                  <span className="text-3xs text-text-muted">Unchanged ({seg.lines.length} lines)</span>
+                </div>
+                <pre className="conflict-context-lines">
+                  {seg.lines.slice(0, 5).map((line, i) => (
+                    <div key={i} className="conflict-line context">{line || "\u00A0"}</div>
+                  ))}
+                  {seg.lines.length > 5 && (
+                    <div className="conflict-line context-more">
+                      ... {seg.lines.length - 5} more unchanged lines
+                    </div>
+                  )}
+                </pre>
+              </div>
+            );
+          }
 
-        {/* RESULT panel */}
-        <div className="flex flex-col overflow-hidden">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-1/60 border-b border-border-40">
-            <span className="text-3xs font-bold text-text-primary uppercase tracking-wider">RESULT (merged preview / editable)</span>
-            <div className="flex-1" />
-            <div className="flex items-center gap-1.5">
-              <button
-                className="h-6 px-2.5 rounded bg-surface-3 hover:bg-surface-4 text-text-primary text-3xs font-semibold flex items-center gap-1 transition-all border border-border-40"
-                onClick={acceptBoth}
-              >
-                <Combine size={10} />
-                <span>Accept Both</span>
-              </button>
-              <button
-                className="h-6 px-3 bg-accent text-accent-fg hover:opacity-90 disabled:opacity-40 text-3xs font-semibold rounded flex items-center gap-1 transition-all shadow-sm"
-                onClick={handleAiResolveConflict}
-                disabled={loadingAi}
-              >
-                {loadingAi ? (
-                  <RefreshCw size={10} className="animate-spin text-accent-fg" />
-                ) : (
-                  <Sparkles size={10} className="text-accent-fg" />
-                )}
-                <span>AI Auto Resolve</span>
-              </button>
+          const block = seg.block;
+          const resolutionColor =
+            block.resolution === "ours"
+              ? "text-[#30d158]"
+              : block.resolution === "theirs"
+                ? "text-[#ff9f0a]"
+                : block.resolution === "both"
+                  ? "text-accent"
+                  : "text-text-secondary";
+
+          return (
+            <div key={`conflict-${block.id}`} className="conflict-block">
+              {/* Block header */}
+              <div className="conflict-block-header">
+                <button
+                  className="ghost p-0.5 text-text-muted hover:text-text-primary"
+                  onClick={() => updateBlock(block.id, { expanded: !block.expanded })}
+                >
+                  {block.expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                </button>
+                <span className="text-3xs font-bold text-[#ff453a] uppercase tracking-wider">
+                  Conflict #{block.id + 1}
+                </span>
+                <span className={`text-3xs font-medium ${resolutionColor}`}>
+                  ({block.resolution})
+                </span>
+                <div className="flex-1" />
+                <div className="flex items-center gap-1">
+                  <button
+                    className="conflict-block-btn accept-ours"
+                    onClick={() => acceptOurs(block.id)}
+                    title="Accept ours for this block"
+                  >
+                    <Check size={9} />
+                    <span>Ours</span>
+                  </button>
+                  <button
+                    className="conflict-block-btn accept-theirs"
+                    onClick={() => acceptTheirs(block.id)}
+                    title="Accept theirs for this block"
+                  >
+                    <Check size={9} />
+                    <span>Theirs</span>
+                  </button>
+                  <button
+                    className="conflict-block-btn accept-both"
+                    onClick={() => acceptBoth(block.id)}
+                    title="Accept both for this block"
+                  >
+                    <Combine size={9} />
+                    <span>Both</span>
+                  </button>
+                </div>
+              </div>
+
+              {block.expanded && (
+                <div className="conflict-block-body">
+                  {/* OURS lines */}
+                  <div className="conflict-side-panel">
+                    <div className="conflict-side-header ours">
+                      <span className="text-3xs font-bold text-[#30d158] uppercase">Ours</span>
+                      <span className="text-3xs text-text-muted">Click to toggle</span>
+                    </div>
+                    <div className="conflict-lines-list">
+                      {block.ours.length === 0 ? (
+                        <div className="conflict-line empty">No changes</div>
+                      ) : (
+                        block.ours.map((line, li) => {
+                          const isSelected = block.resolvedLines.includes(line);
+                          return (
+                            <button
+                              key={`ours-${li}`}
+                              className={`conflict-line ours ${isSelected ? "selected" : ""}`}
+                              onClick={() => toggleLine(block.id, line, "ours")}
+                              title={isSelected ? "Click to remove from result" : "Click to add to result"}
+                            >
+                              <span className="conflict-line-indicator">
+                                {isSelected ? "✓" : "+"}
+                              </span>
+                              <span className="conflict-line-text">{line || "\u00A0"}</span>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+
+                  {/* THEIRS lines */}
+                  <div className="conflict-side-panel">
+                    <div className="conflict-side-header theirs">
+                      <span className="text-3xs font-bold text-[#ff9f0a] uppercase">Theirs</span>
+                      <span className="text-3xs text-text-muted">Click to toggle</span>
+                    </div>
+                    <div className="conflict-lines-list">
+                      {block.theirs.length === 0 ? (
+                        <div className="conflict-line empty">No changes</div>
+                      ) : (
+                        block.theirs.map((line, li) => {
+                          const isSelected = block.resolvedLines.includes(line);
+                          return (
+                            <button
+                              key={`theirs-${li}`}
+                              className={`conflict-line theirs ${isSelected ? "selected" : ""}`}
+                              onClick={() => toggleLine(block.id, line, "theirs")}
+                              title={isSelected ? "Click to remove from result" : "Click to add to result"}
+                            >
+                              <span className="conflict-line-indicator">
+                                {isSelected ? "✓" : "+"}
+                              </span>
+                              <span className="conflict-line-text">{line || "\u00A0"}</span>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+
+                  {/* RESOLVED preview */}
+                  <div className="conflict-side-panel resolved">
+                    <div className="conflict-side-header resolved">
+                      <span className="text-3xs font-bold text-text-primary uppercase">Result</span>
+                      <span className="text-3xs text-text-muted">{block.resolvedLines.length} lines</span>
+                    </div>
+                    <div className="conflict-lines-list">
+                      {block.resolvedLines.length === 0 ? (
+                        <div className="conflict-line empty text-text-muted">Empty (all lines removed)</div>
+                      ) : (
+                        block.resolvedLines.map((line, li) => (
+                          <div key={`res-${li}`} className="conflict-line resolved">
+                            <span className="conflict-line-indicator text-accent">·</span>
+                            <span className="conflict-line-text">{line || "\u00A0"}</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-          <div ref={resultRef} className="flex-1 overflow-auto" />
-        </div>
+          );
+        })}
       </div>
 
       {/* Footer actions */}
-      <div className="flex items-center justify-end gap-2.5 px-4 py-2.5 border-t border-border-60 bg-surface-1">
-        <button
-          onClick={handleComplete}
-          disabled={resolving}
-          className="h-8 px-4 bg-accent text-accent-fg text-xs font-semibold rounded-mac disabled:opacity-40 hover:opacity-90 transition-opacity min-w-[64px]"
-        >
-          {resolving ? "Completing..." : "Complete Merge"}
-        </button>
-        <button
-          onClick={onCancel}
-          className="h-8 px-4 text-xs text-text-secondary hover:text-text-primary border border-border hover:bg-surface-2 rounded-mac transition-all"
-        >
-          Cancel
-        </button>
+      <div className="flex items-center justify-between px-4 py-2.5 border-t border-border-60 bg-surface-1">
+        <span className="text-3xs text-text-muted">
+          {allResolved ? "All conflicts resolved" : "Some conflicts need resolution"}
+        </span>
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={handleComplete}
+            disabled={resolving}
+            className="h-8 px-4 bg-accent text-accent-fg text-xs font-semibold rounded-mac disabled:opacity-40 hover:opacity-90 transition-opacity min-w-[64px]"
+          >
+            {resolving ? "Completing..." : "Complete Merge"}
+          </button>
+          <button
+            onClick={onCancel}
+            className="h-8 px-4 text-xs text-text-secondary hover:text-text-primary border border-border hover:bg-surface-2 rounded-mac transition-all"
+          >
+            Cancel
+          </button>
+        </div>
       </div>
 
       {toast && <div className="toast">{toast}</div>}

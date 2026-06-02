@@ -22,6 +22,7 @@ import { Switch } from "@/components/ui/form";
 const LS_KEY_API_KEY = "gitflowAiApiKey";
 const LS_KEY_API_URL = "gitflowAiApiUrl";
 const LS_KEY_MODEL = "gitflowAiModel";
+const LS_KEY_REVIEW_MODEL = "gitflowAiReviewModel";
 const LS_KEY_TOKEN_LIMIT = "gitflowAiTokenLimit";
 const LS_KEY_DIFF_MODE = "gitflowDefaultDiffViewMode";
 const LS_KEY_AUTO_FETCH = "gitflowAutoFetch";
@@ -66,6 +67,7 @@ const SETTINGS_KEYS = [
   LS_KEY_API_KEY,
   LS_KEY_API_URL,
   LS_KEY_MODEL,
+  LS_KEY_REVIEW_MODEL,
   LS_KEY_TOKEN_LIMIT,
   LS_KEY_FETCHED_MODELS,
   LS_KEY_AI_DETAIL_LEVEL,
@@ -206,7 +208,8 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
   const [apiKey, setApiKey] = useState("");
   const [apiUrl, setApiUrl] = useState("");
   const [showKey, setShowKey] = useState(false);
-  const [model, setModel] = useState("claude-sonnet-4-20250514");
+  const [commitModel, setCommitModel] = useState("claude-sonnet-4-20250514");
+  const [reviewModel, setReviewModel] = useState("claude-sonnet-4-20250514");
   const [tokenLimit, setTokenLimit] = useState(4096);
   const [fetchedModels, setFetchedModels] = useState<{ id: string; label: string }[]>([]);
   const [fetchingModels, setFetchingModels] = useState(false);
@@ -253,6 +256,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       const savedKey = localStorage.getItem(LS_KEY_API_KEY);
       const savedApiUrl = localStorage.getItem(LS_KEY_API_URL);
       const savedModel = localStorage.getItem(LS_KEY_MODEL);
+      const savedReviewModel = localStorage.getItem(LS_KEY_REVIEW_MODEL);
       const savedLimit = localStorage.getItem(LS_KEY_TOKEN_LIMIT);
       const savedFetched = localStorage.getItem(LS_KEY_FETCHED_MODELS);
       const savedDetailLevel = localStorage.getItem(LS_KEY_AI_DETAIL_LEVEL) as "minimal" | "medium" | "detailed";
@@ -277,7 +281,9 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       if (savedReducedMotion !== null) setReducedMotion(savedReducedMotion === "true");
       if (savedKey) setApiKey(savedKey);
       if (savedApiUrl) setApiUrl(savedApiUrl);
-      if (savedModel) setModel(savedModel);
+      if (savedModel) setCommitModel(savedModel);
+      if (savedReviewModel) setReviewModel(savedReviewModel);
+      else if (savedModel) setReviewModel(savedModel);
       if (savedLimit) setTokenLimit(Number(savedLimit));
       if (savedFetched) {
         try {
@@ -322,6 +328,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
     const storedKey = localStorage.getItem(LS_KEY_API_KEY) || "";
     const storedApiUrl = localStorage.getItem(LS_KEY_API_URL) || "";
     const storedModel = localStorage.getItem(LS_KEY_MODEL) || "claude-sonnet-4-20250514";
+    const storedReviewModel = localStorage.getItem(LS_KEY_REVIEW_MODEL) || storedModel;
     const storedLimit = localStorage.getItem(LS_KEY_TOKEN_LIMIT) || "4096";
     const storedFetched = localStorage.getItem(LS_KEY_FETCHED_MODELS) || "[]";
     const storedDetailLevel = (localStorage.getItem(LS_KEY_AI_DETAIL_LEVEL) as "minimal" | "medium" | "detailed") || "medium";
@@ -351,7 +358,8 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       reducedMotion !== storedReducedMotion ||
       apiKey !== storedKey ||
       apiUrl !== storedApiUrl ||
-      model !== storedModel ||
+      commitModel !== storedModel ||
+      reviewModel !== storedReviewModel ||
       tokenLimit !== Number(storedLimit) ||
       JSON.stringify(fetchedModels) !== storedFetched ||
       aiDetailLevel !== storedDetailLevel ||
@@ -382,7 +390,8 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
     reducedMotion,
     apiKey,
     apiUrl,
-    model,
+    commitModel,
+    reviewModel,
     tokenLimit,
     fetchedModels,
     aiDetailLevel,
@@ -458,8 +467,11 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
 
       if (modelsList.length > 0) {
         setFetchedModels(modelsList);
-        if (!modelsList.some((m) => m.id === model)) {
-          setModel(modelsList[0].id);
+        if (!modelsList.some((m) => m.id === commitModel)) {
+          setCommitModel(modelsList[0].id);
+        }
+        if (!modelsList.some((m) => m.id === reviewModel)) {
+          setReviewModel(modelsList[0].id);
         }
         showToast(`Successfully loaded ${modelsList.length} models!`);
       } else {
@@ -493,7 +505,8 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       localStorage.setItem(LS_KEY_REDUCED_MOTION, String(reducedMotion));
       localStorage.setItem(LS_KEY_API_KEY, apiKey);
       localStorage.setItem(LS_KEY_API_URL, apiUrl);
-      localStorage.setItem(LS_KEY_MODEL, model);
+      localStorage.setItem(LS_KEY_MODEL, commitModel);
+      localStorage.setItem(LS_KEY_REVIEW_MODEL, reviewModel);
       localStorage.setItem(LS_KEY_TOKEN_LIMIT, String(tokenLimit));
       localStorage.setItem(LS_KEY_FETCHED_MODELS, JSON.stringify(fetchedModels));
       localStorage.setItem(LS_KEY_AI_DETAIL_LEVEL, aiDetailLevel);
@@ -551,7 +564,8 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
     setReducedMotion(false);
     setApiKey("");
     setApiUrl("");
-    setModel("claude-sonnet-4-20250514");
+    setCommitModel("claude-sonnet-4-20250514");
+    setReviewModel("claude-sonnet-4-20250514");
     setTokenLimit(4096);
     setFetchedModels([]);
     setAiDetailLevel("medium");
@@ -575,9 +589,9 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
   };
 
   return (
-    <div className="flex flex-row h-[480px] w-[600px] bg-surface-0 overflow-hidden select-none">
+    <div className="flex h-full w-full flex-row bg-surface-0 overflow-hidden select-none">
       {/* Left Sidebar (180px) */}
-      <div className="w-[180px] shrink-0 border-r border-border-60 bg-surface-1 flex flex-col justify-between p-2">
+      <div className="w-[210px] shrink-0 border-r border-border-60 bg-surface-1 flex flex-col justify-between p-2">
         <div className="space-y-3">
           {/* Header/Title */}
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 text-text-primary font-semibold text-xs border-b border-border-60">
@@ -1016,33 +1030,69 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
 
                 {/* Model Selection */}
                 <div className="space-y-1 border-t border-border-40 pt-3">
-                  <label className="text-xs font-semibold text-text-primary">AI LLM Model</label>
-                  <div className="relative">
-                    <select
-                      value={model}
-                      onChange={(e) => setModel(e.target.value)}
-                      className="w-full h-8 pl-2.5 pr-8 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer hover:bg-surface-2 transition-all"
-                    >
-                      {fetchedModels.length > 0 && (
-                        <optgroup label="Custom / Local API Models">
-                          {fetchedModels.map((m) => (
-                            <option key={m.id} value={m.id}>{m.label}</option>
-                          ))}
-                        </optgroup>
-                      )}
-                      <optgroup label="Cloud Models (requires Key)">
-                        {AVAILABLE_MODELS.map((m) => (
-                          <option key={m.id} value={m.id}>{m.label}</option>
-                        ))}
-                      </optgroup>
-                      <optgroup label="Local Models (Open Source)">
-                        {LOCAL_MODELS.map((m) => (
-                          <option key={m.id} value={m.id}>{m.label}</option>
-                        ))}
-                      </optgroup>
-                    </select>
-                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
-                      <ChevronDown size={11} strokeWidth={2.5} />
+                  <label className="text-xs font-semibold text-text-primary">AI Models</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <span className="text-2xs font-semibold text-text-muted">Generate Commit</span>
+                      <div className="relative">
+                        <select
+                          value={commitModel}
+                          onChange={(e) => setCommitModel(e.target.value)}
+                          className="w-full h-8 pl-2.5 pr-8 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer hover:bg-surface-2 transition-all"
+                        >
+                          {fetchedModels.length > 0 && (
+                            <optgroup label="Custom / Local API Models">
+                              {fetchedModels.map((m) => (
+                                <option key={m.id} value={m.id}>{m.label}</option>
+                              ))}
+                            </optgroup>
+                          )}
+                          <optgroup label="Cloud Models (requires Key)">
+                            {AVAILABLE_MODELS.map((m) => (
+                              <option key={m.id} value={m.id}>{m.label}</option>
+                            ))}
+                          </optgroup>
+                          <optgroup label="Local Models (Open Source)">
+                            {LOCAL_MODELS.map((m) => (
+                              <option key={m.id} value={m.id}>{m.label}</option>
+                            ))}
+                          </optgroup>
+                        </select>
+                        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
+                          <ChevronDown size={11} strokeWidth={2.5} />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-2xs font-semibold text-text-muted">Review / Explain</span>
+                      <div className="relative">
+                        <select
+                          value={reviewModel}
+                          onChange={(e) => setReviewModel(e.target.value)}
+                          className="w-full h-8 pl-2.5 pr-8 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer hover:bg-surface-2 transition-all"
+                        >
+                          {fetchedModels.length > 0 && (
+                            <optgroup label="Custom / Local API Models">
+                              {fetchedModels.map((m) => (
+                                <option key={m.id} value={m.id}>{m.label}</option>
+                              ))}
+                            </optgroup>
+                          )}
+                          <optgroup label="Cloud Models (requires Key)">
+                            {AVAILABLE_MODELS.map((m) => (
+                              <option key={m.id} value={m.id}>{m.label}</option>
+                            ))}
+                          </optgroup>
+                          <optgroup label="Local Models (Open Source)">
+                            {LOCAL_MODELS.map((m) => (
+                              <option key={m.id} value={m.id}>{m.label}</option>
+                            ))}
+                          </optgroup>
+                        </select>
+                        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
+                          <ChevronDown size={11} strokeWidth={2.5} />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
