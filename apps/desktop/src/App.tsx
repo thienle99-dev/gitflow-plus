@@ -30,6 +30,16 @@ function App() {
 
   const isTrayWindow = window.location.search.includes("window=tray");
 
+  useEffect(() => {
+    document.documentElement.classList.toggle("tray-window", isTrayWindow);
+    document.body.classList.toggle("tray-window", isTrayWindow);
+
+    return () => {
+      document.documentElement.classList.remove("tray-window");
+      document.body.classList.remove("tray-window");
+    };
+  }, [isTrayWindow]);
+
   return (
     <ErrorBoundary>
       <ErrorProvider>

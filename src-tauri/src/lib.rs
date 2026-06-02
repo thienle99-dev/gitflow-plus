@@ -158,8 +158,8 @@ pub fn run() {
                                     tauri::Size::Logical(l) => (l.width, l.height),
                                 };
 
-                                let window_width = 360.0;
-                                let window_height = 560.0;
+                                let window_width = 384.0;
+                                let window_height = 584.0;
                                 let x = pos_x + (size_w / 2.0) - (window_width / 2.0);
                                 let y = if pos_y > 500.0 {
                                     pos_y - window_height

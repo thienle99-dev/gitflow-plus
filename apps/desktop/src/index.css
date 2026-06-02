@@ -124,6 +124,12 @@ body {
   user-select: none;
 }
 
+html.tray-window,
+body.tray-window,
+body.tray-window #root {
+  background: transparent;
+}
+
 /* macOS-style scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

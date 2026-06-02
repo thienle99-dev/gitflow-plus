@@ -9,7 +9,6 @@ import {
   ChevronUp,
   GitBranch,
   File,
-  GitCommit,
   Sparkles,
   RefreshCw,
   Download,
@@ -434,7 +433,8 @@ export default function TrayPanelView() {
   };
 
   return (
-    <div className="flex flex-col h-[560px] w-[360px] bg-surface-0 border border-border-60 rounded-lg overflow-hidden select-none shadow-2xl relative font-sans">
+    <div className="h-[584px] w-[384px] bg-transparent p-0 rounded-[20px] overflow-hidden font-sans">
+      <div className="flex h-full w-full flex-col bg-surface-0 border border-border-60 rounded-[18px] overflow-hidden select-none shadow-2xl relative">
       {/* Header */}
       <div className="h-11 border-b border-border-60 bg-surface-1 flex items-center justify-between px-3 shrink-0">
         {/* Repo Selector Dropdown Trigger */}
@@ -647,30 +647,30 @@ export default function TrayPanelView() {
                   <button
                     onClick={handleAICommitMessage}
                     disabled={(changes?.length || 0) === 0 || generateCommit.isPending}
-                    className="text-[9px] font-bold text-accent hover:opacity-85 disabled:opacity-40 transition-all flex items-center gap-1 cursor-pointer"
+                    className="h-6 w-6 rounded border border-transparent text-accent transition-all hover:border-border-40 hover:bg-surface-3 disabled:opacity-40 flex items-center justify-center cursor-pointer"
                     title={
                       "Generate message using all changes"
                     }
                   >
                     {generateCommit.isPending ? (
-                      <Loader2 size={10} className="animate-spin" />
+                      <Loader2 size={12} className="animate-spin" />
                     ) : (
-                      <Sparkles size={10} />
+                      <Sparkles size={12} />
                     )}
-                    <span>AI Message</span>
                   </button>
 
                   <button
                     onClick={handleCommit}
                     disabled={committing || !commitMessage.trim()}
-                    className="h-6 px-3 bg-accent text-accent-fg text-[9px] font-bold rounded hover:opacity-95 disabled:opacity-40 transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                    className="h-7 px-2.5 bg-accent text-accent-fg text-[9px] font-bold rounded hover:opacity-95 disabled:opacity-40 transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                    title={`Commit ${unstaged.length > 0 ? "all changes" : staged.length > 0 ? `${staged.length} staged changes` : "changes"}`}
                   >
                     {committing ? (
-                      <Loader2 size={10} className="animate-spin" />
+                      <Loader2 size={12} className="animate-spin" />
                     ) : (
-                      <GitCommit size={10} />
+                      <Check size={12} />
                     )}
-                    <span>Commit {unstaged.length > 0 ? "(all)" : staged.length > 0 ? `(${staged.length})` : ""}</span>
+                    <span>Commit</span>
                   </button>
                 </div>
               </div>
@@ -765,9 +765,52 @@ export default function TrayPanelView() {
             </div>
           )
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center text-text-muted gap-2">
-            <FolderOpen size={24} className="opacity-45" />
-            <span className="text-xs font-semibold">Select a Repository to start</span>
+          <div className="flex-1 flex flex-col items-center justify-center text-center text-text-muted gap-3 px-5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-full border border-border-40 bg-surface-1">
+              <FolderOpen size={20} className="text-accent" />
+            </div>
+            <div className="space-y-1">
+              <div className="text-xs font-semibold text-text-primary">No repository open</div>
+              <div className="text-[10px] leading-relaxed text-text-muted">
+                Open the main app or pick a recent repository.
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleOpenMainApp}
+                className="h-7 px-3 rounded bg-accent text-accent-fg text-[10px] font-bold transition-all hover:opacity-95 cursor-pointer"
+              >
+                Open App
+              </button>
+              {recentRepos.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setRepoDropdownOpen(true)}
+                  className="h-7 px-3 rounded border border-border-40 bg-surface-1 text-[10px] font-bold text-text-primary transition-all hover:bg-surface-2 cursor-pointer"
+                >
+                  Recent
+                </button>
+              )}
+            </div>
+            {recentRepos.length > 0 && (
+              <div className="mt-1 w-full max-w-[250px] overflow-hidden rounded border border-border-40 bg-surface-1/60 text-left">
+                {recentRepos.slice(0, 4).map((path) => (
+                  <button
+                    key={path}
+                    type="button"
+                    onClick={() => selectRepo(path)}
+                    className="flex w-full flex-col gap-0.5 border-b border-border-40 px-2.5 py-1.5 text-left last:border-b-0 hover:bg-surface-2 cursor-pointer"
+                    title={path}
+                  >
+                    <span className="truncate text-[10px] font-semibold text-text-primary">
+                      {path.split("/").pop() || path}
+                    </span>
+                    <span className="truncate text-[8px] text-text-muted">{path}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -894,6 +937,7 @@ export default function TrayPanelView() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

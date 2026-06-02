@@ -24,8 +24,8 @@
       {
         "label": "tray",
         "title": "GitFlow Popover",
-        "width": 360,
-        "height": 560,
+        "width": 384,
+        "height": 584,
         "decorations": false,
         "transparent": true,
         "alwaysOnTop": true,
