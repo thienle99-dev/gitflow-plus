@@ -22,6 +22,15 @@ export const THEME_CLASSES: Theme[] = [
 
 const isDarkTheme = (theme: Theme) => theme === "dark" || theme.startsWith("gruvbox-dark");
 
+function isTheme(value: string | null): value is Theme {
+  return !!value && THEME_CLASSES.includes(value as Theme);
+}
+
+export function readStoredTheme(): Theme {
+  const storedTheme = localStorage.getItem("theme");
+  return isTheme(storedTheme) ? storedTheme : "dark";
+}
+
 export function applyTheme(theme: Theme) {
   if (typeof document === "undefined") return;
 
@@ -35,7 +44,7 @@ export function applyTheme(theme: Theme) {
   }
 }
 
-const initialTheme = (localStorage.getItem("theme") as Theme) || "dark";
+const initialTheme = readStoredTheme();
 applyTheme(initialTheme);
 
 interface RepoState {
@@ -48,6 +57,7 @@ interface RepoState {
   selectRef: (ref: string | null) => void;
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
+  syncThemeFromStorage: () => void;
   removeRecentRepo: (path: string) => void;
 }
 
@@ -83,6 +93,12 @@ export const useRepoStore = create<RepoState>((set) => ({
 
   setTheme: (theme: Theme) => {
     localStorage.setItem("theme", theme);
+    applyTheme(theme);
+    set({ theme });
+  },
+
+  syncThemeFromStorage: () => {
+    const theme = readStoredTheme();
     applyTheme(theme);
     set({ theme });
   },

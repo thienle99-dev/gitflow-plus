@@ -7,10 +7,26 @@ import ErrorBoundary from "./components/ui/feedback/ErrorBoundary";
 
 function App() {
   const theme = useRepoStore((s) => s.theme);
+  const syncThemeFromStorage = useRepoStore((s) => s.syncThemeFromStorage);
 
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
+
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === "theme") syncThemeFromStorage();
+    };
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("focus", syncThemeFromStorage);
+    window.addEventListener("gitflow-settings-updated", syncThemeFromStorage);
+
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("focus", syncThemeFromStorage);
+      window.removeEventListener("gitflow-settings-updated", syncThemeFromStorage);
+    };
+  }, [syncThemeFromStorage]);
 
   const isTrayWindow = window.location.search.includes("window=tray");
 

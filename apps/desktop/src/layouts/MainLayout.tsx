@@ -238,10 +238,6 @@ export default function MainLayout() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
-  if (!repoPath) {
-    return <WelcomeScreen onOpen={handleOpenRepo} />;
-  }
-
   const overlayDialog = activeDialog && activeDialog !== "stash" && activeDialog !== "tag"
     ? activeDialog
     : null;
@@ -264,6 +260,30 @@ export default function MainLayout() {
     "merge-request": <MergeRequestDialog onClose={closeDialog} />,
     "clone": <CloneDialog open={true} onClose={closeDialog} />,
   };
+
+  const dialogOverlay = overlayDialog ? (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className={`bg-surface-0 rounded-mac shadow-xl border border-border overflow-hidden ${
+        overlayDialog === "merge-request" ? "w-[760px] h-[520px]" : "min-w-[480px] max-w-[600px] max-h-[80vh]"
+      }`}>
+        {dialogComponents[overlayDialog] || (
+          <div className="p-4 text-text-muted text-sm">
+            Unknown dialog: {overlayDialog}
+            <button className="ghost text-xs ml-4" onClick={closeDialog}>Close</button>
+          </div>
+        )}
+      </div>
+    </div>
+  ) : null;
+
+  if (!repoPath) {
+    return (
+      <div className="h-full min-h-0">
+        <WelcomeScreen onOpen={handleOpenRepo} />
+        {dialogOverlay}
+      </div>
+    );
+  }
 
 function InlineErrorFallback({ name }: { name: string }) {
   return (
@@ -325,20 +345,7 @@ function InlineErrorFallback({ name }: { name: string }) {
       <BottomBar />
 
       {/* Dialog overlays */}
-      {overlayDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className={`bg-surface-0 rounded-mac shadow-xl border border-border overflow-hidden ${
-            overlayDialog === "merge-request" ? "w-[760px] h-[520px]" : "min-w-[480px] max-w-[600px] max-h-[80vh]"
-          }`}>
-            {dialogComponents[overlayDialog] || (
-              <div className="p-4 text-text-muted text-sm">
-                Unknown dialog: {overlayDialog}
-                <button className="ghost text-xs ml-4" onClick={closeDialog}>Close</button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {dialogOverlay}
     </div>
   );
 }

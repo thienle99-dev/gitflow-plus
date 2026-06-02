@@ -539,51 +539,48 @@ export default function TrayPanelView() {
             <>
               {/* Working Tree Section */}
               <div className="flex-1 flex flex-col min-h-[170px] border border-border-40 bg-surface-1/40 rounded-mac p-2.5">
-                <div className="flex items-center justify-between border-b border-border-40 pb-1.5 shrink-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
-                      Changes ({changes?.length || 0})
-                    </span>
-                    {repoPath && (
-                      <div className="flex items-center gap-1.5 border-l border-border-40 pl-2">
-                        <button
-                          onClick={handleStashPush}
-                          disabled={stashLoading || changes?.length === 0}
-                          className="text-[9px] font-semibold text-text-secondary hover:text-accent disabled:opacity-40 flex items-center gap-0.5 cursor-pointer"
-                          title="Stash changes"
-                        >
-                          {stashLoading ? <Loader2 size={9} className="animate-spin" /> : <Archive size={9} />}
-                          <span>Stash</span>
-                        </button>
-                        {stashes && stashes.length > 0 && (
-                          <button
-                            onClick={handleStashPop}
-                            disabled={popLoading}
-                            className="text-[9px] font-semibold text-text-secondary hover:text-accent disabled:opacity-40 flex items-center gap-0.5 cursor-pointer"
-                            title={`Pop latest stash (${stashes.length})`}
-                          >
-                            {popLoading ? <Loader2 size={9} className="animate-spin" /> : <History size={9} />}
-                            <span>Pop ({stashes.length})</span>
-                          </button>
-                        )}
-                      </div>
+                <div className="flex items-center justify-between gap-2 border-b border-border-40 pb-1.5 shrink-0">
+                  <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
+                    Changes ({changes?.length || 0})
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={handleStashPush}
+                      disabled={stashLoading || changes?.length === 0}
+                      className="h-6 w-6 rounded border border-transparent text-text-secondary transition-all hover:border-border-40 hover:bg-surface-2 hover:text-accent disabled:opacity-40 flex items-center justify-center cursor-pointer"
+                      title="Stash changes"
+                    >
+                      {stashLoading ? <Loader2 size={11} className="animate-spin" /> : <Archive size={11} />}
+                    </button>
+                    {stashes && stashes.length > 0 && (
+                      <button
+                        onClick={handleStashPop}
+                        disabled={popLoading}
+                        className="relative h-6 w-6 rounded border border-transparent text-text-secondary transition-all hover:border-border-40 hover:bg-surface-2 hover:text-accent disabled:opacity-40 flex items-center justify-center cursor-pointer"
+                        title={`Pop latest stash (${stashes.length})`}
+                      >
+                        {popLoading ? <Loader2 size={11} className="animate-spin" /> : <History size={11} />}
+                        <span className="absolute -right-1 -top-1 min-w-[13px] rounded-[3px] bg-accent px-0.5 text-[7px] font-bold leading-[13px] text-accent-fg">
+                          {stashes.length}
+                        </span>
+                      </button>
                     )}
-                  </div>
-                  <div className="flex gap-2">
                     {unstaged.length > 0 && (
                       <button
                         onClick={handleStageAll}
-                        className="text-[9px] font-semibold text-accent hover:underline"
+                        className="h-6 w-6 rounded border border-transparent text-accent transition-all hover:border-border-40 hover:bg-surface-2 flex items-center justify-center cursor-pointer"
+                        title="Stage all changes"
                       >
-                        Stage All
+                        <CheckSquare size={11} />
                       </button>
                     )}
                     {staged.length > 0 && (
                       <button
                         onClick={handleUnstageAll}
-                        className="text-[9px] font-semibold text-text-muted hover:text-text-primary hover:underline"
+                        className="h-6 w-6 rounded border border-transparent text-text-secondary transition-all hover:border-border-40 hover:bg-surface-2 hover:text-text-primary flex items-center justify-center cursor-pointer"
+                        title="Unstage all changes"
                       >
-                        Unstage All
+                        <Square size={11} />
                       </button>
                     )}
                   </div>
@@ -835,30 +832,28 @@ export default function TrayPanelView() {
             <button
               onClick={() => handleGitAction("fetch")}
               disabled={syncLoading !== null}
-              className="h-7 px-2.5 bg-surface-2 hover:bg-surface-3 text-text-primary text-[10px] font-semibold rounded border border-border-40 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+              className="h-8 w-8 bg-surface-2 hover:bg-surface-3 text-text-primary rounded border border-border-40 transition-all flex items-center justify-center cursor-pointer disabled:opacity-50"
               title="Fetch remote changes"
             >
               {syncLoading === "fetch" ? (
-                <Loader2 size={10} className="animate-spin" />
+                <Loader2 size={13} className="animate-spin" />
               ) : (
-                <RefreshCw size={10} />
+                <RefreshCw size={13} />
               )}
-              <span>Fetch</span>
             </button>
             <button
               onClick={() => handleGitAction("pull")}
               disabled={syncLoading !== null}
-              className="h-7 px-2.5 bg-surface-2 hover:bg-surface-3 text-text-primary text-[10px] font-semibold rounded border border-border-40 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+              className="relative h-8 w-8 bg-surface-2 hover:bg-surface-3 text-text-primary rounded border border-border-40 transition-all flex items-center justify-center cursor-pointer disabled:opacity-50"
               title="Pull remote changes"
             >
               {syncLoading === "pull" ? (
-                <Loader2 size={10} className="animate-spin" />
+                <Loader2 size={13} className="animate-spin" />
               ) : (
-                <Download size={10} />
+                <Download size={13} />
               )}
-              <span>Pull</span>
               {!!syncStatus?.behind && (
-                <span className="ml-0.5 rounded-[3px] bg-[#0a84ff]/15 px-1 py-0.5 text-[8px] font-bold leading-none text-[#0a84ff]">
+                <span className="absolute -right-1 -top-1 min-w-[15px] rounded-[4px] bg-[#0a84ff] px-1 py-0.5 text-[8px] font-bold leading-none text-white shadow-sm">
                   {syncStatus.behind}
                 </span>
               )}
@@ -866,17 +861,16 @@ export default function TrayPanelView() {
             <button
               onClick={() => handleGitAction("push")}
               disabled={syncLoading !== null}
-              className="h-7 px-2.5 bg-surface-2 hover:bg-surface-3 text-text-primary text-[10px] font-semibold rounded border border-border-40 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+              className="relative h-8 w-8 bg-surface-2 hover:bg-surface-3 text-text-primary rounded border border-border-40 transition-all flex items-center justify-center cursor-pointer disabled:opacity-50"
               title="Push local commits"
             >
               {syncLoading === "push" ? (
-                <Loader2 size={10} className="animate-spin" />
+                <Loader2 size={13} className="animate-spin" />
               ) : (
-                <Upload size={10} />
+                <Upload size={13} />
               )}
-              <span>Push</span>
               {!!syncStatus?.ahead && (
-                <span className="ml-0.5 rounded-[3px] bg-[#30d158]/15 px-1 py-0.5 text-[8px] font-bold leading-none text-[#30d158]">
+                <span className="absolute -right-1 -top-1 min-w-[15px] rounded-[4px] bg-[#30d158] px-1 py-0.5 text-[8px] font-bold leading-none text-white shadow-sm">
                   {syncStatus.ahead}
                 </span>
               )}
