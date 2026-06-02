@@ -328,6 +328,7 @@ export async function analyzeCommitScope(
 
   const branchName = await getCurrentBranchName(repoPath);
   const branchContext = branchName ? `Branch: ${branchName}\n` : "";
+  const customRulesInstruction = buildCustomRulesInstruction(settings.customRules);
 
   const prompt = `You are an expert developer reviewing staged git changes. Analyze the diff and determine if the changes should be split into multiple atomic commits.
 
@@ -352,7 +353,7 @@ RULES:
 - Each message follows format: type(scope): description
 - Maximum 4 groups
 - Return ONLY the JSON, no markdown code blocks, no wrapping
-
+${customRulesInstruction}
 ${branchContext}Staged diff:
 ${diff.slice(0, 12_000)}`;
 

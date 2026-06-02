@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useGitDiff, useGitStatus } from "@/queries/useGitLog";
 import { api, type FileChange } from "@/api/tauri";
 import { useGenerateCommitMessage, useAICommitScope } from "@/queries/useAI";
-import { generateLocalCommitMessage, type CommitScopeSuggestion } from "@/lib/ai";
+import { generateLocalCommitMessage, shouldAnalyzeScope, type CommitScopeSuggestion } from "@/lib/ai";
 import { useQueryClient } from "@tanstack/react-query";
 import ContextMenu, { type ContextMenuItem } from "@/components/ui/overlay/ContextMenu";
 import UndoButton from "@/components/features/actions/UndoButton";
@@ -28,6 +28,7 @@ import {
   FileTerminal,
   FileText,
   GitCommit,
+  Layers,
   MoreHorizontal,
   RefreshCw,
   Sparkles,
@@ -51,6 +52,7 @@ export default function WorkingTree() {
   const [scopeSuggestion, setScopeSuggestion] = useState<CommitScopeSuggestion | null>(null);
   const [scopeDismissed, setScopeDismissed] = useState(false);
   const [committing, setCommitting] = useState(false);
+  const [scopeAnalyzing, setScopeAnalyzing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [stagedOpen, setStagedOpen] = useState(true);
   const [unstagedOpen, setUnstagedOpen] = useState(true);
@@ -276,6 +278,45 @@ export default function WorkingTree() {
     }
   };
 
+  const handleAnalyzeScope = async () => {
+    if (!repoPath || scopeAnalyzing || commitScope.isPending) return;
+    if (staged.length === 0) {
+      showToast("Stage some files first to analyze scope");
+      return;
+    }
+    setScopeAnalyzing(true);
+    setScopeDismissed(false);
+    setScopeSuggestion(null);
+    showToast("Analyzing commit scope...");
+    try {
+      const scope = await commitScope.mutateAsync({ repoPath, files: changes || staged });
+      if (scope?.shouldSplit && scope.groups.length > 1) {
+        setScopeSuggestion(scope);
+        showToast(`AI suggests splitting into ${scope.groups.length} commits`);
+      } else {
+        showToast("Changes look cohesive — single commit is fine");
+      }
+    } catch {
+      showToast("Scope analysis failed");
+    } finally {
+      setScopeAnalyzing(false);
+    }
+  };
+
+  // Auto-trigger scope analysis when staged files cross threshold (≥5 files across ≥2 dirs)
+  const prevStagedCountRef = useRef(0);
+  useEffect(() => {
+    const prevCount = prevStagedCountRef.current;
+    prevStagedCountRef.current = staged.length;
+    // Trigger when crossing the threshold (from <5 to ≥5) and not already analyzing
+    if (staged.length >= 5 && prevCount < 5 && !scopeSuggestion && !scopeAnalyzing && !commitScope.isPending) {
+      // Only auto-trigger if shouldAnalyzeScope returns true
+      if (shouldAnalyzeScope(staged)) {
+        handleAnalyzeScope();
+      }
+    }
+  }, [staged.length]);
+
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && commitMessage.trim()) {
@@ -441,26 +482,46 @@ export default function WorkingTree() {
             placeholder="Commit message"
             className="w-full h-[58px] text-xs bg-transparent text-text-primary placeholder:text-text-muted/60 resize-none outline-none border-none p-0 leading-relaxed"
           />
-          <button
-            className={`absolute right-2 bottom-2 p-1.5 rounded-full hover:bg-accent-15 text-text-muted hover:text-accent transition-all active:scale-95 cursor-pointer ${generateCommit.isPending ? "opacity-50 cursor-not-allowed text-accent" : ""
-              }`}
-            onClick={handleGenerateCommit}
-            disabled={generateCommit.isPending}
-            title={generateCommit.isPending ? "Generating..." : "Generate commit message (AI)"}
-          >
-            {generateCommit.isPending ? (
-              <RefreshCw size={13} className="animate-spin" />
-            ) : (
-              <Sparkles size={13} />
+          <div className="absolute right-1.5 bottom-1.5 flex items-center gap-0.5">
+            {staged.length >= 3 && (
+              <button
+                className={`p-1.5 rounded-full hover:bg-accent-15 text-text-muted hover:text-accent transition-all active:scale-95 cursor-pointer ${scopeAnalyzing || commitScope.isPending ? "opacity-50 cursor-not-allowed text-accent" : ""
+                  }`}
+                onClick={handleAnalyzeScope}
+                disabled={scopeAnalyzing || commitScope.isPending}
+                title={scopeAnalyzing ? "Analyzing scope..." : "Analyze commit scope (suggest splitting)"}
+              >
+                {scopeAnalyzing || commitScope.isPending ? (
+                  <RefreshCw size={13} className="animate-spin" />
+                ) : (
+                  <Layers size={13} />
+                )}
+              </button>
             )}
-          </button>
+            <button
+              className={`p-1.5 rounded-full hover:bg-accent-15 text-text-muted hover:text-accent transition-all active:scale-95 cursor-pointer ${generateCommit.isPending ? "opacity-50 cursor-not-allowed text-accent" : ""
+                }`}
+              onClick={handleGenerateCommit}
+              disabled={generateCommit.isPending}
+              title={generateCommit.isPending ? "Generating..." : "Generate commit message (AI)"}
+            >
+              {generateCommit.isPending ? (
+                <RefreshCw size={13} className="animate-spin" />
+              ) : (
+                <Sparkles size={13} />
+              )}
+            </button>
+          </div>
         </div>
         {scopeSuggestion && !scopeDismissed && (
           <div className="border border-accent-20 bg-accent-5 rounded-mac p-3 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-accent">
-                💡 AI suggests splitting into {scopeSuggestion.groups.length} commits
-              </span>
+              <div className="flex items-center gap-1.5">
+                <Layers size={13} className="text-accent" />
+                <span className="text-xs font-semibold text-accent">
+                  AI suggests splitting into {scopeSuggestion.groups.length} commits
+                </span>
+              </div>
               <button
                 onClick={() => setScopeDismissed(true)}
                 className="text-text-muted hover:text-text-primary cursor-pointer"
@@ -468,42 +529,57 @@ export default function WorkingTree() {
                 <X size={14} />
               </button>
             </div>
-            <p className="text-2xs text-text-secondary">{scopeSuggestion.explanation}</p>
+            <p className="text-2xs text-text-secondary leading-relaxed">{scopeSuggestion.explanation}</p>
 
-            <div className="space-y-1.5 max-h-48 overflow-y-auto">
-              {scopeSuggestion.groups.map((group, i) => (
-                <div
-                  key={i}
-                  className="flex items-start gap-2 p-2 bg-surface-1 rounded border border-border-30"
-                >
-                  <span className="text-2xs font-mono text-accent mt-0.5 shrink-0">
-                    {i + 1}.
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-text-primary truncate">
-                      {group.message}
-                    </p>
-                    <p className="text-2xs text-text-muted truncate">
-                      {group.files.join(", ")}
-                    </p>
-                    <p className="text-2xs text-text-secondary italic">{group.reason}</p>
-                  </div>
-                  <button
-                    onClick={() => handleUseGroup(group)}
-                    className="shrink-0 text-2xs font-semibold px-2 py-1 bg-accent/10 text-accent rounded hover:bg-accent/20 transition-colors cursor-pointer"
+            <div className="space-y-1.5 max-h-60 overflow-y-auto">
+              {scopeSuggestion.groups.map((group, i) => {
+                const groupColors = [
+                  { border: "border-l-[#0a84ff]", bg: "bg-[#0a84ff]/8", badge: "bg-[#0a84ff]/15 text-[#0a84ff]" },
+                  { border: "border-l-[#30d158]", bg: "bg-[#30d158]/8", badge: "bg-[#30d158]/15 text-[#30d158]" },
+                  { border: "border-l-[#ff9f0a]", bg: "bg-[#ff9f0a]/8", badge: "bg-[#ff9f0a]/15 text-[#ff9f0a]" },
+                  { border: "border-l-[#bf5af2]", bg: "bg-[#bf5af2]/8", badge: "bg-[#bf5af2]/15 text-[#bf5af2]" },
+                ];
+                const color = groupColors[i % groupColors.length];
+                return (
+                  <div
+                    key={i}
+                    className={`flex items-start gap-2.5 p-2.5 ${color.bg} rounded-mac border-l-[3px] ${color.border} border border-border-20`}
                   >
-                    Use this
-                  </button>
-                </div>
-              ))}
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <p className="text-xs font-semibold text-text-primary leading-snug">
+                        {group.message}
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {group.files.map((f, fi) => (
+                          <span
+                            key={fi}
+                            className={`inline-flex items-center px-1.5 py-0.5 rounded text-2xs font-mono ${color.badge}`}
+                          >
+                            {f.split("/").pop()}
+                          </span>
+                        ))}
+                      </div>
+                      <p className="text-2xs text-text-secondary italic leading-relaxed">{group.reason}</p>
+                    </div>
+                    <button
+                      onClick={() => handleUseGroup(group)}
+                      className="shrink-0 text-2xs font-semibold px-2.5 py-1.5 bg-accent/10 text-accent rounded-mac hover:bg-accent/20 transition-colors cursor-pointer mt-0.5"
+                    >
+                      Use this
+                    </button>
+                  </div>
+                );
+              })}
             </div>
 
-            <button
-              onClick={() => setScopeDismissed(true)}
-              className="w-full text-2xs text-text-muted hover:text-text-primary py-1 cursor-pointer"
-            >
-              Commit all as one
-            </button>
+            <div className="flex items-center gap-2 pt-0.5">
+              <button
+                onClick={() => setScopeDismissed(true)}
+                className="flex-1 text-2xs text-text-muted hover:text-text-primary py-1.5 cursor-pointer bg-surface-2-30 hover:bg-surface-2 rounded-mac border border-border-30 transition-colors"
+              >
+                Commit all as one
+              </button>
+            </div>
           </div>
         )}
 

@@ -331,7 +331,7 @@ function InlineErrorFallback({ name }: { name: string }) {
         <PanelGroup direction="horizontal" autoSaveId="main-layout" className="h-full min-h-0">
           {sidebarOpen && (
             <>
-              <Panel defaultSize={20} minSize={15} maxSize={35} className="min-h-0">
+              <Panel defaultSize={20} minSize={15} maxSize={35} className="h-full min-h-0">
                 <div className="vibrancy h-full border-r border-border overflow-hidden">
                   <ErrorBoundary fallback={<InlineErrorFallback name="Sidebar" />}>
                     <Sidebar />
@@ -341,7 +341,7 @@ function InlineErrorFallback({ name }: { name: string }) {
               <PanelResizeHandle className="w-[3px] bg-transparent hover:bg-accent transition-colors cursor-col-resize" />
             </>
           )}
-          <Panel defaultSize={sidebarOpen ? 50 : 70} minSize={30} className="min-h-0">
+          <Panel defaultSize={sidebarOpen ? 50 : 70} minSize={30} className="h-full min-h-0">
             <div className="h-full min-h-0 overflow-hidden bg-surface-0">
               <ErrorBoundary fallback={<InlineErrorFallback name="Commit Graph" />}>
                 <CommitGraph />
@@ -349,7 +349,7 @@ function InlineErrorFallback({ name }: { name: string }) {
             </div>
           </Panel>
           <PanelResizeHandle className="w-[3px] bg-transparent hover:bg-accent transition-colors cursor-col-resize" />
-          <Panel defaultSize={30} minSize={20} maxSize={45} className="min-h-0">
+          <Panel defaultSize={30} minSize={20} maxSize={45} className="h-full min-h-0">
             <div className="h-full min-h-0 overflow-hidden">
               <ErrorBoundary fallback={<InlineErrorFallback name="Details Panel" />}>
                 <RightPanel />

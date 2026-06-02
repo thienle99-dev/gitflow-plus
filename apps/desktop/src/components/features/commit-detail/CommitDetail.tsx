@@ -195,7 +195,7 @@ export default function CommitDetail() {
             <button
               onClick={handleReview}
               disabled={aiReview.isPending}
-              className="flex items-center gap-1.5 px-2 py-1 text-2xs font-medium text-orange-400 hover:text-orange-300 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 rounded-mac transition-all cursor-pointer disabled:opacity-40"
+              className="flex items-center gap-1.5 px-2 py-1 text-2xs font-medium text-accent hover:text-accent-fg bg-accent-10 hover:bg-accent-20 border border-accent-30 rounded-mac transition-all cursor-pointer disabled:opacity-40"
               title="Code review this commit with AI"
             >
               <MessageSquareText size={11} className={aiReview.isPending ? "animate-pulse" : ""} />
@@ -236,14 +236,14 @@ export default function CommitDetail() {
 
       {/* AI Review */}
       {showReview && (
-        <div className="px-3 py-2.5 border-b border-border bg-orange-500/5">
+        <div className="px-3 py-2.5 border-b border-border bg-accent-10">
           <div className="flex items-center gap-1.5 mb-2">
-            <MessageSquareText size={12} className="text-orange-400" />
-            <span className="text-xs font-semibold text-orange-400">AI Code Review</span>
+            <MessageSquareText size={12} className="text-accent" />
+            <span className="text-xs font-semibold text-accent">AI Code Review</span>
           </div>
           {aiReview.isPending ? (
             <div className="flex items-center gap-2 text-2xs text-text-muted">
-              <div className="w-3 h-3 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
+              <div className="w-3 h-3 border-2 border-accent border-t-transparent rounded-full animate-spin" />
               Reviewing commit changes...
             </div>
           ) : aiReview.isError ? (
@@ -550,54 +550,54 @@ function renderReviewResult(text: string): React.ReactNode[] {
     }
 
     if (line.startsWith("### ")) {
-      elements.push(<div key={`l${key++}`} className="font-semibold text-text-primary mt-2.5 mb-1 text-xs border-l-2 border-orange-400/50 pl-2">{line.slice(4)}</div>);
+      elements.push(<div key={`l${key++}`} className="font-semibold text-text-primary mt-2.5 mb-1 text-xs border-l-2 border-accent-40 pl-2">{line.slice(4)}</div>);
       continue;
     }
     if (line.startsWith("## ")) {
-      elements.push(<div key={`l${key++}`} className="font-semibold text-text-primary mt-2.5 mb-1 text-xs border-l-2 border-orange-400/50 pl-2">{line.slice(3)}</div>);
+      elements.push(<div key={`l${key++}`} className="font-semibold text-text-primary mt-2.5 mb-1 text-xs border-l-2 border-accent-40 pl-2">{line.slice(3)}</div>);
       continue;
     }
     if (line.startsWith("- **[BUG]**")) {
       elements.push(
-        <div key={`l${key++}`} className="ml-1 mt-1 flex gap-1.5 border-l-2 border-[#ff375f] pl-2 py-0.5 bg-[#ff375f]/5 rounded-r-sm">
+        <div key={`l${key++}`} className="ml-1 mt-1 flex gap-1.5 border-l-2 border-[#ff375f] pl-2 py-0.5 bg-[#ff375f]/8 rounded-r-sm">
           <span className="inline-flex items-center px-1 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-[#ff375f]/20 text-[#ff375f] shrink-0">Bug</span>
-          <span>{parseBoldText(line.slice(11))}</span>
+          <span className="text-text-secondary">{parseBoldText(line.slice(11))}</span>
         </div>
       );
       continue;
     }
     if (line.startsWith("- **[SECURITY]**")) {
       elements.push(
-        <div key={`l${key++}`} className="ml-1 mt-1 flex gap-1.5 border-l-2 border-[#ff6b35] pl-2 py-0.5 bg-[#ff6b35]/5 rounded-r-sm">
+        <div key={`l${key++}`} className="ml-1 mt-1 flex gap-1.5 border-l-2 border-[#ff6b35] pl-2 py-0.5 bg-[#ff6b35]/8 rounded-r-sm">
           <span className="inline-flex items-center px-1 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-[#ff6b35]/20 text-[#ff6b35] shrink-0">Security</span>
-          <span>{parseBoldText(line.slice(16))}</span>
+          <span className="text-text-secondary">{parseBoldText(line.slice(16))}</span>
         </div>
       );
       continue;
     }
     if (line.startsWith("- **[PERF]**")) {
       elements.push(
-        <div key={`l${key++}`} className="ml-1 mt-1 flex gap-1.5 border-l-2 border-yellow-400 pl-2 py-0.5 bg-yellow-400/5 rounded-r-sm">
-          <span className="inline-flex items-center px-1 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-yellow-400/20 text-yellow-400 shrink-0">Perf</span>
-          <span>{parseBoldText(line.slice(12))}</span>
+        <div key={`l${key++}`} className="ml-1 mt-1 flex gap-1.5 border-l-2 border-yellow-500 pl-2 py-0.5 bg-yellow-500/8 rounded-r-sm">
+          <span className="inline-flex items-center px-1 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-yellow-500/20 text-yellow-500 shrink-0">Perf</span>
+          <span className="text-text-secondary">{parseBoldText(line.slice(12))}</span>
         </div>
       );
       continue;
     }
     if (line.startsWith("- **[STYLE]**")) {
       elements.push(
-        <div key={`l${key++}`} className="ml-1 mt-1 flex gap-1.5 border-l-2 border-blue-400 pl-2 py-0.5 bg-blue-400/5 rounded-r-sm">
-          <span className="inline-flex items-center px-1 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-blue-400/20 text-blue-400 shrink-0">Style</span>
-          <span>{parseBoldText(line.slice(13))}</span>
+        <div key={`l${key++}`} className="ml-1 mt-1 flex gap-1.5 border-l-2 border-blue-500 pl-2 py-0.5 bg-blue-500/8 rounded-r-sm">
+          <span className="inline-flex items-center px-1 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-blue-500/20 text-blue-500 shrink-0">Style</span>
+          <span className="text-text-secondary">{parseBoldText(line.slice(13))}</span>
         </div>
       );
       continue;
     }
     if (line.startsWith("- **[BEST-PRACTICE]**")) {
       elements.push(
-        <div key={`l${key++}`} className="ml-1 mt-1 flex gap-1.5 border-l-2 border-purple-400 pl-2 py-0.5 bg-purple-400/5 rounded-r-sm">
-          <span className="inline-flex items-center px-1 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-purple-400/20 text-purple-400 shrink-0">Practice</span>
-          <span>{parseBoldText(line.slice(20))}</span>
+        <div key={`l${key++}`} className="ml-1 mt-1 flex gap-1.5 border-l-2 border-purple-500 pl-2 py-0.5 bg-purple-500/8 rounded-r-sm">
+          <span className="inline-flex items-center px-1 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-500 shrink-0">Practice</span>
+          <span className="text-text-secondary">{parseBoldText(line.slice(20))}</span>
         </div>
       );
       continue;
@@ -605,7 +605,7 @@ function renderReviewResult(text: string): React.ReactNode[] {
     const riskMatch = line.match(/^\*\*(Low|Medium|High)\*\*(.*)/i);
     if (riskMatch) {
       const level = riskMatch[1].toLowerCase();
-      const colors = level === "high" ? "bg-[#ff375f]/20 text-[#ff375f] border-[#ff375f]/30" : level === "medium" ? "bg-yellow-400/20 text-yellow-400 border-yellow-400/30" : "bg-emerald-400/20 text-emerald-400 border-emerald-400/30";
+      const colors = level === "high" ? "bg-[#ff375f]/20 text-[#ff375f] border-[#ff375f]/30" : level === "medium" ? "bg-yellow-500/20 text-yellow-500 border-yellow-500/30" : "bg-emerald-500/20 text-emerald-500 border-emerald-500/30";
       elements.push(
         <div key={`l${key++}`} className="flex items-center gap-2 mt-2 mb-1">
           <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${colors}`}>{riskMatch[1]} Risk</span>
@@ -619,7 +619,7 @@ function renderReviewResult(text: string): React.ReactNode[] {
       continue;
     }
     if (line.startsWith("- ")) {
-      elements.push(<div key={`l${key++}`} className="ml-2 mt-0.5 flex gap-1.5"><span className="text-orange-400/60 shrink-0">•</span><span>{parseBoldText(line.slice(2))}</span></div>);
+      elements.push(<div key={`l${key++}`} className="ml-2 mt-0.5 flex gap-1.5"><span className="text-accent/60 shrink-0">•</span><span>{parseBoldText(line.slice(2))}</span></div>);
       continue;
     }
     elements.push(<div key={`l${key++}`}>{parseBoldText(line) || "\u00A0"}</div>);

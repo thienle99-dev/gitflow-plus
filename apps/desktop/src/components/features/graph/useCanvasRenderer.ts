@@ -62,7 +62,11 @@ export function useCanvasRenderer({
 
     const dpr = window.devicePixelRatio || 1;
     const laneWidth = getLaneWidth(totalLanes);
-    const height = containerHeight;
+    const scrollContainer = canvas.parentElement?.parentElement;
+    const measuredHeight = scrollContainer?.clientHeight || 0;
+    const measuredWidth = scrollContainer?.clientWidth || 0;
+    const height = Math.max(1, containerHeight, measuredHeight);
+    const width = Math.max(1, containerWidth, measuredWidth);
     const startRow = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER_ROWS);
     const endRow = Math.min(
       layout.commits.length,
@@ -74,7 +78,6 @@ export function useCanvasRenderer({
     const offsetY = -scrollTop;
     const graphRight = getVisibleGraphRight(visible, visibleEdges, laneWidth);
     const messageX = Math.max(84, graphRight + 24);
-    const width = Math.max(1, containerWidth);
     const columns = getColumns(width, messageX);
 
     const pixelWidth = Math.ceil(width * dpr);
