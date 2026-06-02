@@ -311,9 +311,9 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
   }, [filteredMrs]);
 
   return (
-    <div className="flex h-full w-full flex-col md:flex-row bg-surface-0 overflow-hidden select-none">
+    <div className="flex h-full w-full flex-row bg-surface-0 overflow-hidden select-none">
       {/* Sidebar - MR List */}
-      <div className="w-full md:w-[360px] md:min-w-[280px] shrink-0 border-b md:border-b-0 md:border-r border-border-60 bg-surface-1 flex flex-col h-[40%] md:h-full">
+      <div className="w-[35%] min-w-[240px] max-w-[360px] shrink-0 border-r border-border-60 bg-surface-1 flex flex-col h-full">
         {/* Header */}
         <div className="px-3.5 py-3 border-b border-border-60 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
@@ -474,7 +474,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
       </div>
 
       {/* Main Panel - MR Details */}
-      <div className="flex-1 min-w-0 flex flex-col h-[60%] md:h-full bg-surface-0">
+      <div className="flex-1 min-w-0 flex flex-col h-full bg-surface-0 overflow-hidden">
         {/* Header */}
         <div className="px-4 py-3 border-b border-border-60 flex items-center justify-between shrink-0 bg-surface-1/10">
           <div className="flex items-center gap-2">
@@ -535,7 +535,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
               </div>
 
               {/* Branch Connection Card */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3 p-3 bg-surface-1/40 border border-border-40 rounded-mac">
+              <div className="flex flex-row items-center justify-between gap-3 p-3 bg-surface-1/40 border border-border-40 rounded-mac">
                 <div className="min-w-0 flex items-center gap-2 text-xs flex-1 overflow-hidden">
                   <GitBranch size={13} className="text-accent shrink-0" />
                   <span className="min-w-0 max-w-[50%] truncate font-mono font-semibold bg-[#30d158]/10 text-[#30d158] px-1.5 py-0.5 rounded-[4px] border border-[#30d158]/20">
@@ -577,7 +577,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
 
               {/* Changed Files */}
               <div className="space-y-2 border-t border-border-60 pt-3">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <div className="flex flex-row items-center justify-between gap-2">
                   <h4 className="text-2xs font-bold text-[#ff9f0a] uppercase tracking-wider flex items-center gap-1.5">
                     <FileText size={10} className="text-[#ff9f0a]" />
                     Changed Files {changedFiles.length > 0 ? `(${changedFiles.length})` : ""}
