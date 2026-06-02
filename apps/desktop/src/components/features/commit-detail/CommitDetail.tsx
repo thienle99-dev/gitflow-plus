@@ -19,11 +19,12 @@ import {
   FileTerminal,
   FileText,
   GitCommit,
+  MessageSquareText,
   RotateCcw,
   Sparkles,
   User,
 } from "lucide-react";
-import { useAICommitExplain } from "@/queries/useAI";
+import { useAICommitExplain, useAICommitReview } from "@/queries/useAI";
 
 export default function CommitDetail() {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -37,13 +38,19 @@ export default function CommitDetail() {
   const [reverting, setReverting] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
   const [explanation, setExplanation] = useState("");
+  const [showReview, setShowReview] = useState(false);
+  const [reviewResult, setReviewResult] = useState("");
   const aiExplain = useAICommitExplain();
+  const aiReview = useAICommitReview();
 
-  // Reset explanation when commit changes
+  // Reset explanation & review when commit changes
   useEffect(() => {
     setShowExplanation(false);
     setExplanation("");
     aiExplain.reset();
+    setShowReview(false);
+    setReviewResult("");
+    aiReview.reset();
   }, [selectedCommit]);
 
   const handleRevert = async () => {
@@ -77,6 +84,27 @@ export default function CommitDetail() {
         commitMessage: commit.message,
       });
       setExplanation(result);
+    } catch {
+      // Error is rendered from mutation state
+    }
+  };
+
+  const handleReview = async () => {
+    if (!repoPath || !selectedCommit || !commit) return;
+    if (showReview && reviewResult) {
+      setShowReview(false);
+      return;
+    }
+    setShowReview(true);
+    if (reviewResult) return; // Already have review
+
+    try {
+      const result = await aiReview.mutateAsync({
+        repoPath,
+        commitHash: selectedCommit,
+        commitMessage: commit.message,
+      });
+      setReviewResult(result);
     } catch {
       // Error is rendered from mutation state
     }
@@ -150,44 +178,82 @@ export default function CommitDetail() {
           {reverting ? "Reverting..." : "Revert commit"}
         </button>
         {localStorage.getItem("gitflowAiApiKey") && (
-          <button
-            onClick={handleExplain}
-            disabled={aiExplain.isPending}
-            className="flex items-center gap-1.5 px-2 py-1 mt-1 text-2xs font-medium text-accent hover:text-accent-fg bg-accent-10 hover:bg-accent-20 border border-accent-30 rounded-mac transition-all cursor-pointer disabled:opacity-40"
-            title="Explain this commit with AI"
-          >
-            <Sparkles size={11} className={aiExplain.isPending ? "animate-pulse" : ""} />
-            {aiExplain.isPending
-              ? "Analyzing..."
-              : showExplanation
-                ? "Hide explanation"
-                : "Explain with AI"}
-          </button>
+          <div className="flex items-center gap-1.5 mt-1">
+            <button
+              onClick={handleExplain}
+              disabled={aiExplain.isPending}
+              className="flex items-center gap-1.5 px-2 py-1 text-2xs font-medium text-accent hover:text-accent-fg bg-accent-10 hover:bg-accent-20 border border-accent-30 rounded-mac transition-all cursor-pointer disabled:opacity-40"
+              title="Explain this commit with AI"
+            >
+              <Sparkles size={11} className={aiExplain.isPending ? "animate-pulse" : ""} />
+              {aiExplain.isPending
+                ? "Analyzing..."
+                : showExplanation
+                  ? "Hide explanation"
+                  : "Explain with AI"}
+            </button>
+            <button
+              onClick={handleReview}
+              disabled={aiReview.isPending}
+              className="flex items-center gap-1.5 px-2 py-1 text-2xs font-medium text-orange-400 hover:text-orange-300 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 rounded-mac transition-all cursor-pointer disabled:opacity-40"
+              title="Code review this commit with AI"
+            >
+              <MessageSquareText size={11} className={aiReview.isPending ? "animate-pulse" : ""} />
+              {aiReview.isPending
+                ? "Reviewing..."
+                : showReview
+                  ? "Hide review"
+                  : "Review with AI"}
+            </button>
+          </div>
         )}
       </div>
 
       {/* AI Explanation */}
       {showExplanation && (
-        <div className="px-3 py-2 border-b border-border bg-accent-5">
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <Sparkles size={11} className="text-accent" />
-            <span className="text-2xs font-semibold text-accent">AI Explanation</span>
+        <div className="px-3 py-2.5 border-b border-border bg-accent-5">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Sparkles size={12} className="text-accent" />
+            <span className="text-xs font-semibold text-accent">AI Explanation</span>
           </div>
           {aiExplain.isPending ? (
-            <div className="text-2xs text-text-muted animate-pulse">Analyzing commit changes...</div>
+            <div className="flex items-center gap-2 text-2xs text-text-muted">
+              <div className="w-3 h-3 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+              Analyzing commit changes...
+            </div>
           ) : aiExplain.isError ? (
-            <div className="text-2xs text-[#ff375f]">
+            <div className="flex items-center gap-2 px-2.5 py-1.5 bg-[#ff375f]/10 border border-[#ff375f]/20 rounded-mac text-2xs text-[#ff375f]">
               {aiExplain.error?.message || "Failed to explain commit"}
-              <button
-                onClick={handleExplain}
-                className="ml-2 text-accent underline text-2xs"
-              >
-                Retry
-              </button>
+              <button onClick={handleExplain} className="ml-auto text-accent underline text-2xs font-medium hover:text-accent-fg">Retry</button>
             </div>
           ) : explanation ? (
-            <div className="text-2xs text-text-secondary leading-relaxed whitespace-pre-wrap">
-              {explanation}
+            <div className="text-2xs text-text-secondary leading-relaxed">
+              {renderAIResult(explanation)}
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {/* AI Review */}
+      {showReview && (
+        <div className="px-3 py-2.5 border-b border-border bg-orange-500/5">
+          <div className="flex items-center gap-1.5 mb-2">
+            <MessageSquareText size={12} className="text-orange-400" />
+            <span className="text-xs font-semibold text-orange-400">AI Code Review</span>
+          </div>
+          {aiReview.isPending ? (
+            <div className="flex items-center gap-2 text-2xs text-text-muted">
+              <div className="w-3 h-3 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
+              Reviewing commit changes...
+            </div>
+          ) : aiReview.isError ? (
+            <div className="flex items-center gap-2 px-2.5 py-1.5 bg-[#ff375f]/10 border border-[#ff375f]/20 rounded-mac text-2xs text-[#ff375f]">
+              {aiReview.error?.message || "Failed to review commit"}
+              <button onClick={handleReview} className="ml-auto text-accent underline text-2xs font-medium hover:text-accent-fg">Retry</button>
+            </div>
+          ) : reviewResult ? (
+            <div className="text-2xs text-text-secondary leading-relaxed">
+              {renderReviewResult(reviewResult)}
             </div>
           ) : null}
         </div>
@@ -415,4 +481,204 @@ function getFolder(path: string) {
   const parts = path.split("/");
   parts.pop();
   return parts.join("/");
+}
+
+/** Render **bold** text in a line as React elements */
+function parseBoldText(text: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  const regex = /\*\*(.+?)\*\*/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    parts.push(<span key={`b${key++}`} className="font-semibold text-text-primary">{match[1]}</span>);
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+  return parts.length > 0 ? parts : [text];
+}
+
+/** Render AI Review result with color-coded findings, code block support, and bold text */
+function renderReviewResult(text: string): React.ReactNode[] {
+  const elements: React.ReactNode[] = [];
+  const lines = text.split("\n");
+  let inCodeBlock = false;
+  let codeLang = "";
+  let codeLines: string[] = [];
+  let key = 0;
+
+  const flushCodeBlock = () => {
+    if (codeLines.length > 0) {
+      elements.push(
+        <div key={`cb${key++}`} className="my-2 rounded-mac overflow-hidden border border-border-40">
+          {codeLang && (
+            <div className="px-2.5 py-1 bg-surface-3/60 text-2xs font-mono font-medium text-text-muted uppercase tracking-wide border-b border-border-30">
+              {codeLang}
+            </div>
+          )}
+          <pre className="px-3 py-2 bg-surface-2/80 overflow-x-auto">
+            <code className="text-2xs font-mono text-text-secondary leading-relaxed whitespace-pre">
+              {codeLines.join("\n")}
+            </code>
+          </pre>
+        </div>
+      );
+      codeLines = [];
+      codeLang = "";
+    }
+  };
+
+  for (const line of lines) {
+    if (line.startsWith("```")) {
+      if (inCodeBlock) {
+        flushCodeBlock();
+        inCodeBlock = false;
+      } else {
+        inCodeBlock = true;
+        codeLang = line.slice(3).trim();
+      }
+      continue;
+    }
+    if (inCodeBlock) {
+      codeLines.push(line);
+      continue;
+    }
+
+    if (line.startsWith("### ")) {
+      elements.push(<div key={`l${key++}`} className="font-semibold text-text-primary mt-2.5 mb-1 text-xs border-l-2 border-orange-400/50 pl-2">{line.slice(4)}</div>);
+      continue;
+    }
+    if (line.startsWith("## ")) {
+      elements.push(<div key={`l${key++}`} className="font-semibold text-text-primary mt-2.5 mb-1 text-xs border-l-2 border-orange-400/50 pl-2">{line.slice(3)}</div>);
+      continue;
+    }
+    if (line.startsWith("- **[BUG]**")) {
+      elements.push(
+        <div key={`l${key++}`} className="ml-1 mt-1 flex gap-1.5 border-l-2 border-[#ff375f] pl-2 py-0.5 bg-[#ff375f]/5 rounded-r-sm">
+          <span className="inline-flex items-center px-1 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-[#ff375f]/20 text-[#ff375f] shrink-0">Bug</span>
+          <span>{parseBoldText(line.slice(11))}</span>
+        </div>
+      );
+      continue;
+    }
+    if (line.startsWith("- **[SECURITY]**")) {
+      elements.push(
+        <div key={`l${key++}`} className="ml-1 mt-1 flex gap-1.5 border-l-2 border-[#ff6b35] pl-2 py-0.5 bg-[#ff6b35]/5 rounded-r-sm">
+          <span className="inline-flex items-center px-1 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-[#ff6b35]/20 text-[#ff6b35] shrink-0">Security</span>
+          <span>{parseBoldText(line.slice(16))}</span>
+        </div>
+      );
+      continue;
+    }
+    if (line.startsWith("- **[PERF]**")) {
+      elements.push(
+        <div key={`l${key++}`} className="ml-1 mt-1 flex gap-1.5 border-l-2 border-yellow-400 pl-2 py-0.5 bg-yellow-400/5 rounded-r-sm">
+          <span className="inline-flex items-center px-1 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-yellow-400/20 text-yellow-400 shrink-0">Perf</span>
+          <span>{parseBoldText(line.slice(12))}</span>
+        </div>
+      );
+      continue;
+    }
+    if (line.startsWith("- **[STYLE]**")) {
+      elements.push(
+        <div key={`l${key++}`} className="ml-1 mt-1 flex gap-1.5 border-l-2 border-blue-400 pl-2 py-0.5 bg-blue-400/5 rounded-r-sm">
+          <span className="inline-flex items-center px-1 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-blue-400/20 text-blue-400 shrink-0">Style</span>
+          <span>{parseBoldText(line.slice(13))}</span>
+        </div>
+      );
+      continue;
+    }
+    if (line.startsWith("- **[BEST-PRACTICE]**")) {
+      elements.push(
+        <div key={`l${key++}`} className="ml-1 mt-1 flex gap-1.5 border-l-2 border-purple-400 pl-2 py-0.5 bg-purple-400/5 rounded-r-sm">
+          <span className="inline-flex items-center px-1 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-purple-400/20 text-purple-400 shrink-0">Practice</span>
+          <span>{parseBoldText(line.slice(20))}</span>
+        </div>
+      );
+      continue;
+    }
+    const riskMatch = line.match(/^\*\*(Low|Medium|High)\*\*(.*)/i);
+    if (riskMatch) {
+      const level = riskMatch[1].toLowerCase();
+      const colors = level === "high" ? "bg-[#ff375f]/20 text-[#ff375f] border-[#ff375f]/30" : level === "medium" ? "bg-yellow-400/20 text-yellow-400 border-yellow-400/30" : "bg-emerald-400/20 text-emerald-400 border-emerald-400/30";
+      elements.push(
+        <div key={`l${key++}`} className="flex items-center gap-2 mt-2 mb-1">
+          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${colors}`}>{riskMatch[1]} Risk</span>
+          <span className="text-text-muted">{parseBoldText(riskMatch[2])}</span>
+        </div>
+      );
+      continue;
+    }
+    if (line.match(/^\*\*.*\*\*$/)) {
+      elements.push(<div key={`l${key++}`} className="font-semibold text-text-primary mt-2">{line.replace(/\*\*/g, "")}</div>);
+      continue;
+    }
+    if (line.startsWith("- ")) {
+      elements.push(<div key={`l${key++}`} className="ml-2 mt-0.5 flex gap-1.5"><span className="text-orange-400/60 shrink-0">•</span><span>{parseBoldText(line.slice(2))}</span></div>);
+      continue;
+    }
+    elements.push(<div key={`l${key++}`}>{parseBoldText(line) || "\u00A0"}</div>);
+  }
+
+  if (inCodeBlock) flushCodeBlock();
+  return elements;
+}
+
+/** Render AI text with code block support (```lang ... ```) and bold text */
+function renderAIResult(text: string): React.ReactNode[] {
+  const elements: React.ReactNode[] = [];
+  const lines = text.split("\n");
+  let inCodeBlock = false;
+  let codeLang = "";
+  let codeLines: string[] = [];
+  let key = 0;
+
+  const flushCodeBlock = () => {
+    if (codeLines.length > 0) {
+      elements.push(
+        <div key={`cb${key++}`} className="my-2 rounded-mac overflow-hidden border border-border-40">
+          {codeLang && (
+            <div className="px-2.5 py-1 bg-surface-3/60 text-2xs font-mono font-medium text-text-muted uppercase tracking-wide border-b border-border-30">
+              {codeLang}
+            </div>
+          )}
+          <pre className="px-3 py-2 bg-surface-2/80 overflow-x-auto">
+            <code className="text-2xs font-mono text-text-secondary leading-relaxed whitespace-pre">
+              {codeLines.join("\n")}
+            </code>
+          </pre>
+        </div>
+      );
+      codeLines = [];
+      codeLang = "";
+    }
+  };
+
+  for (const line of lines) {
+    if (line.startsWith("```")) {
+      if (inCodeBlock) {
+        flushCodeBlock();
+        inCodeBlock = false;
+      } else {
+        inCodeBlock = true;
+        codeLang = line.slice(3).trim();
+      }
+      continue;
+    }
+    if (inCodeBlock) {
+      codeLines.push(line);
+      continue;
+    }
+    // Regular text line
+    elements.push(<div key={`l${key++}`}>{parseBoldText(line) || "\u00A0"}</div>);
+  }
+  // Unclosed code block
+  if (inCodeBlock) flushCodeBlock();
+
+  return elements;
 }

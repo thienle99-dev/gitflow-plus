@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useRepoInfo } from "@/queries/useGitLog";
@@ -32,6 +32,7 @@ import {
   type CheckRun,
 } from "@/api/gitHost";
 import { useAIMergeRequestExplain, useAIMergeRequestReview } from "@/queries/useAI";
+import { parseDiff, type DiffHunk, type DiffLine } from "@/lib/parse-diff";
 
 interface MergeRequestDialogProps {
   onClose: () => void;
@@ -220,12 +221,41 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
     );
   }, [changedFiles, selectedChangedFile]);
 
-  const selectAdjacentChangedFile = (direction: -1 | 1) => {
+  const selectAdjacentChangedFile = useCallback((direction: -1 | 1) => {
     if (changedFiles.length === 0) return;
     const currentIndex = selectedChangedFileIndex >= 0 ? selectedChangedFileIndex : 0;
     const nextIndex = (currentIndex + direction + changedFiles.length) % changedFiles.length;
     setSelectedChangedFile(changedFiles[nextIndex]);
-  };
+  }, [changedFiles, selectedChangedFileIndex]);
+
+  // Keyboard navigation: j/k or ArrowDown/ArrowUp to switch files
+  const containerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle when focus is within the dialog
+      if (!el.contains(document.activeElement) && document.activeElement !== el) return;
+      if (e.key === "j" || e.key === "ArrowDown") {
+        e.preventDefault();
+        selectAdjacentChangedFile(1);
+      } else if (e.key === "k" || e.key === "ArrowUp") {
+        e.preventDefault();
+        selectAdjacentChangedFile(-1);
+      }
+    };
+    el.addEventListener("keydown", handleKeyDown);
+    return () => el.removeEventListener("keydown", handleKeyDown);
+  }, [selectAdjacentChangedFile]);
+
+  // Parse the selected file's patch into structured hunks with line numbers
+  const parsedHunks = useMemo(() => {
+    if (!selectedChangedFile?.patch) return [];
+    return parseDiff(selectedChangedFile.patch);
+  }, [selectedChangedFile?.patch]);
+
+  // Hunk count for the selected file
+  const hunkCount = parsedHunks.length;
 
   const getDiffLineClass = (line: string) => {
     if (line.startsWith("+") && !line.startsWith("+++")) {
@@ -238,6 +268,35 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
       return "bg-accent-10 text-accent";
     }
     return "text-text-secondary";
+  };
+
+  // Render text with clickable backtick-wrapped file paths
+  const renderTextWithFileLinks = (text: string) => {
+    const parts = text.split(/(`[^`]+\.[a-zA-Z0-9]+`)/g);
+    return parts.map((part, i) => {
+      const fileMatch = part.match(/^`([^`]+\.[a-zA-Z0-9]+)`$/);
+      if (fileMatch) {
+        const filePath = fileMatch[1];
+        return (
+          <button
+            key={i}
+            type="button"
+            className="inline font-mono text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent cursor-pointer bg-accent-10 px-0.5 rounded-[2px]"
+            onClick={() => {
+              // Find the matching changed file and select it
+              const match = changedFiles.find(
+                (f) => f.path === filePath || f.path.endsWith(`/${filePath}`) || f.path.split("/").pop() === filePath
+              );
+              if (match) setSelectedChangedFile(match);
+            }}
+            title={`Jump to ${filePath}`}
+          >
+            {filePath}
+          </button>
+        );
+      }
+      return <span key={i}>{part}</span>;
+    });
   };
 
   const renderAIText = (text: string) => {
@@ -278,19 +337,67 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
             }`}
           >
             <span className="mr-1 text-text-muted">•</span>
-            {trimmed.slice(2)}
+            {renderTextWithFileLinks(trimmed.slice(2))}
           </div>
         );
       }
       return (
         <p key={index} className="text-text-secondary">
-          {trimmed}
+          {renderTextWithFileLinks(trimmed)}
         </p>
       );
     });
   };
 
   const aiPanelKind = aiReviewResult ? "review" : aiExplanation ? "explain" : null;
+
+  // Parse AI review findings to extract file references for highlighting
+  interface AIFinding {
+    filePath: string;
+    severity: "high" | "medium" | "low" | "info";
+    line: string;
+  }
+  const aiFindings = useMemo<AIFinding[]>(() => {
+    if (!aiReviewResult) return [];
+    const findings: AIFinding[] = [];
+    const lines = aiReviewResult.split("\n");
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith("- ") && !trimmed.startsWith("* ")) continue;
+      // Extract backtick-wrapped file paths
+      const fileMatches = trimmed.matchAll(/`([^`]+\.[a-zA-Z0-9]+)`/g);
+      for (const match of fileMatches) {
+        const filePath = match[1];
+        let severity: AIFinding["severity"] = "info";
+        if (/critical|high|severe|blocking|security|vulnerability/i.test(trimmed)) severity = "high";
+        else if (/medium|warning|caution|risk|regression/i.test(trimmed)) severity = "medium";
+        else if (/low|minor|suggestion|nit|improvement/i.test(trimmed)) severity = "low";
+        findings.push({ filePath, severity, line: trimmed });
+      }
+    }
+    return findings;
+  }, [aiReviewResult]);
+
+  // Map of filePath -> findings for quick lookup
+  const findingsByFile = useMemo(() => {
+    const map = new Map<string, AIFinding[]>();
+    for (const f of aiFindings) {
+      const existing = map.get(f.filePath) || [];
+      existing.push(f);
+      map.set(f.filePath, existing);
+    }
+    return map;
+  }, [aiFindings]);
+
+  // Findings for the currently selected changed file
+  const selectedFileFindings = useMemo(() => {
+    if (!selectedChangedFile) return [];
+    // Match by exact path or filename
+    const byPath = findingsByFile.get(selectedChangedFile.path);
+    if (byPath) return byPath;
+    const fileName = selectedChangedFile.path.split("/").pop() || "";
+    return findingsByFile.get(fileName) || [];
+  }, [selectedChangedFile, findingsByFile]);
 
   const providerReviewUrl = useMemo(() => {
     if (!selectedMr) return "";
@@ -311,7 +418,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
   }, [filteredMrs]);
 
   return (
-    <div className="flex h-full w-full flex-row bg-surface-0 overflow-hidden select-none">
+    <div ref={containerRef} tabIndex={-1} className="flex h-full w-full flex-row bg-surface-0 overflow-hidden select-none outline-none">
       {/* Sidebar - MR List */}
       <div className="w-[35%] min-w-[240px] max-w-[360px] shrink-0 border-r border-border-60 bg-surface-1 flex flex-col h-full">
         {/* Header */}
@@ -641,6 +748,8 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                           selectedChangedFile?.path === file.path &&
                           selectedChangedFile?.oldPath === file.oldPath &&
                           selectedChangedFile?.status === file.status;
+                        const fileHasFindings = findingsByFile.has(file.path) ||
+                          findingsByFile.has(file.path.split("/").pop() || "");
 
                         return (
                           <button
@@ -650,24 +759,29 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                               isFileSelected
                                 ? "bg-accent-10"
                                 : "hover:bg-surface-2/70"
-                            }`}
+                            } ${fileHasFindings ? "border-l-2 border-l-[#ff9f0a]" : ""}`}
                             title={file.oldPath ? `${file.oldPath} -> ${file.path}` : file.path}
                           >
                             <div className="min-w-0 flex items-center gap-2">
-                              <FileText
-                                size={11}
-                                className={`shrink-0 ${
-                                  file.status === "added"
-                                    ? "text-[#30d158]"
-                                    : file.status === "deleted"
-                                    ? "text-[#ff453a]"
-                                    : file.status === "renamed"
-                                    ? "text-[#64d2ff]"
-                                    : isFileSelected
-                                    ? "text-accent"
-                                    : "text-[#ff9f0a]"
-                                }`}
-                              />
+                              <div className="relative shrink-0">
+                                <FileText
+                                  size={11}
+                                  className={`${
+                                    file.status === "added"
+                                      ? "text-[#30d158]"
+                                      : file.status === "deleted"
+                                      ? "text-[#ff453a]"
+                                      : file.status === "renamed"
+                                      ? "text-[#64d2ff]"
+                                      : isFileSelected
+                                      ? "text-accent"
+                                      : "text-[#ff9f0a]"
+                                  }`}
+                                />
+                                {fileHasFindings && (
+                                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#ff9f0a] border border-surface-1" />
+                                )}
+                              </div>
                               <div className="min-w-0">
                                 <div className="truncate text-2xs font-semibold text-text-primary">
                                   {file.path.split("/").pop() || file.path}
@@ -705,42 +819,121 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                     {selectedChangedFile && (
                       <div className="border-t border-border-40 bg-surface-0/60">
                         <div className="flex items-center justify-between gap-2 border-b border-border-40 px-2.5 py-2">
-                          <div className="min-w-0">
-                            <div className="truncate text-2xs font-bold text-text-primary">
-                              {selectedChangedFile.oldPath
-                                ? `${selectedChangedFile.oldPath} -> ${selectedChangedFile.path}`
-                                : selectedChangedFile.path}
-                            </div>
-                            <div className="text-[10px] text-text-muted">
-                              File {selectedChangedFileIndex + 1} of {changedFiles.length}
+                          <div className="min-w-0 flex items-center gap-2">
+                            <span className="shrink-0 rounded bg-surface-3 px-1.5 py-0.5 text-[9px] font-bold text-text-muted uppercase font-mono">
+                              {(selectedChangedFile.path.split(".").pop() || "txt").slice(0, 5)}
+                            </span>
+                            <div className="min-w-0">
+                              <div className="truncate text-2xs font-bold text-text-primary">
+                                {selectedChangedFile.oldPath
+                                  ? `${selectedChangedFile.oldPath} -> ${selectedChangedFile.path}`
+                                  : selectedChangedFile.path}
+                              </div>
+                              <div className="text-[10px] text-text-muted flex items-center gap-2">
+                                <span>File {selectedChangedFileIndex + 1} of {changedFiles.length}</span>
+                                {hunkCount > 0 && (
+                                  <span className="text-accent">{hunkCount} hunk{hunkCount > 1 ? "s" : ""}</span>
+                                )}
+                              </div>
                             </div>
                           </div>
                           <div className="flex shrink-0 items-center gap-1">
                             <button
                               onClick={() => selectAdjacentChangedFile(-1)}
                               className="h-6 px-2 rounded border border-border-40 bg-surface-2 text-[10px] font-bold text-text-secondary hover:bg-surface-3 hover:text-text-primary"
+                              title="Previous file (k)"
                             >
                               Prev
                             </button>
                             <button
                               onClick={() => selectAdjacentChangedFile(1)}
                               className="h-6 px-2 rounded border border-border-40 bg-surface-2 text-[10px] font-bold text-text-secondary hover:bg-surface-3 hover:text-text-primary"
+                              title="Next file (j)"
                             >
                               Next
                             </button>
                           </div>
                         </div>
 
+                        {/* AI Findings Banner for this file */}
+                        {selectedFileFindings.length > 0 && (
+                          <div className="border-b border-border-40 px-2.5 py-2 bg-[#ff9f0a]/5">
+                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#ff9f0a]">
+                              <AlertTriangle size={10} />
+                              <span>{selectedFileFindings.length} AI finding{selectedFileFindings.length > 1 ? "s" : ""} in this file</span>
+                            </div>
+                            <div className="mt-1 space-y-1">
+                              {selectedFileFindings.map((finding, i) => (
+                                <div key={i} className="flex items-start gap-1.5 text-[10px] text-text-secondary">
+                                  <span className={`shrink-0 mt-0.5 w-1.5 h-1.5 rounded-full ${
+                                    finding.severity === "high" ? "bg-[#ff453a]" :
+                                    finding.severity === "medium" ? "bg-[#ff9f0a]" :
+                                    finding.severity === "low" ? "bg-[#0a84ff]" :
+                                    "bg-text-muted"
+                                  }`} />
+                                  <span className="leading-snug">{finding.line.replace(/^[-*]\s*/, "").slice(0, 160)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         {selectedChangedFile.patch ? (
                           <div className="max-h-[320px] overflow-auto bg-[#0b0c0f] py-2 font-mono text-[11px] leading-5">
-                            {selectedChangedFile.patch.split("\n").map((line, index) => (
-                              <div
-                                key={`${selectedChangedFile.path}:${index}`}
-                                className={`whitespace-pre px-3 ${getDiffLineClass(line)}`}
-                              >
-                                {line || " "}
-                              </div>
-                            ))}
+                            {parsedHunks.length > 0 ? (
+                              parsedHunks.map((hunk, hunkIdx) => (
+                                <div key={hunkIdx}>
+                                  {/* Hunk header separator */}
+                                  <div className="flex items-center gap-2 bg-surface-2/30 border-y border-border-40/40 px-3 py-1 text-[10px] text-text-muted">
+                                    <span className="font-mono text-accent">{hunk.header.match(/@@ .+ @@/)?.[0] || hunk.header}</span>
+                                  </div>
+                                  {/* Hunk lines with line numbers */}
+                                  {hunk.lines.filter(l => l.type !== "header").map((dLine, lineIdx) => (
+                                    <div
+                                      key={`${hunkIdx}:${lineIdx}`}
+                                      className={`flex ${
+                                        dLine.type === "add"
+                                          ? "bg-[#30d158]/10"
+                                          : dLine.type === "delete"
+                                          ? "bg-[#ff453a]/10"
+                                          : ""
+                                      }`}
+                                    >
+                                      {/* Old line number */}
+                                      <span className="w-10 shrink-0 text-right pr-2 text-text-muted/40 select-none border-r border-border-40/20">
+                                        {dLine.oldLineNumber ?? ""}
+                                      </span>
+                                      {/* New line number */}
+                                      <span className="w-10 shrink-0 text-right pr-2 text-text-muted/40 select-none border-r border-border-40/20">
+                                        {dLine.newLineNumber ?? ""}
+                                      </span>
+                                      {/* Diff type indicator */}
+                                      <span className={`w-5 shrink-0 text-center select-none ${
+                                        dLine.type === "add" ? "text-[#30d158]" : dLine.type === "delete" ? "text-[#ff453a]" : "text-text-muted/30"
+                                      }`}>
+                                        {dLine.type === "add" ? "+" : dLine.type === "delete" ? "-" : " "}
+                                      </span>
+                                      {/* Content */}
+                                      <span className={`flex-1 whitespace-pre ${
+                                        dLine.type === "add" ? "text-[#7ee787]" : dLine.type === "delete" ? "text-[#ff9b95]" : "text-text-secondary"
+                                      }`}>
+                                        {dLine.content.slice(1) || " "}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ))
+                            ) : (
+                              // Fallback to raw rendering if parseDiff fails
+                              selectedChangedFile.patch.split("\n").map((line, index) => (
+                                <div
+                                  key={`${selectedChangedFile.path}:${index}`}
+                                  className={`whitespace-pre px-3 ${getDiffLineClass(line)}`}
+                                >
+                                  {line || " "}
+                                </div>
+                              ))
+                            )}
                           </div>
                         ) : (
                           <div className="p-3 text-2xs leading-relaxed text-text-muted">

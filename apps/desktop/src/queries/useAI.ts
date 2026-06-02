@@ -5,6 +5,7 @@ import {
   generateCommitMessageWithAI,
   reviewDiffWithAI,
   explainCommitWithAI,
+  reviewCommitWithAI,
   analyzeCommitScope,
   explainMergeRequestWithAI,
   reviewMergeRequestWithAI,
@@ -23,6 +24,20 @@ export function useAIDiffReview() {
   return useMutation({
     mutationFn: ({ filePath, diff }: { filePath: string; diff: string }) =>
       reviewDiffWithAI(filePath, diff),
+  });
+}
+
+export function useAICommitReview() {
+  return useMutation({
+    mutationFn: ({
+      repoPath,
+      commitHash,
+      commitMessage,
+    }: {
+      repoPath: string;
+      commitHash: string;
+      commitMessage: string;
+    }) => reviewCommitWithAI(repoPath, commitHash, commitMessage),
   });
 }
 

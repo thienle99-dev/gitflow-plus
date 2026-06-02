@@ -88,12 +88,13 @@ export async function reviewDiffWithAI(filePath: string, diff: string) {
   }
 
   const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
+  const customRulesInstruction = buildCustomRulesInstruction(settings.customRules);
   const prompt = `You are a world-class senior software architect. Analyze the git diff below for the file "${filePath}" and provide two structured sections:
 1. CODE EXPLANATION: A clear, high-level summary of WHAT was changed and WHY.
 2. CODE REVIEW & SUGGESTIONS: Inspect the code changes for potential bugs, security issues, performance optimization opportunities, or style improvements. If everything looks good, say that clearly.
 
 Be professional, direct, constructive, and use markdown styling.
-${languageInstruction}
+${languageInstruction}${customRulesInstruction}
 
 Diff:
 ${diff.slice(0, 8000)}`;
@@ -126,6 +127,7 @@ export async function explainCommitWithAI(
   const branchContext = branchName ? `Branch: ${branchName}\n` : "";
   const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
 
+  const customRulesInstruction = buildCustomRulesInstruction(settings.customRules);
   const prompt = `You are a senior software engineer reviewing a Git commit. Explain this commit for code review.
 
 ${branchContext}Commit message: ${commitMessage}
@@ -139,13 +141,60 @@ INSTRUCTIONS:
 3. List the KEY CHANGES as bullet points (max 5-6).
 4. If there are potential RISKS or BREAKING CHANGES, mention them briefly.
 5. Be concise and direct. No markdown code blocks.
-${languageInstruction}`;
+${languageInstruction}${customRulesInstruction}`;
 
   const explanation = cleanAIText(await requestAIText(prompt, withReviewModel(settings)));
   if (!explanation) {
     throw new Error("Empty response from AI");
   }
   return explanation;
+}
+
+export async function reviewCommitWithAI(
+  repoPath: string,
+  commitHash: string,
+  commitMessage: string,
+): Promise<string> {
+  const settings = readAISettings();
+  if (!hasProvider(settings)) {
+    throw new Error("Configure an AI API key in settings to use AI features");
+  }
+
+  const diff = await api.diff.commit(repoPath, commitHash);
+  if (!diff.trim()) {
+    return "This commit has no file changes to review (e.g., an empty merge commit).";
+  }
+
+  const truncatedDiff = diff.slice(0, 12_000);
+  const branchName = await getCurrentBranchName(repoPath);
+  const branchContext = branchName ? `Branch: ${branchName}\n` : "";
+  const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
+
+  const customRulesInstruction = buildCustomRulesInstruction(settings.customRules);
+  const prompt = `You are a world-class senior software architect performing a thorough code review. Analyze the git diff below for this commit.
+
+${branchContext}Commit: ${commitMessage}
+
+INSTRUCTIONS:
+1. RISK ASSESSMENT: Rate the overall risk level (Low / Medium / High) with a one-line justification.
+2. FINDINGS: List specific code review findings. Each finding bullet MUST reference the file path wrapped in backticks, e.g. \`src/auth/login.ts\`. Always use the exact file path from the diff header. Categorize each as:
+   - [BUG] potential bug or logic error
+   - [SECURITY] security concern
+   - [PERF] performance issue
+   - [STYLE] code style or readability improvement
+   - [BEST-PRACTICE] best practice violation
+3. If the code looks solid with no issues, say so clearly — do not invent problems.
+4. Be professional, direct, constructive. Use markdown styling.
+${languageInstruction}${customRulesInstruction}
+
+Diff:
+${truncatedDiff}`;
+
+  const review = cleanAIText(await requestAIText(prompt, withReviewModel(settings)));
+  if (!review) {
+    throw new Error("Empty response from AI reviewer");
+  }
+  return review;
 }
 
 export async function explainMergeRequestWithAI(
@@ -172,6 +221,7 @@ export async function explainMergeRequestWithAI(
     .join("\n\n");
   const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
 
+  const customRulesInstruction = buildCustomRulesInstruction(settings.customRules);
   const prompt = `You are a senior engineer reviewing a merge request. Explain the change and call out review-relevant details.
 
 Title: ${mergeRequest.title}
@@ -193,7 +243,7 @@ INSTRUCTIONS:
 2. List key file-level changes as bullets.
 3. Mention risk areas, testing focus, or possible regressions.
 4. Keep it useful for code review. No code blocks.
-${languageInstruction}`;
+${languageInstruction}${customRulesInstruction}`;
 
   const explanation = cleanAIText(await requestAIText(prompt, withReviewModel(settings)));
   if (!explanation) {
@@ -226,6 +276,7 @@ export async function reviewMergeRequestWithAI(
     .join("\n\n");
   const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
 
+  const customRulesInstruction = buildCustomRulesInstruction(settings.customRules);
   const prompt = `You are a rigorous senior engineer performing a merge request review.
 
 Title: ${mergeRequest.title}
@@ -245,10 +296,11 @@ ${diffSnippets || "(No patch snippets returned)"}
 INSTRUCTIONS:
 1. Review for correctness bugs, security issues, regressions, data loss risks, performance problems, missing validation, and missing tests.
 2. Lead with review findings. For each finding include severity, file path, and why it matters.
-3. If no concrete issues are found, say "No blocking issues found" and list residual risks or tests to run.
-4. End with a short recommendation: Approve, Approve with comments, or Request changes.
-5. Be concise and practical. Use markdown bullets, no code blocks.
-${languageInstruction}`;
+3. FORMAT: Each finding bullet MUST reference the file path wrapped in backticks, e.g. \`src/auth/login.ts\`. Always use the exact file path from the diff header.
+4. If no concrete issues are found, say "No blocking issues found" and list residual risks or tests to run.
+5. End with a short recommendation: Approve, Approve with comments, or Request changes.
+6. Be concise and practical. Use markdown bullets, no code blocks.
+${languageInstruction}${customRulesInstruction}`;
 
   const review = cleanAIText(await requestAIText(prompt, withReviewModel(settings)));
   if (!review) {
@@ -394,6 +446,12 @@ function readAIReviewLanguage(): AIReviewLanguage {
     return saved as AIReviewLanguage;
   }
   return "auto";
+}
+
+function buildCustomRulesInstruction(customRules: string): string {
+  return customRules.trim()
+    ? `\nUSER CUSTOM GUIDELINES:\n${customRules.trim()}\n`
+    : "";
 }
 
 function buildReviewLanguageInstruction(language: AIReviewLanguage) {
