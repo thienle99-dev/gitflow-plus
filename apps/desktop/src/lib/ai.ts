@@ -1,4 +1,5 @@
 import { api, type FileChange, type Branch } from "@/api/tauri";
+import type { MergeRequest, MergeRequestFileChange } from "@/api/gitHost";
 
 const DEFAULT_MODEL = "claude-sonnet-4-20250514";
 
@@ -124,6 +125,58 @@ INSTRUCTIONS:
 4. If there are potential RISKS or BREAKING CHANGES, mention them briefly.
 5. Use plain English. Be concise and direct. No markdown code blocks.
 6. Use English unless the commit message is in another language.`;
+
+  const explanation = cleanAIText(await requestAIText(prompt, settings));
+  if (!explanation) {
+    throw new Error("Empty response from AI");
+  }
+  return explanation;
+}
+
+export async function explainMergeRequestWithAI(
+  mergeRequest: MergeRequest,
+  files: MergeRequestFileChange[],
+): Promise<string> {
+  const settings = readAISettings();
+  if (!hasProvider(settings)) {
+    throw new Error("Configure an AI API key in settings to use AI features");
+  }
+
+  const fileSummary = files.map((file) => {
+    const oldPath = file.oldPath ? ` (from ${file.oldPath})` : "";
+    const stats = file.additions !== undefined || file.deletions !== undefined
+      ? ` +${file.additions ?? 0}/-${file.deletions ?? 0}`
+      : "";
+    return `- [${file.status}] ${file.path}${oldPath}${stats}`;
+  }).join("\n");
+
+  const diffSnippets = files
+    .filter((file) => file.patch?.trim())
+    .slice(0, 12)
+    .map((file) => `### ${file.path}\n${file.patch!.slice(0, 1800)}`)
+    .join("\n\n");
+
+  const prompt = `You are a senior engineer reviewing a merge request. Explain the change in plain English and call out review-relevant details.
+
+Title: ${mergeRequest.title}
+Author: ${mergeRequest.author}
+State: ${mergeRequest.state}
+Branches: ${mergeRequest.sourceBranch} -> ${mergeRequest.targetBranch}
+
+Description:
+${mergeRequest.description || "(No description)"}
+
+Changed files:
+${fileSummary || "(No file changes returned)"}
+
+Diff snippets:
+${diffSnippets || "(No patch snippets returned)"}
+
+INSTRUCTIONS:
+1. Start with a concise 1-2 sentence summary of what this MR changes.
+2. List key file-level changes as bullets.
+3. Mention risk areas, testing focus, or possible regressions.
+4. Keep it useful for code review. No code blocks.`;
 
   const explanation = cleanAIText(await requestAIText(prompt, settings));
   if (!explanation) {

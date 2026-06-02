@@ -13,20 +13,23 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
+  FileText,
   Loader2,
-  Lock,
-  Unlock,
   Clock,
   ArrowRight,
   Settings,
+  Sparkles,
 } from "lucide-react";
 import {
   fetchMergeRequests,
+  fetchMergeRequestChanges,
   fetchGitHubCheckRuns,
   parseRemoteUrl,
   type MergeRequest,
+  type MergeRequestFileChange,
   type CheckRun,
 } from "@/api/gitHost";
+import { useAIMergeRequestExplain } from "@/queries/useAI";
 
 interface MergeRequestDialogProps {
   onClose: () => void;
@@ -41,6 +44,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
     onClose();
     useUIStore.getState().openDialog("settings");
   };
+  const aiExplain = useAIMergeRequestExplain();
 
   const remoteUrl = repoInfo?.remote;
   const remoteInfo = useMemo(() => (remoteUrl ? parseRemoteUrl(remoteUrl) : null), [remoteUrl]);
@@ -55,6 +59,10 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
   // GitHub detailed checks
   const [checkRuns, setCheckRuns] = useState<CheckRun[]>([]);
   const [loadingChecks, setLoadingChecks] = useState(false);
+  const [changedFiles, setChangedFiles] = useState<MergeRequestFileChange[]>([]);
+  const [loadingFiles, setLoadingFiles] = useState(false);
+  const [filesError, setFilesError] = useState<string | null>(null);
+  const [aiExplanation, setAiExplanation] = useState("");
 
   // Local actions
   const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -103,7 +111,39 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
     }
     setCheckoutSuccess(null);
     setCheckoutError(null);
+    setAiExplanation("");
   }, [selectedMr, remoteInfo]);
+
+  useEffect(() => {
+    if (!selectedMr || !remoteUrl) {
+      setChangedFiles([]);
+      setFilesError(null);
+      return;
+    }
+
+    setLoadingFiles(true);
+    setFilesError(null);
+    fetchMergeRequestChanges(remoteUrl, selectedMr)
+      .then((files) => setChangedFiles(files))
+      .catch((error) => {
+        setChangedFiles([]);
+        setFilesError(error.message || String(error));
+      })
+      .finally(() => setLoadingFiles(false));
+  }, [selectedMr, remoteUrl]);
+
+  const handleExplainMergeRequest = async () => {
+    if (!selectedMr) return;
+    try {
+      const explanation = await aiExplain.mutateAsync({
+        mergeRequest: selectedMr,
+        files: changedFiles,
+      });
+      setAiExplanation(explanation);
+    } catch {
+      setAiExplanation("");
+    }
+  };
 
   // Checkout local branch
   const handleCheckoutBranch = async () => {
@@ -382,6 +422,96 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                   <span>{checkoutError}</span>
                 </div>
               )}
+
+              {/* Changed Files */}
+              <div className="space-y-2 border-t border-border-60 pt-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="text-2xs font-bold text-text-muted uppercase tracking-wider">
+                    Changed Files {changedFiles.length > 0 ? `(${changedFiles.length})` : ""}
+                  </h4>
+                  <button
+                    onClick={handleExplainMergeRequest}
+                    disabled={aiExplain.isPending || loadingFiles || !selectedMr}
+                    className="h-7 px-2.5 rounded border border-border-40 bg-surface-2 text-[10px] font-bold text-text-primary hover:bg-surface-3 disabled:opacity-45 transition-colors flex items-center gap-1.5"
+                    title="Explain this merge request with AI"
+                  >
+                    {aiExplain.isPending ? (
+                      <Loader2 size={11} className="animate-spin text-accent" />
+                    ) : (
+                      <Sparkles size={11} className="text-accent" />
+                    )}
+                    <span>AI Explain</span>
+                  </button>
+                </div>
+
+                {loadingFiles ? (
+                  <div className="flex items-center gap-2 rounded-mac border border-border-40 bg-surface-1/20 p-3 text-2xs text-text-muted">
+                    <Loader2 size={12} className="animate-spin text-accent" />
+                    <span>Loading changed files...</span>
+                  </div>
+                ) : filesError ? (
+                  <div className="rounded-mac border border-[#ff453a]/20 bg-[#ff453a]/10 p-3 text-2xs text-[#ff453a]">
+                    {filesError}
+                  </div>
+                ) : changedFiles.length === 0 ? (
+                  <div className="rounded-mac border border-border-40 bg-surface-1/20 p-3 text-2xs text-text-muted">
+                    No changed files returned by the provider.
+                  </div>
+                ) : (
+                  <div className="max-h-[150px] overflow-y-auto rounded-mac border border-border-40 bg-surface-1/20">
+                    {changedFiles.map((file) => (
+                      <div
+                        key={`${file.status}:${file.path}:${file.oldPath || ""}`}
+                        className="flex items-center justify-between gap-2 border-b border-border-40 px-2.5 py-1.5 last:border-b-0"
+                        title={file.oldPath ? `${file.oldPath} -> ${file.path}` : file.path}
+                      >
+                        <div className="min-w-0 flex items-center gap-2">
+                          <FileText size={11} className="shrink-0 text-text-muted" />
+                          <div className="min-w-0">
+                            <div className="truncate text-2xs font-semibold text-text-primary">
+                              {file.path.split("/").pop() || file.path}
+                            </div>
+                            <div className="truncate text-[10px] text-text-muted">
+                              {file.oldPath ? `${file.oldPath} -> ${file.path}` : file.path}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          {(file.additions !== undefined || file.deletions !== undefined) && (
+                            <span className="font-mono text-[10px] text-text-muted">
+                              <span className="text-[#30d158]">+{file.additions ?? 0}</span>
+                              <span className="mx-0.5">/</span>
+                              <span className="text-[#ff453a]">-{file.deletions ?? 0}</span>
+                            </span>
+                          )}
+                          <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase ${
+                            file.status === "added"
+                              ? "bg-[#30d158]/10 text-[#30d158]"
+                              : file.status === "deleted"
+                                ? "bg-[#ff453a]/10 text-[#ff453a]"
+                                : file.status === "renamed"
+                                  ? "bg-[#64d2ff]/10 text-[#64d2ff]"
+                                  : "bg-[#ff9f0a]/10 text-[#ff9f0a]"
+                          }`}>
+                            {file.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {aiExplain.error && (
+                  <div className="rounded-mac border border-[#ff453a]/20 bg-[#ff453a]/10 p-3 text-2xs text-[#ff453a]">
+                    {aiExplain.error.message || "Failed to explain merge request"}
+                  </div>
+                )}
+                {aiExplanation && (
+                  <div className="max-h-[180px] overflow-y-auto rounded-mac border border-accent-20 bg-accent-5 p-3 text-2xs leading-relaxed text-text-secondary whitespace-pre-wrap">
+                    {aiExplanation}
+                  </div>
+                )}
+              </div>
 
               {/* Description */}
               {selectedMr.description && (

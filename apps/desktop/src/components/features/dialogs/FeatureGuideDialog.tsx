@@ -1063,13 +1063,16 @@ export default function FeatureGuideDialog({ open, onClose }: FeatureGuideDialog
   const currentSection = sections[activeTab];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#000000]/45 animate-in fade-in duration-200">
-      <div className="bg-surface-0 rounded-mac shadow-2xl border border-border w-[680px] max-h-[80vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.45)" }} onClick={onClose}>
+      <div className="bg-surface-0 rounded-mac shadow-2xl border border-border w-[720px] max-h-[82vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-surface-1-40">
+        <div className="flex items-center gap-2 px-5 py-3 border-b border-border bg-surface-1-40">
           <Book size={15} className="text-accent shrink-0" />
           <span className="text-xs font-semibold text-text-primary flex-1">
             Feature Guide
+          </span>
+          <span className="text-3xs text-text-muted bg-surface-2 rounded-full px-2 py-0.5 font-medium">
+            {sections.reduce((sum, s) => sum + s.features.length, 0)} features
           </span>
           <button
             onClick={onClose}
@@ -1080,39 +1083,55 @@ export default function FeatureGuideDialog({ open, onClose }: FeatureGuideDialog
           </button>
         </div>
 
-        {/* Tab Bar */}
-        <div className="flex border-b border-border bg-surface-1-20 overflow-x-auto scrollbar-none">
-          {sections.map((section, idx) => (
-            <button
-              key={section.category}
-              onClick={() => setActiveTab(idx)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-2xs font-medium whitespace-nowrap transition-all border-b-2 ${
-                activeTab === idx
-                  ? "text-accent border-accent bg-surface-1-40"
-                  : "text-text-muted border-transparent hover:text-text-secondary hover:bg-surface-1-30"
-              }`}
-              title={section.category}
-            >
-              <span className="shrink-0">{section.icon}</span>
-              <span className="hidden sm:inline">{section.category}</span>
-            </button>
-          ))}
+        {/* Tab Bar — pill style */}
+        <div className="px-4 pt-3 pb-0 bg-surface-1-20 border-b border-border">
+          <div className="flex gap-1 overflow-x-auto scrollbar-none pb-2.5">
+            {sections.map((section, idx) => {
+              const isActive = activeTab === idx;
+              return (
+                <button
+                  key={section.category}
+                  onClick={() => setActiveTab(idx)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-mac-sm text-2xs font-medium whitespace-nowrap transition-all ${
+                    isActive
+                      ? "bg-accent-15 text-accent shadow-sm border border-accent-30"
+                      : "text-text-muted hover:text-text-secondary hover:bg-surface-2-40 border border-transparent"
+                  }`}
+                  title={section.category}
+                >
+                  <span className="shrink-0">{section.icon}</span>
+                  <span>{section.category}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 pr-3.5">
-          {/* Section intro */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <h3 className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+        <div className="flex-1 overflow-y-auto p-5 space-y-3 pr-4">
+          {/* Section header with illustration */}
+          <div className="space-y-3">
+            {/* Category title bar */}
+            <div className="flex items-center gap-2.5">
+              <div className="flex items-center justify-center w-6 h-6 rounded bg-accent-10 text-accent shrink-0">
                 {currentSection.icon}
-                {currentSection.category}
-              </h3>
-              <span className="text-3xs text-text-muted bg-surface-2 rounded-full px-2 py-0.5">
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-semibold text-text-primary">
+                  {currentSection.category}
+                </h3>
+              </div>
+              <span className="text-3xs font-medium text-text-muted bg-surface-2-50 rounded-full px-2 py-0.5 shrink-0">
                 {currentSection.features.length} features
               </span>
             </div>
-            <div className="mb-2">{currentSection.illustration}</div>
+
+            {/* Illustration */}
+            <div className="rounded-mac overflow-hidden border border-border-30">
+              {currentSection.illustration}
+            </div>
+
+            {/* Features list */}
             <div className="bg-surface-1-30 border border-border-40 rounded-mac p-2.5 space-y-1.5">
               {currentSection.features.map((feature, idx) => (
                 <FeatureItem key={`${activeTab}-${idx}`} feature={feature} />

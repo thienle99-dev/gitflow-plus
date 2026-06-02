@@ -22,11 +22,37 @@ export interface MergeRequest {
   pipelineStatus?: "success" | "failed" | "running" | "pending" | "skipped";
 }
 
+export interface MergeRequestFileChange {
+  path: string;
+  oldPath?: string;
+  status: "added" | "modified" | "deleted" | "renamed";
+  additions?: number;
+  deletions?: number;
+  patch?: string;
+}
+
 export interface CheckRun {
   name: string;
   status: string;
   conclusion: string | null;
   htmlUrl: string;
+}
+
+function mergeRequestAuthHeaders(provider: "github" | "gitlab") {
+  const headers: Record<string, string> = {
+    "User-Agent": "GitFlow-Desktop",
+  };
+
+  if (provider === "github") {
+    const token = localStorage.getItem("gitflowGithubToken") || "";
+    headers.Accept = "application/vnd.github.v3+json";
+    if (token) headers.Authorization = `token ${token}`;
+  } else {
+    const token = localStorage.getItem("gitflowGitlabToken") || "";
+    if (token) headers["PRIVATE-TOKEN"] = token;
+  }
+
+  return headers;
 }
 
 function normalizeGitlabHost(value: string | undefined): string | undefined {
@@ -132,15 +158,8 @@ export async function fetchMergeRequests(remoteUrl: string): Promise<MergeReques
   }
 
   if (provider === "github") {
-    const token = localStorage.getItem("gitflowGithubToken") || "";
     const url = `https://api.github.com/repos/${owner}/${repo}/pulls?state=all&per_page=30`;
-    const headers: Record<string, string> = {
-      "Accept": "application/vnd.github.v3+json",
-      "User-Agent": "GitFlow-Desktop",
-    };
-    if (token) {
-      headers["Authorization"] = `token ${token}`;
-    }
+    const headers = mergeRequestAuthHeaders("github");
 
     const response = await api.ai.request(url, "GET", headers);
     if (response.status !== 200) {
@@ -175,16 +194,10 @@ export async function fetchMergeRequests(remoteUrl: string): Promise<MergeReques
       };
     });
   } else {
-    const token = localStorage.getItem("gitflowGitlabToken") || "";
     const gitlabHost = host || localStorage.getItem("gitflowGitlabHost") || "https://gitlab.com";
     const projectId = encodeURIComponent(`${owner}/${repo}`);
     const url = `${gitlabHost}/api/v4/projects/${projectId}/merge_requests?state=all&per_page=30`;
-    const headers: Record<string, string> = {
-      "User-Agent": "GitFlow-Desktop",
-    };
-    if (token) {
-      headers["PRIVATE-TOKEN"] = token;
-    }
+    const headers = mergeRequestAuthHeaders("gitlab");
 
     const response = await api.ai.request(url, "GET", headers);
     if (response.status !== 200) {
@@ -229,6 +242,70 @@ export async function fetchMergeRequests(remoteUrl: string): Promise<MergeReques
       };
     });
   }
+}
+
+export async function fetchMergeRequestChanges(remoteUrl: string, mr: MergeRequest): Promise<MergeRequestFileChange[]> {
+  const { provider, owner, repo, host } = parseRemoteUrl(remoteUrl);
+  if (!provider) {
+    throw new Error("Unable to identify Git hosting provider (GitHub/GitLab) from remote URL.");
+  }
+
+  if (provider === "github") {
+    const url = `https://api.github.com/repos/${owner}/${repo}/pulls/${mr.iid}/files?per_page=100`;
+    const response = await api.ai.request(url, "GET", mergeRequestAuthHeaders("github"));
+    if (response.status !== 200) {
+      let errDetail = "";
+      try {
+        errDetail = JSON.parse(response.body).message;
+      } catch {
+        errDetail = response.body;
+      }
+      throw new Error(`GitHub API Error (${response.status}): ${errDetail}`);
+    }
+
+    return JSON.parse(response.body).map((file: any) => ({
+      path: file.filename,
+      oldPath: file.previous_filename,
+      status: file.status === "removed"
+        ? "deleted"
+        : file.status === "added"
+          ? "added"
+          : file.status === "renamed"
+            ? "renamed"
+            : "modified",
+      additions: file.additions,
+      deletions: file.deletions,
+      patch: file.patch,
+    }));
+  }
+
+  const gitlabHost = host || localStorage.getItem("gitflowGitlabHost") || "https://gitlab.com";
+  const projectId = encodeURIComponent(`${owner}/${repo}`);
+  const url = `${gitlabHost}/api/v4/projects/${projectId}/merge_requests/${mr.iid}/changes`;
+  const response = await api.ai.request(url, "GET", mergeRequestAuthHeaders("gitlab"));
+  if (response.status !== 200) {
+    let errDetail = "";
+    try {
+      errDetail = JSON.parse(response.body).message || JSON.parse(response.body).error;
+    } catch {
+      errDetail = response.body;
+    }
+    throw new Error(`GitLab API Error (${response.status}): ${errDetail}`);
+  }
+
+  const data = JSON.parse(response.body);
+  return (data.changes || []).map((file: any) => ({
+    path: file.new_path,
+    oldPath: file.old_path !== file.new_path ? file.old_path : undefined,
+    status: file.new_file
+      ? "added"
+      : file.deleted_file
+        ? "deleted"
+        : file.renamed_file
+          ? "renamed"
+          : "modified",
+    patch: file.diff,
+  }));
 }
 
 export async function fetchGitHubCheckRuns(remoteUrl: string, sha: string): Promise<CheckRun[]> {

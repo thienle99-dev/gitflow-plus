@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import type { FileChange } from "@/api/tauri";
-import { generateCommitMessageWithAI, reviewDiffWithAI, explainCommitWithAI, analyzeCommitScope } from "@/lib/ai";
+import type { MergeRequest, MergeRequestFileChange } from "@/api/gitHost";
+import { generateCommitMessageWithAI, reviewDiffWithAI, explainCommitWithAI, analyzeCommitScope, explainMergeRequestWithAI } from "@/lib/ai";
 
 export function useGenerateCommitMessage(repoPath: string | null) {
   return useMutation({
@@ -36,5 +37,12 @@ export function useAICommitScope() {
   return useMutation({
     mutationFn: ({ repoPath, files }: { repoPath: string; files: FileChange[] }) =>
       analyzeCommitScope(repoPath, files),
+  });
+}
+
+export function useAIMergeRequestExplain() {
+  return useMutation({
+    mutationFn: ({ mergeRequest, files }: { mergeRequest: MergeRequest; files: MergeRequestFileChange[] }) =>
+      explainMergeRequestWithAI(mergeRequest, files),
   });
 }
