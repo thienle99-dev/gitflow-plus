@@ -499,9 +499,9 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
             <>
               {/* Title & Status Badge */}
               <div className="space-y-2">
-                <div className="flex items-start gap-2.5">
-                  <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase shrink-0 ${
+                <div className="flex items-start gap-2.5 min-w-0">
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase shrink-0 ${
                       selectedMr.state === "open"
                         ? "bg-[#30d158]/15 text-[#30d158] border border-[#30d158]/20"
                         : selectedMr.state === "merged"
@@ -511,7 +511,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                   >
                     {selectedMr.state}
                   </span>
-                  <h3 className="text-base font-semibold text-text-primary leading-snug">
+                  <h3 className="text-base font-semibold text-text-primary leading-snug min-w-0 break-words">
                     {selectedMr.title}
                   </h3>
                 </div>
