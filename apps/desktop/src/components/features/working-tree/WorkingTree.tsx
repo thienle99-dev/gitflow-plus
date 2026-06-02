@@ -3,8 +3,8 @@ import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useGitStatus } from "@/queries/useGitLog";
 import { api, type FileChange } from "@/api/tauri";
-import { useGenerateCommitMessage } from "@/queries/useAI";
-import { generateLocalCommitMessage } from "@/lib/ai";
+import { useGenerateCommitMessage, useAICommitScope } from "@/queries/useAI";
+import { generateLocalCommitMessage, type CommitScopeSuggestion } from "@/lib/ai";
 import { useQueryClient } from "@tanstack/react-query";
 import ContextMenu, { type ContextMenuItem } from "@/components/ui/overlay/ContextMenu";
 import UndoButton from "@/components/features/actions/UndoButton";
@@ -31,6 +31,7 @@ import {
   Trash2,
   Plus,
   Undo2,
+  X,
 } from "lucide-react";
 
 export default function WorkingTree() {
@@ -41,8 +42,11 @@ export default function WorkingTree() {
   const { data: changes } = useGitStatus(repoPath);
   const queryClient = useQueryClient();
   const generateCommit = useGenerateCommitMessage(repoPath);
+  const commitScope = useAICommitScope();
   const [commitMessage, setCommitMessage] = useState("");
   const [amend, setAmend] = useState(false);
+  const [scopeSuggestion, setScopeSuggestion] = useState<CommitScopeSuggestion | null>(null);
+  const [scopeDismissed, setScopeDismissed] = useState(false);
   const [committing, setCommitting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [stagedOpen, setStagedOpen] = useState(true);
@@ -205,6 +209,26 @@ export default function WorkingTree() {
     }
   };
 
+  const handleUseGroup = async (group: { files: string[]; message: string }) => {
+    try {
+      await api.commit.unstageAll(repoPath!);
+      for (const filePath of group.files) {
+        await api.commit.stage(repoPath!, filePath);
+      }
+      setCommitMessage(group.message);
+      setScopeSuggestion((prev) => {
+        if (!prev) return null;
+        const remaining = prev.groups.filter((g) => g.message !== group.message);
+        if (remaining.length <= 1) return null;
+        return { ...prev, groups: remaining };
+      });
+      showToast(`Staged ${group.files.length} files. Commit with ⌘↵`);
+    } catch (e: any) {
+      showToast(`Error: ${e}`);
+    }
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  };
+
   const handleGenerateCommit = async () => {
     if (generateCommit.isPending) return;
     if (!changes || changes.length === 0) {
@@ -212,11 +236,25 @@ export default function WorkingTree() {
       return;
     }
 
+    setScopeSuggestion(null);
+    setScopeDismissed(false);
+
     showToast("Generating commit message for all changes...");
     try {
       const result = await generateCommit.mutateAsync({ files: changes });
       setCommitMessage(result.message);
       showToast(result.fallback ? `Generated message using local template${result.reason ? ` (${result.reason})` : ""}` : "AI commit message generated");
+
+      // Run scope analysis in background (non-blocking)
+      if (!result.fallback && changes.length > 0) {
+        commitScope.mutateAsync({ repoPath: repoPath!, files: changes }).then((scope) => {
+          if (scope?.shouldSplit && scope.groups.length > 1) {
+            setScopeSuggestion(scope);
+          }
+        }).catch(() => {
+          // Silent failure — scope analysis is optional
+        });
+      }
     } catch (err: any) {
       setCommitMessage(generateLocalCommitMessage(changes));
       showToast(`AI failed: ${err.message || err}. Used local fallback.`);
@@ -404,6 +442,58 @@ export default function WorkingTree() {
             )}
           </button>
         </div>
+        {scopeSuggestion && !scopeDismissed && (
+          <div className="border border-accent-20 bg-accent-5 rounded-mac p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-accent">
+                💡 AI suggests splitting into {scopeSuggestion.groups.length} commits
+              </span>
+              <button
+                onClick={() => setScopeDismissed(true)}
+                className="text-text-muted hover:text-text-primary cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <p className="text-2xs text-text-secondary">{scopeSuggestion.explanation}</p>
+
+            <div className="space-y-1.5 max-h-48 overflow-y-auto">
+              {scopeSuggestion.groups.map((group, i) => (
+                <div
+                  key={i}
+                  className="flex items-start gap-2 p-2 bg-surface-1 rounded border border-border-30"
+                >
+                  <span className="text-2xs font-mono text-accent mt-0.5 shrink-0">
+                    {i + 1}.
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-text-primary truncate">
+                      {group.message}
+                    </p>
+                    <p className="text-2xs text-text-muted truncate">
+                      {group.files.join(", ")}
+                    </p>
+                    <p className="text-2xs text-text-secondary italic">{group.reason}</p>
+                  </div>
+                  <button
+                    onClick={() => handleUseGroup(group)}
+                    className="shrink-0 text-2xs font-semibold px-2 py-1 bg-accent/10 text-accent rounded hover:bg-accent/20 transition-colors cursor-pointer"
+                  >
+                    Use this
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setScopeDismissed(true)}
+              className="w-full text-2xs text-text-muted hover:text-text-primary py-1 cursor-pointer"
+            >
+              Commit all as one
+            </button>
+          </div>
+        )}
+
         <div className="flex items-center gap-2">
           <button
             onClick={handleCommit}

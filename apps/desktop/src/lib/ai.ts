@@ -21,6 +21,19 @@ interface GeneratedCommitMessage {
 type CommitMessageStyle = "conventional" | "plain" | "gitmoji" | "jira";
 type CommitMessageDetailLevel = "ultra-minimal" | "minimal" | "medium" | "detailed" | "comprehensive";
 
+export interface CommitGroup {
+  files: string[];
+  message: string;
+  reason: string;
+}
+
+export interface CommitScopeSuggestion {
+  shouldSplit: boolean;
+  overallMessage: string;
+  groups: CommitGroup[];
+  explanation: string;
+}
+
 export async function generateCommitMessageWithAI(
   repoPath: string,
   files: FileChange[],
@@ -117,6 +130,69 @@ INSTRUCTIONS:
     throw new Error("Empty response from AI");
   }
   return explanation;
+}
+
+export function shouldAnalyzeScope(files: FileChange[]): boolean {
+  if (files.length < 5) return false;
+  const dirs = new Set(files.map((f) => f.path.split("/")[0]));
+  return dirs.size >= 2;
+}
+
+export async function analyzeCommitScope(
+  repoPath: string,
+  files: FileChange[],
+): Promise<CommitScopeSuggestion | null> {
+  const settings = readAISettings();
+  if (!hasProvider(settings)) return null;
+  if (!shouldAnalyzeScope(files)) return null;
+
+  const diff = await api.diff.staged(repoPath);
+  if (!diff.trim()) return null;
+
+  const branchName = await getCurrentBranchName(repoPath);
+  const branchContext = branchName ? `Branch: ${branchName}\n` : "";
+
+  const prompt = `You are an expert developer reviewing staged git changes. Analyze the diff and determine if the changes should be split into multiple atomic commits.
+
+Return a JSON object with this exact structure:
+{
+  "shouldSplit": boolean,
+  "overallMessage": "single commit message if not splitting",
+  "groups": [
+    {
+      "files": ["path/to/file1"],
+      "message": "conventional commit message for this group",
+      "reason": "why these files belong together"
+    }
+  ],
+  "explanation": "brief explanation of why splitting is recommended"
+}
+
+RULES:
+- If changes are logically cohesive, set shouldSplit=false and provide overallMessage
+- If changes span unrelated concerns, set shouldSplit=true and provide groups
+- Each group should be a self-contained atomic change
+- Each message follows format: type(scope): description
+- Maximum 4 groups
+- Return ONLY the JSON, no markdown code blocks, no wrapping
+
+${branchContext}Staged diff:
+${diff.slice(0, 12_000)}`;
+
+  const raw = cleanAIText(await requestAIText(prompt, settings));
+  if (!raw) return null;
+
+  try {
+    // Strip markdown code fences if present
+    const jsonStr = raw.replace(/^```(?:json)?\s*\n?/m, "").replace(/\n?```\s*$/m, "").trim();
+    const parsed = JSON.parse(jsonStr);
+    if (parsed && typeof parsed.shouldSplit === "boolean") {
+      return parsed as CommitScopeSuggestion;
+    }
+  } catch {
+    // Invalid JSON — return null, caller falls back to single message
+  }
+  return null;
 }
 
 export function generateLocalCommitMessage(files: FileChange[], branchName = "") {

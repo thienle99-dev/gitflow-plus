@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import type { FileChange } from "@/api/tauri";
-import { generateCommitMessageWithAI, reviewDiffWithAI, explainCommitWithAI } from "@/lib/ai";
+import { generateCommitMessageWithAI, reviewDiffWithAI, explainCommitWithAI, analyzeCommitScope } from "@/lib/ai";
 
 export function useGenerateCommitMessage(repoPath: string | null) {
   return useMutation({
@@ -29,5 +29,12 @@ export function useAICommitExplain() {
       commitHash: string;
       commitMessage: string;
     }) => explainCommitWithAI(repoPath, commitHash, commitMessage),
+  });
+}
+
+export function useAICommitScope() {
+  return useMutation({
+    mutationFn: ({ repoPath, files }: { repoPath: string; files: FileChange[] }) =>
+      analyzeCommitScope(repoPath, files),
   });
 }
