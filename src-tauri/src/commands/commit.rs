@@ -174,3 +174,45 @@ pub async fn commit_changes(
         Err(format!("Commit failed: {}", stderr.trim()))
     }
 }
+
+#[tauri::command]
+pub async fn revert_commit(path: String, commit_hash: String) -> Result<String, String> {
+    let output = Command::new("git")
+        .args([
+            "--no-pager",
+            "-C",
+            &path,
+            "revert",
+            &commit_hash,
+            "--no-edit",
+        ])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run git revert: {}", e))?;
+
+    if output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let short = stdout
+            .lines()
+            .last()
+            .unwrap_or("Reverted")
+            .trim()
+            .to_string();
+        Ok(short)
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stderr_str = stderr.trim();
+
+        // Check for merge commit error
+        if stderr_str.contains("is a merge") {
+            return Err("Cannot revert merge commit. Use git revert -m 1 manually.".to_string());
+        }
+
+        // Check for conflict
+        if stderr_str.contains("CONFLICT") || stderr_str.contains("could not apply") {
+            return Err(format!("Revert conflict: {}", stderr_str));
+        }
+
+        Err(format!("Revert failed: {}", stderr_str))
+    }
+}

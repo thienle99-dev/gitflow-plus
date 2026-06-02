@@ -57,7 +57,7 @@
 - [x] Click → select commit
 - [x] Right-click → context menu
 - [x] Pagination: load more on scroll bottom
-- [ ] Canvas renderer — thay SVG bằng Canvas để tránh DOM overhead với 1000+ nodes/edges
+- [x] Canvas renderer — thay SVG bằng Canvas để tránh DOM overhead với 1000+ nodes/edges
 - [ ] Web Worker cho graph layout — move `computeGraphLayout` ra khỏi main thread (pure function, dễ isolate)
 - [ ] True virtualization — TanStack Virtual, chỉ render rows đang visible thay vì pagination
 - [ ] Unit tests for layout algorithm
@@ -141,7 +141,7 @@
 - [x] Tag CRUD
 - [x] Git log search/filter
 - [x] Cherry-pick (pick commit từ branch khác)
-- [ ] Multi-select commits — chọn nhiều commits để cherry-pick batch hoặc xem combined diff
+- [x] Multi-select commits — chọn nhiều commits để cherry-pick batch hoặc xem combined diff
 - [x] Blame view (inline trong diff viewer — ai viết dòng nào)
 - [x] File history — xem toàn bộ commits đã chạm vào một file (`git log -- <file>`)
 - [x] Submodule support (hiển thị status, init/update)

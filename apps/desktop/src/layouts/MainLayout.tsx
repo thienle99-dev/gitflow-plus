@@ -82,6 +82,37 @@ export default function MainLayout() {
     return () => { unlisten.then((f) => f()); };
   }, [repoPath, scheduleInvalidate]);
 
+  // Auto-fetch: periodically run git fetch in background
+  useEffect(() => {
+    if (!repoPath) return;
+
+    const autoFetchEnabled = localStorage.getItem("gitflowAutoFetch") !== "false";
+    if (!autoFetchEnabled) return;
+
+    const minutes = Number(localStorage.getItem("gitflowFetchIntervalMinutes") || "10");
+    const safeMinutes = Number.isFinite(minutes) ? Math.min(60, Math.max(5, minutes)) : 10;
+    const intervalMs = safeMinutes * 60_000;
+
+    const runFetch = () => {
+      api.remote.fetch(repoPath).then(() => {
+        scheduleInvalidate(["git", repoPath, "sync-status"]);
+        scheduleInvalidate(["git", repoPath, "branches"]);
+      }).catch(() => {
+        // Silently ignore — network errors are transient
+      });
+    };
+
+    // Initial fetch after a short delay (don't block repo open)
+    const initialTimer = window.setTimeout(runFetch, 5_000);
+
+    const interval = window.setInterval(runFetch, intervalMs);
+
+    return () => {
+      window.clearTimeout(initialTimer);
+      window.clearInterval(interval);
+    };
+  }, [repoPath, scheduleInvalidate]);
+
   // Listen for open-dialog requests from other windows (e.g. tray popover)
   useEffect(() => {
     const unlisten = listen<string>("open-dialog", (event) => {

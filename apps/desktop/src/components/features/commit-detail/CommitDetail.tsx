@@ -1,7 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useCommitChangedFiles, useGitLog } from "@/queries/useGitLog";
+import { api } from "@/api/tauri";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
   Braces,
@@ -17,6 +19,7 @@ import {
   FileTerminal,
   FileText,
   GitCommit,
+  RotateCcw,
   User,
 } from "lucide-react";
 
@@ -28,6 +31,23 @@ export default function CommitDetail() {
   const { data } = useGitLog(repoPath);
   const { data: changedFiles, isLoading: filesLoading, error: filesError } =
     useCommitChangedFiles(repoPath, selectedCommit);
+  const queryClient = useQueryClient();
+  const [reverting, setReverting] = useState(false);
+
+  const handleRevert = async () => {
+    if (!repoPath || !selectedCommit) return;
+    if (!confirm(`Revert commit ${selectedCommit.slice(0, 7)}? This will create a new commit that undoes the changes.`)) return;
+    setReverting(true);
+    try {
+      const result = await api.commit.revert(repoPath, selectedCommit);
+      queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
+      alert(result);
+    } catch (e: any) {
+      alert(`Revert failed: ${e}`);
+    } finally {
+      setReverting(false);
+    }
+  };
 
   const commit = useMemo(
     () => data?.pages.flat().find((c) => c.hash === selectedCommit),
@@ -87,6 +107,15 @@ export default function CommitDetail() {
             </span>
           </div>
         )}
+        <button
+          onClick={handleRevert}
+          disabled={reverting}
+          className="flex items-center gap-1.5 px-2 py-1 mt-1 text-2xs font-medium text-text-muted hover:text-text-primary bg-surface-2-40 hover:bg-surface-2 border border-border-40 rounded-mac transition-all cursor-pointer disabled:opacity-40"
+          title="Revert this commit (creates a new undo commit)"
+        >
+          <RotateCcw size={11} className={reverting ? "animate-spin" : ""} />
+          {reverting ? "Reverting..." : "Revert commit"}
+        </button>
       </div>
 
       <div className="flex-1 px-3 py-2">

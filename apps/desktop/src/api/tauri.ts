@@ -193,6 +193,8 @@ export const api = {
       invoke<string>("discard_all", { path }),
     commit: (path: string, message: string, amend?: boolean) =>
       invoke<string>("commit_changes", { path, message, amend: amend ?? false }),
+    revert: (path: string, commitHash: string) =>
+      invoke<string>("revert_commit", { path, commitHash }),
   },
 
   diff: {
