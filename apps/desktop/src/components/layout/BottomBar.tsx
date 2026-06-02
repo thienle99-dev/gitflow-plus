@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { ChevronRight, ChevronDown, Terminal } from "lucide-react";
+import { ChevronRight, ChevronDown, Terminal, Book } from "lucide-react";
+import { useUIStore } from "@/stores/ui";
 
 export default function BottomBar() {
   const [logs, setLogs] = useState<string[]>([]);
   const [expanded, setExpanded] = useState(false);
+  const openDialogState = useUIStore((s) => s.openDialog);
 
   return (
     <div className="h-[26px] border-t border-border-60 bg-surface-1-40 backdrop-blur-md flex items-center px-4 text-2xs text-text-muted select-none">
@@ -33,7 +35,16 @@ export default function BottomBar() {
 
       <div className="flex-1" />
 
-      {/* Right side: Version Capsule */}
+      {/* Right side: Feature Guide + Version */}
+      <button
+        onClick={() => openDialogState("feature-guide")}
+        className="flex items-center gap-1 text-text-muted hover:text-text-primary transition-all p-0.5 rounded cursor-pointer mr-2"
+        title="Feature Guide (⌘⇧H)"
+      >
+        <Book size={11} />
+        <span className="text-[9px] font-semibold">Guide</span>
+      </button>
+
       <span className="bg-surface-2-60 border border-border-40 rounded-full px-2 py-0.5 text-[9px] font-semibold text-text-muted/80 shadow-2xs">
         GitFlow Desktop v0.1.0
       </span>

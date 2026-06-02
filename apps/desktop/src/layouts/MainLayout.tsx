@@ -11,7 +11,7 @@ import Sidebar from "@/components/features/sidebar/Sidebar";
 import CommitGraph from "@/components/features/graph/CommitGraph";
 import RightPanel from "@/components/layout/RightPanel";
 import BottomBar from "@/components/layout/BottomBar";
-import { SearchDialog, KeyboardShortcutsModal, CherryPickDialog, SettingsDialog, AnalyticsDialog, CreateBranchDialog, MergeRequestDialog, CloneDialog } from "@/components/features/dialogs";
+import { SearchDialog, KeyboardShortcutsModal, CherryPickDialog, SettingsDialog, AnalyticsDialog, CreateBranchDialog, MergeRequestDialog, CloneDialog, FeatureGuideDialog } from "@/components/features/dialogs";
 import ErrorBoundary from "@/components/ui/feedback/ErrorBoundary";
 import { AlertOctagon, RefreshCw, Trash2 } from "lucide-react";
 
@@ -29,6 +29,7 @@ export default function MainLayout() {
   const queryClient = useQueryClient();
   const invalidateTimersRef = useRef<Map<string, number>>(new Map());
   const lastFocusRefreshRef = useRef(0);
+  const featureGuideOpenedRef = useRef(false);
 
   const scheduleInvalidate = useCallback((queryKey: unknown[], delay = 250) => {
     const key = JSON.stringify(queryKey);
@@ -49,6 +50,12 @@ export default function MainLayout() {
       invalidateTimersRef.current.clear();
     };
   }, []);
+
+  useEffect(() => {
+    if (featureGuideOpenedRef.current || activeDialog) return;
+    featureGuideOpenedRef.current = true;
+    openDialogState("feature-guide");
+  }, [activeDialog, openDialogState]);
 
   // Start/stop file watcher when repo changes
   useEffect(() => {
@@ -224,6 +231,10 @@ export default function MainLayout() {
         e.preventDefault();
         openDialogState("keyboard-shortcuts");
       }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === "h" || e.key === "H")) {
+        e.preventDefault();
+        openDialogState("feature-guide");
+      }
       // Escape closes dialogs
       if (e.key === "Escape" && activeDialog) {
         e.preventDefault();
@@ -259,6 +270,7 @@ export default function MainLayout() {
     analytics: <AnalyticsDialog open={true} onClose={closeDialog} />,
     "merge-request": <MergeRequestDialog onClose={closeDialog} />,
     "clone": <CloneDialog open={true} onClose={closeDialog} />,
+    "feature-guide": <FeatureGuideDialog open={true} onClose={closeDialog} />,
   };
 
   const dialogOverlay = overlayDialog ? (

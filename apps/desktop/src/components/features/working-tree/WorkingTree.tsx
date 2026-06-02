@@ -694,7 +694,7 @@ function ChangeRow({ file, checked, selected, multiSelected, onSelect, onToggle,
       className={`tree-item group w-full grid grid-cols-[14px_16px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-1 text-left ${multiSelected ? "ring-1 ring-accent bg-accent-5" : selected ? "selected" : ""
         }`}
       onClick={(e) => {
-        if (onMultiClick) {
+        if (onMultiClick && (e.shiftKey || e.metaKey || e.ctrlKey)) {
           onMultiClick(e);
         } else {
           onSelect();

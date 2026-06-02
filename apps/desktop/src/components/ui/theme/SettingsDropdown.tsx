@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect } from "react";
-import { Settings, Moon, Sun } from "lucide-react";
+import { Settings, Moon, Sun, Book } from "lucide-react";
 import { useRepoStore } from "@/stores/repo";
 
 interface SettingsDropdownProps {
   onOpenSettings: () => void;
   onOpenKeyboardShortcuts: () => void;
+  onOpenFeatureGuide: () => void;
 }
 
-export default function SettingsDropdown({ onOpenSettings, onOpenKeyboardShortcuts }: SettingsDropdownProps) {
+export default function SettingsDropdown({ onOpenSettings, onOpenKeyboardShortcuts, onOpenFeatureGuide }: SettingsDropdownProps) {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const theme = useRepoStore((s) => s.theme);
@@ -72,6 +73,17 @@ export default function SettingsDropdown({ onOpenSettings, onOpenKeyboardShortcu
           >
             <span className="text-2xs font-mono">⌘?</span>
             Keyboard Shortcuts
+          </button>
+
+          <button
+            onClick={() => {
+              onOpenFeatureGuide();
+              setOpen(false);
+            }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors text-left"
+          >
+            <Book size={13} />
+            Feature Guide
           </button>
         </div>
       )}

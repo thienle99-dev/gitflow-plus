@@ -297,6 +297,7 @@ export default function Toolbar() {
           <SettingsDropdown
             onOpenSettings={() => openDialog("settings")}
             onOpenKeyboardShortcuts={() => openDialog("keyboard-shortcuts")}
+            onOpenFeatureGuide={() => openDialog("feature-guide")}
           />
         </div>
 
