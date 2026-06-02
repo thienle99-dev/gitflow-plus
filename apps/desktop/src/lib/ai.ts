@@ -77,6 +77,48 @@ ${diff.slice(0, 8000)}`;
   return review;
 }
 
+export async function explainCommitWithAI(
+  repoPath: string,
+  commitHash: string,
+  commitMessage: string,
+): Promise<string> {
+  const settings = readAISettings();
+  if (!hasProvider(settings)) {
+    throw new Error("Configure an AI API key in settings to use AI features");
+  }
+
+  // Fetch full commit diff (no filePath = entire commit)
+  const diff = await api.diff.commit(repoPath, commitHash);
+  if (!diff.trim()) {
+    return "This commit has no file changes to explain (e.g., an empty merge commit).";
+  }
+
+  const truncatedDiff = diff.slice(0, 12_000);
+  const branchName = await getCurrentBranchName(repoPath);
+  const branchContext = branchName ? `Branch: ${branchName}\n` : "";
+
+  const prompt = `You are a senior software engineer reviewing a Git commit. Explain this commit in plain English.
+
+${branchContext}Commit message: ${commitMessage}
+
+Diff:
+${truncatedDiff}
+
+INSTRUCTIONS:
+1. Start with a 1-2 sentence summary of WHAT this commit does.
+2. Explain the MOTIVATION — why this change was likely needed.
+3. List the KEY CHANGES as bullet points (max 5-6).
+4. If there are potential RISKS or BREAKING CHANGES, mention them briefly.
+5. Use plain English. Be concise and direct. No markdown code blocks.
+6. Use English unless the commit message is in another language.`;
+
+  const explanation = cleanAIText(await requestAIText(prompt, settings));
+  if (!explanation) {
+    throw new Error("Empty response from AI");
+  }
+  return explanation;
+}
+
 export function generateLocalCommitMessage(files: FileChange[], branchName = "") {
   const commitStyle = readCommitMessageStyle();
   const detailLevel = readCommitMessageDetailLevel();

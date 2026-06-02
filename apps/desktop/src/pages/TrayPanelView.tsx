@@ -434,7 +434,7 @@ export default function TrayPanelView() {
   };
 
   return (
-    <div className="flex flex-col h-[460px] w-[360px] bg-surface-0 border border-border-60 rounded-lg overflow-hidden select-none shadow-2xl relative font-sans">
+    <div className="flex flex-col h-[560px] w-[360px] bg-surface-0 border border-border-60 rounded-lg overflow-hidden select-none shadow-2xl relative font-sans">
       {/* Header */}
       <div className="h-11 border-b border-border-60 bg-surface-1 flex items-center justify-between px-3 shrink-0">
         {/* Repo Selector Dropdown Trigger */}
@@ -636,13 +636,13 @@ export default function TrayPanelView() {
               </div>
 
               {/* Commit Form Section */}
-              <div className="border border-border-40 focus-within:border-accent-60 bg-surface-2 rounded-mac p-2 flex flex-col gap-2 shrink-0 transition-colors">
+              <div className="border border-border-40 focus-within:border-accent-60 bg-surface-2 rounded-mac p-2.5 flex flex-col gap-2.5 shrink-0 transition-colors">
                 <textarea
                   value={commitMessage}
                   onChange={(e) => setCommitMessage(e.target.value)}
                   placeholder="Commit message (or generate with AI...)"
-                  rows={2}
-                  className="w-full bg-transparent border-none text-[10px] text-text-primary placeholder-text-muted resize-none leading-relaxed font-mono p-0.5"
+                  rows={4}
+                  className="min-h-[92px] max-h-[180px] w-full bg-transparent border-none text-[10px] text-text-primary placeholder-text-muted resize-y leading-relaxed font-mono p-0.5"
                   style={{ outline: "none", border: "none", boxShadow: "none" }}
                 />
 
@@ -698,7 +698,7 @@ export default function TrayPanelView() {
                     <div
                       key={commit.hash}
                       onClick={() => copyToClipboard(commit.hash, "Commit hash copied")}
-                      className="group w-full text-left p-2 rounded hover:bg-surface-2 active:bg-surface-3 transition-all flex flex-col gap-1 border border-transparent hover:border-border-40 cursor-pointer"
+                      className="group min-h-[58px] w-full text-left p-2.5 rounded hover:bg-surface-2 active:bg-surface-3 transition-all flex flex-col justify-center gap-1.5 border border-transparent hover:border-border-40 cursor-pointer"
                       role="button"
                       tabIndex={0}
                       onKeyDown={(event) => {

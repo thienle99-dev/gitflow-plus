@@ -147,7 +147,7 @@
 - [x] Submodule support (hiển thị status, init/update)
 - [ ] Git hooks visibility (show active hooks, --no-verify option)
 - [x] Undo stack (reflog-based, undo last commit/stage/checkout)
-- [ ] Auto-fetch — background fetch theo interval (configurable, mặc định 5 phút), badge "X commits behind"
+- [x] Auto-fetch — background fetch theo interval (configurable, mặc định 5 phút), badge "X commits behind"
 
 ### Performance
 - [x] Incremental git log — cache commit list, chỉ fetch commits mới hơn HEAD đã biết (`git log <known_HEAD>..HEAD`)
@@ -158,15 +158,15 @@
 - [x] Settings UI: API key input (Claude/OpenAI), model selector, token limit
 - [ ] API key storage in OS keychain (`keyring` crate)
 - [ ] Rust backend: LLM API client + streaming response via Tauri events
-- [ ] **AI Conflict Resolution** — phân tích ours/theirs + surrounding context, đề xuất merged result
-- [ ] **AI Commit Message** — phân tích staged diff, generate conventional commit (type: subject + body)
-- [ ] **AI Explain Changes** — giải thích commit/diff bằng ngôn ngữ tự nhiên
-- [ ] **AI Code Review Assist** — flag bugs, suggest improvements, đề xuất test cases
+- [x] **AI Conflict Resolution** — phân tích ours/theirs + surrounding context, đề xuất merged result
+- [x] **AI Commit Message** — phân tích staged diff, generate conventional commit (type: subject + body)
+- [x] **AI Explain Changes** — giải thích commit/diff bằng ngôn ngữ tự nhiên
+- [x] **AI Code Review Assist** — flag bugs, suggest improvements, đề xuất test cases
 - [ ] **AI Commit Scope Suggestion** — gợi ý tách commit nếu staged changes quá lớn/không liên quan
 - [ ] **AI Branch Naming** — suggest branch name từ description
 - [ ] Context-aware prompts — gửi kèm project conventions (.cursorrules, CLAUDE.md) nếu có
 - [ ] Rate limiting + response caching cho cùng diff
-- [ ] Fallback: API fail → toast error, manual workflow vẫn hoạt động bình thường
+- [x] Fallback: API fail → toast error, manual workflow vẫn hoạt động bình thường
 
 ## Phase 3: Remote Integration (after Phase 2)
 

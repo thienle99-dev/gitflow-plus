@@ -159,7 +159,7 @@ pub fn run() {
                                 };
 
                                 let window_width = 360.0;
-                                let window_height = 460.0;
+                                let window_height = 560.0;
                                 let x = pos_x + (size_w / 2.0) - (window_width / 2.0);
                                 let y = if pos_y > 500.0 {
                                     pos_y - window_height

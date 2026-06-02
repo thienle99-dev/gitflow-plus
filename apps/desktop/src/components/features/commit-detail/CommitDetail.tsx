@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useCommitChangedFiles, useGitLog } from "@/queries/useGitLog";
@@ -20,8 +20,10 @@ import {
   FileText,
   GitCommit,
   RotateCcw,
+  Sparkles,
   User,
 } from "lucide-react";
+import { useAICommitExplain } from "@/queries/useAI";
 
 export default function CommitDetail() {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -33,6 +35,16 @@ export default function CommitDetail() {
     useCommitChangedFiles(repoPath, selectedCommit);
   const queryClient = useQueryClient();
   const [reverting, setReverting] = useState(false);
+  const [showExplanation, setShowExplanation] = useState(false);
+  const [explanation, setExplanation] = useState("");
+  const aiExplain = useAICommitExplain();
+
+  // Reset explanation when commit changes
+  useEffect(() => {
+    setShowExplanation(false);
+    setExplanation("");
+    aiExplain.reset();
+  }, [selectedCommit]);
 
   const handleRevert = async () => {
     if (!repoPath || !selectedCommit) return;
@@ -46,6 +58,27 @@ export default function CommitDetail() {
       alert(`Revert failed: ${e}`);
     } finally {
       setReverting(false);
+    }
+  };
+
+  const handleExplain = async () => {
+    if (!repoPath || !selectedCommit || !commit) return;
+    if (showExplanation && explanation) {
+      setShowExplanation(false);
+      return;
+    }
+    setShowExplanation(true);
+    if (explanation) return; // Already have explanation
+
+    try {
+      const result = await aiExplain.mutateAsync({
+        repoPath,
+        commitHash: selectedCommit,
+        commitMessage: commit.message,
+      });
+      setExplanation(result);
+    } catch {
+      // Error is rendered from mutation state
     }
   };
 
@@ -116,7 +149,49 @@ export default function CommitDetail() {
           <RotateCcw size={11} className={reverting ? "animate-spin" : ""} />
           {reverting ? "Reverting..." : "Revert commit"}
         </button>
+        {localStorage.getItem("gitflowAiApiKey") && (
+          <button
+            onClick={handleExplain}
+            disabled={aiExplain.isPending}
+            className="flex items-center gap-1.5 px-2 py-1 mt-1 text-2xs font-medium text-accent hover:text-accent-fg bg-accent-10 hover:bg-accent-20 border border-accent-30 rounded-mac transition-all cursor-pointer disabled:opacity-40"
+            title="Explain this commit with AI"
+          >
+            <Sparkles size={11} className={aiExplain.isPending ? "animate-pulse" : ""} />
+            {aiExplain.isPending
+              ? "Analyzing..."
+              : showExplanation
+                ? "Hide explanation"
+                : "Explain with AI"}
+          </button>
+        )}
       </div>
+
+      {/* AI Explanation */}
+      {showExplanation && (
+        <div className="px-3 py-2 border-b border-border bg-accent-5">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <Sparkles size={11} className="text-accent" />
+            <span className="text-2xs font-semibold text-accent">AI Explanation</span>
+          </div>
+          {aiExplain.isPending ? (
+            <div className="text-2xs text-text-muted animate-pulse">Analyzing commit changes...</div>
+          ) : aiExplain.isError ? (
+            <div className="text-2xs text-[#ff375f]">
+              {aiExplain.error?.message || "Failed to explain commit"}
+              <button
+                onClick={handleExplain}
+                className="ml-2 text-accent underline text-2xs"
+              >
+                Retry
+              </button>
+            </div>
+          ) : explanation ? (
+            <div className="text-2xs text-text-secondary leading-relaxed whitespace-pre-wrap">
+              {explanation}
+            </div>
+          ) : null}
+        </div>
+      )}
 
       <div className="flex-1 px-3 py-2">
         <div className="text-xs font-semibold text-text-primary mb-2">
