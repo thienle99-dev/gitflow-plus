@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitFlow Desktop Releases</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .release {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .release-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .release-version {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+        .release-date {
+            font-size: 12px;
+            color: #999;
+        }
+        .downloads {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .download-link {
+            display: inline-flex;
+            align-items: center;
+            padding: 10px 15px;
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #667eea;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .download-link:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        .download-icon {
+            margin-right: 8px;
+        }
+        .no-releases {
+            text-align: center;
+            color: #999;
+            padding: 40px 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>GitFlow Desktop</h1>
+        <p class="subtitle">Fast, native Git client for macOS</p>
+
+        <div id="releases-container">
+            <div class="no-releases">
+                <p>No releases available yet.</p>
+                <p>Check back soon!</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // This will be populated by the GitHub Actions workflow
+        const releases = window.RELEASES || [];
+
+        function renderReleases() {
+            const container = document.getElementById('releases-container');
+
+            if (releases.length === 0) {
+                container.innerHTML = `
+                    <div class="no-releases">
+                        <p>No releases available yet.</p>
+                        <p>Check back soon!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = releases.map(release => `
+                <div class="release">
+                    <div class="release-header">
+                        <span class="release-version">${release.version}</span>
+                        <span class="release-date">${release.date}</span>
+                    </div>
+                    <div class="downloads">
+                        ${release.downloads.map(dl => `
+                            <a href="${dl.url}" class="download-link">
+                                <span class="download-icon">⬇️</span>
+                                ${dl.name}
+                            </a>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        renderReleases();
+    </script>
+</body>
+</html>
