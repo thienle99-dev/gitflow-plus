@@ -29,6 +29,18 @@ export interface CheckRun {
   htmlUrl: string;
 }
 
+function normalizeGitlabHost(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+
+  try {
+    return new URL(trimmed.includes("://") ? trimmed : `https://${trimmed}`).origin;
+  } catch {
+    return undefined;
+  }
+}
+
 export function parseRemoteUrl(url: string): RemoteRepoInfo {
   if (!url) return { provider: null, owner: "", repo: "" };
 
@@ -51,14 +63,16 @@ export function parseRemoteUrl(url: string): RemoteRepoInfo {
         provider = "github";
       } else if (hostPart === "gitlab.com") {
         provider = "gitlab";
+        host = "https://gitlab.com";
       } else {
-        const customHostSetting = localStorage.getItem("gitflowGitlabHost") || "";
+        const customHostSetting = normalizeGitlabHost(localStorage.getItem("gitflowGitlabHost") || "");
         const customHostUrl = customHostSetting ? new URL(customHostSetting).hostname : "";
         if (customHostUrl && hostPart === customHostUrl) {
           provider = "gitlab";
           host = customHostSetting;
         } else if (hostPart.toLowerCase().includes("gitlab")) {
           provider = "gitlab";
+          host = `https://${hostPart}`;
         }
       }
 
@@ -83,14 +97,16 @@ export function parseRemoteUrl(url: string): RemoteRepoInfo {
       provider = "github";
     } else if (hostPart === "gitlab.com") {
       provider = "gitlab";
+      host = "https://gitlab.com";
     } else {
-      const customHostSetting = localStorage.getItem("gitflowGitlabHost") || "";
+      const customHostSetting = normalizeGitlabHost(localStorage.getItem("gitflowGitlabHost") || "");
       const customHostUrl = customHostSetting ? new URL(customHostSetting).hostname : "";
       if (customHostUrl && hostPart === customHostUrl) {
         provider = "gitlab";
         host = customHostSetting;
       } else if (hostPart.toLowerCase().includes("gitlab")) {
         provider = "gitlab";
+        host = `https://${hostPart}`;
       }
     }
 

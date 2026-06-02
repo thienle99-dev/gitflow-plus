@@ -994,56 +994,60 @@ function FeatureItem({ feature }: { feature: Feature }) {
               {feature.illustration}
             </div>
           )}
-          {/* Steps */}
-          {feature?.details?.steps && feature.details.steps.length > 0 && (
-            <div className="space-y-1 pt-2.5">
-              <p className="text-3xs font-semibold text-text-muted uppercase tracking-wider">How to use</p>
-              <ol className="space-y-1 pl-0">
-                {feature.details.steps.map((step, i) => (
-                  <li key={i} className="flex gap-2 text-2xs text-text-secondary leading-relaxed">
-                    <span className="text-accent font-semibold shrink-0 mt-px">{i + 1}.</span>
-                    <span>{step}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          )}
+          {feature.details && (
+            <>
+              {/* Steps */}
+              {feature.details.steps && feature.details.steps.length > 0 && (
+                <div className="space-y-1 pt-2.5">
+                  <p className="text-3xs font-semibold text-text-muted uppercase tracking-wider">How to use</p>
+                  <ol className="space-y-1 pl-0">
+                    {feature.details.steps.map((step, i) => (
+                      <li key={i} className="flex gap-2 text-2xs text-text-secondary leading-relaxed">
+                        <span className="text-accent font-semibold shrink-0 mt-px">{i + 1}.</span>
+                        <span>{step}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
 
-          {/* Shortcuts */}
-          {feature?.details?.shortcuts && feature.details.shortcuts.length > 0 && (
-            <div className="space-y-1">
-              <p className="text-3xs font-semibold text-text-muted uppercase tracking-wider">Shortcuts & Actions</p>
-              <div className="space-y-0.5">
-                {feature.details.shortcuts.map((shortcut, i) => (
-                  <div key={i} className="flex items-center gap-2 text-2xs text-text-secondary">
-                    <span className="text-accent">▸</span>
-                    <span>{shortcut}</span>
+              {/* Shortcuts */}
+              {feature.details.shortcuts && feature.details.shortcuts.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-3xs font-semibold text-text-muted uppercase tracking-wider">Shortcuts & Actions</p>
+                  <div className="space-y-0.5">
+                    {feature.details.shortcuts.map((shortcut, i) => (
+                      <div key={i} className="flex items-center gap-2 text-2xs text-text-secondary">
+                        <span className="text-accent">▸</span>
+                        <span>{shortcut}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
+                </div>
+              )}
 
-          {/* Tips */}
-          {feature?.details?.tips && feature.details.tips.length > 0 && (
-            <div className="space-y-1">
-              <p className="text-3xs font-semibold text-text-muted uppercase tracking-wider">💡 Tips</p>
-              <div className="space-y-0.5">
-                {feature.details.tips.map((tip, i) => (
-                  <div key={i} className="flex gap-1.5 text-2xs text-text-secondary leading-relaxed">
-                    <span className="text-accent shrink-0">•</span>
-                    <span>{tip}</span>
+              {/* Tips */}
+              {feature.details.tips && feature.details.tips.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-3xs font-semibold text-text-muted uppercase tracking-wider">💡 Tips</p>
+                  <div className="space-y-0.5">
+                    {feature.details.tips.map((tip, i) => (
+                      <div key={i} className="flex gap-1.5 text-2xs text-text-secondary leading-relaxed">
+                        <span className="text-accent shrink-0">•</span>
+                        <span>{tip}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
+                </div>
+              )}
 
-          {/* Notes */}
-          {feature?.details?.notes && (
-            <p className="text-2xs text-text-muted italic border-l-2 border-accent-30 pl-2">
-              {feature.details.notes}
-            </p>
+              {/* Notes */}
+              {feature.details.notes && (
+                <p className="text-2xs text-text-muted italic border-l-2 border-accent-30 pl-2">
+                  {feature.details.notes}
+                </p>
+              )}
+            </>
           )}
         </div>
       )}
@@ -1052,7 +1056,11 @@ function FeatureItem({ feature }: { feature: Feature }) {
 }
 
 export default function FeatureGuideDialog({ open, onClose }: FeatureGuideDialogProps) {
+  const [activeTab, setActiveTab] = useState(0);
+
   if (!open) return null;
+
+  const currentSection = sections[activeTab];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#000000]/45 animate-in fade-in duration-200">
@@ -1072,35 +1080,50 @@ export default function FeatureGuideDialog({ open, onClose }: FeatureGuideDialog
           </button>
         </div>
 
+        {/* Tab Bar */}
+        <div className="flex border-b border-border bg-surface-1-20 overflow-x-auto scrollbar-none">
+          {sections.map((section, idx) => (
+            <button
+              key={section.category}
+              onClick={() => setActiveTab(idx)}
+              className={`flex items-center gap-1.5 px-3 py-2 text-2xs font-medium whitespace-nowrap transition-all border-b-2 ${
+                activeTab === idx
+                  ? "text-accent border-accent bg-surface-1-40"
+                  : "text-text-muted border-transparent hover:text-text-secondary hover:bg-surface-1-30"
+              }`}
+              title={section.category}
+            >
+              <span className="shrink-0">{section.icon}</span>
+              <span className="hidden sm:inline">{section.category}</span>
+            </button>
+          ))}
+        </div>
+
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-5 pr-3.5">
-          {/* App intro */}
-          <div className="text-center space-y-1 pb-2">
-            <h2 className="text-sm font-semibold text-text-primary">GitFlow Desktop</h2>
-            <p className="text-2xs text-text-muted">
-              A powerful Git GUI with AI-assisted workflows, GitFlow branching, and more. Click any feature to see details.
-            </p>
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 pr-3.5">
+          {/* Section intro */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <h3 className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+                {currentSection.icon}
+                {currentSection.category}
+              </h3>
+              <span className="text-3xs text-text-muted bg-surface-2 rounded-full px-2 py-0.5">
+                {currentSection.features.length} features
+              </span>
+            </div>
+            <div className="mb-2">{currentSection.illustration}</div>
+            <div className="bg-surface-1-30 border border-border-40 rounded-mac p-2.5 space-y-1.5">
+              {currentSection.features.map((feature, idx) => (
+                <FeatureItem key={`${activeTab}-${idx}`} feature={feature} />
+              ))}
+            </div>
           </div>
 
-          {sections.map((section) => (
-            <div key={section.category} className="space-y-2">
-              <h3 className="text-3xs font-semibold text-text-muted uppercase tracking-wider pl-1 flex items-center gap-1.5">
-                {section.icon}
-                {section.category}
-              </h3>
-              <div className="mb-2">{section.illustration}</div>
-              <div className="bg-surface-1-30 border border-border-40 rounded-mac p-2.5 space-y-1.5">
-                {section.features.map((feature, idx) => (
-                  <FeatureItem key={idx} feature={feature} />
-                ))}
-              </div>
-            </div>
-          ))}
-
           {/* Footer */}
-          <div className="text-center pt-2 pb-1">
+          <div className="text-center pt-1 pb-1">
             <p className="text-3xs text-text-muted">
-              Press <kbd className="px-1 py-0.5 bg-surface-2 rounded text-3xs font-mono">⌘?</kbd> for keyboard shortcuts
+              Use tabs to browse categories · Press <kbd className="px-1 py-0.5 bg-surface-2 rounded text-3xs font-mono">⌘?</kbd> for keyboard shortcuts
             </p>
           </div>
         </div>

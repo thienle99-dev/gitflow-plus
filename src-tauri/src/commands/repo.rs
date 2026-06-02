@@ -47,12 +47,39 @@ async fn get_repo_info_inner(path: &str) -> Result<RepoInfo, String> {
     let branch = lines.first().unwrap_or(&"unknown").to_string();
     let root = lines.get(1).unwrap_or(&path).to_string();
 
-    // Get remote URL
-    let remote_output = Command::new("git")
+    // Get remote URL. Prefer origin, but fall back to the first configured remote.
+    let mut remote_output = Command::new("git")
         .args(["--no-pager", "-C", path, "remote", "get-url", "origin"])
         .output()
         .await
         .ok();
+
+    if !remote_output.as_ref().is_some_and(|o| o.status.success()) {
+        let first_remote = Command::new("git")
+            .args(["--no-pager", "-C", path, "remote"])
+            .output()
+            .await
+            .ok()
+            .and_then(|o| {
+                if o.status.success() {
+                    String::from_utf8_lossy(&o.stdout)
+                        .lines()
+                        .next()
+                        .map(str::to_string)
+                } else {
+                    None
+                }
+            });
+
+        if let Some(remote_name) = first_remote {
+            remote_output = Command::new("git")
+                .args(["--no-pager", "-C", path, "remote", "get-url", &remote_name])
+                .output()
+                .await
+                .ok();
+        }
+    }
+
     let remote = remote_output.and_then(|o| {
         if o.status.success() {
             Some(String::from_utf8_lossy(&o.stdout).trim().to_string())

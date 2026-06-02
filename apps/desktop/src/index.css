@@ -426,6 +426,12 @@ button.ghost:active {
   border-color: color-mix(in srgb, var(--border) 60%, transparent) !important;
 }
 
+.border-border-20 {
+  border-color: color-mix(in srgb, var(--border) 20%, transparent) !important;
+}
+.border-border-30 {
+  border-color: color-mix(in srgb, var(--border) 30%, transparent) !important;
+}
 .border-border-40 {
   border-color: color-mix(in srgb, var(--border) 40%, transparent) !important;
 }
@@ -472,6 +478,9 @@ button.ghost:active {
 
 .bg-surface-1-10 {
   background-color: color-mix(in srgb, var(--surface-1) 10%, transparent) !important;
+}
+.bg-surface-1-20 {
+  background-color: color-mix(in srgb, var(--surface-1) 20%, transparent) !important;
 }
 .bg-surface-1-30 {
   background-color: color-mix(in srgb, var(--surface-1) 30%, transparent) !important;

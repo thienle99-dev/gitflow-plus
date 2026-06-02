@@ -1,17 +1,20 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
-import { useGitStatus } from "@/queries/useGitLog";
+import { useGitDiff, useGitStatus } from "@/queries/useGitLog";
 import { api, type FileChange } from "@/api/tauri";
 import { useGenerateCommitMessage, useAICommitScope } from "@/queries/useAI";
 import { generateLocalCommitMessage, type CommitScopeSuggestion } from "@/lib/ai";
 import { useQueryClient } from "@tanstack/react-query";
 import ContextMenu, { type ContextMenuItem } from "@/components/ui/overlay/ContextMenu";
 import UndoButton from "@/components/features/actions/UndoButton";
+import DiffViewer from "@/components/features/diff/DiffViewer";
 import {
   Braces,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Database,
   File,
   FileArchive,
@@ -52,6 +55,7 @@ export default function WorkingTree() {
   const [stagedOpen, setStagedOpen] = useState(true);
   const [unstagedOpen, setUnstagedOpen] = useState(true);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; file: FileChange; stage: "staged" | "unstaged" } | null>(null);
+  const [reviewTarget, setReviewTarget] = useState<DiffReviewTarget | null>(null);
   // Multi-select for batch stage/unstage
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const lastClickedRef = useRef<string | null>(null);
@@ -59,6 +63,15 @@ export default function WorkingTree() {
 
   const staged = changes?.filter((c) => c.staged) || [];
   const unstaged = changes?.filter((c) => !c.staged) || [];
+  const reviewFiles: DiffReviewTarget[] = [
+    ...staged.map((file) => ({ path: file.path, stage: "staged" as const, status: file.status })),
+    ...unstaged.map((file) => ({ path: file.path, stage: "unstaged" as const, status: file.status })),
+  ];
+
+  const openDiffReview = (path: string, stage: "staged" | "unstaged") => {
+    const target = reviewFiles.find((file) => file.path === path && file.stage === stage) || { path, stage };
+    setReviewTarget(target);
+  };
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -277,7 +290,7 @@ export default function WorkingTree() {
     ? [
       {
         label: "View diff",
-        action: () => selectFile(ctxMenu.file.path, ctxMenu.stage),
+        action: () => openDiffReview(ctxMenu.file.path, ctxMenu.stage),
       },
       {
         label: ctxMenu.stage === "staged" ? "Unstage file" : "Stage file",
@@ -374,13 +387,13 @@ export default function WorkingTree() {
           open={stagedOpen}
           files={staged}
           empty="No staged changes"
-          selectedFile={selectedFile}
-          selectedStage={selectedFileStage}
+          selectedFile={reviewTarget?.path || selectedFile}
+          selectedStage={reviewTarget?.stage || selectedFileStage}
           stage="staged"
           multiSelectedFiles={selectedFiles}
           onToggleAll={handleUnstageAll}
           onToggleFile={handleUnstage}
-          onSelect={(path) => selectFile(path, "staged")}
+          onSelect={(path) => openDiffReview(path, "staged")}
           onToggleOpen={() => setStagedOpen((open) => !open)}
           onMenu={(x, y, file) => setCtxMenu({ x, y, file, stage: "staged" })}
           onFileMultiClick={handleFileClick}
@@ -391,13 +404,13 @@ export default function WorkingTree() {
           open={unstagedOpen}
           files={unstaged}
           empty="No unstaged changes"
-          selectedFile={selectedFile}
-          selectedStage={selectedFileStage}
+          selectedFile={reviewTarget?.path || selectedFile}
+          selectedStage={reviewTarget?.stage || selectedFileStage}
           stage="unstaged"
           multiSelectedFiles={selectedFiles}
           onToggleAll={handleStageAll}
           onToggleFile={handleStage}
-          onSelect={(path) => selectFile(path, "unstaged")}
+          onSelect={(path) => openDiffReview(path, "unstaged")}
           onToggleOpen={() => setUnstagedOpen((open) => !open)}
           onMenu={(x, y, file) => setCtxMenu({ x, y, file, stage: "unstaged" })}
           onFileMultiClick={handleFileClick}
@@ -532,6 +545,16 @@ export default function WorkingTree() {
           </button>
         </div>
       </div>
+
+      {reviewTarget && (
+        <DiffReviewModal
+          target={reviewTarget}
+          files={reviewFiles}
+          onChangeTarget={setReviewTarget}
+          onClose={() => setReviewTarget(null)}
+          onRefresh={invalidate}
+        />
+      )}
 
       {toast && <div className="toast">{toast}</div>}
       {ctxMenu && (
@@ -762,11 +785,175 @@ function ChangeRow({ file, checked, selected, multiSelected, onSelect, onToggle,
   );
 }
 
-function fileIcon(path: string, status: string) {
+interface DiffReviewTarget {
+  path: string;
+  stage: "staged" | "unstaged";
+  status?: string;
+}
+
+interface DiffReviewModalProps {
+  target: DiffReviewTarget;
+  files: DiffReviewTarget[];
+  onChangeTarget: (target: DiffReviewTarget) => void;
+  onClose: () => void;
+  onRefresh: () => void;
+}
+
+function DiffReviewModal({ target, files, onChangeTarget, onClose, onRefresh }: DiffReviewModalProps) {
+  const repoPath = useRepoStore((s) => s.repoPath);
+  const diffViewMode = useUIStore((s) => s.diffViewMode);
+  const setDiffViewMode = useUIStore((s) => s.setDiffViewMode);
+  const queryClient = useQueryClient();
+  const [showFullContext, setShowFullContext] = useState(false);
+  const currentIndex = files.findIndex((file) => file.path === target.path && file.stage === target.stage);
+  const currentNumber = currentIndex >= 0 ? currentIndex + 1 : 1;
+  const canGoPrevious = currentIndex > 0;
+  const canGoNext = currentIndex >= 0 && currentIndex < files.length - 1;
+  const { data: diff, isLoading } = useGitDiff(
+    repoPath,
+    target.path,
+    null,
+    target.stage === "staged",
+    showFullContext ? 9999 : undefined,
+  );
+
+  const goTo = useCallback((offset: number) => {
+    if (currentIndex < 0) return;
+    const next = files[currentIndex + offset];
+    if (next) {
+      setShowFullContext(false);
+      onChangeTarget(next);
+    }
+  }, [currentIndex, files, onChangeTarget]);
+
+  const refreshDiff = () => {
+    queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
+    onRefresh();
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        goTo(-1);
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        goTo(1);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [goTo, onClose]);
+
+  return (
+    <div className="fixed inset-0 z-[9997] flex items-center justify-center bg-black/65 p-6 backdrop-blur-sm animate-in fade-in duration-150">
+      <div className="flex h-[88vh] w-[92vw] max-w-[1320px] min-w-[760px] flex-col overflow-hidden rounded-mac border border-border bg-surface-0 shadow-2xl">
+        <div className="flex items-center justify-between gap-3 border-b border-border bg-surface-1 px-3 py-2 shrink-0">
+          <div className="min-w-0 flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded bg-surface-2 text-text-secondary shrink-0">
+              {fileIcon(target.path, target.status || "modified", 16)}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="truncate text-sm font-semibold text-text-primary">{getFileName(target.path)}</span>
+                {target.status && (
+                  <span className={`font-mono text-[10px] font-bold ${statusColor(target.status)}`}>
+                    {statusLabel(target.status)}
+                  </span>
+                )}
+                <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${
+                  target.stage === "staged"
+                    ? "bg-[#30d158]/10 text-[#30d158]"
+                    : "bg-[#ff9f0a]/10 text-[#ff9f0a]"
+                }`}>
+                  {target.stage}
+                </span>
+              </div>
+              <div className="truncate text-[11px] text-text-muted">{target.path}</div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              className="h-7 w-7 rounded border border-border-40 bg-surface-2 hover:bg-surface-3 disabled:opacity-35 flex items-center justify-center transition-colors"
+              onClick={() => goTo(-1)}
+              disabled={!canGoPrevious}
+              title="Previous file"
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <span className="min-w-[58px] text-center text-[11px] font-semibold text-text-muted">
+              {currentNumber}/{Math.max(files.length, 1)}
+            </span>
+            <button
+              className="h-7 w-7 rounded border border-border-40 bg-surface-2 hover:bg-surface-3 disabled:opacity-35 flex items-center justify-center transition-colors"
+              onClick={() => goTo(1)}
+              disabled={!canGoNext}
+              title="Next file"
+            >
+              <ChevronRight size={14} />
+            </button>
+
+            <button
+              className={`ghost h-7 px-2 text-[11px] rounded border border-transparent ${
+                showFullContext ? "text-accent bg-accent-10 border-accent-20" : "hover:bg-surface-2"
+              }`}
+              onClick={() => setShowFullContext((show) => !show)}
+              title={showFullContext ? "Show changed hunks only" : "Show full file context"}
+            >
+              {showFullContext ? "Compact" : "Full file"}
+            </button>
+            <div className="segmented-control">
+              <button
+                className={diffViewMode === "split" ? "active" : ""}
+                onClick={() => setDiffViewMode("split")}
+              >
+                Split
+              </button>
+              <button
+                className={diffViewMode === "unified" ? "active" : ""}
+                onClick={() => setDiffViewMode("unified")}
+              >
+                Unified
+              </button>
+            </div>
+            <button
+              className="h-7 w-7 rounded hover:bg-surface-2 text-text-muted hover:text-text-primary flex items-center justify-center transition-colors"
+              onClick={onClose}
+              title="Close review"
+            >
+              <X size={15} />
+            </button>
+          </div>
+        </div>
+
+        <div className="min-h-0 flex-1 bg-surface-0">
+          {isLoading ? (
+            <div className="flex h-full items-center justify-center text-xs text-text-muted">Loading diff...</div>
+          ) : diff ? (
+            <DiffViewer
+              diff={diff}
+              filePath={target.path}
+              source={target.stage === "staged" ? "staged" : "working"}
+              onPatchApplied={refreshDiff}
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center text-xs text-text-muted">No changes</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function fileIcon(path: string, status: string, size = 14) {
   const className = statusColor(status);
   const ext = getExtension(path);
   const fileName = getFileName(path).toLowerCase();
-  const size = 14;
 
   if (["package.json", "tsconfig.json", "vite.config.ts", "tailwind.config.ts"].includes(fileName)) {
     return <FileCog size={size} className={className} />;

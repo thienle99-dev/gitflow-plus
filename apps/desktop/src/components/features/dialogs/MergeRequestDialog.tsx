@@ -206,6 +206,27 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
               <span className="text-3xs font-semibold">No remote detected</span>
             </div>
 
+          ) : error ? (
+            <div className="h-full flex flex-col items-center justify-center p-4 text-center space-y-2 text-text-muted">
+              <AlertCircle size={18} className="text-[#ff453a]" />
+              <span className="text-3xs font-semibold text-text-primary">Could not load merge requests</span>
+              <span className="max-w-[220px] text-[10px] leading-relaxed">{error}</span>
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  onClick={loadMRs}
+                  className="h-7 px-3 rounded bg-accent text-accent-fg text-[10px] font-bold hover:opacity-90 transition-opacity"
+                >
+                  Retry
+                </button>
+                <button
+                  onClick={openSettings}
+                  className="h-7 px-3 rounded border border-border-40 bg-surface-2 text-text-primary text-[10px] font-bold hover:bg-surface-3 transition-colors"
+                >
+                  Settings
+                </button>
+              </div>
+            </div>
+
           ) : filteredMrs.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center p-4 text-center text-text-muted space-y-1">
               <GitPullRequest size={16} className="opacity-40" />
