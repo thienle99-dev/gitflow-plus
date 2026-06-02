@@ -58,8 +58,13 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'GitFlow Desktop ${{ github.ref_name }}'
-          releaseDraft: false
+          releaseDraft: true
           prerelease: false
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "${{ github.ref_name }}" --draft=false
 
       - name: Prepare artifacts for deployment
         run: |
