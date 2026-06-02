@@ -276,7 +276,9 @@ export default function MainLayout() {
   const dialogOverlay = overlayDialog ? (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className={`bg-surface-0 rounded-mac shadow-xl border border-border overflow-hidden ${
-        overlayDialog === "merge-request" ? "w-[760px] h-[520px]" : "min-w-[480px] max-w-[600px] max-h-[80vh]"
+        overlayDialog === "merge-request"
+          ? "h-[min(760px,88vh)] w-[min(1180px,92vw)]"
+          : "min-w-[480px] max-w-[600px] max-h-[80vh]"
       }`}>
         {dialogComponents[overlayDialog] || (
           <div className="p-4 text-text-muted text-sm">

@@ -342,7 +342,63 @@ button.ghost:active {
   border-color: transparent;
 }
 
+.hunk-action-btn.accept:hover {
+  background: #30d158;
+  color: white;
+  border-color: transparent;
+}
+
+.hunk-action-btn.reject:hover {
+  background: #ff375f;
+  color: white;
+  border-color: transparent;
+}
+
 .hunk-action-btn.discard:hover {
+  background: #ff375f;
+  color: white;
+}
+
+/* Per-Line Action Widgets (Accept/Reject on hover) */
+.diff-line-actions-widget {
+  display: none;
+  gap: 4px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.cm-line:hover .diff-line-actions-widget {
+  display: inline-flex;
+}
+
+.line-action-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-family: inherit;
+  padding: 0 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 150ms ease;
+  user-select: none;
+  line-height: 16px;
+  height: 16px;
+}
+
+.line-action-btn:hover {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: transparent;
+}
+
+.line-action-btn.accept:hover {
+  background: #30d158;
+  color: white;
+}
+
+.line-action-btn.reject:hover {
   background: #ff375f;
   color: white;
 }

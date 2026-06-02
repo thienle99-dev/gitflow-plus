@@ -29,6 +29,7 @@ const LS_KEY_FETCHED_MODELS = "gitflowAiFetchedModels";
 const LS_KEY_AI_DETAIL_LEVEL = "gitflowAiDetailLevel";
 const LS_KEY_COMMIT_STYLE = "gitflowCommitMessageStyle";
 const LS_KEY_AI_CUSTOM_RULES = "gitflowAiCustomRules";
+const LS_KEY_AI_REVIEW_LANGUAGE = "gitflowAiReviewLanguage";
 const LS_KEY_FETCH_INTERVAL = "gitflowFetchIntervalMinutes";
 const LS_KEY_AUTO_PRUNE = "gitflowAutoPruneOnFetch";
 const LS_KEY_CONFIRM_DANGEROUS = "gitflowConfirmDangerousActions";
@@ -70,6 +71,7 @@ const SETTINGS_KEYS = [
   LS_KEY_AI_DETAIL_LEVEL,
   LS_KEY_COMMIT_STYLE,
   LS_KEY_AI_CUSTOM_RULES,
+  LS_KEY_AI_REVIEW_LANGUAGE,
   LS_KEY_GITHUB_TOKEN,
   LS_KEY_GITLAB_TOKEN,
   LS_KEY_GITLAB_HOST,
@@ -87,6 +89,18 @@ const THEME_CARDS = [
   { id: "gruvbox-dark-hard",label: "Dark Hard",    group: "Gruvbox Dark",  colors: { bg: "#1d2021", surface: "#282828", sidebar: "#141617", accent: "#d79921", text: "#ebdbb2" } },
   { id: "gruvbox-light",    label: "Light Medium", group: "Gruvbox Light", colors: { bg: "#fbf1c7", surface: "#f9f5d7", sidebar: "#ebdbb2", accent: "#b57614", text: "#3c3836" } },
   { id: "gruvbox-light-soft",label:"Light Soft",   group: "Gruvbox Light", colors: { bg: "#f2e5bc", surface: "#ebdbb2", sidebar: "#d5c4a1", accent: "#b57614", text: "#3c3836" } },
+] as const;
+
+const AI_REVIEW_LANGUAGES = [
+  { id: "auto", label: "Auto detect" },
+  { id: "english", label: "English" },
+  { id: "vietnamese", label: "Vietnamese" },
+  { id: "japanese", label: "Japanese" },
+  { id: "korean", label: "Korean" },
+  { id: "chinese", label: "Chinese" },
+  { id: "spanish", label: "Spanish" },
+  { id: "french", label: "French" },
+  { id: "german", label: "German" },
 ] as const;
 
 const THEME_GROUPS = ["macOS", "Gruvbox Dark", "Gruvbox Light"] as const;
@@ -199,6 +213,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
   const [aiDetailLevel, setAiDetailLevel] = useState<"minimal" | "medium" | "detailed">("medium");
   const [commitStyle, setCommitStyle] = useState<"conventional" | "plain" | "gitmoji" | "jira">("conventional");
   const [customRules, setCustomRules] = useState("");
+  const [reviewLanguage, setReviewLanguage] = useState("auto");
 
   // Advanced Tab States
   const [largeDiffMode, setLargeDiffMode] = useState<"full" | "prompt" | "summary">("prompt");
@@ -243,6 +258,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       const savedDetailLevel = localStorage.getItem(LS_KEY_AI_DETAIL_LEVEL) as "minimal" | "medium" | "detailed";
       const savedCommitStyle = localStorage.getItem(LS_KEY_COMMIT_STYLE) as "conventional" | "plain" | "gitmoji" | "jira";
       const savedCustomRules = localStorage.getItem(LS_KEY_AI_CUSTOM_RULES) || "";
+      const savedReviewLanguage = localStorage.getItem(LS_KEY_AI_REVIEW_LANGUAGE) || "auto";
 
       if (savedDiffMode) setDefaultDiffMode(savedDiffMode);
       if (savedAutoFetch !== null) setAutoFetch(savedAutoFetch === "true");
@@ -271,6 +287,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       if (savedDetailLevel) setAiDetailLevel(savedDetailLevel);
       if (savedCommitStyle) setCommitStyle(savedCommitStyle);
       setCustomRules(savedCustomRules);
+      setReviewLanguage(savedReviewLanguage);
       
       const savedGithubToken = localStorage.getItem(LS_KEY_GITHUB_TOKEN);
       const savedGitlabToken = localStorage.getItem(LS_KEY_GITLAB_TOKEN);
@@ -310,6 +327,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
     const storedDetailLevel = (localStorage.getItem(LS_KEY_AI_DETAIL_LEVEL) as "minimal" | "medium" | "detailed") || "medium";
     const storedCommitStyle = (localStorage.getItem(LS_KEY_COMMIT_STYLE) as "conventional" | "plain" | "gitmoji" | "jira") || "conventional";
     const storedCustomRules = localStorage.getItem(LS_KEY_AI_CUSTOM_RULES) || "";
+    const storedReviewLanguage = localStorage.getItem(LS_KEY_AI_REVIEW_LANGUAGE) || "auto";
     const storedGithubToken = localStorage.getItem(LS_KEY_GITHUB_TOKEN) || "";
     const storedGitlabToken = localStorage.getItem(LS_KEY_GITLAB_TOKEN) || "";
     const storedGitlabHost = localStorage.getItem(LS_KEY_GITLAB_HOST) || "";
@@ -339,6 +357,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       aiDetailLevel !== storedDetailLevel ||
       commitStyle !== storedCommitStyle ||
       customRules !== storedCustomRules ||
+      reviewLanguage !== storedReviewLanguage ||
       githubToken !== storedGithubToken ||
       gitlabToken !== storedGitlabToken ||
       gitlabHost !== storedGitlabHost
@@ -369,6 +388,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
     aiDetailLevel,
     commitStyle,
     customRules,
+    reviewLanguage,
     githubToken,
     gitlabToken,
     gitlabHost,
@@ -479,6 +499,7 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       localStorage.setItem(LS_KEY_AI_DETAIL_LEVEL, aiDetailLevel);
       localStorage.setItem(LS_KEY_COMMIT_STYLE, commitStyle);
       localStorage.setItem(LS_KEY_AI_CUSTOM_RULES, customRules);
+      localStorage.setItem(LS_KEY_AI_REVIEW_LANGUAGE, reviewLanguage);
       localStorage.setItem(LS_KEY_GITHUB_TOKEN, githubToken);
       localStorage.setItem(LS_KEY_GITLAB_TOKEN, gitlabToken);
       localStorage.setItem(LS_KEY_GITLAB_HOST, gitlabHost);
@@ -1089,6 +1110,30 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
                       <ChevronDown size={11} strokeWidth={2.5} />
                     </div>
                   </div>
+                </div>
+
+                {/* AI Review Language */}
+                <div className="space-y-1 border-t border-border-40 pt-3">
+                  <label className="text-xs font-semibold text-text-primary">AI Review Language</label>
+                  <div className="relative">
+                    <select
+                      value={reviewLanguage}
+                      onChange={(e) => setReviewLanguage(e.target.value)}
+                      className="w-full h-8 pl-2.5 pr-8 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer hover:bg-surface-2 transition-all"
+                    >
+                      {AI_REVIEW_LANGUAGES.map((language) => (
+                        <option key={language.id} value={language.id}>
+                          {language.label}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
+                      <ChevronDown size={11} strokeWidth={2.5} />
+                    </div>
+                  </div>
+                  <p className="text-2xs text-text-muted">
+                    Used for AI diff reviews, commit explanations, and merge request reviews.
+                  </p>
                 </div>
 
                 {/* Custom Rules */}

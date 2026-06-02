@@ -18,7 +18,7 @@ import { html } from "@codemirror/lang-html";
 import { xml } from "@codemirror/lang-xml";
 import { java } from "@codemirror/lang-java";
 import { cpp } from "@codemirror/lang-cpp";
-import { parseDiff, type DiffHunk } from "@/lib/parse-diff";
+import { parseDiff, type DiffHunk, type DiffLine } from "@/lib/parse-diff";
 
 const LANG_MAP: Record<string, ReturnType<typeof javascript>> = {
   js: javascript(),
@@ -150,6 +150,29 @@ export default function DiffViewer({
     }
   };
 
+  // Apply a single line change (accept or reject a single added/deleted line)
+  const applyLine = async (
+    hunk: DiffHunk,
+    lineIndex: number,
+    action: "stage" | "unstage" | "discard",
+  ) => {
+    if (!repoPath) return;
+    if (action === "discard" && !confirm("Discard this line from the working tree?")) return;
+
+    setApplying(lineIndex);
+    setError(null);
+    try {
+      const line = hunk.lines[lineIndex];
+      const patch = buildSingleLinePatch(patchPrefix, hunk, line);
+      await api.diff.applyHunk(repoPath, patch, action);
+      onPatchApplied?.();
+    } catch (e: any) {
+      setError(String(e));
+    } finally {
+      setApplying(null);
+    }
+  };
+
   // Destroy editors on unmount
   useEffect(() => {
     return () => {
@@ -181,6 +204,7 @@ export default function DiffViewer({
       hunks,
       source,
       applyHunk,
+      applyLine,
       "old",
       oldLines,
       newLines,
@@ -193,6 +217,7 @@ export default function DiffViewer({
       hunks,
       source,
       applyHunk,
+      applyLine,
       "new",
       oldLines,
       newLines,
@@ -223,6 +248,7 @@ export default function DiffViewer({
       hunks,
       source,
       applyHunk,
+      applyLine,
     );
 
     return () => {
@@ -317,27 +343,30 @@ export default function DiffViewer({
                   {source === "working" ? (
                     <>
                       <button
-                        className="ghost text-2xs px-2"
+                        className="ghost text-2xs px-2 text-[#30d158] hover:bg-[#30d158]/10"
                         onClick={() => applyHunk(hunk, index, "stage")}
                         disabled={applying !== null}
+                        title="Accept all changes in this hunk (stage)"
                       >
-                        {applying === index ? "Applying..." : "Stage hunk"}
+                        {applying === index ? "Applying..." : "✓ Accept Hunk"}
                       </button>
                       <button
-                        className="ghost text-2xs px-2 hover:text-[#ff375f]"
+                        className="ghost text-2xs px-2 text-[#ff375f] hover:bg-[#ff375f]/10"
                         onClick={() => applyHunk(hunk, index, "discard")}
                         disabled={applying !== null}
+                        title="Reject and discard all changes in this hunk"
                       >
-                        Discard
+                        {applying === index ? "Applying..." : "✗ Reject Hunk"}
                       </button>
                     </>
                   ) : (
                     <button
-                      className="ghost text-2xs px-2"
+                      className="ghost text-2xs px-2 hover:text-[#ff9f0a]"
                       onClick={() => applyHunk(hunk, index, "unstage")}
                       disabled={applying !== null}
+                      title="Unstage this hunk"
                     >
-                      {applying === index ? "Applying..." : "Unstage hunk"}
+                      {applying === index ? "Applying..." : "↩ Unstage Hunk"}
                     </button>
                   )}
                 </div>
@@ -510,27 +539,30 @@ class HunkActionsWidget extends WidgetType {
     if (this.source === "commit") return span;
 
     if (this.source === "working") {
-      const stageBtn = document.createElement("button");
-      stageBtn.textContent = "Stage";
-      stageBtn.className = "hunk-action-btn stage";
-      stageBtn.onclick = (e) => {
+      const acceptBtn = document.createElement("button");
+      acceptBtn.textContent = "✓ Accept";
+      acceptBtn.className = "hunk-action-btn accept";
+      acceptBtn.title = "Stage this hunk";
+      acceptBtn.onclick = (e) => {
         e.stopPropagation();
         this.onAction(this.hunk, this.index, "stage");
       };
-      span.appendChild(stageBtn);
+      span.appendChild(acceptBtn);
 
-      const discardBtn = document.createElement("button");
-      discardBtn.textContent = "Discard";
-      discardBtn.className = "hunk-action-btn discard";
-      discardBtn.onclick = (e) => {
+      const rejectBtn = document.createElement("button");
+      rejectBtn.textContent = "✗ Reject";
+      rejectBtn.className = "hunk-action-btn reject";
+      rejectBtn.title = "Discard this hunk";
+      rejectBtn.onclick = (e) => {
         e.stopPropagation();
         this.onAction(this.hunk, this.index, "discard");
       };
-      span.appendChild(discardBtn);
+      span.appendChild(rejectBtn);
     } else if (this.source === "staged") {
       const unstageBtn = document.createElement("button");
-      unstageBtn.textContent = "Unstage";
+      unstageBtn.textContent = "↩ Unstage";
       unstageBtn.className = "hunk-action-btn unstage";
+      unstageBtn.title = "Unstage this hunk";
       unstageBtn.onclick = (e) => {
         e.stopPropagation();
         this.onAction(this.hunk, this.index, "unstage");
@@ -546,10 +578,78 @@ class HunkActionsWidget extends WidgetType {
   }
 }
 
+/**
+ * Widget that appears on individual changed lines, allowing per-line accept/reject/discard.
+ */
+class LineActionsWidget extends WidgetType {
+  constructor(
+    readonly hunk: DiffHunk,
+    readonly lineIndex: number,
+    readonly source: "working" | "staged" | "commit",
+    readonly onLineAction: (
+      hunk: DiffHunk,
+      lineIndex: number,
+      action: "stage" | "unstage" | "discard",
+    ) => void,
+  ) {
+    super();
+  }
+
+  eq(other: LineActionsWidget) {
+    return this.lineIndex === other.lineIndex && this.source === other.source;
+  }
+
+  toDOM() {
+    const span = document.createElement("span");
+    span.className = "diff-line-actions-widget";
+
+    if (this.source === "commit") return span;
+
+    if (this.source === "working") {
+      const acceptBtn = document.createElement("button");
+      acceptBtn.textContent = "✓";
+      acceptBtn.className = "line-action-btn accept";
+      acceptBtn.title = "Accept this line (stage)";
+      acceptBtn.onclick = (e) => {
+        e.stopPropagation();
+        this.onLineAction(this.hunk, this.lineIndex, "stage");
+      };
+      span.appendChild(acceptBtn);
+
+      const rejectBtn = document.createElement("button");
+      rejectBtn.textContent = "✗";
+      rejectBtn.className = "line-action-btn reject";
+      rejectBtn.title = "Reject this line (discard)";
+      rejectBtn.onclick = (e) => {
+        e.stopPropagation();
+        this.onLineAction(this.hunk, this.lineIndex, "discard");
+      };
+      span.appendChild(rejectBtn);
+    } else if (this.source === "staged") {
+      const unstageBtn = document.createElement("button");
+      unstageBtn.textContent = "↩";
+      unstageBtn.className = "line-action-btn unstage";
+      unstageBtn.title = "Unstage this line";
+      unstageBtn.onclick = (e) => {
+        e.stopPropagation();
+        this.onLineAction(this.hunk, this.lineIndex, "unstage");
+      };
+      span.appendChild(unstageBtn);
+    }
+
+    return span;
+  }
+
+  ignoreEvent() {
+    return false;
+  }
+}
+
 function getDiffHighlightExtension(
   hunks: DiffHunk[],
   source: "working" | "staged" | "commit",
   onAction: (hunk: DiffHunk, index: number, action: "stage" | "unstage" | "discard") => void,
+  onLineAction: (hunk: DiffHunk, lineIndex: number, action: "stage" | "unstage" | "discard") => void,
   side?: "old" | "new",
   oldLines?: string[],
   newLines?: string[],
@@ -559,10 +659,27 @@ function getDiffHighlightExtension(
       const builder = new RangeSetBuilder<Decoration>();
       const doc = state.doc;
       let hunkIndex = 0;
+      // Track which hunk each document line belongs to (for per-line actions)
+      const lineToHunk: { hunk: DiffHunk; lineIndexInHunk: number }[] = [];
+      let currentHunkForLines: DiffHunk | null = null;
+      let hunkLineCounter = 0;
       
       for (let i = 1; i <= doc.lines; i++) {
         const line = doc.line(i);
         const text = line.text;
+        
+        // Track hunk association for changed lines
+        if (text.startsWith("@@")) {
+          currentHunkForLines = hunks[hunkIndex] || null;
+          hunkLineCounter = 0;
+        } else if (currentHunkForLines) {
+          // Map doc line -> hunk line index (skip header lines in hunk.lines)
+          const hunkLines = currentHunkForLines.lines.filter((l) => l.type !== "header");
+          if (hunkLineCounter < hunkLines.length) {
+            lineToHunk[i] = { hunk: currentHunkForLines, lineIndexInHunk: hunkLineCounter };
+          }
+          hunkLineCounter++;
+        }
         
         if (text.startsWith("+")) {
           // Line decoration
@@ -578,6 +695,23 @@ function getDiffHighlightExtension(
             line.from + 1,
             Decoration.replace({ widget: new PrefixWidget("+") }),
           );
+
+          // Per-line action widget (accept/reject) for working/staged diffs
+          if (source !== "commit" && lineToHunk[i]) {
+            builder.add(
+              line.to,
+              line.to,
+              Decoration.widget({
+                widget: new LineActionsWidget(
+                  lineToHunk[i].hunk,
+                  lineToHunk[i].lineIndexInHunk,
+                  source,
+                  onLineAction,
+                ),
+                side: 1,
+              }),
+            );
+          }
 
           // Inline highlight for side-by-side split view
           if (side === "new" && oldLines && newLines && i <= oldLines.length) {
@@ -609,6 +743,23 @@ function getDiffHighlightExtension(
             line.from + 1,
             Decoration.replace({ widget: new PrefixWidget("-") }),
           );
+
+          // Per-line action widget (accept/reject) for working/staged diffs
+          if (source !== "commit" && lineToHunk[i]) {
+            builder.add(
+              line.to,
+              line.to,
+              Decoration.widget({
+                widget: new LineActionsWidget(
+                  lineToHunk[i].hunk,
+                  lineToHunk[i].lineIndexInHunk,
+                  source,
+                  onLineAction,
+                ),
+                side: 1,
+              }),
+            );
+          }
           
           // Inline highlight for side-by-side split view
           if (side === "old" && oldLines && newLines && i <= newLines.length) {
@@ -718,6 +869,7 @@ function createEditor(
   hunks: DiffHunk[],
   source: "working" | "staged" | "commit",
   onAction: (hunk: DiffHunk, index: number, action: "stage" | "unstage" | "discard") => void,
+  onLineAction: (hunk: DiffHunk, lineIndex: number, action: "stage" | "unstage" | "discard") => void,
   side?: "old" | "new",
   oldLines?: string[],
   newLines?: string[],
@@ -728,7 +880,7 @@ function createEditor(
       basicSetup,
       lang,
       ...theme,
-      getDiffHighlightExtension(hunks, source, onAction, side, oldLines, newLines),
+      getDiffHighlightExtension(hunks, source, onAction, onLineAction, side, oldLines, newLines),
       EditorView.editable.of(false),
       EditorView.lineWrapping,
       keymap.of([]),
@@ -803,4 +955,41 @@ function getPatchPrefix(diff: string) {
 function buildHunkPatch(prefix: string, hunk: DiffHunk) {
   const hunkLines = hunk.lines.map((line) => line.content).join("\n");
   return `${prefix}\n${hunkLines}\n`;
+}
+
+/**
+ * Build a single-line patch for applying/reverting one changed line.
+ * Constructs a minimal hunk with the target line and its surrounding context.
+ */
+function buildSingleLinePatch(prefix: string, hunk: DiffHunk, targetLine: DiffLine): string {
+  // Build a minimal hunk around the target line with 1 line of context
+  const nonHeaderLines = hunk.lines.filter((l) => l.type !== "header");
+  const targetIdx = nonHeaderLines.indexOf(targetLine);
+  if (targetIdx === -1) return buildHunkPatch(prefix, hunk);
+
+  // Find context window: 1 line before and after
+  const start = Math.max(0, targetIdx - 1);
+  const end = Math.min(nonHeaderLines.length - 1, targetIdx + 1);
+
+  const selectedLines = nonHeaderLines.slice(start, end + 1);
+
+  // Compute old/new ranges for the mini hunk
+  let oldStart = 0, oldCount = 0, newStart = 0, newCount = 0;
+  for (const l of selectedLines) {
+    if (l.type === "context" || l.type === "delete") {
+      if (oldStart === 0 && l.oldLineNumber !== null) oldStart = l.oldLineNumber;
+      oldCount++;
+    }
+    if (l.type === "context" || l.type === "add") {
+      if (newStart === 0 && l.newLineNumber !== null) newStart = l.newLineNumber;
+      newCount++;
+    }
+  }
+
+  if (oldStart === 0) oldStart = hunk.oldStart;
+  if (newStart === 0) newStart = hunk.newStart;
+
+  const miniHeader = `@@ -${oldStart},${oldCount} +${newStart},${newCount} @@`;
+  const lines = selectedLines.map((l) => l.content).join("\n");
+  return `${prefix}\n${miniHeader}\n${lines}\n`;
 }

@@ -84,6 +84,7 @@ describe("buildCommitPrompt", () => {
       detailLevel: "ultra-minimal" as const,
       commitStyle: "conventional" as const,
       customRules: "",
+      reviewLanguage: "auto" as const,
     };
     const prompt = buildCommitPrompt("diff content", settings, "main");
     expect(prompt).toContain("Return ONLY a single line");
@@ -98,6 +99,7 @@ describe("buildCommitPrompt", () => {
       detailLevel: "minimal" as const,
       commitStyle: "conventional" as const,
       customRules: "",
+      reviewLanguage: "auto" as const,
     };
     const prompt = buildCommitPrompt("diff content", settings, "main");
     expect(prompt).toContain("1-2 lines of brief explanation");
@@ -112,6 +114,7 @@ describe("buildCommitPrompt", () => {
       detailLevel: "medium" as const,
       commitStyle: "conventional" as const,
       customRules: "",
+      reviewLanguage: "auto" as const,
     };
     const prompt = buildCommitPrompt("diff content", settings, "main");
     expect(prompt).toContain("If the changes are complex");
@@ -126,6 +129,7 @@ describe("buildCommitPrompt", () => {
       detailLevel: "detailed" as const,
       commitStyle: "conventional" as const,
       customRules: "",
+      reviewLanguage: "auto" as const,
     };
     const prompt = buildCommitPrompt("diff content", settings, "main");
     expect(prompt).toContain("detailed commit message with a body");
@@ -140,6 +144,7 @@ describe("buildCommitPrompt", () => {
       detailLevel: "comprehensive" as const,
       commitStyle: "conventional" as const,
       customRules: "",
+      reviewLanguage: "auto" as const,
     };
     const prompt = buildCommitPrompt("diff content", settings, "main");
     expect(prompt).toContain("reasoning section");

@@ -11,6 +11,7 @@ interface AISettings {
   detailLevel: CommitMessageDetailLevel;
   commitStyle: CommitMessageStyle;
   customRules: string;
+  reviewLanguage: AIReviewLanguage;
 }
 
 interface GeneratedCommitMessage {
@@ -21,6 +22,16 @@ interface GeneratedCommitMessage {
 
 type CommitMessageStyle = "conventional" | "plain" | "gitmoji" | "jira";
 type CommitMessageDetailLevel = "ultra-minimal" | "minimal" | "medium" | "detailed" | "comprehensive";
+type AIReviewLanguage =
+  | "auto"
+  | "english"
+  | "vietnamese"
+  | "japanese"
+  | "korean"
+  | "chinese"
+  | "spanish"
+  | "french"
+  | "german";
 
 export interface CommitGroup {
   files: string[];
@@ -75,11 +86,13 @@ export async function reviewDiffWithAI(filePath: string, diff: string) {
     throw new Error("Configure an AI API key or local model in settings");
   }
 
+  const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
   const prompt = `You are a world-class senior software architect. Analyze the git diff below for the file "${filePath}" and provide two structured sections:
 1. CODE EXPLANATION: A clear, high-level summary of WHAT was changed and WHY.
 2. CODE REVIEW & SUGGESTIONS: Inspect the code changes for potential bugs, security issues, performance optimization opportunities, or style improvements. If everything looks good, say that clearly.
 
 Be professional, direct, constructive, and use markdown styling.
+${languageInstruction}
 
 Diff:
 ${diff.slice(0, 8000)}`;
@@ -110,8 +123,9 @@ export async function explainCommitWithAI(
   const truncatedDiff = diff.slice(0, 12_000);
   const branchName = await getCurrentBranchName(repoPath);
   const branchContext = branchName ? `Branch: ${branchName}\n` : "";
+  const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
 
-  const prompt = `You are a senior software engineer reviewing a Git commit. Explain this commit in plain English.
+  const prompt = `You are a senior software engineer reviewing a Git commit. Explain this commit for code review.
 
 ${branchContext}Commit message: ${commitMessage}
 
@@ -123,8 +137,8 @@ INSTRUCTIONS:
 2. Explain the MOTIVATION — why this change was likely needed.
 3. List the KEY CHANGES as bullet points (max 5-6).
 4. If there are potential RISKS or BREAKING CHANGES, mention them briefly.
-5. Use plain English. Be concise and direct. No markdown code blocks.
-6. Use English unless the commit message is in another language.`;
+5. Be concise and direct. No markdown code blocks.
+${languageInstruction}`;
 
   const explanation = cleanAIText(await requestAIText(prompt, settings));
   if (!explanation) {
@@ -155,8 +169,9 @@ export async function explainMergeRequestWithAI(
     .slice(0, 12)
     .map((file) => `### ${file.path}\n${file.patch!.slice(0, 1800)}`)
     .join("\n\n");
+  const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
 
-  const prompt = `You are a senior engineer reviewing a merge request. Explain the change in plain English and call out review-relevant details.
+  const prompt = `You are a senior engineer reviewing a merge request. Explain the change and call out review-relevant details.
 
 Title: ${mergeRequest.title}
 Author: ${mergeRequest.author}
@@ -176,13 +191,69 @@ INSTRUCTIONS:
 1. Start with a concise 1-2 sentence summary of what this MR changes.
 2. List key file-level changes as bullets.
 3. Mention risk areas, testing focus, or possible regressions.
-4. Keep it useful for code review. No code blocks.`;
+4. Keep it useful for code review. No code blocks.
+${languageInstruction}`;
 
   const explanation = cleanAIText(await requestAIText(prompt, settings));
   if (!explanation) {
     throw new Error("Empty response from AI");
   }
   return explanation;
+}
+
+export async function reviewMergeRequestWithAI(
+  mergeRequest: MergeRequest,
+  files: MergeRequestFileChange[],
+): Promise<string> {
+  const settings = readAISettings();
+  if (!hasProvider(settings)) {
+    throw new Error("Configure an AI API key in settings to use AI features");
+  }
+
+  const fileSummary = files.map((file) => {
+    const oldPath = file.oldPath ? ` (from ${file.oldPath})` : "";
+    const stats = file.additions !== undefined || file.deletions !== undefined
+      ? ` +${file.additions ?? 0}/-${file.deletions ?? 0}`
+      : "";
+    return `- [${file.status}] ${file.path}${oldPath}${stats}`;
+  }).join("\n");
+
+  const diffSnippets = files
+    .filter((file) => file.patch?.trim())
+    .slice(0, 16)
+    .map((file) => `### ${file.path}\n${file.patch!.slice(0, 2200)}`)
+    .join("\n\n");
+  const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
+
+  const prompt = `You are a rigorous senior engineer performing a merge request review.
+
+Title: ${mergeRequest.title}
+Author: ${mergeRequest.author}
+State: ${mergeRequest.state}
+Branches: ${mergeRequest.sourceBranch} -> ${mergeRequest.targetBranch}
+
+Description:
+${mergeRequest.description || "(No description)"}
+
+Changed files:
+${fileSummary || "(No file changes returned)"}
+
+Diff snippets:
+${diffSnippets || "(No patch snippets returned)"}
+
+INSTRUCTIONS:
+1. Review for correctness bugs, security issues, regressions, data loss risks, performance problems, missing validation, and missing tests.
+2. Lead with review findings. For each finding include severity, file path, and why it matters.
+3. If no concrete issues are found, say "No blocking issues found" and list residual risks or tests to run.
+4. End with a short recommendation: Approve, Approve with comments, or Request changes.
+5. Be concise and practical. Use markdown bullets, no code blocks.
+${languageInstruction}`;
+
+  const review = cleanAIText(await requestAIText(prompt, settings));
+  if (!review) {
+    throw new Error("Empty response from AI reviewer");
+  }
+  return review;
 }
 
 export function shouldAnalyzeScope(files: FileChange[]): boolean {
@@ -281,6 +352,7 @@ function readAISettings(): AISettings {
     detailLevel: readCommitMessageDetailLevel(),
     commitStyle: readCommitMessageStyle(),
     customRules: localStorage.getItem("gitflowAiCustomRules") || "",
+    reviewLanguage: readAIReviewLanguage(),
   };
 }
 
@@ -299,6 +371,44 @@ export function readCommitMessageDetailLevel(): CommitMessageDetailLevel {
     return saved as CommitMessageDetailLevel;
   }
   return "medium";
+}
+
+function readAIReviewLanguage(): AIReviewLanguage {
+  const saved = localStorage.getItem("gitflowAiReviewLanguage");
+  const validLanguages: AIReviewLanguage[] = [
+    "auto",
+    "english",
+    "vietnamese",
+    "japanese",
+    "korean",
+    "chinese",
+    "spanish",
+    "french",
+    "german",
+  ];
+  if (saved && validLanguages.includes(saved as AIReviewLanguage)) {
+    return saved as AIReviewLanguage;
+  }
+  return "auto";
+}
+
+function buildReviewLanguageInstruction(language: AIReviewLanguage) {
+  if (language === "auto") {
+    return "LANGUAGE: Match the user's language when it is clear from the request or commit/MR text; otherwise use English.";
+  }
+
+  const labels: Record<Exclude<AIReviewLanguage, "auto">, string> = {
+    english: "English",
+    vietnamese: "Vietnamese",
+    japanese: "Japanese",
+    korean: "Korean",
+    chinese: "Chinese",
+    spanish: "Spanish",
+    french: "French",
+    german: "German",
+  };
+
+  return `LANGUAGE: Write the entire response in ${labels[language]}. Keep technical identifiers, file paths, code symbols, and API names unchanged.`;
 }
 
 function hasProvider(settings: AISettings) {
