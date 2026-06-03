@@ -2,6 +2,7 @@ import { create } from "zustand";
 
 interface UIState {
   sidebarOpen: boolean;
+  rightPanelOpen: boolean;
   selectedCommit: string | null;
   selectedFile: string | null;
   selectedFileStage: "staged" | "unstaged" | null;
@@ -12,6 +13,8 @@ interface UIState {
   compareBranchTarget: string | null;
   setSidebarOpen: (open: boolean) => void;
   toggleSidebar: () => void;
+  setRightPanelOpen: (open: boolean) => void;
+  toggleRightPanel: () => void;
   selectCommit: (hash: string | null) => void;
   selectFile: (path: string | null, stage?: "staged" | "unstaged" | null) => void;
   setSelectedStashIndex: (index: number | null) => void;
@@ -24,6 +27,7 @@ interface UIState {
 
 export const useUIStore = create<UIState>((set) => ({
   sidebarOpen: true,
+  rightPanelOpen: true,
   selectedCommit: null,
   selectedFile: null,
   selectedFileStage: null,
@@ -35,6 +39,8 @@ export const useUIStore = create<UIState>((set) => ({
 
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
+  setRightPanelOpen: (open) => set({ rightPanelOpen: open }),
+  toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
   selectCommit: (hash) => set({
     selectedCommit: hash,
     selectedFile: null,

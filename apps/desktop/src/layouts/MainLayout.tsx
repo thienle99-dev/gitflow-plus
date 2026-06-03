@@ -19,6 +19,8 @@ import { AlertOctagon, RefreshCw, Trash2 } from "lucide-react";
 export default function MainLayout() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
+  const rightPanelOpen = useUIStore((s) => s.rightPanelOpen);
+  const toggleRightPanel = useUIStore((s) => s.toggleRightPanel);
   const activeDialog = useUIStore((s) => s.activeDialog);
   const closeDialog = useUIStore((s) => s.closeDialog);
   const selectedCommit = useUIStore((s) => s.selectedCommit);
@@ -262,6 +264,10 @@ export default function MainLayout() {
         e.preventDefault();
         toggleSidebar();
       }
+      if ((e.metaKey || e.ctrlKey) && (e.key === "i" || e.key === "I")) {
+        e.preventDefault();
+        toggleRightPanel();
+      }
       if ((e.metaKey || e.ctrlKey) && e.key === ",") {
         e.preventDefault();
         openDialogState("settings");
@@ -280,7 +286,7 @@ export default function MainLayout() {
         closeDialog();
       }
     },
-    [toggleSidebar, activeDialog, closeDialog, repoPath, queryClient],
+    [toggleSidebar, toggleRightPanel, activeDialog, closeDialog, repoPath, queryClient],
   );
 
   useEffect(() => {
@@ -382,7 +388,15 @@ function InlineErrorFallback({ name }: { name: string }) {
         <PanelGroup direction="horizontal" autoSaveId="main-layout" className="h-full min-h-0">
           {sidebarOpen && (
             <>
-              <Panel defaultSize={20} minSize={15} maxSize={35} className="h-full min-h-0">
+              <Panel
+                defaultSize={20}
+                minSize={15}
+                maxSize={35}
+                collapsible={true}
+                onCollapse={() => useUIStore.setState({ sidebarOpen: false })}
+                onExpand={() => useUIStore.setState({ sidebarOpen: true })}
+                className="h-full min-h-0"
+              >
                 <div className="vibrancy h-full border-r border-border overflow-hidden">
                   <ErrorBoundary fallback={<InlineErrorFallback name="Sidebar" />}>
                     <Sidebar />
@@ -392,21 +406,33 @@ function InlineErrorFallback({ name }: { name: string }) {
               <PanelResizeHandle className="w-[3px] bg-transparent hover:bg-accent transition-colors cursor-col-resize" />
             </>
           )}
-          <Panel defaultSize={sidebarOpen ? 50 : 70} minSize={30} className="h-full min-h-0">
+          <Panel defaultSize={100 - (sidebarOpen ? 20 : 0) - (rightPanelOpen ? 34 : 0)} minSize={30} className="h-full min-h-0">
             <div className="h-full min-h-0 overflow-hidden bg-surface-0">
               <ErrorBoundary fallback={<InlineErrorFallback name="Commit Graph" />}>
                 <CommitGraph />
               </ErrorBoundary>
             </div>
           </Panel>
-          <PanelResizeHandle className="w-[3px] bg-transparent hover:bg-accent transition-colors cursor-col-resize" />
-          <Panel defaultSize={34} minSize={22} maxSize={55} className="h-full min-h-0">
-            <div className="h-full min-h-0 overflow-hidden">
-              <ErrorBoundary fallback={<InlineErrorFallback name="Details Panel" />}>
-                <RightPanel />
-              </ErrorBoundary>
-            </div>
-          </Panel>
+          {rightPanelOpen && (
+            <>
+              <PanelResizeHandle className="w-[3px] bg-transparent hover:bg-accent transition-colors cursor-col-resize" />
+              <Panel
+                defaultSize={34}
+                minSize={22}
+                maxSize={55}
+                collapsible={true}
+                onCollapse={() => useUIStore.setState({ rightPanelOpen: false })}
+                onExpand={() => useUIStore.setState({ rightPanelOpen: true })}
+                className="h-full min-h-0"
+              >
+                <div className="h-full min-h-0 overflow-hidden">
+                  <ErrorBoundary fallback={<InlineErrorFallback name="Details Panel" />}>
+                    <RightPanel />
+                  </ErrorBoundary>
+                </div>
+              </Panel>
+            </>
+          )}
         </PanelGroup>
       </div>
       <BottomBar />

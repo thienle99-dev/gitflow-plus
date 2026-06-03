@@ -95,7 +95,7 @@ interface SettingsDialogProps {
   initialTab?: "general" | "git" | "accounts" | "ai" | "advanced";
 }
 
-const THEME_CARDS = [
+export const THEME_CARDS = [
   { id: "system",           label: "Auto (OS Sync)", group: "OS Sync",       colors: { bg: "#1e1e1e", surface: "#2d2d2d", sidebar: "#181818", accent: "#0a84ff", text: "#e0e0e0" } },
   { id: "dark",             label: "macOS Dark",   group: "OS Sync",       colors: { bg: "#1c1c1e", surface: "#2c2c2e", sidebar: "#111113", accent: "#0a84ff", text: "#f5f5f7" } },
   { id: "light",            label: "macOS Light",  group: "OS Sync",       colors: { bg: "#ffffff", surface: "#f2f2f7", sidebar: "#e8e8ed", accent: "#007aff", text: "#1d1d1f" } },
@@ -127,9 +127,9 @@ const AI_REVIEW_LANGUAGES = [
   { id: "german", label: "German" },
 ] as const;
 
-const THEME_GROUPS = ["OS Sync", "Developer Classics", "Highly Personalized", "Gruvbox Dark", "Gruvbox Light"] as const;
+export const THEME_GROUPS = ["OS Sync", "Developer Classics", "Highly Personalized", "Gruvbox Dark", "Gruvbox Light"] as const;
 
-function ThemeSkeletonCard({ card, selected, onClick }: {
+export function ThemeSkeletonCard({ card, selected, onClick }: {
   card: typeof THEME_CARDS[number];
   selected: boolean;
   onClick: () => void;

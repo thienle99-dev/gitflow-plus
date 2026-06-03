@@ -21,6 +21,8 @@ import {
   Settings,
   BarChart3,
   Database,
+  PanelLeft,
+  PanelRight,
 } from "lucide-react";
 import CreateBranchDialog from "@/components/features/dialogs/CreateBranchDialog";
 import { RiskSummaryDialog } from "@/components/features/dialogs";
@@ -35,6 +37,10 @@ export default function Toolbar() {
   const selectCommit = useUIStore((s) => s.selectCommit);
   const selectFile = useUIStore((s) => s.selectFile);
   const openDialog = useUIStore((s) => s.openDialog);
+  const sidebarOpen = useUIStore((s) => s.sidebarOpen);
+  const toggleSidebar = useUIStore((s) => s.toggleSidebar);
+  const rightPanelOpen = useUIStore((s) => s.rightPanelOpen);
+  const toggleRightPanel = useUIStore((s) => s.toggleRightPanel);
   const queryClient = useQueryClient();
   const { data: branches } = useGitBranches(repoPath);
   const { data: changes } = useGitStatus(repoPath);
@@ -303,6 +309,35 @@ export default function Toolbar() {
 
         {/* Right Side: Integrations (PR & SettingsDropdown) */}
         <div className="flex items-center gap-3">
+          {/* Panel Layout Toggles */}
+          <div className="flex items-center bg-surface-2-40 border border-border-40 rounded-mac p-0.5 shadow-2xs">
+            <button
+              onClick={toggleSidebar}
+              className={`h-7 w-7 flex items-center justify-center rounded-[5px] transition-all cursor-pointer ${
+                sidebarOpen 
+                  ? "text-[#0a84ff] bg-[#0a84ff]/10 font-bold" 
+                  : "text-text-muted hover:text-text-primary hover:bg-surface-3"
+              }`}
+              title="Toggle Left Sidebar (⌘B)"
+            >
+              <PanelLeft size={13} />
+            </button>
+            <div className="w-[1px] h-3.5 bg-border-40/50" />
+            <button
+              onClick={toggleRightPanel}
+              className={`h-7 w-7 flex items-center justify-center rounded-[5px] transition-all cursor-pointer ${
+                rightPanelOpen 
+                  ? "text-[#0a84ff] bg-[#0a84ff]/10 font-bold" 
+                  : "text-text-muted hover:text-text-primary hover:bg-surface-3"
+              }`}
+              title="Toggle Right Details Panel (⌘I)"
+            >
+              <PanelRight size={13} />
+            </button>
+          </div>
+
+          <div className="w-[1px] h-3.5 bg-border-40/60" />
+
           {/* PR Trigger */}
           <button
             onClick={() => openDialog("merge-request")}

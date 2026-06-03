@@ -13,7 +13,8 @@ import {
   X,
   Check,
 } from "lucide-react";
-import { useRepoStore, THEME_CLASSES, type Theme } from "@/stores/repo";
+import { useRepoStore, THEME_CLASSES, applyTheme, type Theme } from "@/stores/repo";
+import { THEME_CARDS, THEME_GROUPS, ThemeSkeletonCard } from "./SettingsDialog";
 import { Switch } from "@/components/ui/form";
 import { AI_REVIEW_CHECKLIST_OPTIONS, DEFAULT_AI_REVIEW_CHECKLIST, type AIReviewMode } from "@/lib/ai";
 
@@ -347,31 +348,6 @@ function WelcomeStep() {
 }
 
 function ThemeStep({ theme, setTheme }: { theme: Theme; setTheme: (t: Theme) => void }) {
-  const groups = [
-    {
-      label: "Standard",
-      themes: [
-        { id: "dark" as Theme, name: "Dark", colors: ["#1c1c1e", "#2c2c2e", "#0a84ff"] },
-        { id: "light" as Theme, name: "Light", colors: ["#ffffff", "#f5f5f7", "#007aff"] },
-      ],
-    },
-    {
-      label: "Gruvbox Dark",
-      themes: [
-        { id: "gruvbox-dark" as Theme, name: "Medium", colors: ["#282828", "#3c3836", "#d79921"] },
-        { id: "gruvbox-dark-soft" as Theme, name: "Soft", colors: ["#32302f", "#3c3836", "#d79921"] },
-        { id: "gruvbox-dark-hard" as Theme, name: "Hard", colors: ["#1d2021", "#282828", "#d79921"] },
-      ],
-    },
-    {
-      label: "Gruvbox Light",
-      themes: [
-        { id: "gruvbox-light" as Theme, name: "Medium", colors: ["#fbf1c7", "#ebdbb2", "#b57614"] },
-        { id: "gruvbox-light-soft" as Theme, name: "Soft", colors: ["#f2e5bc", "#ebdbb2", "#b57614"] },
-      ],
-    },
-  ];
-
   return (
     <div className="space-y-4">
       <div className="text-center space-y-1">
@@ -379,39 +355,29 @@ function ThemeStep({ theme, setTheme }: { theme: Theme; setTheme: (t: Theme) => 
         <p className="text-2xs text-text-muted">You can change this later in Settings (⌘,)</p>
       </div>
       <div className="space-y-3">
-        {groups.map((group) => (
-          <div key={group.label}>
-            <div className="text-2xs font-semibold text-text-muted uppercase tracking-wider mb-1.5">
-              {group.label}
+        {THEME_GROUPS.map((group) => {
+          const cards = THEME_CARDS.filter((c) => c.group === group);
+          return (
+            <div key={group}>
+              <div className="text-2xs font-semibold text-text-muted uppercase tracking-wider mb-1.5">
+                {group}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {cards.map((card) => (
+                  <ThemeSkeletonCard
+                    key={card.id}
+                    card={card}
+                    selected={theme === card.id}
+                    onClick={() => {
+                      setTheme(card.id as Theme);
+                      applyTheme(card.id as Theme);
+                    }}
+                  />
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              {group.themes.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setTheme(t.id)}
-                  className={`relative flex flex-col items-center gap-1.5 p-2.5 rounded-lg border-2 transition-all cursor-pointer ${
-                    theme === t.id
-                      ? "border-accent bg-accent/5"
-                      : "border-border hover:border-text-muted/30 bg-surface-1"
-                  }`}
-                >
-                  {/* Theme preview swatch */}
-                  <div className="w-full h-8 rounded-md overflow-hidden flex" style={{ border: `1px solid ${t.colors[1]}` }}>
-                    <div className="w-1/3" style={{ backgroundColor: t.colors[0] }} />
-                    <div className="w-1/3" style={{ backgroundColor: t.colors[1] }} />
-                    <div className="w-1/3" style={{ backgroundColor: t.colors[2] }} />
-                  </div>
-                  <span className="text-2xs font-medium text-text-secondary">{t.name}</span>
-                  {theme === t.id && (
-                    <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-accent flex items-center justify-center">
-                      <Check size={10} className="text-accent-fg" />
-                    </div>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
