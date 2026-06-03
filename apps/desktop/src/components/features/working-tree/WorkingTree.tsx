@@ -3,7 +3,7 @@ import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useGitDiff, useGitStatus } from "@/queries/useGitLog";
 import { api, type FileChange, type LintDiagnostic } from "@/api/tauri";
-import { useGenerateCommitMessage, useAICommitScope } from "@/queries/useAI";
+import { useGenerateCommitMessage, useAICommitScope, useAIDiffReview } from "@/queries/useAI";
 import { generateLocalCommitMessage, shouldAnalyzeScope, type CommitScopeSuggestion } from "@/lib/ai";
 import { useQueryClient } from "@tanstack/react-query";
 import ContextMenu, { type ContextMenuItem } from "@/components/ui/overlay/ContextMenu";
@@ -50,6 +50,7 @@ export default function WorkingTree() {
   const queryClient = useQueryClient();
   const generateCommit = useGenerateCommitMessage(repoPath);
   const commitScope = useAICommitScope();
+  const aiReview = useAIDiffReview();
   const [commitMessage, setCommitMessage] = useState("");
   const [lintResults, setLintResults] = useState<CommitLintResult[]>([]);
 
@@ -78,6 +79,8 @@ export default function WorkingTree() {
   const [committing, setCommitting] = useState(false);
   const [committingGroupKey, setCommittingGroupKey] = useState<string | null>(null);
   const [scopeAnalyzing, setScopeAnalyzing] = useState(false);
+  const [aiReviewOpen, setAiReviewOpen] = useState(false);
+  const [aiReviewResult, setAiReviewResult] = useState("");
   const [toast, setToast] = useState<string | null>(null);
   const [stagedOpen, setStagedOpen] = useState(true);
   const [unstagedOpen, setUnstagedOpen] = useState(true);
@@ -303,6 +306,47 @@ export default function WorkingTree() {
     }
 
     await performActualCommit(commitMessage, amend);
+  };
+
+  const handleAIReview = async () => {
+    if (!repoPath || aiReview.isPending) return;
+    if (aiReviewOpen && aiReviewResult) {
+      setAiReviewOpen(false);
+      return;
+    }
+
+    const hasStaged = staged.length > 0;
+    const filesToReview = hasStaged ? staged : unstaged;
+    if (filesToReview.length === 0) {
+      showToast("No changes to review");
+      return;
+    }
+
+    setAiReviewOpen(true);
+    setAiReviewResult("");
+    aiReview.reset();
+
+    try {
+      const diff = hasStaged
+        ? await api.diff.staged(repoPath)
+        : (await Promise.all(filesToReview.slice(0, 20).map((file) => api.diff.file(repoPath, file.path).catch(() => "")))).filter(Boolean).join("\n\n");
+
+      if (!diff.trim()) {
+        showToast("No diff found for AI review");
+        setAiReviewOpen(false);
+        return;
+      }
+
+      const result = await aiReview.mutateAsync({
+        filePath: hasStaged ? "Staged changes" : "Working tree changes",
+        diff,
+        repoPath,
+        mode: "custom",
+      });
+      setAiReviewResult(result);
+    } catch (err: any) {
+      showToast(`AI review failed: ${err?.message || err}`);
+    }
   };
 
   const handleUseGroup = async (group: { files: string[]; message: string }) => {
@@ -607,39 +651,73 @@ export default function WorkingTree() {
             className="w-full min-h-[96px] max-h-[240px] text-xs bg-transparent text-text-primary placeholder:text-text-muted/60 resize-y outline-none border-none p-0 leading-relaxed font-mono focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:outline-none"
             style={{ outline: "none", border: "none", boxShadow: "none" }}
           />
-          <div className="flex items-center justify-end gap-1.5 border-t border-border-60 pt-2.5 mt-2 select-none shrink-0">
-            {staged.length >= 3 && (
+          <div className="flex items-center justify-between gap-2 border-t border-border-60 pt-2.5 mt-2 select-none shrink-0 flex-wrap">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <button
                 type="button"
-                className={`h-7 px-2.5 rounded border text-3xs font-semibold flex items-center gap-1 transition-all bg-surface-2 border-border-40 text-text-secondary hover:text-text-primary hover:bg-surface-3 active:scale-95 cursor-pointer ${scopeAnalyzing || commitScope.isPending ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
-                onClick={handleAnalyzeScope}
-                disabled={scopeAnalyzing || commitScope.isPending}
-                title={scopeAnalyzing ? "Analyzing scope..." : "Analyze commit scope (suggest splitting)"}
+                onClick={handleAIReview}
+                disabled={committing || aiReview.isPending || (staged.length === 0 && unstaged.length === 0)}
+                className={`h-7 px-2.5 rounded-[5px] border text-3xs font-semibold inline-flex items-center gap-1 transition-all cursor-pointer shadow-2xs bg-accent-10 border-accent-30 text-accent hover:bg-accent-20 hover:border-accent-40 active:scale-[0.99] disabled:bg-surface-2-40 disabled:border-border-40 disabled:text-text-muted disabled:opacity-45 disabled:cursor-not-allowed ${aiReview.isPending ? "opacity-70" : ""}`}
+                title="Run AI review with custom checklist"
               >
-                {scopeAnalyzing || commitScope.isPending ? (
-                  <RefreshCw size={11} className="animate-spin" />
+                {aiReview.isPending ? (
+                  <RefreshCw size={11} className="animate-spin text-accent" />
                 ) : (
-                  <Layers size={11} />
+                  <Sparkles size={11} className="text-accent" />
                 )}
-                <span>Split Scope</span>
+                <span>AI Review</span>
               </button>
-            )}
-            <button
-              type="button"
-              className={`h-7 px-2.5 rounded text-3xs font-semibold flex items-center gap-1 transition-all bg-accent text-accent-fg hover:opacity-95 active:scale-[0.99] flex items-center gap-1 active:scale-95 cursor-pointer shadow-sm ${generateCommit.isPending ? "opacity-50 cursor-not-allowed" : ""
-                }`}
-              onClick={handleGenerateCommit}
-              disabled={generateCommit.isPending}
-              title={generateCommit.isPending ? "Generating..." : "Generate commit message (AI)"}
-            >
-              {generateCommit.isPending ? (
-                <RefreshCw size={11} className="animate-spin text-accent-fg" />
-              ) : (
-                <Sparkles size={11} />
+
+              <UndoButton compact onUndoComplete={invalidate} />
+
+              <button
+                type="button"
+                onClick={() => setAmend(!amend)}
+                className={`h-7 px-2.5 rounded-[5px] border text-3xs font-semibold flex items-center gap-1 transition-all cursor-pointer shadow-2xs ${amend
+                  ? "bg-[#ff9f0a]/10 border-[#ff9f0a]/30 text-[#ff9f0a]"
+                  : "bg-surface-2-40 border-border-40 text-text-muted hover:text-text-primary hover:bg-surface-3"
+                  }`}
+                title="Amend last commit"
+              >
+                <GitCommit size={11} className={amend ? "text-[#ff9f0a]" : "text-text-muted"} />
+                <span>Amend</span>
+              </button>
+            </div>
+
+            <div className="flex items-center justify-end gap-1.5 flex-wrap">
+              {staged.length >= 3 && (
+                <button
+                  type="button"
+                  className={`h-7 px-2.5 rounded border text-3xs font-semibold flex items-center gap-1 transition-all bg-surface-2 border-border-40 text-text-secondary hover:text-text-primary hover:bg-surface-3 active:scale-95 cursor-pointer ${scopeAnalyzing || commitScope.isPending ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                  onClick={handleAnalyzeScope}
+                  disabled={scopeAnalyzing || commitScope.isPending}
+                  title={scopeAnalyzing ? "Analyzing scope..." : "Analyze commit scope (suggest splitting)"}
+                >
+                  {scopeAnalyzing || commitScope.isPending ? (
+                    <RefreshCw size={11} className="animate-spin" />
+                  ) : (
+                    <Layers size={11} />
+                  )}
+                  <span>Split Scope</span>
+                </button>
               )}
-              <span>Generate with AI</span>
-            </button>
+              <button
+                type="button"
+                className={`h-7 px-2.5 rounded text-3xs font-semibold flex items-center gap-1 transition-all bg-accent text-accent-fg hover:opacity-95 active:scale-[0.99] active:scale-95 cursor-pointer shadow-sm ${generateCommit.isPending ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                onClick={handleGenerateCommit}
+                disabled={generateCommit.isPending}
+                title={generateCommit.isPending ? "Generating..." : "Generate commit message (AI)"}
+              >
+                {generateCommit.isPending ? (
+                  <RefreshCw size={11} className="animate-spin text-accent-fg" />
+                ) : (
+                  <Sparkles size={11} />
+                )}
+                <span>Generate with AI</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -767,6 +845,44 @@ export default function WorkingTree() {
           </div>
         )}
 
+        {aiReviewOpen && (
+          <div className="border border-accent-20 bg-surface-2-30 rounded-mac overflow-hidden shadow-2xs">
+            <div className="flex items-center justify-between px-3 py-2 border-b border-border-40 bg-surface-1/40">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Sparkles size={13} className="text-accent shrink-0" />
+                <span className="text-xs font-semibold text-text-primary">AI Review</span>
+                <span className="text-3xs font-semibold text-accent bg-accent-10 border border-accent-20 rounded px-1.5 py-0.5">
+                  Custom checklist
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAiReviewOpen(false)}
+                className="h-6 w-6 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer"
+                title="Close AI review"
+              >
+                <X size={13} />
+              </button>
+            </div>
+            <div className="max-h-52 overflow-y-auto p-3 text-2xs leading-relaxed text-text-secondary space-y-1.5">
+              {aiReview.isPending ? (
+                <div className="flex items-center gap-2 text-text-muted">
+                  <RefreshCw size={12} className="animate-spin text-accent" />
+                  <span>Reviewing changes with AI...</span>
+                </div>
+              ) : aiReview.isError ? (
+                <div className="text-[#ff453a]">
+                  {aiReview.error instanceof Error ? aiReview.error.message : "AI review failed"}
+                </div>
+              ) : aiReviewResult ? (
+                aiReviewResult.split("\n").map((line, index) => <AIReviewLine key={index} line={line} />)
+              ) : (
+                <span className="text-text-muted">No review result yet.</span>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center gap-2">
           <button
             onClick={handleCommit}
@@ -791,21 +907,6 @@ export default function WorkingTree() {
               <Check size={12} className={commitMessage.trim() && (staged.length > 0 || unstaged.length > 0) ? "text-accent-fg" : "text-text-muted"} />
             )}
             <span>{committing ? "Committing..." : lintRunning ? "Linting changes..." : unstaged.length > 0 ? "Commit All" : "Commit"}</span>
-          </button>
-
-          <UndoButton onUndoComplete={invalidate} />
-
-          <button
-            type="button"
-            onClick={() => setAmend(!amend)}
-            className={`h-8 px-3 rounded-[5px] border text-2xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${amend
-              ? "bg-[#ff9f0a]/10 border-[#ff9f0a]/30 text-[#ff9f0a]"
-              : "bg-surface-2-40 border-border-40 text-text-muted hover:text-text-primary hover:bg-surface-3"
-              }`}
-            title="Amend last commit"
-          >
-            <GitCommit size={11} className={amend ? "text-[#ff9f0a]" : "text-text-muted"} />
-            <span>Amend</span>
           </button>
         </div>
       </div>
@@ -1336,6 +1437,48 @@ function statusColor(status: string) {
     case "copied": return "text-[#64d2ff]";
     case "untracked": return "text-text-muted";
     default: return "text-[#ff9f0a]";
+  }
+}
+
+function AIReviewLine({ line }: { line: string }) {
+  const match = line.match(/^\s*(?:[-*]\s*)?(?:\*\*)?\[(BUG|SECURITY|PERF|STYLE|BEST-PRACTICE|LINTER|TEST|A11Y|UX)\](?:\*\*)?\s*(.*)$/i);
+  if (!match) {
+    return <p className="whitespace-pre-wrap">{line || "\u00A0"}</p>;
+  }
+
+  const meta = aiReviewTagMeta(match[1]);
+  return (
+    <div className="flex items-start gap-2">
+      <span className={`mt-0.5 shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-bold leading-none ${meta.className}`}>
+        {meta.label}
+      </span>
+      <p className="min-w-0 flex-1 whitespace-pre-wrap text-text-secondary">{match[2]}</p>
+    </div>
+  );
+}
+
+function aiReviewTagMeta(tag: string) {
+  switch (tag.toUpperCase()) {
+    case "BUG":
+      return { label: "BUG", className: "border-[#ff375f] bg-[#ff375f]/10 text-[#ff375f]" };
+    case "SECURITY":
+      return { label: "SECURITY", className: "border-[#ff6b35] bg-[#ff6b35]/10 text-[#ff6b35]" };
+    case "PERF":
+      return { label: "PERF", className: "border-[#ffcc00] bg-[#ffcc00]/10 text-[#ffcc00]" };
+    case "STYLE":
+      return { label: "STYLE", className: "border-[#0a84ff] bg-[#0a84ff]/10 text-[#0a84ff]" };
+    case "BEST-PRACTICE":
+      return { label: "BEST", className: "border-[#bf5af2] bg-[#bf5af2]/10 text-[#bf5af2]" };
+    case "LINTER":
+      return { label: "LINTER", className: "border-[#64d2ff] bg-[#64d2ff]/10 text-[#64d2ff]" };
+    case "TEST":
+      return { label: "TEST", className: "border-[#30d158] bg-[#30d158]/10 text-[#30d158]" };
+    case "A11Y":
+      return { label: "A11Y", className: "border-[#ff9f0a] bg-[#ff9f0a]/10 text-[#ff9f0a]" };
+    case "UX":
+      return { label: "UX", className: "border-[#ff2d55] bg-[#ff2d55]/10 text-[#ff2d55]" };
+    default:
+      return { label: tag.toUpperCase(), className: "border-accent bg-accent/10 text-accent" };
   }
 }
 

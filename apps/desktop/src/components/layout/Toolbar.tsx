@@ -24,6 +24,9 @@ import {
   Database,
 } from "lucide-react";
 import CreateBranchDialog from "@/components/features/dialogs/CreateBranchDialog";
+import { RiskSummaryDialog } from "@/components/features/dialogs";
+import { generateRiskSummary } from "@/lib/ai";
+import type { RiskReport } from "@/lib/risk-scanner";
 import { useErrorReporter } from "@/lib/ErrorContext";
 import SettingsDropdown from "@/components/ui/theme/SettingsDropdown";
 
@@ -43,6 +46,11 @@ export default function Toolbar() {
   const { reportError } = useErrorReporter();
   const [loading, setLoading] = useState<string | null>(null);
   const [showBranchDialog, setShowBranchDialog] = useState(false);
+  const [riskDialog, setRiskDialog] = useState<{
+    open: boolean;
+    report: (RiskReport & { aiSummary?: string }) | null;
+    loading: boolean;
+  }>({ open: false, report: null, loading: false });
 
   if (!repoPath) return null;
 
@@ -67,6 +75,30 @@ export default function Toolbar() {
   const showChanges = () => {
     selectCommit(null);
     selectFile(null);
+  };
+
+  const handlePush = async () => {
+    setRiskDialog({ open: true, report: null, loading: true });
+    try {
+      // Get staged files for risk analysis
+      const staged = (changes || []).filter((c) => c.staged);
+      const diff = staged.length > 0 ? await api.diff.staged(repoPath!).catch(() => "") : "";
+      const report = await generateRiskSummary(repoPath!, staged, diff);
+      setRiskDialog({ open: true, report, loading: false });
+    } catch {
+      // Risk analysis failed — proceed anyway
+      setRiskDialog({ open: false, report: null, loading: false });
+      doAction("push", () => api.remote.push(repoPath!));
+    }
+  };
+
+  const proceedPush = () => {
+    setRiskDialog({ open: false, report: null, loading: false });
+    doAction("push", () => api.remote.push(repoPath!));
+  };
+
+  const cancelPush = () => {
+    setRiskDialog({ open: false, report: null, loading: false });
   };
 
   const inMerge = mergeStatus?.merging;
@@ -161,9 +193,9 @@ export default function Toolbar() {
             <div className="w-[1px] h-3.5 bg-border-40/50" />
             <button
               className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all disabled:opacity-40 cursor-pointer"
-              onClick={() => doAction("push", () => api.remote.push(repoPath!))}
+              onClick={handlePush}
               disabled={!!loading}
-              title="Push local commits"
+              title="Push local commits (risk analysis runs first)"
             >
               <ArrowUpFromLine size={13} className="text-text-muted" />
               <span>Push</span>
@@ -309,6 +341,14 @@ export default function Toolbar() {
           onClose={() => setShowBranchDialog(false)}
         />
       )}
+      <RiskSummaryDialog
+        open={riskDialog.open}
+        report={riskDialog.report}
+        loading={riskDialog.loading}
+        action="push"
+        onProceed={proceedPush}
+        onCancel={cancelPush}
+      />
     </>
   );
 }

@@ -6,10 +6,11 @@ import { Undo2, GitCommit, RotateCcw, History } from "lucide-react";
 interface UndoButtonProps {
   /** If true, the dropdown with reflog entries is always visible */
   expanded?: boolean;
+  compact?: boolean;
   onUndoComplete?: () => void;
 }
 
-export default function UndoButton({ expanded: controlledExpanded, onUndoComplete }: UndoButtonProps) {
+export default function UndoButton({ expanded: controlledExpanded, compact = false, onUndoComplete }: UndoButtonProps) {
   const repoPath = useRepoStore((s) => s.repoPath);
   const { data: reflog } = useReflogList(repoPath, 10);
   const undoLast = useUndoLast(repoPath);
@@ -54,10 +55,10 @@ export default function UndoButton({ expanded: controlledExpanded, onUndoComplet
       <button
         onClick={() => setOpen(!open)}
         disabled={!repoPath}
-        className="h-8 px-3.5 flex items-center gap-1.5 text-2xs font-semibold text-text-muted hover:text-text-primary bg-surface-2/40 border border-border-40 hover:bg-surface-3 rounded-[5px] disabled:opacity-30 transition-all cursor-pointer shadow-2xs"
+        className={`${compact ? "h-7 px-2.5 text-3xs" : "h-8 px-3.5 text-2xs"} flex items-center gap-1.5 font-semibold text-text-muted hover:text-text-primary bg-surface-2/40 border border-border-40 hover:bg-surface-3 rounded-[5px] disabled:opacity-30 transition-all cursor-pointer shadow-2xs`}
         title="Undo last commit"
       >
-        <Undo2 size={11} className="text-text-muted" />
+        <Undo2 size={compact ? 10 : 11} className="text-text-muted" />
         <span>Undo</span>
       </button>
 

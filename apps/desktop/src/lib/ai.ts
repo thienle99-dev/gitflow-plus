@@ -1,5 +1,6 @@
 import { api, type FileChange, type Branch, type ConventionFile } from "@/api/tauri";
 import type { MergeRequest, MergeRequestFileChange } from "@/api/gitHost";
+import { scanForRisks, type RiskReport } from "./risk-scanner";
 
 const DEFAULT_MODEL = "claude-sonnet-4-20250514";
 
@@ -526,6 +527,68 @@ ${diff.slice(0, 12_000)}`;
     // Invalid JSON — return null, caller falls back to single message
   }
   return null;
+}
+
+/**
+ * AI-powered risk summary for a diff — combines local pattern scan with
+ * optional AI deep analysis. Returns a full RiskReport.
+ */
+export async function generateRiskSummary(
+  repoPath: string,
+  files: FileChange[],
+  diff?: string,
+): Promise<RiskReport & { aiSummary?: string }> {
+  // Phase 1: instant local scan
+  const localReport = scanForRisks(
+    files.map((f) => ({ path: f.path, status: f.status })),
+    diff,
+  );
+
+  // Phase 2: AI deep analysis (only if provider is configured and there are findings or many files)
+  const settings = readAISettings();
+  if (!hasProvider(settings) || (localReport.findings.length === 0 && files.length < 5)) {
+    return localReport;
+  }
+
+  const diffContent = diff || await api.diff.staged(repoPath).catch(() => "");
+  if (!diffContent.trim()) return localReport;
+
+  const conventionInstruction = await getConventionContext(repoPath);
+  const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
+  const fileList = files.map((f) => `- [${f.status}] ${f.path}`).join("\n");
+
+  const prompt = `You are a senior DevOps/security engineer. Analyze this git diff before a push or merge.
+
+FILE CHANGES:
+${fileList}
+
+DIFF (truncated):
+${diffContent.slice(0, 10_000)}
+
+TASK: Provide a concise risk assessment. Focus on:
+1. SECURITY RISKS: leaked credentials, exposed secrets, insecure configs, auth bypass
+2. DATA RISKS: destructive SQL (DROP/DELETE/TRUNCATE), data loss, schema breaking changes
+3. INFRA RISKS: Dockerfile/workflow/CI changes, deployment config changes
+4. MIGRATION RISKS: database migrations, schema changes that may break compatibility
+5. AUTH CHANGES: authentication/authorization logic changes that may affect access control
+
+FORMAT:
+- Start with a one-line OVERALL RISK LEVEL (LOW / MEDIUM / HIGH / CRITICAL).
+- List each finding as a bullet with a category tag: [SECURITY], [DATA], [INFRA], [MIGRATION], [AUTH], [QUALITY]
+- If no risks found, say "No significant risks detected."
+- Be concise, direct, and actionable. No markdown code blocks.
+${languageInstruction}${conventionInstruction}`;
+
+  try {
+    const aiResult = cleanAIText(await requestAIText(prompt, withReviewModel(settings)));
+    if (aiResult) {
+      return { ...localReport, aiSummary: aiResult };
+    }
+  } catch {
+    // AI analysis failed — return local-only results
+  }
+
+  return localReport;
 }
 
 export function generateLocalCommitMessage(files: FileChange[], branchName = "") {

@@ -9,6 +9,7 @@ interface LintWarningDialogProps {
   commitErrors: CommitLintResult[];
   codeDiagnostics: LintDiagnostic[];
   strictness: "strict" | "warn";
+  mode?: "commit" | "review";
   onCommitAnyway: () => void;
   onAutoFixCommit: () => void;
 }
@@ -19,6 +20,7 @@ export default function LintWarningDialog({
   commitErrors,
   codeDiagnostics,
   strictness,
+  mode = "commit",
   onCommitAnyway,
   onAutoFixCommit,
 }: LintWarningDialogProps) {
@@ -51,6 +53,7 @@ export default function LintWarningDialog({
   };
 
   const hasFixableCommitMessage = commitErrors.some(e => e.autoFixable);
+  const isReviewMode = mode === "review";
 
   return (
     <div className="fixed inset-0 bg-[#000000]/65 backdrop-blur-md z-[9998] flex items-center justify-center p-6 animate-in fade-in duration-200">
@@ -64,7 +67,7 @@ export default function LintWarningDialog({
               <AlertTriangle size={16} className="text-[#ff9f0a]" />
             )}
             <span className="text-sm font-semibold text-text-primary">
-              Pre-Commit Quality Gate Blocked
+              {isReviewMode ? "Pre-Commit Review Results" : "Pre-Commit Quality Gate Blocked"}
             </span>
           </div>
           <button
@@ -81,7 +84,11 @@ export default function LintWarningDialog({
             Found{" "}
             <span className="font-semibold text-[#ff453a]">{totalErrors} errors</span> and{" "}
             <span className="font-semibold text-[#ff9f0a]">{totalWarnings} warnings</span> in staged changes.
-            {isStrict ? (
+            {isReviewMode ? (
+              <p className="text-2xs text-text-muted mt-0.5">
+                Review only: no commit was created. Fix issues or continue when ready.
+              </p>
+            ) : isStrict ? (
               <p className="text-2xs text-[#ff453a] mt-0.5 font-medium">
                 Strict Gate Active: All errors must be resolved before committing.
               </p>
@@ -207,11 +214,11 @@ export default function LintWarningDialog({
             onClick={onClose}
             className="px-4 h-8 text-xs font-semibold text-text-secondary hover:text-text-primary border border-border hover:bg-surface-2 rounded-mac transition-colors cursor-pointer"
           >
-            Go Back & Fix
+            {isReviewMode ? "Close" : "Go Back & Fix"}
           </button>
 
           <div className="flex gap-2">
-            {!isStrict && (
+            {!isReviewMode && !isStrict && (
               <button
                 type="button"
                 onClick={onCommitAnyway}

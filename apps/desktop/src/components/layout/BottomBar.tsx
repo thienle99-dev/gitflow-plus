@@ -1,14 +1,36 @@
 import { useState } from "react";
-import { ChevronRight, ChevronDown, Terminal, Book } from "lucide-react";
+import { ChevronRight, ChevronDown, Terminal, Book, GitBranch, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
 import { useUIStore } from "@/stores/ui";
+import { useRepoStore } from "@/stores/repo";
+import { useGitBranches, useGitStatus, useGitSyncStatus } from "@/queries/useGitLog";
+import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 
 export default function BottomBar() {
   const [logs, setLogs] = useState<string[]>([]);
   const [expanded, setExpanded] = useState(false);
+  const repoPath = useRepoStore((s) => s.repoPath);
   const openDialogState = useUIStore((s) => s.openDialog);
 
+  // Monitor global background fetch/mutation progress
+  const isFetching = useIsFetching();
+  const isMutating = useIsMutating();
+  const isLoading = isFetching > 0 || isMutating > 0;
+
+  // Fetch Git details only if we have an active repository
+  const { data: branches } = useGitBranches(repoPath);
+  const { data: status } = useGitStatus(repoPath);
+  const { data: syncStatus } = useGitSyncStatus(repoPath);
+
+  const currentBranch = branches?.find((b) => b.current)?.name || "";
+  const stagedCount = status?.filter((f) => f.staged).length || 0;
+  const unstagedCount = status?.filter((f) => !f.staged).length || 0;
+  const totalChanges = stagedCount + unstagedCount;
+
+  const aheadCount = syncStatus?.ahead || 0;
+  const behindCount = syncStatus?.behind || 0;
+
   return (
-    <div className="h-[26px] border-t border-border-60 bg-surface-1-40 backdrop-blur-md flex items-center px-4 text-2xs text-text-muted select-none">
+    <div className="h-[26px] border-t border-border-60 bg-surface-1-40 backdrop-blur-md flex items-center px-4 text-2xs text-text-muted select-none shrink-0">
       
       {/* Left side: Terminal Log expand toggle */}
       <button
@@ -25,29 +47,91 @@ export default function BottomBar() {
       </button>
 
       {/* Connection / State Indicator (Pulse Dot) */}
-      <div className="flex items-center gap-1.5">
-        <span className="relative flex h-1.5 w-1.5">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#30d158] opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#30d158]"></span>
-        </span>
-        <span className="font-semibold text-text-secondary">Ready</span>
+      {/* Connection / State Indicator (Pulse Dot / Loader) */}
+      <div className="flex items-center gap-1.5 border-r border-border-20 pr-3 mr-3 h-4 min-w-[56px]">
+        {isLoading ? (
+          <>
+            <Loader2 size={11} className="animate-spin text-accent shrink-0" />
+            <span className="font-semibold text-text-secondary">
+              {isMutating > 0 ? "Running" : "Syncing"}
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="relative flex h-1.5 w-1.5 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#30d158] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#30d158]"></span>
+            </span>
+            <span className="font-semibold text-text-secondary">Ready</span>
+          </>
+        )}
       </div>
+
+      {/* Contextual Git Metrics */}
+      {repoPath && (
+        <div className="flex items-center gap-3">
+          {/* Branch switching status */}
+          {currentBranch && (
+            <div className="flex items-center gap-1 text-text-secondary font-medium">
+              <GitBranch size={11} className="text-text-muted" />
+              <span>{currentBranch}</span>
+            </div>
+          )}
+
+          {/* Sync Stats (Ahead/Behind) */}
+          {(aheadCount > 0 || behindCount > 0) && (
+            <div className="flex items-center gap-2 text-text-muted text-[10px] border-l border-border-20 pl-3 h-3">
+              {aheadCount > 0 && (
+                <span className="flex items-center gap-0.5 text-accent font-semibold" title={`${aheadCount} commits to push`}>
+                  <ArrowUp size={10} />
+                  {aheadCount}
+                </span>
+              )}
+              {behindCount > 0 && (
+                <span className="flex items-center gap-0.5 text-[#ff9f0a] font-semibold" title={`${behindCount} commits to pull`}>
+                  <ArrowDown size={10} />
+                  {behindCount}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Staging stats summary */}
+          {totalChanges > 0 && (
+            <div className="flex items-center gap-1.5 text-[10px] text-text-muted border-l border-border-20 pl-3 h-3">
+              {stagedCount > 0 && (
+                <span className="text-[#30d158]" title={`${stagedCount} staged files`}>
+                  {stagedCount} staged
+                </span>
+              )}
+              {stagedCount > 0 && unstagedCount > 0 && <span>·</span>}
+              {unstagedCount > 0 && (
+                <span className="text-[#ff9f0a]" title={`${unstagedCount} unstaged files`}>
+                  {unstagedCount} unstaged
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex-1" />
 
       {/* Right side: Feature Guide + Version */}
-      <button
-        onClick={() => openDialogState("feature-guide")}
-        className="flex items-center gap-1 text-text-muted hover:text-text-primary transition-all p-0.5 rounded cursor-pointer mr-2"
-        title="Feature Guide (⌘⇧H)"
-      >
-        <Book size={11} />
-        <span className="text-[9px] font-semibold">Guide</span>
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => openDialogState("feature-guide")}
+          className="flex items-center gap-1 text-text-muted hover:text-text-primary transition-all p-0.5 rounded cursor-pointer mr-0.5"
+          title="Feature Guide (⌘⇧H)"
+        >
+          <Book size={11} />
+          <span className="text-[9px] font-semibold">Guide</span>
+        </button>
 
-      <span className="bg-surface-2-60 border border-border-40 rounded-full px-2 py-0.5 text-[9px] font-semibold text-text-muted/80 shadow-2xs">
-        GitFlow Desktop v0.1.0
-      </span>
+        <span className="text-[9px] font-medium text-text-muted/60 select-all">
+          v0.1.0
+        </span>
+      </div>
     </div>
   );
 }
