@@ -12,7 +12,7 @@ import Sidebar from "@/components/features/sidebar/Sidebar";
 import CommitGraph from "@/components/features/graph/CommitGraph";
 import RightPanel from "@/components/layout/RightPanel";
 import BottomBar from "@/components/layout/BottomBar";
-import { SearchDialog, KeyboardShortcutsModal, CherryPickDialog, SettingsDialog, AnalyticsDialog, CreateBranchDialog, MergeRequestDialog, CloneDialog, FeatureGuideDialog } from "@/components/features/dialogs";
+import { SearchDialog, KeyboardShortcutsModal, CherryPickDialog, SettingsDialog, AnalyticsDialog, CreateBranchDialog, MergeRequestDialog, MergePreviewDialog, CloneDialog, FeatureGuideDialog } from "@/components/features/dialogs";
 import ErrorBoundary from "@/components/ui/feedback/ErrorBoundary";
 import { AlertOctagon, RefreshCw, Trash2 } from "lucide-react";
 
@@ -22,6 +22,7 @@ export default function MainLayout() {
   const activeDialog = useUIStore((s) => s.activeDialog);
   const closeDialog = useUIStore((s) => s.closeDialog);
   const selectedCommit = useUIStore((s) => s.selectedCommit);
+  const mergeTargetBranch = useUIStore((s) => s.mergeTargetBranch);
   const repoPath = useRepoStore((s) => s.repoPath);
   const openRepo = useRepoStore((s) => s.openRepo);
   const closeRepo = useRepoStore((s) => s.closeRepo);
@@ -303,6 +304,7 @@ export default function MainLayout() {
     "create-branch": <CreateBranchDialog open={true} onClose={closeDialog} />,
     analytics: <AnalyticsDialog open={true} onClose={closeDialog} />,
     "merge-request": <MergeRequestDialog onClose={closeDialog} />,
+    merge: <MergePreviewDialog initialBranch={mergeTargetBranch ?? undefined} onClose={closeDialog} />,
     "clone": <CloneDialog open={true} onClose={closeDialog} />,
     "feature-guide": <FeatureGuideDialog open={true} onClose={closeDialog} />,
   };

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useGitBranches } from "@/queries/useGitLog";
@@ -6,6 +6,7 @@ import { useTagList } from "@/queries/useGitTag";
 import { useSubmoduleList } from "@/queries/useSubmoduleList";
 import SubmoduleEntry from "./SubmoduleEntry";
 import { api } from "@/api/tauri";
+import ContextMenu from "@/components/ui/overlay/ContextMenu";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import {
   ChevronRight,
@@ -21,6 +22,7 @@ import {
   Trash2,
   GitPullRequest,
   Download,
+  ArrowLeftRight,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -29,6 +31,7 @@ export default function Sidebar() {
   const selectRef = useRepoStore((s) => s.selectRef);
   const selectedFile = useUIStore((s) => s.selectedFile);
   const openDialogState = useUIStore((s) => s.openDialog);
+  const setMergeTargetBranch = useUIStore((s) => s.setMergeTargetBranch);
   const { data: branches } = useGitBranches(repoPath);
   const { data: tags } = useTagList(repoPath);
   const { data: submodules } = useSubmoduleList(repoPath);
@@ -37,6 +40,7 @@ export default function Sidebar() {
   const [tagsOpen, setTagsOpen] = useState(false);
   const [repoMenuOpen, setRepoMenuOpen] = useState(false);
   const [repoSearchQuery, setRepoSearchQuery] = useState("");
+  const [branchCtxMenu, setBranchCtxMenu] = useState<{ branch: string; x: number; y: number } | null>(null);
 
   const openRepo = useRepoStore((s) => s.openRepo);
   const closeRepo = useRepoStore((s) => s.closeRepo);
@@ -257,6 +261,10 @@ export default function Sidebar() {
               className={`tree-item flex items-center gap-2 px-3 py-[3px] mx-1 ${selectedRef === b.name ? "selected" : ""} ${b.current ? "ring-1 ring-[#30d158]/25" : ""}`}
               onClick={() => selectRef(b.name)}
               onDoubleClick={() => handleCheckout(b.name)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setBranchCtxMenu({ branch: b.name, x: e.clientX, y: e.clientY });
+              }}
             >
               <GitBranch size={12} className={selectedRef === b.name ? "text-accent-fg" : b.current ? "text-[#30d158]" : "text-accent"} />
               <span className={`min-w-0 flex-1 truncate text-xs ${b.current && selectedRef !== b.name ? "text-[#30d158] font-semibold" : ""}`}>{b.name}</span>
@@ -369,6 +377,39 @@ export default function Sidebar() {
             />
           ))}
         </div>
+      )}
+
+      {branchCtxMenu && (
+        <ContextMenu
+          x={branchCtxMenu.x}
+          y={branchCtxMenu.y}
+          items={[
+            {
+              label: "Checkout",
+              icon: <GitBranch size={12} />,
+              action: () => handleCheckout(branchCtxMenu.branch),
+            },
+            {
+              label: "Merge into current branch…",
+              icon: <ArrowLeftRight size={12} />,
+              action: () => {
+                setMergeTargetBranch(branchCtxMenu.branch);
+                openDialogState("merge");
+              },
+            },
+            { separator: true, label: "", action: () => {} },
+            {
+              label: "Delete branch…",
+              icon: <Trash2 size={12} />,
+              action: () => {
+                if (confirm(`Delete branch "${branchCtxMenu.branch}"?`)) {
+                  api.branches.delete(repoPath, branchCtxMenu.branch).catch(console.error);
+                }
+              },
+            },
+          ]}
+          onClose={() => setBranchCtxMenu(null)}
+        />
       )}
     </div>
   );

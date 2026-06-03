@@ -58,6 +58,26 @@ export interface MergeStatus {
   stage_entries: string[];
 }
 
+export interface MergePreview {
+  ahead: number;
+  behind: number;
+  incoming_commits: MergePreviewCommit[];
+  changed_files: MergePreviewFile[];
+}
+
+export interface MergePreviewCommit {
+  hash: string;
+  message: string;
+  author: string;
+}
+
+export interface MergePreviewFile {
+  path: string;
+  status: string;
+  additions: number;
+  deletions: number;
+}
+
 export interface StashEntry {
   index: number;
   message: string;
@@ -249,6 +269,8 @@ export const api = {
       invoke<string>("merge_continue", { path, message: message ?? null }),
     status: (path: string) =>
       invoke<MergeStatus>("merge_status", { path }),
+    preview: (path: string, branch: string) =>
+      invoke<MergePreview>("merge_preview", { path, branch }),
   },
 
   stash: {

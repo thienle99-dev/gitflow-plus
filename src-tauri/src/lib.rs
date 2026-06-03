@@ -253,6 +253,7 @@ pub fn run() {
             commands::merge::merge_abort,
             commands::merge::merge_continue,
             commands::merge::merge_status,
+            commands::merge::merge_preview,
             commands::stash::stash_list,
             commands::stash::stash_push,
             commands::stash::stash_pop,

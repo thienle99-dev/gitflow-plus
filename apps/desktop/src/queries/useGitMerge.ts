@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, type MergeStatus, type MergeResult } from "@/api/tauri";
+import { api, type MergeStatus, type MergeResult, type MergePreview } from "@/api/tauri";
 
 export function useMergeStatus(repoPath: string | null) {
   return useQuery<MergeStatus>({
@@ -41,5 +41,14 @@ export function useMergeContinue(repoPath: string | null) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
     },
+  });
+}
+
+export function useMergePreview(repoPath: string | null, branch: string | null) {
+  return useQuery<MergePreview>({
+    queryKey: ["git", repoPath, "merge", "preview", branch],
+    queryFn: () => api.merge.preview(repoPath!, branch!),
+    enabled: !!repoPath && !!branch,
+    staleTime: 10_000,
   });
 }

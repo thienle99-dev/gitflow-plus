@@ -2,6 +2,105 @@ use serde::Serialize;
 use tokio::process::Command;
 
 #[derive(Serialize)]
+pub struct MergePreview {
+    pub ahead: usize,
+    pub behind: usize,
+    pub incoming_commits: Vec<MergePreviewCommit>,
+    pub changed_files: Vec<MergePreviewFile>,
+}
+
+#[derive(Serialize)]
+pub struct MergePreviewCommit {
+    pub hash: String,
+    pub message: String,
+    pub author: String,
+}
+
+#[derive(Serialize)]
+pub struct MergePreviewFile {
+    pub path: String,
+    pub status: String,
+    pub additions: usize,
+    pub deletions: usize,
+}
+
+#[tauri::command]
+pub async fn merge_preview(path: String, branch: String) -> Result<MergePreview, String> {
+    // 1. Ahead/behind count
+    let rev_output = Command::new("git")
+        .args(["--no-pager", "-C", &path, "rev-list", "--left-right", "--count", &format!("HEAD...{}", branch)])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to get ahead/behind: {}", e))?;
+
+    let (ahead, behind) = if rev_output.status.success() {
+        let stdout = String::from_utf8_lossy(&rev_output.stdout);
+        let parts: Vec<&str> = stdout.trim().split_whitespace().collect();
+        if parts.len() == 2 {
+            (parts[0].parse::<usize>().unwrap_or(0), parts[1].parse::<usize>().unwrap_or(0))
+        } else {
+            (0, 0)
+        }
+    } else {
+        (0, 0)
+    };
+
+    // 2. Incoming commits (commits in branch but not in HEAD)
+    let log_output = Command::new("git")
+        .args(["--no-pager", "-C", &path, "log", "--oneline", "--format=%H%x00%s%x00%an", &format!("HEAD..{}", branch)])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to get incoming commits: {}", e))?;
+
+    let mut incoming_commits = Vec::new();
+    if log_output.status.success() {
+        let stdout = String::from_utf8_lossy(&log_output.stdout);
+        for line in stdout.lines() {
+            let parts: Vec<&str> = line.split('\0').collect();
+            if parts.len() >= 3 {
+                incoming_commits.push(MergePreviewCommit {
+                    hash: parts[0].to_string(),
+                    message: parts[1].to_string(),
+                    author: parts[2].to_string(),
+                });
+            }
+        }
+    }
+
+    // 3. Changed files with stat
+    let stat_output = Command::new("git")
+        .args(["--no-pager", "-C", &path, "diff", "--numstat", &format!("HEAD...{}", branch)])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to get diff stat: {}", e))?;
+
+    let mut changed_files = Vec::new();
+    if stat_output.status.success() {
+        let stdout = String::from_utf8_lossy(&stat_output.stdout);
+        for line in stdout.lines() {
+            let parts: Vec<&str> = line.split('\t').collect();
+            if parts.len() >= 3 {
+                let additions = parts[0].parse::<usize>().unwrap_or(0);
+                let deletions = parts[1].parse::<usize>().unwrap_or(0);
+                changed_files.push(MergePreviewFile {
+                    path: parts[2].to_string(),
+                    status: if additions > 0 && deletions == 0 { "A" } else if additions == 0 && deletions > 0 { "D" } else { "M" }.to_string(),
+                    additions,
+                    deletions,
+                });
+            }
+        }
+    }
+
+    Ok(MergePreview {
+        ahead,
+        behind,
+        incoming_commits,
+        changed_files,
+    })
+}
+
+#[derive(Serialize)]
 pub struct MergeResult {
     pub success: bool,
     pub message: String,

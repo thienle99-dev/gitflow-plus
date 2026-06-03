@@ -8,6 +8,7 @@ interface UIState {
   selectedStashIndex: number | null;
   diffViewMode: "split" | "unified";
   activeDialog: string | null;
+  mergeTargetBranch: string | null;
   setSidebarOpen: (open: boolean) => void;
   toggleSidebar: () => void;
   selectCommit: (hash: string | null) => void;
@@ -16,6 +17,7 @@ interface UIState {
   setDiffViewMode: (mode: "split" | "unified") => void;
   openDialog: (name: string) => void;
   closeDialog: () => void;
+  setMergeTargetBranch: (branch: string | null) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -26,6 +28,7 @@ export const useUIStore = create<UIState>((set) => ({
   selectedStashIndex: null,
   diffViewMode: "split",
   activeDialog: null,
+  mergeTargetBranch: null,
 
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
@@ -43,5 +46,6 @@ export const useUIStore = create<UIState>((set) => ({
   setSelectedStashIndex: (index) => set({ selectedStashIndex: index }),
   setDiffViewMode: (mode) => set({ diffViewMode: mode }),
   openDialog: (name) => set({ activeDialog: name }),
-  closeDialog: () => set({ activeDialog: null }),
+  closeDialog: () => set({ activeDialog: null, mergeTargetBranch: null }),
+  setMergeTargetBranch: (branch) => set({ mergeTargetBranch: branch }),
 }));

@@ -8,4 +8,5 @@ export { default as KeyboardShortcutsModal } from "./KeyboardShortcutsModal";
 export { default as SearchDialog } from "./SearchDialog";
 export { default as SettingsDialog } from "./SettingsDialog";
 export { default as MergeRequestDialog } from "./MergeRequestDialog";
+export { default as MergePreviewDialog } from "./MergePreviewDialog";
 export { default as FeatureGuideDialog } from "./FeatureGuideDialog";

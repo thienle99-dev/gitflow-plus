@@ -96,7 +96,7 @@
 - [x] Error handling: toast notifications, auth prompts
 - [x] Clone dialog — URL input + destination path picker
 - [x] Revert commit — tạo commit mới đảo ngược thay đổi (an toàn cho shared branches)
-- [ ] Branch merge preview — show ahead/behind count + diff preview trước khi merge
+- [x] Branch merge preview — show ahead/behind count + diff preview trước khi merge
 
 ### Step 11: File Watcher
 - [x] `watcher/fs_watcher.rs` — notify crate setup
