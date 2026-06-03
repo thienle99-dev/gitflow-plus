@@ -140,6 +140,20 @@ export interface ReflogEntry {
   date: string;
 }
 
+export interface LintDiagnostic {
+  file: string;
+  line: number | null;
+  column: number | null;
+  rule: string | null;
+  severity: "error" | "warning" | "info";
+  message: string;
+}
+
+export interface LintResponse {
+  diagnostics: LintDiagnostic[];
+  linters_run: string[];
+}
+
 // Typed invoke wrappers
 export const api = {
   repo: {
@@ -220,6 +234,11 @@ export const api = {
       invoke<string>("commit_changes", { path, message, amend: amend ?? false }),
     revert: (path: string, commitHash: string) =>
       invoke<string>("revert_commit", { path, commitHash }),
+  },
+
+  lint: {
+    run: (path: string) =>
+      invoke<LintResponse>("run_project_linters", { repoPath: path }),
   },
 
   diff: {

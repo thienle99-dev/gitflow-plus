@@ -234,6 +234,7 @@ pub fn run() {
             commands::commit::discard_all,
             commands::commit::commit_changes,
             commands::commit::revert_commit,
+            commands::lint::run_project_linters,
             commands::diff::file_diff,
             commands::diff::commit_diff,
             commands::diff::staged_diff,

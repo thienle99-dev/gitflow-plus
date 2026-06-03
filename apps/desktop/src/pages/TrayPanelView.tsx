@@ -1,9 +1,11 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useGitStatus, useGitBranches, useGitSyncStatus } from "@/queries/useGitLog";
-import { api, type FileChange, type Commit, type StashEntry, type RepoInfo } from "@/api/tauri";
+import { api, type FileChange, type Commit, type StashEntry, type RepoInfo, type LintDiagnostic } from "@/api/tauri";
 import { useQueryClient, useQuery, useQueries } from "@tanstack/react-query";
 import { useGenerateCommitMessage } from "@/queries/useAI";
+import { lintCommitMessage, autoFixCommitMessage, type CommitLintResult } from "@/lib/commit-lint";
+import { LintWarningDialog } from "@/components/features/dialogs";
 import {
   ChevronDown,
   ChevronUp,
@@ -17,6 +19,7 @@ import {
   Loader2,
   Check,
   AlertCircle,
+  ShieldAlert,
   FolderOpen,
   CheckSquare,
   Square,
@@ -38,7 +41,6 @@ function formatTrayCommitDate(date: string) {
   if (Number.isNaN(parsed.getTime())) {
     return date.slice(0, 16);
   }
-
   return parsed.toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
@@ -67,6 +69,37 @@ export default function TrayPanelView() {
   const [syncLoading, setSyncLoading] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  // Commit message linting state
+  const [lintResults, setLintResults] = useState<CommitLintResult[]>([]);
+
+  const runLint = useCallback(() => {
+    const isCommitLintEnabled = localStorage.getItem("gitflowCommitLintEnabled") !== "false";
+    if (isCommitLintEnabled && commitMessage) {
+      setLintResults(lintCommitMessage(commitMessage));
+    } else {
+      setLintResults([]);
+    }
+  }, [commitMessage]);
+
+  useEffect(() => {
+    runLint();
+  }, [commitMessage, runLint]);
+
+  useEffect(() => {
+    window.addEventListener("gitflow-settings-updated", runLint);
+    return () => {
+      window.removeEventListener("gitflow-settings-updated", runLint);
+    };
+  }, [runLint]);
+
+  // Pre-Commit Gate States
+  const [lintWarningOpen, setLintWarningOpen] = useState(false);
+  const [pendingCommitMessage, setPendingCommitMessage] = useState("");
+  const [gateCommitErrors, setGateCommitErrors] = useState<CommitLintResult[]>([]);
+  const [gateCodeDiagnostics, setGateCodeDiagnostics] = useState<LintDiagnostic[]>([]);
+  const [gateStrictness, setGateStrictness] = useState<"strict" | "warn">("warn");
+  const [lintRunning, setLintRunning] = useState(false);
 
   // Branch switcher states
   const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
@@ -258,14 +291,13 @@ export default function TrayPanelView() {
     }
   };
 
-  const handleCommit = async () => {
-    if (!repoPath || !commitMessage.trim()) return;
+  const performActualCommit = async (msg: string) => {
     setCommitting(true);
     try {
       if (unstaged.length > 0) {
-        await api.commit.stageAll(repoPath);
+        await api.commit.stageAll(repoPath!);
       }
-      await api.commit.commit(repoPath, commitMessage, false);
+      await api.commit.commit(repoPath!, msg, false);
       setCommitMessage("");
       invalidate();
       showToast("Committed successfully");
@@ -274,6 +306,53 @@ export default function TrayPanelView() {
     } finally {
       setCommitting(false);
     }
+  };
+
+  const handleCommit = async () => {
+    if (!repoPath || !commitMessage.trim()) return;
+
+    const commitLintEnabled = localStorage.getItem("gitflowCommitLintEnabled") !== "false";
+    const codeLintEnabled = localStorage.getItem("gitflowCodeLintEnabled") === "true";
+    const strictness = (localStorage.getItem("gitflowLintStrictness") || "warn") as "strict" | "warn";
+
+    let msgErrors: CommitLintResult[] = [];
+    let codeIssues: LintDiagnostic[] = [];
+
+    const filesToLintExist = (changes?.length || 0) > 0;
+
+    if (commitLintEnabled) {
+      msgErrors = lintCommitMessage(commitMessage);
+    }
+
+    if (codeLintEnabled && filesToLintExist) {
+      setLintRunning(true);
+      try {
+        if (unstaged.length > 0) {
+          await api.commit.stageAll(repoPath);
+          invalidate();
+        }
+        const res = await api.lint.run(repoPath);
+        codeIssues = res.diagnostics;
+      } catch (err) {
+        console.error("Linter execution failed:", err);
+      } finally {
+        setLintRunning(false);
+      }
+    }
+
+    const hasErrors = msgErrors.some(e => e.severity === "error") || codeIssues.some(d => d.severity === "error");
+    const hasWarnings = msgErrors.some(e => e.severity === "warning") || codeIssues.some(d => d.severity === "warning");
+
+    if (hasErrors || hasWarnings) {
+      setGateCommitErrors(msgErrors);
+      setGateCodeDiagnostics(codeIssues);
+      setGateStrictness(strictness);
+      setPendingCommitMessage(commitMessage);
+      setLintWarningOpen(true);
+      return;
+    }
+
+    await performActualCommit(commitMessage);
   };
 
   const handleGitAction = async (action: "fetch" | "pull" | "push") => {
@@ -661,16 +740,16 @@ export default function TrayPanelView() {
 
                   <button
                     onClick={handleCommit}
-                    disabled={committing || !commitMessage.trim()}
+                    disabled={committing || lintRunning || !commitMessage.trim()}
                     className="h-7 px-2.5 bg-accent text-accent-fg text-[9px] font-bold rounded hover:opacity-95 disabled:opacity-40 transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
-                    title={`Commit ${unstaged.length > 0 ? "all changes" : staged.length > 0 ? `${staged.length} staged changes` : "changes"}`}
+                    title={`Commit changes`}
                   >
-                    {committing ? (
+                    {committing || lintRunning ? (
                       <Loader2 size={12} className="animate-spin" />
                     ) : (
                       <Check size={12} />
                     )}
-                    <span>Commit</span>
+                    <span>{committing ? "Committing..." : lintRunning ? "Linting..." : "Commit"}</span>
                   </button>
                 </div>
               </div>
@@ -937,6 +1016,28 @@ export default function TrayPanelView() {
           </div>
         </div>
       )}
+      <LintWarningDialog
+        open={lintWarningOpen}
+        onClose={() => setLintWarningOpen(false)}
+        commitErrors={gateCommitErrors}
+        codeDiagnostics={gateCodeDiagnostics}
+        strictness={gateStrictness}
+        onCommitAnyway={async () => {
+          setLintWarningOpen(false);
+          await performActualCommit(pendingCommitMessage);
+        }}
+        onAutoFixCommit={() => {
+          const fixed = autoFixCommitMessage(pendingCommitMessage, gateCommitErrors);
+          setPendingCommitMessage(fixed);
+          setCommitMessage(fixed);
+          const reErrors = lintCommitMessage(fixed);
+          setGateCommitErrors(reErrors);
+          if (reErrors.length === 0 && gateCodeDiagnostics.length === 0) {
+            setLintWarningOpen(false);
+            performActualCommit(fixed);
+          }
+        }}
+      />
       </div>
     </div>
   );

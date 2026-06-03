@@ -503,6 +503,57 @@ function parseBoldText(text: string): React.ReactNode[] {
   return parts.length > 0 ? parts : [text];
 }
 
+function reviewCategoryMeta(category: string) {
+  switch (category.toUpperCase()) {
+    case "BUG":
+      return {
+        label: "Bug",
+        border: "border-[#ff375f]",
+        bg: "bg-[#ff375f]/8",
+        badge: "bg-[#ff375f]/20 text-[#ff375f]",
+      };
+    case "SECURITY":
+      return {
+        label: "Security",
+        border: "border-[#ff6b35]",
+        bg: "bg-[#ff6b35]/8",
+        badge: "bg-[#ff6b35]/20 text-[#ff6b35]",
+      };
+    case "PERF":
+      return {
+        label: "Perf",
+        border: "border-[#ffcc00]",
+        bg: "bg-[#ffcc00]/8",
+        badge: "bg-[#ffcc00]/20 text-[#ffcc00]",
+      };
+    case "STYLE":
+      return {
+        label: "Style",
+        border: "border-[#0a84ff]",
+        bg: "bg-[#0a84ff]/8",
+        badge: "bg-[#0a84ff]/20 text-[#0a84ff]",
+      };
+    case "BEST-PRACTICE":
+      return {
+        label: "Best Practice",
+        border: "border-[#bf5af2]",
+        bg: "bg-[#bf5af2]/8",
+        badge: "bg-[#bf5af2]/20 text-[#bf5af2]",
+      };
+    default:
+      return {
+        label: category,
+        border: "border-accent",
+        bg: "bg-accent/8",
+        badge: "bg-accent/20 text-accent",
+      };
+  }
+}
+
+function matchReviewCategory(line: string) {
+  return line.match(/^\s*(?:#{1,6}\s*)?(?:[-*]\s*)?(?:\*\*)?\[(BUG|SECURITY|PERF|STYLE|BEST-PRACTICE)\](?:\*\*)?\s*(.*)$/i);
+}
+
 /** Render AI Review result with color-coded findings, code block support, and bold text */
 function renderReviewResult(text: string): React.ReactNode[] {
   const elements: React.ReactNode[] = [];
@@ -549,6 +600,19 @@ function renderReviewResult(text: string): React.ReactNode[] {
       continue;
     }
 
+    const categoryMatch = matchReviewCategory(line);
+    if (categoryMatch) {
+      const meta = reviewCategoryMeta(categoryMatch[1]);
+      elements.push(
+        <div key={`l${key++}`} className={`ml-1 mt-1.5 flex gap-2 border-l-2 ${meta.border} ${meta.bg} pl-2.5 pr-2 py-1.5 rounded-r-sm`}>
+          <span className={`inline-flex items-center h-5 px-1.5 rounded text-[9px] font-bold uppercase tracking-wider ${meta.badge} shrink-0`}>
+            {meta.label}
+          </span>
+          <span className="min-w-0 text-text-secondary">{parseBoldText(categoryMatch[2])}</span>
+        </div>
+      );
+      continue;
+    }
     if (line.startsWith("### ")) {
       elements.push(<div key={`l${key++}`} className="font-semibold text-text-primary mt-2.5 mb-1 text-xs border-l-2 border-accent-40 pl-2">{line.slice(4)}</div>);
       continue;

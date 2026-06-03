@@ -7,6 +7,57 @@ const DEFAULT_MODEL = "claude-sonnet-4-20250514";
 const conventionCache = new Map<string, { files: ConventionFile[]; ts: number }>();
 const CONVENTION_TTL_MS = 5 * 60 * 1000;
 
+// ─── AI Response Cache (same diff → cached result) ─────────────────────────
+const aiResponseCache = new Map<string, { text: string; ts: number }>();
+const AI_CACHE_TTL_MS = 10 * 60 * 1000; // 10 min
+const AI_CACHE_MAX = 50;
+
+function cacheKey(prompt: string, model: string): string {
+  let h = 5381;
+  const key = model + "\x00" + prompt;
+  for (let i = 0; i < key.length; i++) {
+    h = ((h << 5) + h + key.charCodeAt(i)) & 0xffffffff;
+  }
+  return h.toString(36);
+}
+
+function cacheGet(key: string): string | null {
+  const entry = aiResponseCache.get(key);
+  if (entry && Date.now() - entry.ts < AI_CACHE_TTL_MS) return entry.text;
+  if (entry) aiResponseCache.delete(key);
+  return null;
+}
+
+function cacheSet(key: string, text: string) {
+  if (aiResponseCache.size >= AI_CACHE_MAX) {
+    const oldest = aiResponseCache.keys().next().value;
+    if (oldest !== undefined) aiResponseCache.delete(oldest);
+  }
+  aiResponseCache.set(key, { text, ts: Date.now() });
+}
+
+/** Clear the response cache (e.g. when user changes AI settings). */
+export function clearAICache() {
+  aiResponseCache.clear();
+}
+
+// ─── Rate Limiter (sliding window) ──────────────────────────────────────────
+const rateTimestamps: number[] = [];
+const RATE_WINDOW_MS = 60_000; // 1 min
+const RATE_MAX = 10; // max requests per window
+
+async function waitForRateSlot(): Promise<void> {
+  const now = Date.now();
+  while (rateTimestamps.length > 0 && rateTimestamps[0] < now - RATE_WINDOW_MS) {
+    rateTimestamps.shift();
+  }
+  if (rateTimestamps.length >= RATE_MAX) {
+    const waitMs = rateTimestamps[0] + RATE_WINDOW_MS - now + 100;
+    if (waitMs > 0) await new Promise((r) => setTimeout(r, waitMs));
+  }
+  rateTimestamps.push(Date.now());
+}
+
 interface AISettings {
   apiKey: string;
   model: string;
@@ -661,6 +712,16 @@ function gitmojiForType(type: string) {
 }
 
 async function requestAIText(prompt: string, settings: AISettings) {
+  // ── Cache: return cached response for identical (prompt + model) ──
+  const key = cacheKey(prompt, settings.model);
+  const cached = cacheGet(key);
+  if (cached) return cached;
+
+  // ── Rate limit: wait if we've exceeded the sliding window ──
+  await waitForRateSlot();
+
+  let result: string;
+
   if (settings.model.startsWith("claude-")) {
     let endpoint = settings.customUrl.trim() || "https://api.anthropic.com/v1/messages";
     if (settings.customUrl && !endpoint.endsWith("/messages")) {
@@ -682,39 +743,43 @@ async function requestAIText(prompt: string, settings: AISettings) {
       }),
     );
     assertSuccess(res.status);
-    return parseAnthropicResponse(res.body);
+    result = parseAnthropicResponse(res.body);
+  } else {
+    let endpoint = settings.customUrl.trim();
+    if (!endpoint) {
+      endpoint = settings.model === "ollama"
+        ? "http://localhost:11434/v1/chat/completions"
+        : settings.model === "llama.cpp"
+          ? "http://localhost:8080/v1/chat/completions"
+          : "https://api.openai.com/v1/chat/completions";
+    }
+    if (settings.customUrl && !endpoint.endsWith("/chat/completions") && !endpoint.endsWith("/completions")) {
+      endpoint = endpoint.replace(/\/+$/, "") + "/chat/completions";
+    }
+
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (settings.apiKey) {
+      headers.Authorization = `Bearer ${settings.apiKey}`;
+    }
+
+    const res = await api.ai.request(
+      endpoint,
+      "POST",
+      headers,
+      JSON.stringify({
+        model: settings.model === "ollama" ? "llama3" : settings.model === "llama.cpp" ? "local-model" : settings.model,
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: settings.tokenLimit,
+        stream: false,
+      }),
+    );
+    assertSuccess(res.status);
+    result = parseOpenAIResponse(res.body);
   }
 
-  let endpoint = settings.customUrl.trim();
-  if (!endpoint) {
-    endpoint = settings.model === "ollama"
-      ? "http://localhost:11434/v1/chat/completions"
-      : settings.model === "llama.cpp"
-        ? "http://localhost:8080/v1/chat/completions"
-        : "https://api.openai.com/v1/chat/completions";
-  }
-  if (settings.customUrl && !endpoint.endsWith("/chat/completions") && !endpoint.endsWith("/completions")) {
-    endpoint = endpoint.replace(/\/+$/, "") + "/chat/completions";
-  }
-
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (settings.apiKey) {
-    headers.Authorization = `Bearer ${settings.apiKey}`;
-  }
-
-  const res = await api.ai.request(
-    endpoint,
-    "POST",
-    headers,
-    JSON.stringify({
-      model: settings.model === "ollama" ? "llama3" : settings.model === "llama.cpp" ? "local-model" : settings.model,
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: settings.tokenLimit,
-      stream: false,
-    }),
-  );
-  assertSuccess(res.status);
-  return parseOpenAIResponse(res.body);
+  // ── Store in cache ──
+  cacheSet(key, result);
+  return result;
 }
 
 function assertSuccess(status: number) {

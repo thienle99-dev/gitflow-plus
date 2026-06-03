@@ -11,4 +11,5 @@ export { default as MergeRequestDialog } from "./MergeRequestDialog";
 export { default as MergePreviewDialog } from "./MergePreviewDialog";
 export { default as FeatureGuideDialog } from "./FeatureGuideDialog";
 export { default as OnboardingWizard } from "./OnboardingWizard";
+export { default as LintWarningDialog } from "./LintWarningDialog";
 export { isOnboardingComplete, resetOnboarding } from "./OnboardingWizard";

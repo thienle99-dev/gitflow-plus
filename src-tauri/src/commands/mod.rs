@@ -7,6 +7,7 @@ pub mod clone;
 pub mod commit;
 pub mod diff;
 pub mod lfs;
+pub mod lint;
 pub mod log;
 pub mod merge;
 pub mod rebase;

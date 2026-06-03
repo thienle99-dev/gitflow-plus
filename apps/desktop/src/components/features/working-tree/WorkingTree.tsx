@@ -2,13 +2,16 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useGitDiff, useGitStatus } from "@/queries/useGitLog";
-import { api, type FileChange } from "@/api/tauri";
+import { api, type FileChange, type LintDiagnostic } from "@/api/tauri";
 import { useGenerateCommitMessage, useAICommitScope } from "@/queries/useAI";
 import { generateLocalCommitMessage, shouldAnalyzeScope, type CommitScopeSuggestion } from "@/lib/ai";
 import { useQueryClient } from "@tanstack/react-query";
 import ContextMenu, { type ContextMenuItem } from "@/components/ui/overlay/ContextMenu";
 import UndoButton from "@/components/features/actions/UndoButton";
 import LazyDiffViewer from "@/components/features/diff/LazyDiffViewer";
+import { AlertCircle, ShieldAlert } from "lucide-react";
+import { lintCommitMessage, autoFixCommitMessage, type CommitLintResult } from "@/lib/commit-lint";
+import { LintWarningDialog } from "@/components/features/dialogs";
 import {
   Braces,
   Check,
@@ -48,6 +51,27 @@ export default function WorkingTree() {
   const generateCommit = useGenerateCommitMessage(repoPath);
   const commitScope = useAICommitScope();
   const [commitMessage, setCommitMessage] = useState("");
+  const [lintResults, setLintResults] = useState<CommitLintResult[]>([]);
+
+  const runLint = useCallback(() => {
+    const isCommitLintEnabled = localStorage.getItem("gitflowCommitLintEnabled") !== "false";
+    if (isCommitLintEnabled && commitMessage) {
+      setLintResults(lintCommitMessage(commitMessage));
+    } else {
+      setLintResults([]);
+    }
+  }, [commitMessage]);
+
+  useEffect(() => {
+    runLint();
+  }, [commitMessage, runLint]);
+
+  useEffect(() => {
+    window.addEventListener("gitflow-settings-updated", runLint);
+    return () => {
+      window.removeEventListener("gitflow-settings-updated", runLint);
+    };
+  }, [runLint]);
   const [amend, setAmend] = useState(false);
   const [scopeSuggestion, setScopeSuggestion] = useState<CommitScopeSuggestion | null>(null);
   const [scopeDismissed, setScopeDismissed] = useState(false);
@@ -63,6 +87,15 @@ export default function WorkingTree() {
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const lastClickedRef = useRef<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Pre-Commit Gate States
+  const [lintWarningOpen, setLintWarningOpen] = useState(false);
+  const [pendingCommitMessage, setPendingCommitMessage] = useState("");
+  const [pendingAmend, setPendingAmend] = useState(false);
+  const [gateCommitErrors, setGateCommitErrors] = useState<CommitLintResult[]>([]);
+  const [gateCodeDiagnostics, setGateCodeDiagnostics] = useState<LintDiagnostic[]>([]);
+  const [gateStrictness, setGateStrictness] = useState<"strict" | "warn">("warn");
+  const [lintRunning, setLintRunning] = useState(false);
 
   const staged = changes?.filter((c) => c.staged) || [];
   const unstaged = changes?.filter((c) => !c.staged) || [];
@@ -206,14 +239,13 @@ export default function WorkingTree() {
     }
   };
 
-  const handleCommit = async () => {
-    if (!commitMessage.trim()) return;
+  const performActualCommit = async (msg: string, isAmend: boolean) => {
     setCommitting(true);
     try {
       if (staged.length === 0 && unstaged.length > 0) {
         await api.commit.stageAll(repoPath!);
       }
-      const result = await api.commit.commit(repoPath!, commitMessage, amend);
+      const result = await api.commit.commit(repoPath!, msg, isAmend);
       showToast(result);
       setCommitMessage("");
       setAmend(false);
@@ -223,6 +255,54 @@ export default function WorkingTree() {
     } finally {
       setCommitting(false);
     }
+  };
+
+  const handleCommit = async () => {
+    if (!commitMessage.trim()) return;
+
+    const commitLintEnabled = localStorage.getItem("gitflowCommitLintEnabled") !== "false";
+    const codeLintEnabled = localStorage.getItem("gitflowCodeLintEnabled") === "true";
+    const strictness = (localStorage.getItem("gitflowLintStrictness") || "warn") as "strict" | "warn";
+
+    let msgErrors: CommitLintResult[] = [];
+    let codeIssues: LintDiagnostic[] = [];
+
+    const filesToLintExist = staged.length > 0 || unstaged.length > 0;
+
+    if (commitLintEnabled) {
+      msgErrors = lintCommitMessage(commitMessage);
+    }
+
+    if (codeLintEnabled && filesToLintExist) {
+      setLintRunning(true);
+      try {
+        if (staged.length === 0 && unstaged.length > 0) {
+          await api.commit.stageAll(repoPath!);
+          invalidate();
+        }
+        const res = await api.lint.run(repoPath!);
+        codeIssues = res.diagnostics;
+      } catch (err) {
+        console.error("Linter execution failed:", err);
+      } finally {
+        setLintRunning(false);
+      }
+    }
+
+    const hasErrors = msgErrors.some(e => e.severity === "error") || codeIssues.some(d => d.severity === "error");
+    const hasWarnings = msgErrors.some(e => e.severity === "warning") || codeIssues.some(d => d.severity === "warning");
+
+    if (hasErrors || hasWarnings) {
+      setGateCommitErrors(msgErrors);
+      setGateCodeDiagnostics(codeIssues);
+      setGateStrictness(strictness);
+      setPendingCommitMessage(commitMessage);
+      setPendingAmend(amend);
+      setLintWarningOpen(true);
+      return;
+    }
+
+    await performActualCommit(commitMessage, amend);
   };
 
   const handleUseGroup = async (group: { files: string[]; message: string }) => {
@@ -421,7 +501,7 @@ export default function WorkingTree() {
   return (
     <div className="h-full flex flex-col bg-surface-0">
       {/* Master Changes Header */}
-      <div className="h-9 px-3 border-b border-border flex items-center justify-between shrink-0 bg-surface-1-40 hover:bg-surface-1-70 transition-colors">
+      <div className="h-10 px-3 border-b border-border-60 flex items-center justify-between shrink-0 bg-surface-1/70 backdrop-blur">
         <div
           className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-text-primary uppercase tracking-wider select-none"
           onClick={handleToggleAllSections}
@@ -433,16 +513,16 @@ export default function WorkingTree() {
           />
           Changes
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           <button
-            className="ghost p-1 rounded hover:bg-surface-2 transition-colors"
+            className="h-6 w-6 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
             onClick={invalidate}
             title="Refresh changes"
           >
             <RefreshCw size={13} />
           </button>
           <button
-            className={`ghost p-1 rounded hover:bg-surface-2 transition-colors ${generateCommit.isPending ? "opacity-50 cursor-not-allowed text-accent" : ""}`}
+            className={`h-6 w-6 inline-flex items-center justify-center rounded-md text-text-muted hover:text-accent hover:bg-accent-10 transition-colors ${generateCommit.isPending ? "opacity-50 cursor-not-allowed text-accent" : ""}`}
             onClick={handleGenerateCommit}
             disabled={generateCommit.isPending}
             title={generateCommit.isPending ? "Generating message..." : "Generate commit message (AI)"}
@@ -454,7 +534,7 @@ export default function WorkingTree() {
             )}
           </button>
           <button
-            className="ghost p-1 rounded hover:bg-surface-2 transition-colors text-text-secondary hover:text-accent disabled:opacity-40"
+            className="h-6 w-6 inline-flex items-center justify-center rounded-md text-text-muted hover:text-accent hover:bg-accent-10 disabled:opacity-35 disabled:hover:bg-transparent transition-colors"
             onClick={handleStageAll}
             disabled={unstaged.length === 0}
             title="Stage all changes"
@@ -462,7 +542,7 @@ export default function WorkingTree() {
             <Plus size={13} />
           </button>
           <button
-            className="ghost p-1 rounded hover:bg-surface-2 transition-colors text-text-secondary hover:text-[#ff375f] disabled:opacity-40"
+            className="h-6 w-6 inline-flex items-center justify-center rounded-md text-text-muted hover:text-[#ff375f] hover:bg-[#ff375f]/10 disabled:opacity-35 disabled:hover:bg-transparent transition-colors"
             onClick={handleDiscardAll}
             disabled={totalChanges === 0}
             title="Discard all changes"
@@ -470,7 +550,7 @@ export default function WorkingTree() {
             <Undo2 size={13} />
           </button>
           {totalChanges > 0 && (
-            <span className="ml-1.5 flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-[#bf5af2]/15 text-[#bf5af2] dark:text-[#da8fff] text-[10px] font-bold px-1 select-none">
+            <span className="ml-1 flex items-center justify-center min-w-[20px] h-5 rounded-full bg-[#bf5af2]/15 text-[#bf5af2] dark:text-[#da8fff] text-[10px] font-bold px-1.5 select-none">
               {totalChanges}
             </span>
           )}
@@ -569,6 +649,43 @@ export default function WorkingTree() {
             </button>
           </div>
         </div>
+
+        <div className="flex items-center justify-between text-2xs px-1 text-text-muted mt-1 select-none">
+          <div className="flex items-center gap-1.5 min-w-0">
+            {localStorage.getItem("gitflowCommitLintEnabled") !== "false" && lintResults.length > 0 ? (
+              <>
+                {lintResults[0].severity === "error" ? (
+                  <ShieldAlert size={11} className="text-[#ff453a] shrink-0" />
+                ) : (
+                  <AlertCircle size={11} className="text-[#ff9f0a] shrink-0" />
+                )}
+                <span className="text-text-secondary truncate max-w-[280px]" title={lintResults[0].message}>
+                  {lintResults[0].message}
+                </span>
+                {lintResults.some(r => r.autoFixable) && (
+                  <button
+                    type="button"
+                    onClick={() => setCommitMessage(autoFixCommitMessage(commitMessage, lintResults))}
+                    className="text-accent hover:underline font-semibold ml-1 cursor-pointer shrink-0"
+                  >
+                    Auto-fix
+                  </button>
+                )}
+              </>
+            ) : localStorage.getItem("gitflowCommitLintEnabled") !== "false" && commitMessage.trim().length > 0 ? (
+              <span className="text-[#30d158] flex items-center gap-1">
+                <Check size={11} className="text-[#30d158]" /> Message conforms to spec
+              </span>
+            ) : null}
+          </div>
+
+          <div className="text-2xs text-text-muted shrink-0 ml-2">
+            <span className={commitMessage.split('\n')[0].length > 72 ? "text-[#ff453a] font-semibold" : ""}>
+              {commitMessage.split('\n')[0].length}
+            </span>
+            /72
+          </div>
+        </div>
         {scopeSuggestion && !scopeDismissed && (
           <div className="border border-accent-20 bg-accent-5 rounded-mac p-3 space-y-2">
             <div className="flex items-center justify-between">
@@ -660,11 +777,11 @@ export default function WorkingTree() {
         <div className="flex items-center gap-2">
           <button
             onClick={handleCommit}
-            disabled={!commitMessage.trim() || (staged.length === 0 && unstaged.length === 0) || committing}
+            disabled={!commitMessage.trim() || (staged.length === 0 && unstaged.length === 0) || committing || lintRunning}
             className={`flex-1 h-8 inline-flex items-center justify-center gap-1.5 px-4 text-2xs font-semibold rounded-[5px] transition-all shadow-2xs cursor-pointer select-none ${commitMessage.trim() && (staged.length > 0 || unstaged.length > 0)
               ? "bg-accent text-accent-fg hover:opacity-90 active:scale-[0.99] shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]"
               : "bg-surface-3 text-text-muted opacity-40 cursor-not-allowed"
-              } ${committing ? "opacity-60" : ""}`}
+              } ${committing || lintRunning ? "opacity-60" : ""}`}
             title={
               !commitMessage.trim()
                 ? "Enter a commit message"
@@ -675,8 +792,12 @@ export default function WorkingTree() {
                   : "Commit (⌘↵)"
             }
           >
-            <Check size={12} className={commitMessage.trim() && (staged.length > 0 || unstaged.length > 0) ? "text-accent-fg" : "text-text-muted"} />
-            <span>{committing ? "Committing..." : unstaged.length > 0 ? "Commit All" : "Commit"}</span>
+            {lintRunning ? (
+              <RefreshCw size={12} className="animate-spin text-accent-fg" />
+            ) : (
+              <Check size={12} className={commitMessage.trim() && (staged.length > 0 || unstaged.length > 0) ? "text-accent-fg" : "text-text-muted"} />
+            )}
+            <span>{committing ? "Committing..." : lintRunning ? "Linting changes..." : unstaged.length > 0 ? "Commit All" : "Commit"}</span>
           </button>
 
           <UndoButton onUndoComplete={invalidate} />
@@ -707,6 +828,28 @@ export default function WorkingTree() {
       )}
 
       {toast && <div className="toast">{toast}</div>}
+      <LintWarningDialog
+        open={lintWarningOpen}
+        onClose={() => setLintWarningOpen(false)}
+        commitErrors={gateCommitErrors}
+        codeDiagnostics={gateCodeDiagnostics}
+        strictness={gateStrictness}
+        onCommitAnyway={async () => {
+          setLintWarningOpen(false);
+          await performActualCommit(pendingCommitMessage, pendingAmend);
+        }}
+        onAutoFixCommit={() => {
+          const fixed = autoFixCommitMessage(pendingCommitMessage, gateCommitErrors);
+          setPendingCommitMessage(fixed);
+          setCommitMessage(fixed);
+          const reErrors = lintCommitMessage(fixed);
+          setGateCommitErrors(reErrors);
+          if (reErrors.length === 0 && gateCodeDiagnostics.length === 0) {
+            setLintWarningOpen(false);
+            performActualCommit(fixed, pendingAmend);
+          }
+        }}
+      />
       {ctxMenu && (
         <ContextMenu
           x={ctxMenu.x}
@@ -757,8 +900,8 @@ function ChangeSection({
   grow,
 }: ChangeSectionProps) {
   return (
-    <div className={`border-b border-border min-h-0 flex flex-col ${grow && open ? "flex-1" : "shrink-0"} ${!grow && open ? "max-h-[42%]" : ""}`}>
-      <div className="h-8 px-3 flex items-center gap-2 bg-surface-1 shrink-0">
+    <div className={`border-b border-border-60 min-h-0 flex flex-col ${grow && open ? "flex-1" : "shrink-0"} ${!grow && open ? "max-h-[42%]" : ""}`}>
+      <div className="h-9 px-3 flex items-center gap-2 bg-surface-1/55 shrink-0">
         <button
           className="ghost p-0.5 text-text-muted hover:text-text-primary transition-colors"
           onClick={onToggleOpen}
@@ -778,10 +921,10 @@ function ChangeSection({
           {checked && <Check size={9} strokeWidth={3.5} />}
         </button>
         <div className="flex-1 text-xs font-semibold text-text-primary">
-          {title} ({files.length})
+          {title} <span className="text-text-muted font-medium">({files.length})</span>
         </div>
         {files.length > 0 && (
-          <button className="ghost text-2xs font-medium" onClick={onToggleAll}
+          <button className="text-2xs font-semibold text-text-muted hover:text-accent transition-colors" onClick={onToggleAll}
             title={checked ? "Unstage all (⌘U)" : "Stage all (⌘⇧A)"}>
             {checked ? "Unstage all" : "Stage all"}
           </button>
@@ -789,9 +932,9 @@ function ChangeSection({
       </div>
 
       {open && (
-        <div className="flex-1 overflow-y-auto py-1">
+        <div className="flex-1 overflow-y-auto py-1.5">
           {files.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-text-muted">{empty}</div>
+            <div className="px-5 py-4 text-xs text-text-muted/80">{empty}</div>
           ) : (
             files.map((file) => (
               <ChangeRow

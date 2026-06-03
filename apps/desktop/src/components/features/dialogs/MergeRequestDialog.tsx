@@ -304,6 +304,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
   const renderAIText = (text: string) => {
     return text.split("\n").map((line, index) => {
       const trimmed = line.trim();
+      const categoryMatch = trimmed.match(/^\s*(?:#{1,6}\s*)?(?:[-*]\s*)?(?:\*\*)?\[(BUG|SECURITY|PERF|STYLE|BEST-PRACTICE)\](?:\*\*)?\s*(.*)$/i);
       const isFinding =
         /severity|risk|bug|security|regression|request changes|blocking/i.test(trimmed);
       const isPositive =
@@ -311,6 +312,27 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
 
       if (!trimmed) {
         return <div key={index} className="h-2" />;
+      }
+      if (categoryMatch) {
+        const category = categoryMatch[1].toUpperCase();
+        const colors =
+          category === "BUG"
+            ? "border-[#ff375f]/35 bg-[#ff375f]/10 text-[#ff375f]"
+            : category === "SECURITY"
+              ? "border-[#ff6b35]/35 bg-[#ff6b35]/10 text-[#ff6b35]"
+              : category === "PERF"
+                ? "border-[#ffcc00]/35 bg-[#ffcc00]/10 text-[#ffcc00]"
+                : category === "STYLE"
+                  ? "border-[#0a84ff]/35 bg-[#0a84ff]/10 text-[#0a84ff]"
+                  : "border-[#bf5af2]/35 bg-[#bf5af2]/10 text-[#bf5af2]";
+        return (
+          <div key={index} className={`rounded-mac border-l-2 px-2.5 py-1.5 ${colors}`}>
+            <span className="mr-2 inline-flex rounded bg-current/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
+              {category === "BEST-PRACTICE" ? "Best Practice" : category}
+            </span>
+            <span className="text-text-secondary">{renderTextWithFileLinks(categoryMatch[2])}</span>
+          </div>
+        );
       }
       if (trimmed.startsWith("### ")) {
         return (
