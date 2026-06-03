@@ -52,6 +52,7 @@ export default function WorkingTree() {
   const [scopeSuggestion, setScopeSuggestion] = useState<CommitScopeSuggestion | null>(null);
   const [scopeDismissed, setScopeDismissed] = useState(false);
   const [committing, setCommitting] = useState(false);
+  const [committingGroupKey, setCommittingGroupKey] = useState<string | null>(null);
   const [scopeAnalyzing, setScopeAnalyzing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [stagedOpen, setStagedOpen] = useState(true);
@@ -209,7 +210,7 @@ export default function WorkingTree() {
     if (!commitMessage.trim()) return;
     setCommitting(true);
     try {
-      if (unstaged.length > 0) {
+      if (staged.length === 0 && unstaged.length > 0) {
         await api.commit.stageAll(repoPath!);
       }
       const result = await api.commit.commit(repoPath!, commitMessage, amend);
@@ -237,11 +238,66 @@ export default function WorkingTree() {
         if (remaining.length <= 1) return null;
         return { ...prev, groups: remaining };
       });
-      showToast(`Staged ${group.files.length} files. Commit with ⌘↵`);
+      showToast(`Staged ${group.files.length} files for this commit. Press Commit or ⌘↵`);
     } catch (e: any) {
       showToast(`Error: ${e}`);
     }
     requestAnimationFrame(() => textareaRef.current?.focus());
+  };
+
+  const handleCommitGroup = async (group: { files: string[]; message: string }) => {
+    if (!repoPath || committingGroupKey || committing) return;
+    const groupKey = group.message;
+    setCommittingGroupKey(groupKey);
+    setCommitting(true);
+    try {
+      await api.commit.unstageAll(repoPath);
+      for (const filePath of group.files) {
+        await api.commit.stage(repoPath, filePath);
+      }
+      const result = await api.commit.commit(repoPath, group.message, false);
+      setCommitMessage("");
+      setAmend(false);
+      setScopeSuggestion((prev) => {
+        if (!prev) return null;
+        const remaining = prev.groups.filter((g) => g.message !== group.message);
+        if (remaining.length <= 1) return null;
+        return { ...prev, groups: remaining };
+      });
+      showToast(result || `Committed ${group.files.length} files`);
+      invalidate();
+    } catch (e: any) {
+      showToast(`Error: ${e}`);
+    } finally {
+      setCommitting(false);
+      setCommittingGroupKey(null);
+    }
+  };
+
+  const handleCommitAllSuggested = async () => {
+    if (!repoPath || !scopeSuggestion || committingGroupKey || committing) return;
+    setCommittingGroupKey("__all__");
+    setCommitting(true);
+    try {
+      for (const group of scopeSuggestion.groups) {
+        await api.commit.unstageAll(repoPath);
+        for (const filePath of group.files) {
+          await api.commit.stage(repoPath, filePath);
+        }
+        await api.commit.commit(repoPath, group.message, false);
+      }
+      setCommitMessage("");
+      setAmend(false);
+      setScopeSuggestion(null);
+      setScopeDismissed(true);
+      showToast(`Committed ${scopeSuggestion.groups.length} suggested commits`);
+      invalidate();
+    } catch (e: any) {
+      showToast(`Error: ${e}`);
+    } finally {
+      setCommitting(false);
+      setCommittingGroupKey(null);
+    }
   };
 
   const handleGenerateCommit = async () => {
@@ -561,12 +617,22 @@ export default function WorkingTree() {
                       </div>
                       <p className="text-2xs text-text-secondary italic leading-relaxed">{group.reason}</p>
                     </div>
-                    <button
-                      onClick={() => handleUseGroup(group)}
-                      className="shrink-0 text-2xs font-semibold px-2.5 py-1.5 bg-accent/10 text-accent rounded-mac hover:bg-accent/20 transition-colors cursor-pointer mt-0.5"
-                    >
-                      Use this
-                    </button>
+                    <div className="shrink-0 flex flex-col gap-1 mt-0.5">
+                      <button
+                        onClick={() => handleCommitGroup(group)}
+                        disabled={!!committingGroupKey || committing}
+                        className="text-2xs font-semibold px-2.5 py-1.5 bg-accent text-accent-fg rounded-mac hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      >
+                        {committingGroupKey === group.message ? "Committing..." : "Commit"}
+                      </button>
+                      <button
+                        onClick={() => handleUseGroup(group)}
+                        disabled={!!committingGroupKey || committing}
+                        className="text-2xs font-semibold px-2.5 py-1.5 bg-accent/10 text-accent rounded-mac hover:bg-accent/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      >
+                        Use this
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -574,8 +640,16 @@ export default function WorkingTree() {
 
             <div className="flex items-center gap-2 pt-0.5">
               <button
+                onClick={handleCommitAllSuggested}
+                disabled={!!committingGroupKey || committing}
+                className="flex-1 text-2xs font-semibold text-accent-fg py-1.5 cursor-pointer bg-accent hover:opacity-90 rounded-mac border border-accent transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {committingGroupKey === "__all__" ? "Committing suggestions..." : "Commit all suggested"}
+              </button>
+              <button
                 onClick={() => setScopeDismissed(true)}
-                className="flex-1 text-2xs text-text-muted hover:text-text-primary py-1.5 cursor-pointer bg-surface-2-30 hover:bg-surface-2 rounded-mac border border-border-30 transition-colors"
+                disabled={!!committingGroupKey || committing}
+                className="flex-1 text-2xs text-text-muted hover:text-text-primary py-1.5 cursor-pointer bg-surface-2-30 hover:bg-surface-2 rounded-mac border border-border-30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Commit all as one
               </button>
