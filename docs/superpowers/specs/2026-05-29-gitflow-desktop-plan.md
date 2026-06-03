@@ -271,9 +271,9 @@
 - [ ] Gitignore editor — visual editor cho `.gitignore`, browse files, add patterns, test matching
 - [ ] Patch export/import — export commits thành `.patch` file, apply patch từ file
 - [x] Git LFS support — detect LFS-tracked files, show LFS status, hỗ trợ lfs pull/push
-- [ ] Repository health check — scan large files không LFS-tracked, sensitive data patterns, broken symlinks
-- [ ] Diagnostic bundle — collect app version, git version, repo state summary, redacted logs for bug reports
-- [ ] Test fixture repos — conflict, binary, LFS, submodule, large history, rename/delete, detached HEAD, shallow clone
+- [x] Repository health check — scan large files không LFS-tracked, sensitive data patterns, broken symlinks
+- [x] Diagnostic bundle — collect app version, git version, repo state summary, redacted logs for bug reports
+- [x] Test fixture repos — conflict, binary, LFS, submodule, large history, rename/delete, detached HEAD, shallow clone
 
 ## Phase 5: Plugin System & Extensibility (future)
 
@@ -296,8 +296,8 @@
 - [ ] Virtual scroll: 1000+ commits smooth
 - [ ] Diff viewer: all file states (M/A/D/R)
 - [ ] Dark/light toggle works
-- [ ] `cargo test` passes
-- [ ] `npm test` passes
+- [x] `cargo test` passes
+- [x] `npm test` passes
 
 ## Plan Review Notes
 
