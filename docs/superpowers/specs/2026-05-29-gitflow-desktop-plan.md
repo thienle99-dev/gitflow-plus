@@ -58,9 +58,9 @@
 - [x] Right-click → context menu
 - [x] Pagination: load more on scroll bottom
 - [x] Canvas renderer — thay SVG bằng Canvas để tránh DOM overhead với 1000+ nodes/edges
-- [ ] Web Worker cho graph layout — move `computeGraphLayout` ra khỏi main thread (pure function, dễ isolate)
-- [ ] True virtualization — TanStack Virtual, chỉ render rows đang visible thay vì pagination
-- [ ] Unit tests for layout algorithm
+- [x] Web Worker cho graph layout — move `computeGraphLayout` ra khỏi main thread (pure function, dễ isolate)
+- [x] True virtualization — TanStack Virtual, chỉ render rows đang visible thay vì pagination
+- [x] Unit tests for layout algorithm
 
 ### Step 7: Right Panel
 - [x] `components/detail/CommitDetail.tsx` — hash, author, date, message
@@ -85,7 +85,7 @@
 - [x] Syntax highlight auto-detect by extension
 - [x] Edge cases: binary, large file, new/deleted
 - [x] Word-level diff highlighting — highlight từng từ thay đổi trong một dòng, không chỉ cả dòng
-- [ ] Lazy load CodeMirror — chỉ import khi user click xem diff, không load upfront (~500KB saved)
+- [x] Lazy load CodeMirror — chỉ import khi user click xem diff, không load upfront (~500KB saved)
 
 ### Step 10: Git Actions
 - [x] Pull button → invoke git_pull → refresh queries
@@ -95,7 +95,7 @@
 - [x] Create branch dialog (name input + base ref selector)
 - [x] Error handling: toast notifications, auth prompts
 - [x] Clone dialog — URL input + destination path picker
-- [ ] Revert commit — tạo commit mới đảo ngược thay đổi (an toàn cho shared branches)
+- [x] Revert commit — tạo commit mới đảo ngược thay đổi (an toàn cho shared branches)
 - [ ] Branch merge preview — show ahead/behind count + diff preview trước khi merge
 
 ### Step 11: File Watcher

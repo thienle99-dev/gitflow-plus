@@ -6,7 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Eye, History, Maximize2, Minimize2 } from "lucide-react";
 import WorkingTree from "@/components/features/working-tree/WorkingTree";
 import CommitDetail from "@/components/features/commit-detail/CommitDetail";
-import DiffViewer from "@/components/features/diff/DiffViewer";
+import LazyDiffViewer from "@/components/features/diff/LazyDiffViewer";
 import StashPanel from "@/components/features/stash/StashPanel";
 import TagPanel from "@/components/features/tags/TagPanel";
 import SubmoduleDetail from "@/components/features/submodules/SubmoduleDetail";
@@ -161,7 +161,7 @@ function DiffViewerPanel() {
           Loading diff...
         </div>
       ) : diff ? (
-        <DiffViewer
+        <LazyDiffViewer
           diff={diff}
           filePath={selectedFile || ""}
           source={diffSource as "working" | "staged" | "commit"}

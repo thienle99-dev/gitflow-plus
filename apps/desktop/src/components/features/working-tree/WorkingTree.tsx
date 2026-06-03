@@ -8,7 +8,7 @@ import { generateLocalCommitMessage, shouldAnalyzeScope, type CommitScopeSuggest
 import { useQueryClient } from "@tanstack/react-query";
 import ContextMenu, { type ContextMenuItem } from "@/components/ui/overlay/ContextMenu";
 import UndoButton from "@/components/features/actions/UndoButton";
-import DiffViewer from "@/components/features/diff/DiffViewer";
+import LazyDiffViewer from "@/components/features/diff/LazyDiffViewer";
 import {
   Braces,
   Check,
@@ -1011,7 +1011,7 @@ function DiffReviewModal({ target, files, onChangeTarget, onClose, onRefresh }: 
           {isLoading ? (
             <div className="flex h-full items-center justify-center text-xs text-text-muted">Loading diff...</div>
           ) : diff ? (
-            <DiffViewer
+            <LazyDiffViewer
               diff={diff}
               filePath={target.path}
               source={target.stage === "staged" ? "staged" : "working"}

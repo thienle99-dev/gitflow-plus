@@ -1,19 +1,17 @@
-import { useRef, useEffect, useMemo, useState, useCallback } from "react";
+import { useRef, useEffect, useMemo, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useGitLog } from "@/queries/useGitLog";
-import { computeGraphLayout, type LayoutState } from "@/lib/graph-layout";
-import { measureSync, repoName } from "@/lib/performance";
 import { api } from "@/api/tauri";
 import { useQueryClient } from "@tanstack/react-query";
 import ContextMenu, { type ContextMenuItem } from "@/components/ui/overlay/ContextMenu";
-import { useCanvasRenderer, type GraphEdgeSegment, type GraphRenderIndex } from "./useCanvasRenderer";
+import { useCanvasRenderer } from "./useCanvasRenderer";
 import { useHitTest } from "./useHitTest";
+import { useGraphLayoutWorker } from "@/lib/useGraphLayoutWorker";
 import CommitTooltip from "./CommitTooltip";
 
 const ROW_HEIGHT = 28;
-const LOAD_MORE_THRESHOLD = 200; // px from bottom
-const EDGE_BLOCK_SIZE = 128;
 
 export default function CommitGraph() {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -26,64 +24,25 @@ export default function CommitGraph() {
 
   const [containerHeight, setContainerHeight] = useState(600);
   const [containerWidth, setContainerWidth] = useState(800);
-  const [scrollTop, setScrollTop] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const scrollFrameRef = useRef<number | null>(null);
-  const latestScrollTopRef = useRef(0);
-  const layoutCacheRef = useRef<{
-    pages: NonNullable<typeof data>["pages"];
-    layout: LayoutState;
-  } | null>(null);
-
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; hash: string } | null>(null);
 
-  const layout = useMemo(() => {
-    return measureSync(
-      "graph_layout",
-      () => {
-        const pages = data?.pages ?? [];
-        const cache = layoutCacheRef.current;
-        let layout: LayoutState | null = null;
-        let startPage = 0;
-
-        if (
-          cache &&
-          cache.pages.length <= pages.length &&
-          cache.pages.every((page, index) => page === pages[index])
-        ) {
-          layout = cache.layout;
-          startPage = cache.pages.length;
-        }
-
-        for (let i = startPage; i < pages.length; i++) {
-          layout = computeGraphLayout(pages[i], layout ?? undefined);
-        }
-
-        const nextLayout = layout ?? computeGraphLayout([]);
-        layoutCacheRef.current = { pages: [...pages], layout: nextLayout };
-        return nextLayout;
-      },
-      {
-        repo: repoName(repoPath),
-        pages: data?.pages.length ?? 0,
-        commits: data?.pages.reduce((count, page) => count + page.length, 0) ?? 0,
-      },
-    );
-  }, [data, repoPath]);
+  // Graph layout + render index computed off the main thread via Web Worker
+  const { layout, graphIndex } = useGraphLayoutWorker(data, repoPath);
   const commits = layout.commits;
-  const graphIndex = useMemo(
-    () =>
-      measureSync(
-        "graph_render_index",
-        () => buildGraphRenderIndex(layout),
-        { repo: repoName(repoPath), commits: layout.commits.length },
-      ),
-    [layout, repoPath],
-  );
 
-  const totalHeight = layout.commits.length * ROW_HEIGHT;
-  const scrollHeight = Math.max(totalHeight, containerHeight);
+  // TanStack Virtual — manages scroll position, total size, and infinite loading
+  const virtualizer = useVirtualizer({
+    count: hasNextPage ? commits.length + 1 : commits.length,
+    getScrollElement: () => containerRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 10,
+  });
+  const virtualItems = virtualizer.getVirtualItems();
+  const scrollTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
+  const totalSize = virtualizer.getTotalSize();
+
   const totalLanes = useMemo(
     () => layout.commits.reduce((max, c) => Math.max(max, c.lane + 1), 1),
     [layout],
@@ -133,14 +92,6 @@ export default function CommitGraph() {
     };
   }, []);
 
-  useEffect(() => {
-    return () => {
-      if (scrollFrameRef.current !== null) {
-        cancelAnimationFrame(scrollFrameRef.current);
-      }
-    };
-  }, []);
-
   // Hit-test hook — hover state + event handlers
   const { hover, handleMouseMove, handleMouseLeave, handleClick, handleContextMenu } =
     useHitTest(layout, scrollTop);
@@ -159,26 +110,14 @@ export default function CommitGraph() {
     theme,
   });
 
-  const handleScroll = useCallback(
-    (e: React.UIEvent<HTMLDivElement>) => {
-      const el = e.currentTarget;
-      latestScrollTopRef.current = el.scrollTop;
-      if (scrollFrameRef.current === null) {
-        scrollFrameRef.current = requestAnimationFrame(() => {
-          scrollFrameRef.current = null;
-          setScrollTop(latestScrollTopRef.current);
-        });
-      }
-      if (
-        hasNextPage &&
-        !isFetchingNextPage &&
-        el.scrollHeight - el.scrollTop - el.clientHeight < LOAD_MORE_THRESHOLD
-      ) {
-        fetchNextPage();
-      }
-    },
-    [hasNextPage, isFetchingNextPage, fetchNextPage],
-  );
+  // Infinite loading — triggered when the last virtual item becomes visible
+  useEffect(() => {
+    const lastItem = virtualItems[virtualItems.length - 1];
+    if (!lastItem) return;
+    if (lastItem.index >= commits.length - 1 && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [virtualItems, hasNextPage, isFetchingNextPage, fetchNextPage, commits.length]);
 
   const copyHash = async (hash: string) => {
     try {
@@ -252,7 +191,7 @@ export default function CommitGraph() {
     }
   };
 
-  if (isLoading && commits.length === 0) {
+  if ((isLoading || commits.length === 0) && !graphIndex.commitByHash.size) {
     return (
       <div className="h-full flex flex-col">
         <div className="h-[28px] flex items-center px-3 border-b border-border text-xs text-text-muted font-medium">
@@ -333,14 +272,13 @@ export default function CommitGraph() {
         </div>
       </div>
 
-      {/* Scrollable graph area */}
+      {/* Scrollable graph area — managed by TanStack Virtual */}
       <div
         ref={containerRef}
         className="flex-1 min-h-0 w-full overflow-y-auto overflow-x-hidden"
-        onScroll={handleScroll}
       >
-        {/* Tall div establishes the virtual scroll height */}
-        <div style={{ minHeight: "100%", height: scrollHeight, position: "relative" }}>
+        {/* Inner div sized by virtualizer total height */}
+        <div style={{ minHeight: "100%", height: totalSize, position: "relative" }}>
           {/* Canvas is sticky so it stays in view while the div scrolls behind it */}
           <canvas
             ref={canvasRef}
@@ -378,37 +316,6 @@ export default function CommitGraph() {
       )}
     </div>
   );
-}
-
-function buildGraphRenderIndex(layout: LayoutState): GraphRenderIndex {
-  const commitByHash = new Map(layout.commits.map((commit) => [commit.hash, commit]));
-  const rowByHash = new Map(layout.commits.map((commit, row) => [commit.hash, row]));
-  const blockCount = Math.max(1, Math.ceil(Math.max(1, layout.commits.length) / EDGE_BLOCK_SIZE));
-  const edgeBlocks: GraphEdgeSegment[][] = Array.from({ length: blockCount }, () => []);
-  let edgeId = 0;
-
-  layout.commits.forEach((commit, row) => {
-    commit.parents.forEach((parentHash, parentIndex) => {
-      const parentRow = rowByHash.get(parentHash) ?? layout.commits.length;
-      if (parentRow <= row) return;
-
-      const edge: GraphEdgeSegment = {
-        id: edgeId++,
-        fromRow: row,
-        toRow: parentRow,
-        fromLane: commit.lane,
-        toLane: commit.parentLanes[parentIndex] ?? commit.lane,
-        color: commit.color,
-      };
-      const startBlock = Math.max(0, Math.floor(edge.fromRow / EDGE_BLOCK_SIZE));
-      const endBlock = Math.min(edgeBlocks.length - 1, Math.floor(edge.toRow / EDGE_BLOCK_SIZE));
-      for (let block = startBlock; block <= endBlock; block++) {
-        edgeBlocks[block].push(edge);
-      }
-    });
-  });
-
-  return { commitByHash, edgeBlocks, blockSize: EDGE_BLOCK_SIZE };
 }
 
 function CopyIcon() {
