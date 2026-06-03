@@ -47,6 +47,9 @@ const LS_KEY_REDUCED_MOTION = "gitflowReducedMotion";
 const LS_KEY_GITHUB_TOKEN = "gitflowGithubToken";
 const LS_KEY_GITLAB_TOKEN = "gitflowGitlabToken";
 const LS_KEY_GITLAB_HOST = "gitflowGitlabHost";
+const LS_KEY_COMMIT_LINT_ENABLED = "gitflowCommitLintEnabled";
+const LS_KEY_CODE_LINT_ENABLED = "gitflowCodeLintEnabled";
+const LS_KEY_LINT_STRICTNESS = "gitflowLintStrictness";
 
 const SETTINGS_KEYS = [
   LS_KEY_DIFF_MODE,
@@ -77,10 +80,14 @@ const SETTINGS_KEYS = [
   LS_KEY_GITHUB_TOKEN,
   LS_KEY_GITLAB_TOKEN,
   LS_KEY_GITLAB_HOST,
+  LS_KEY_COMMIT_LINT_ENABLED,
+  LS_KEY_CODE_LINT_ENABLED,
+  LS_KEY_LINT_STRICTNESS,
 ];
 
 interface SettingsDialogProps {
   onClose?: () => void;
+  initialTab?: "general" | "git" | "accounts" | "ai" | "advanced";
 }
 
 const THEME_CARDS = [
@@ -180,11 +187,11 @@ const COMMIT_MESSAGE_STYLES = [
   { id: "jira", label: "Jira ticket prefix" },
 ] as const;
 
-export default function SettingsDialog({ onClose }: SettingsDialogProps) {
+export default function SettingsDialog({ onClose, initialTab = "general" }: SettingsDialogProps) {
   const currentTheme = useRepoStore((s) => s.theme);
   const setTheme = useRepoStore((s) => s.setTheme);
 
-  const [activeTab, setActiveTab] = useState<"general" | "git" | "accounts" | "ai" | "advanced">("general");
+  const [activeTab, setActiveTab] = useState<"general" | "git" | "accounts" | "ai" | "advanced">(initialTab);
   
   // General Tab States
   const [theme, setSelectedTheme] = useState<typeof currentTheme>(currentTheme);
@@ -203,6 +210,9 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
   const [confirmDangerous, setConfirmDangerous] = useState(true);
   const [reopenLastRepo, setReopenLastRepo] = useState(false);
   const [recentRepoLimit, setRecentRepoLimit] = useState(10);
+  const [commitLintEnabled, setCommitLintEnabled] = useState(true);
+  const [codeLintEnabled, setCodeLintEnabled] = useState(true);
+  const [lintStrictness, setLintStrictness] = useState<"warning" | "error" | "block_all">("error");
 
   // AI Tab States
   const [apiKey, setApiKey] = useState("");
@@ -245,6 +255,9 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       const savedConfirmDangerous = localStorage.getItem(LS_KEY_CONFIRM_DANGEROUS);
       const savedReopenLastRepo = localStorage.getItem(LS_KEY_REOPEN_LAST_REPO);
       const savedRecentRepoLimit = localStorage.getItem(LS_KEY_RECENT_REPO_LIMIT);
+      const savedCommitLint = localStorage.getItem(LS_KEY_COMMIT_LINT_ENABLED);
+      const savedCodeLint = localStorage.getItem(LS_KEY_CODE_LINT_ENABLED);
+      const savedLintStrictness = localStorage.getItem(LS_KEY_LINT_STRICTNESS) as "warning" | "error" | "block_all";
       const savedGraphDensity = localStorage.getItem(LS_KEY_GRAPH_DENSITY) as "comfortable" | "compact";
       const savedGraphShowHash = localStorage.getItem(LS_KEY_GRAPH_SHOW_HASH);
       const savedGraphShowAuthor = localStorage.getItem(LS_KEY_GRAPH_SHOW_AUTHOR);
@@ -271,6 +284,9 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       if (savedConfirmDangerous !== null) setConfirmDangerous(savedConfirmDangerous === "true");
       if (savedReopenLastRepo !== null) setReopenLastRepo(savedReopenLastRepo === "true");
       if (savedRecentRepoLimit) setRecentRepoLimit(Number(savedRecentRepoLimit));
+      if (savedCommitLint !== null) setCommitLintEnabled(savedCommitLint === "true");
+      if (savedCodeLint !== null) setCodeLintEnabled(savedCodeLint === "true");
+      if (savedLintStrictness) setLintStrictness(savedLintStrictness);
       if (savedGraphDensity) setGraphDensity(savedGraphDensity);
       if (savedGraphShowHash !== null) setGraphShowHash(savedGraphShowHash === "true");
       if (savedGraphShowAuthor !== null) setGraphShowAuthor(savedGraphShowAuthor === "true");
@@ -317,6 +333,9 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
     const storedConfirmDangerous = localStorage.getItem(LS_KEY_CONFIRM_DANGEROUS) !== "false";
     const storedReopenLastRepo = localStorage.getItem(LS_KEY_REOPEN_LAST_REPO) === "true";
     const storedRecentRepoLimit = localStorage.getItem(LS_KEY_RECENT_REPO_LIMIT) || "10";
+    const storedCommitLint = localStorage.getItem(LS_KEY_COMMIT_LINT_ENABLED) !== "false";
+    const storedCodeLint = localStorage.getItem(LS_KEY_CODE_LINT_ENABLED) !== "false";
+    const storedLintStrictness = localStorage.getItem(LS_KEY_LINT_STRICTNESS) || "error";
     const storedGraphDensity = (localStorage.getItem(LS_KEY_GRAPH_DENSITY) as "comfortable" | "compact") || "comfortable";
     const storedGraphShowHash = localStorage.getItem(LS_KEY_GRAPH_SHOW_HASH) !== "false";
     const storedGraphShowAuthor = localStorage.getItem(LS_KEY_GRAPH_SHOW_AUTHOR) !== "false";
@@ -348,6 +367,9 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       confirmDangerous !== storedConfirmDangerous ||
       reopenLastRepo !== storedReopenLastRepo ||
       recentRepoLimit !== Number(storedRecentRepoLimit) ||
+      commitLintEnabled !== storedCommitLint ||
+      codeLintEnabled !== storedCodeLint ||
+      lintStrictness !== storedLintStrictness ||
       graphDensity !== storedGraphDensity ||
       graphShowHash !== storedGraphShowHash ||
       graphShowAuthor !== storedGraphShowAuthor ||
@@ -380,6 +402,9 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
     confirmDangerous,
     reopenLastRepo,
     recentRepoLimit,
+    commitLintEnabled,
+    codeLintEnabled,
+    lintStrictness,
     graphDensity,
     graphShowHash,
     graphShowAuthor,
@@ -495,6 +520,9 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
       localStorage.setItem(LS_KEY_CONFIRM_DANGEROUS, String(confirmDangerous));
       localStorage.setItem(LS_KEY_REOPEN_LAST_REPO, String(reopenLastRepo));
       localStorage.setItem(LS_KEY_RECENT_REPO_LIMIT, String(recentRepoLimit));
+      localStorage.setItem(LS_KEY_COMMIT_LINT_ENABLED, String(commitLintEnabled));
+      localStorage.setItem(LS_KEY_CODE_LINT_ENABLED, String(codeLintEnabled));
+      localStorage.setItem(LS_KEY_LINT_STRICTNESS, lintStrictness);
       localStorage.setItem(LS_KEY_GRAPH_DENSITY, graphDensity);
       localStorage.setItem(LS_KEY_GRAPH_SHOW_HASH, String(graphShowHash));
       localStorage.setItem(LS_KEY_GRAPH_SHOW_AUTHOR, String(graphShowAuthor));
@@ -554,6 +582,9 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
     setConfirmDangerous(true);
     setReopenLastRepo(false);
     setRecentRepoLimit(10);
+    setCommitLintEnabled(true);
+    setCodeLintEnabled(true);
+    setLintStrictness("error");
     setGraphDensity("comfortable");
     setGraphShowHash(true);
     setGraphShowAuthor(true);
@@ -896,6 +927,52 @@ export default function SettingsDialog({ onClose }: SettingsDialogProps) {
                     onChange={(e) => setRecentRepoLimit(Number(e.target.value))}
                     className="w-20 h-8 px-2.5 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent hover:bg-surface-2 transition-all shrink-0 text-center"
                   />
+                </div>
+              </div>
+
+              {/* Pre-Commit Quality Gates Card */}
+              <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary mb-1">
+                  <ShieldAlert size={13} className="text-accent" />
+                  Pre-Commit Quality Gates
+                </div>
+
+                <Switch
+                  checked={commitLintEnabled}
+                  onChange={setCommitLintEnabled}
+                  label="Enable Commit Message Linting"
+                  description="Validate commit messages against Conventional Commits spec before committing."
+                />
+
+                <div className="border-t border-border-40 pt-2.5">
+                  <Switch
+                    checked={codeLintEnabled}
+                    onChange={setCodeLintEnabled}
+                    label="Enable Code Quality Linting"
+                    description="Run project linters (ESLint, Biome, Ruff, golangci-lint, Cargo Clippy) on staged files."
+                  />
+                </div>
+
+                <div className={`border-t border-border-40 pt-3 flex items-center justify-between gap-4 transition-opacity ${(!commitLintEnabled && !codeLintEnabled) ? "opacity-40" : ""}`}>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-semibold text-text-primary">Gate Strictness Policy</span>
+                    <span className="text-2xs text-text-muted mt-0.5 leading-normal">Configure strictness behavior when linter issues or format warnings are found.</span>
+                  </div>
+                  <div className="relative w-48 shrink-0">
+                    <select
+                      value={lintStrictness}
+                      onChange={(e) => setLintStrictness(e.target.value as "warning" | "error" | "block_all")}
+                      disabled={!commitLintEnabled && !codeLintEnabled}
+                      className="w-full h-8 pl-2.5 pr-8 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer hover:bg-surface-2 transition-all disabled:cursor-not-allowed"
+                    >
+                      <option value="warning">Warning only (allow skip)</option>
+                      <option value="error">Block on errors (allow skip warnings)</option>
+                      <option value="block_all">Block all (strictly forbid skip)</option>
+                    </select>
+                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
+                      <ChevronDown size={11} strokeWidth={2.5} />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
