@@ -12,6 +12,7 @@
         "core:event:allow-emit",
         "dialog:default",
         "dialog:allow-open",
+        "updater:default",
         "window-state:default"
       ]
     }
