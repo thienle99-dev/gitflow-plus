@@ -381,7 +381,7 @@ function InlineErrorFallback({ name }: { name: string }) {
             </div>
           </Panel>
           <PanelResizeHandle className="w-[3px] bg-transparent hover:bg-accent transition-colors cursor-col-resize" />
-          <Panel defaultSize={30} minSize={20} maxSize={45} className="h-full min-h-0">
+          <Panel defaultSize={34} minSize={22} maxSize={55} className="h-full min-h-0">
             <div className="h-full min-h-0 overflow-hidden">
               <ErrorBoundary fallback={<InlineErrorFallback name="Details Panel" />}>
                 <RightPanel />

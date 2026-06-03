@@ -529,7 +529,7 @@ export default function WorkingTree() {
         )}
       </div>
 
-      <div className="px-4 py-3 border-t border-border-60 bg-surface-1-10 space-y-2.5 shrink-0">
+      <div className="px-3 py-3 border-t border-border-60 bg-surface-1-10 space-y-2.5 shrink-0">
         <div className="relative bg-surface-2-30 border border-border-40 rounded-mac p-2 focus-within:border-accent-60 focus-within:ring-1 focus-within:ring-accent-15 transition-all shadow-2xs">
           <textarea
             ref={textareaRef}
