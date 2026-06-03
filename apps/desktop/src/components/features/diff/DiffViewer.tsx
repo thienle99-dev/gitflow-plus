@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
 import { api } from "@/api/tauri";
-import { useAIDiffReview } from "@/queries/useAI";
-import { Sparkles, RefreshCw } from "lucide-react";
+import { useAIDiffReview, useAIInlineComments } from "@/queries/useAI";
+import { Sparkles, RefreshCw, MessageSquare } from "lucide-react";
 import { EditorView, basicSetup } from "codemirror";
 import { EditorState, RangeSetBuilder, StateField } from "@codemirror/state";
 import { keymap, Decoration, type DecorationSet, WidgetType } from "@codemirror/view";
@@ -19,7 +19,7 @@ import { xml } from "@codemirror/lang-xml";
 import { java } from "@codemirror/lang-java";
 import { cpp } from "@codemirror/lang-cpp";
 import { parseDiff, type DiffHunk, type DiffLine } from "@/lib/parse-diff";
-import { AI_REVIEW_MODE_OPTIONS, readLastAIReviewMode, saveLastAIReviewMode, type AIReviewMode } from "@/lib/ai";
+import { AI_REVIEW_MODE_OPTIONS, readLastAIReviewMode, saveLastAIReviewMode, type AIReviewMode, type InlineReviewComment } from "@/lib/ai";
 
 const LANG_MAP: Record<string, ReturnType<typeof javascript>> = {
   js: javascript(),
@@ -100,10 +100,17 @@ export default function DiffViewer({
   const [reviewMode, setReviewMode] = useState<AIReviewMode>(() => readLastAIReviewMode());
   const aiReview = useAIDiffReview();
 
+  const [showInlineComments, setShowInlineComments] = useState(false);
+  const [inlineComments, setInlineComments] = useState<InlineReviewComment[]>([]);
+  const inlineCommentsMutation = useAIInlineComments();
+
   useEffect(() => {
     setReviewResult("");
     setShowReview(false);
     aiReview.reset();
+    setInlineComments([]);
+    setShowInlineComments(false);
+    inlineCommentsMutation.reset();
   }, [filePath, diff]);
 
   const handleToggleAiReview = async () => {
@@ -117,6 +124,28 @@ export default function DiffViewer({
 
     try {
       setReviewResult(await aiReview.mutateAsync({ filePath, diff, repoPath: repoPath ?? undefined, mode: reviewMode }));
+    } catch {
+      // Error is rendered from the mutation state.
+    }
+  };
+
+  const handleToggleInlineComments = async () => {
+    if (showInlineComments) {
+      setShowInlineComments(false);
+      return;
+    }
+
+    setShowInlineComments(true);
+    if (inlineComments.length > 0) return;
+
+    try {
+      const comments = await inlineCommentsMutation.mutateAsync({
+        filePath,
+        diff,
+        repoPath: repoPath ?? undefined,
+        mode: reviewMode,
+      });
+      setInlineComments(comments);
     } catch {
       // Error is rendered from the mutation state.
     }
@@ -790,6 +819,74 @@ class LineActionsWidget extends WidgetType {
   }
 }
 
+/**
+ * Widget that renders an inline AI review comment below a diff line.
+ */
+class InlineCommentWidget extends WidgetType {
+  constructor(
+    readonly comments: InlineReviewComment[],
+  ) {
+    super();
+  }
+
+  eq(other: InlineCommentWidget) {
+    return (
+      this.comments.length === other.comments.length &&
+      this.comments.every((c, i) =>
+        c.line === other.comments[i].line &&
+        c.side === other.comments[i].side &&
+        c.category === other.comments[i].category &&
+        c.message === other.comments[i].message,
+      )
+    );
+  }
+
+  toDOM() {
+    const container = document.createElement("div");
+    container.className = "inline-review-comment-container";
+
+    for (const comment of this.comments) {
+      const card = document.createElement("div");
+      const severityClass =
+        comment.severity === "error"
+          ? "inline-review-comment-error"
+          : comment.severity === "warning"
+            ? "inline-review-comment-warning"
+            : "inline-review-comment-info";
+      card.className = `inline-review-comment-card ${severityClass}`;
+
+      const header = document.createElement("div");
+      header.className = "inline-review-comment-header";
+
+      const badge = document.createElement("span");
+      badge.className = "inline-review-comment-badge";
+      badge.textContent = comment.category;
+      header.appendChild(badge);
+
+      const severityIcon = document.createElement("span");
+      severityIcon.className = "inline-review-comment-severity";
+      severityIcon.textContent =
+        comment.severity === "error" ? "●" : comment.severity === "warning" ? "◐" : "○";
+      header.appendChild(severityIcon);
+
+      card.appendChild(header);
+
+      const body = document.createElement("div");
+      body.className = "inline-review-comment-body";
+      body.textContent = comment.message;
+      card.appendChild(body);
+
+      container.appendChild(card);
+    }
+
+    return container;
+  }
+
+  ignoreEvent() {
+    return false;
+  }
+}
+
 function getDiffHighlightExtension(
   hunks: DiffHunk[],
   source: "working" | "staged" | "commit",
@@ -798,7 +895,22 @@ function getDiffHighlightExtension(
   side?: "old" | "new",
   oldLines?: string[],
   newLines?: string[],
+  inlineComments?: InlineReviewComment[],
 ) {
+  // Build a lookup map: "side:lineNumber" -> InlineReviewComment[]
+  const commentMap = new Map<string, InlineReviewComment[]>();
+  if (inlineComments && inlineComments.length > 0) {
+    for (const comment of inlineComments) {
+      const key = `${comment.side}:${comment.line}`;
+      const existing = commentMap.get(key);
+      if (existing) {
+        existing.push(comment);
+      } else {
+        commentMap.set(key, [comment]);
+      }
+    }
+  }
+
   return StateField.define<DecorationSet>({
     create(state) {
       const builder = new RangeSetBuilder<Decoration>();
@@ -808,6 +920,9 @@ function getDiffHighlightExtension(
       const lineToHunk: { hunk: DiffHunk; lineIndexInHunk: number }[] = [];
       let currentHunkForLines: DiffHunk | null = null;
       let hunkLineCounter = 0;
+      // Track current old/new line numbers for inline comment matching
+      let currentOldLine = 0;
+      let currentNewLine = 0;
       
       for (let i = 1; i <= doc.lines; i++) {
         const line = doc.line(i);
@@ -817,6 +932,12 @@ function getDiffHighlightExtension(
         if (text.startsWith("@@")) {
           currentHunkForLines = hunks[hunkIndex] || null;
           hunkLineCounter = 0;
+          // Parse hunk header to reset line counters
+          const hunkMatch = text.match(/@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/);
+          if (hunkMatch) {
+            currentOldLine = parseInt(hunkMatch[1]);
+            currentNewLine = parseInt(hunkMatch[3]);
+          }
         } else if (currentHunkForLines) {
           // Map doc line -> hunk line index (skip header lines in hunk.lines)
           const hunkLines = currentHunkForLines.lines.filter((l) => l.type !== "header");
@@ -857,6 +978,22 @@ function getDiffHighlightExtension(
               }),
             );
           }
+
+          // Inline review comment widget for new-side lines
+          const newLineKey = `new:${currentNewLine}`;
+          const newLineComments = commentMap.get(newLineKey);
+          if (newLineComments && newLineComments.length > 0) {
+            builder.add(
+              line.to,
+              line.to,
+              Decoration.widget({
+                widget: new InlineCommentWidget(newLineComments),
+                side: 1,
+                block: true,
+              }),
+            );
+          }
+          currentNewLine++;
 
           // Inline word-level highlight for side-by-side split view
           if (side === "new" && oldLines && newLines && i <= oldLines.length) {
@@ -899,6 +1036,22 @@ function getDiffHighlightExtension(
               }),
             );
           }
+
+          // Inline review comment widget for old-side lines
+          const oldLineKey = `old:${currentOldLine}`;
+          const oldLineComments = commentMap.get(oldLineKey);
+          if (oldLineComments && oldLineComments.length > 0) {
+            builder.add(
+              line.to,
+              line.to,
+              Decoration.widget({
+                widget: new InlineCommentWidget(oldLineComments),
+                side: 1,
+                block: true,
+              }),
+            );
+          }
+          currentOldLine++;
           
           // Inline word-level highlight for side-by-side split view
           if (side === "old" && oldLines && newLines && i <= newLines.length) {
@@ -939,6 +1092,8 @@ function getDiffHighlightExtension(
             line.from + 1,
             Decoration.replace({ widget: new PrefixWidget(" ") }),
           );
+          currentOldLine++;
+          currentNewLine++;
         } else if (text.startsWith("@@")) {
           builder.add(
             line.from,
@@ -994,6 +1149,7 @@ function createEditor(
   side?: "old" | "new",
   oldLines?: string[],
   newLines?: string[],
+  inlineComments?: InlineReviewComment[],
 ): EditorView {
   const state = EditorState.create({
     doc: content,
@@ -1001,7 +1157,7 @@ function createEditor(
       basicSetup,
       lang,
       ...theme,
-      getDiffHighlightExtension(hunks, source, onAction, onLineAction, side, oldLines, newLines),
+      getDiffHighlightExtension(hunks, source, onAction, onLineAction, side, oldLines, newLines, inlineComments),
       EditorView.editable.of(false),
       EditorView.lineWrapping,
       keymap.of([]),

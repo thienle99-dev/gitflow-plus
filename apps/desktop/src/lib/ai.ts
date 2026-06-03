@@ -217,6 +217,87 @@ ${diff.slice(0, 8000)}`;
   return review;
 }
 
+/**
+ * Generate structured inline review comments for specific lines in a diff.
+ * Returns an array of comments with line numbers, sides, categories, and messages.
+ */
+export async function generateInlineReviewComments(
+  filePath: string,
+  diff: string,
+  repoPath?: string,
+  mode: AIReviewMode = "all",
+): Promise<InlineReviewComment[]> {
+  const settings = readAISettings();
+  if (!hasProvider(settings)) {
+    throw new Error("Configure an AI API key or local model in settings");
+  }
+
+  const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
+  const customRulesInstruction = buildCustomRulesInstruction(settings.customRules);
+  const conventionInstruction = repoPath ? await getConventionContext(repoPath) : "";
+  const reviewFocusInstruction = buildReviewFocusInstruction(mode);
+
+  const prompt = `You are a world-class senior software architect. Analyze the git diff below for the file "${filePath}" and generate inline review comments.
+
+${reviewFocusInstruction}
+${languageInstruction}${customRulesInstruction}${conventionInstruction}
+
+IMPORTANT: Return ONLY a valid JSON array. No markdown, no explanation, no code fences.
+Each item in the array must have these exact fields:
+- "line": the diff line number (old line number for side "old", new line number for side "new")
+- "side": either "old" (for deleted/removed lines) or "new" (for added/new lines)
+- "category": one of "BUG", "SECURITY", "PERF", "STYLE", "BEST-PRACTICE", "LINTER", "TEST", "A11Y", "UX"
+- "severity": one of "info", "warning", "error"
+- "message": a concise, actionable review comment (1-2 sentences max)
+
+Only comment on lines that have actual findings. If the diff looks clean, return an empty array [].
+Do NOT comment on unchanged/context lines. Only comment on added (+) or deleted (-) lines.
+
+Example output:
+[{"line":42,"side":"new","category":"BUG","severity":"error","message":"Potential null pointer: user may be undefined here."},{"line":15,"side":"old","category":"STYLE","severity":"info","message":"This variable was unused and its removal is correct."}]
+
+Diff:
+${diff.slice(0, 8000)}`;
+
+  const raw = cleanAIText(await requestAIText(prompt, withReviewModel(settings)));
+  if (!raw) {
+    throw new Error("Empty response from AI reviewer");
+  }
+
+  // Parse JSON from response - handle potential markdown code fences
+  let jsonStr = raw.trim();
+  const fenceMatch = jsonStr.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
+  if (fenceMatch) {
+    jsonStr = fenceMatch[1].trim();
+  }
+  // Also try to extract array if wrapped in other text
+  const arrayMatch = jsonStr.match(/\[[\s\S]*\]/);
+  if (arrayMatch) {
+    jsonStr = arrayMatch[0];
+  }
+
+  try {
+    const parsed = JSON.parse(jsonStr);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((item: any) =>
+        typeof item.line === "number" &&
+        (item.side === "old" || item.side === "new") &&
+        typeof item.category === "string" &&
+        typeof item.message === "string",
+      )
+      .map((item: any) => ({
+        line: item.line,
+        side: item.side as "old" | "new",
+        category: item.category.toUpperCase(),
+        severity: (["info", "warning", "error"].includes(item.severity) ? item.severity : "info") as "info" | "warning" | "error",
+        message: String(item.message),
+      }));
+  } catch {
+    return [];
+  }
+}
+
 export function readAIReviewChecklist(): Exclude<AIReviewMode, "all" | "custom">[] {
   const saved = localStorage.getItem(LS_KEY_AI_REVIEW_CHECKLIST);
   if (!saved) return DEFAULT_AI_REVIEW_CHECKLIST;
