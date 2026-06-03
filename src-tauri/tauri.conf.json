@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicedoc/tauri-docs/main/src/schemas/tauri-conf.schema.json",
   "productName": "GitFlow Desktop",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "identifier": "com.gitflow.desktop",
   "build": {
     "beforeDevCommand": "pnpm --filter @gitflow-desktop/desktop dev",
