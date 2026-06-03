@@ -643,74 +643,76 @@ export default function WorkingTree() {
             </button>
           </div>
         )}
+
+        {aiReviewOpen && (
+          <div className={`${aiReviewCollapsed ? "shrink-0 px-3 py-2" : "flex-1 min-h-0 px-3 py-2"} border-t border-border-60`}>
+            <div className={`h-full border border-accent-30 bg-surface-1 overflow-hidden transition-all ${aiReviewCollapsed ? "rounded-[5px] shadow-2xs" : "rounded-mac shadow-lg shadow-black/10 flex flex-col"}`}>
+              <div className={`flex items-center justify-between gap-2 select-none shrink-0 ${aiReviewCollapsed ? "px-2 py-1 bg-surface-2-30" : "px-3 py-1.5 border-b border-border-40 bg-accent-5"}`}>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Sparkles size={aiReviewCollapsed ? 11 : 13} className="text-accent shrink-0" />
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className={`${aiReviewCollapsed ? "text-[10px]" : "text-[11px]"} font-bold text-text-primary`}>AI Review</span>
+                    <span className="text-[9px] font-semibold text-accent bg-accent-10 border border-accent-20 rounded px-1.5 py-0.5 leading-none shrink-0">
+                      {staged.length > 0 ? `${staged.length} staged` : `${unstaged.length} unstaged`}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {aiReviewTagCount > 0 && (
+                    <span className="mr-1 text-[9px] font-semibold text-text-secondary bg-surface-2 border border-border-40 rounded px-1.5 py-0.5 leading-none">
+                      {aiReviewTagCount} tagged
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setAiReviewModalOpen(true)}
+                    className={`${aiReviewCollapsed ? "h-5 w-5" : "h-6 w-6"} inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer`}
+                    title="Open full AI review modal"
+                  >
+                    <Maximize2 size={aiReviewCollapsed ? 11 : 12} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAiReviewCollapsed((collapsed) => !collapsed)}
+                    className={`${aiReviewCollapsed ? "h-5 w-5" : "h-6 w-6"} inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer`}
+                    title={aiReviewCollapsed ? "Show AI review details" : "Hide AI review details"}
+                  >
+                    <ChevronDown size={aiReviewCollapsed ? 11 : 13} className={`transition-transform duration-200 ${aiReviewCollapsed ? "-rotate-90" : ""}`} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAiReviewOpen(false)}
+                    className={`${aiReviewCollapsed ? "h-5 w-5" : "h-6 w-6"} inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer`}
+                    title="Close AI review"
+                  >
+                    <X size={aiReviewCollapsed ? 11 : 13} />
+                  </button>
+                </div>
+              </div>
+              {!aiReviewCollapsed && (
+                <div className="flex-1 min-h-0 overflow-y-auto p-3.5 text-xs leading-relaxed text-text-secondary space-y-2">
+                  {aiReview.isPending ? (
+                    <div className="flex items-center gap-2 rounded-mac border border-accent-20 bg-accent-5 px-3 py-2.5 text-text-secondary">
+                      <RefreshCw size={13} className="animate-spin text-accent" />
+                      <span>Reviewing changes with AI...</span>
+                    </div>
+                  ) : aiReview.isError ? (
+                    <div className="rounded-mac border border-[#ff453a]/25 bg-[#ff453a]/10 px-3 py-2 text-[#ff453a]">
+                      {aiReview.error instanceof Error ? aiReview.error.message : "AI review failed"}
+                    </div>
+                  ) : aiReviewResult ? (
+                    aiReviewResult.split("\n").map((line, index) => <AIReviewLine key={index} line={line} />)
+                  ) : (
+                    <span className="text-text-muted">No review result yet.</span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="px-3 py-3 border-t border-border-60 bg-surface-1-10 space-y-2.5 shrink-0">
-        {aiReviewOpen && (
-          <div className={`border border-accent-30 bg-surface-1 overflow-hidden transition-all ${aiReviewCollapsed ? "rounded-[5px] shadow-2xs" : "rounded-mac shadow-lg shadow-black/10"}`}>
-            <div className={`flex items-center justify-between gap-2 select-none ${aiReviewCollapsed ? "px-2 py-1 bg-surface-2-30" : "px-3 py-1.5 border-b border-border-40 bg-accent-5"}`}>
-              <div className="flex items-center gap-1.5 min-w-0">
-                <Sparkles size={aiReviewCollapsed ? 11 : 13} className="text-accent shrink-0" />
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className={`${aiReviewCollapsed ? "text-[10px]" : "text-[11px]"} font-bold text-text-primary`}>AI Review</span>
-                  <span className="text-[9px] font-semibold text-accent bg-accent-10 border border-accent-20 rounded px-1.5 py-0.5 leading-none shrink-0">
-                    {staged.length > 0 ? `${staged.length} staged` : `${unstaged.length} unstaged`}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                {aiReviewTagCount > 0 && (
-                  <span className="mr-1 text-[9px] font-semibold text-text-secondary bg-surface-2 border border-border-40 rounded px-1.5 py-0.5 leading-none">
-                    {aiReviewTagCount} tagged
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setAiReviewModalOpen(true)}
-                  className={`${aiReviewCollapsed ? "h-5 w-5" : "h-6 w-6"} inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer`}
-                  title="Open full AI review modal"
-                >
-                  <Maximize2 size={aiReviewCollapsed ? 11 : 12} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAiReviewCollapsed((collapsed) => !collapsed)}
-                  className={`${aiReviewCollapsed ? "h-5 w-5" : "h-6 w-6"} inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer`}
-                  title={aiReviewCollapsed ? "Show AI review details" : "Hide AI review details"}
-                >
-                  <ChevronDown size={aiReviewCollapsed ? 11 : 13} className={`transition-transform duration-200 ${aiReviewCollapsed ? "-rotate-90" : ""}`} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAiReviewOpen(false)}
-                  className={`${aiReviewCollapsed ? "h-5 w-5" : "h-6 w-6"} inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer`}
-                  title="Close AI review"
-                >
-                  <X size={aiReviewCollapsed ? 11 : 13} />
-                </button>
-              </div>
-            </div>
-            {!aiReviewCollapsed && (
-              <div className="h-[200px] overflow-y-auto p-3.5 text-xs leading-relaxed text-text-secondary space-y-2">
-                {aiReview.isPending ? (
-                  <div className="flex items-center gap-2 rounded-mac border border-accent-20 bg-accent-5 px-3 py-2.5 text-text-secondary">
-                    <RefreshCw size={13} className="animate-spin text-accent" />
-                    <span>Reviewing changes with AI...</span>
-                  </div>
-                ) : aiReview.isError ? (
-                  <div className="rounded-mac border border-[#ff453a]/25 bg-[#ff453a]/10 px-3 py-2 text-[#ff453a]">
-                    {aiReview.error instanceof Error ? aiReview.error.message : "AI review failed"}
-                  </div>
-                ) : aiReviewResult ? (
-                  aiReviewResult.split("\n").map((line, index) => <AIReviewLine key={index} line={line} />)
-                ) : (
-                  <span className="text-text-muted">No review result yet.</span>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
         <div className="flex flex-col bg-surface-2-30 border border-border-40 rounded-mac p-2.5 focus-within:border-accent-60 focus-within:ring-1 focus-within:ring-accent-15 transition-all shadow-2xs">
           <textarea
             ref={textareaRef}

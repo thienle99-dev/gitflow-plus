@@ -77,6 +77,14 @@ interface GeneratedCommitMessage {
   reason?: string;
 }
 
+export interface InlineReviewComment {
+  line: number;
+  side: "old" | "new";
+  category: string;
+  message: string;
+  severity: "info" | "warning" | "error";
+}
+
 type CommitMessageStyle = "conventional" | "plain" | "gitmoji" | "jira";
 type CommitMessageDetailLevel = "ultra-minimal" | "minimal" | "medium" | "detailed" | "comprehensive";
 export type AIReviewMode =

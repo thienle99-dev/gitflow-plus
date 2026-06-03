@@ -22,6 +22,8 @@ export default function TitleBar() {
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const queryClient = useQueryClient();
 
+  const isMac = typeof window !== "undefined" && navigator.userAgent.includes("Mac");
+
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [isHoveringDots, setIsHoveringDots] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -194,61 +196,63 @@ export default function TitleBar() {
         </div>
 
         {/* Menu list */}
-        <div className="flex items-center gap-1">
-          {Object.entries(menus).map(([name, items]) => {
-            const isOpen = activeMenu === name;
-            return (
-              <div key={name} className="relative">
-                <button
-                  onClick={() => setActiveMenu(isOpen ? null : name)}
-                  onMouseEnter={() => handleMenuHeaderHover(name)}
-                  className={`px-3 py-1 rounded-[4px] text-[11px] font-medium transition-all ${
-                    name === "GitFlow Desktop" ? "font-bold text-text-primary" : "text-text-secondary hover:text-text-primary"
-                  } ${isOpen ? "bg-accent text-white" : "hover:bg-surface-2"}`}
-                >
-                  {name}
-                </button>
-
-                {isOpen && (
-                  <div
-                    className="absolute left-0 mt-[3px] w-56 bg-surface-1/95 backdrop-blur-lg border border-border-40 rounded-mac shadow-xl py-1 z-[9999] animate-in fade-in duration-100"
-                    onMouseEnter={(e) => e.stopPropagation()}
+        {!isMac && (
+          <div className="flex items-center gap-1">
+            {Object.entries(menus).map(([name, items]) => {
+              const isOpen = activeMenu === name;
+              return (
+                <div key={name} className="relative">
+                  <button
+                    onClick={() => setActiveMenu(isOpen ? null : name)}
+                    onMouseEnter={() => handleMenuHeaderHover(name)}
+                    className={`px-3 py-1 rounded-[4px] text-[11px] font-medium transition-all ${
+                      name === "GitFlow Desktop" ? "font-bold text-text-primary" : "text-text-secondary hover:text-text-primary"
+                    } ${isOpen ? "bg-accent text-white" : "hover:bg-surface-2"}`}
                   >
-                    {items.map((item, idx) => {
-                      if (item.separator) {
-                        return (
-                          <div
-                            key={`sep-${idx}`}
-                            className="my-1 border-t border-border-20"
-                          />
-                        );
-                      }
+                    {name}
+                  </button>
 
-                      return (
-                        <button
-                          key={item.label}
-                          onClick={() => {
-                            setActiveMenu(null);
-                            item.onClick?.();
-                          }}
-                          disabled={item.disabled}
-                          className="w-full flex items-center justify-between px-5 py-0.5 text-left hover:bg-accent hover:text-white disabled:opacity-40 text-text-secondary hover:text-text-primary text-[11px] group cursor-default"
-                        >
-                          <span>{item.label}</span>
-                          {item.shortcut && (
-                            <span className="text-text-muted group-hover:text-white/85 text-[10px] ml-4 font-normal tracking-wide">
-                              {item.shortcut}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                  {isOpen && (
+                    <div
+                      className="absolute left-0 mt-[3px] w-56 bg-surface-1/95 backdrop-blur-lg border border-border-40 rounded-mac shadow-xl py-1 z-[9999] animate-in fade-in duration-100"
+                      onMouseEnter={(e) => e.stopPropagation()}
+                    >
+                      {items.map((item, idx) => {
+                        if (item.separator) {
+                          return (
+                            <div
+                              key={`sep-${idx}`}
+                              className="my-1 border-t border-border-20"
+                            />
+                          );
+                        }
+
+                        return (
+                          <button
+                            key={item.label}
+                            onClick={() => {
+                              setActiveMenu(null);
+                              item.onClick?.();
+                            }}
+                            disabled={item.disabled}
+                            className="w-full flex items-center justify-between px-5 py-0.5 text-left hover:bg-accent hover:text-white disabled:opacity-40 text-text-secondary hover:text-text-primary text-[11px] group cursor-default"
+                          >
+                            <span>{item.label}</span>
+                            {item.shortcut && (
+                              <span className="text-text-muted group-hover:text-white/85 text-[10px] ml-4 font-normal tracking-wide">
+                                {item.shortcut}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Right side spacer for window drag handle */}
