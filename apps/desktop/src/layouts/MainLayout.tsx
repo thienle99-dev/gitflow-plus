@@ -31,7 +31,6 @@ export default function MainLayout() {
   const queryClient = useQueryClient();
   const invalidateTimersRef = useRef<Map<string, number>>(new Map());
   const lastFocusRefreshRef = useRef(0);
-  const featureGuideOpenedRef = useRef(false);
   const [showOnboarding, setShowOnboarding] = useState(() => !isOnboardingComplete());
 
   const scheduleInvalidate = useCallback((queryKey: unknown[], delay = 250) => {
@@ -53,12 +52,6 @@ export default function MainLayout() {
       invalidateTimersRef.current.clear();
     };
   }, []);
-
-  useEffect(() => {
-    if (featureGuideOpenedRef.current || activeDialog) return;
-    featureGuideOpenedRef.current = true;
-    openDialogState("feature-guide");
-  }, [activeDialog, openDialogState]);
 
   // Start/stop file watcher when repo changes
   useEffect(() => {
@@ -294,6 +287,7 @@ export default function MainLayout() {
     search: <SearchDialog open={true} onClose={closeDialog} />,
     settings: <SettingsDialog onClose={closeDialog} />,
     "ai-settings": <SettingsDialog onClose={closeDialog} />,
+    "accounts-settings": <SettingsDialog initialTab="accounts" onClose={closeDialog} />,
     "keyboard-shortcuts": <KeyboardShortcutsModal open={true} onClose={closeDialog} />,
     "cherry-pick": (
       <CherryPickDialog
@@ -315,7 +309,7 @@ export default function MainLayout() {
       <div className={`bg-surface-0 rounded-mac shadow-xl border border-border overflow-hidden ${
         overlayDialog === "merge-request"
           ? "h-[min(760px,88vh)] w-[min(1180px,92vw)]"
-          : overlayDialog === "settings" || overlayDialog === "ai-settings"
+          : overlayDialog === "settings" || overlayDialog === "ai-settings" || overlayDialog === "accounts-settings"
             ? "h-[min(680px,88vh)] w-[min(900px,90vw)]"
           : "min-w-[480px] max-w-[600px] max-h-[80vh]"
       }`}>
