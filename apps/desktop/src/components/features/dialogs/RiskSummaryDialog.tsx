@@ -3,13 +3,14 @@ import {
   AlertTriangle,
   CheckCircle2,
   ChevronDown,
-  ExternalLink,
-  FileWarning,
   Loader2,
   Shield,
   ShieldAlert,
   ShieldCheck,
   X,
+  Sparkles,
+  Terminal,
+  FileText
 } from "lucide-react";
 import type { RiskReport, RiskFinding, RiskSeverity } from "@/lib/risk-scanner";
 
@@ -23,23 +24,23 @@ interface RiskSummaryDialogProps {
 }
 
 const SEVERITY_META: Record<RiskSeverity, { color: string; bg: string; border: string; icon: typeof ShieldAlert }> = {
-  critical: { color: "text-[#ff375f]", bg: "bg-[#ff375f]/10", border: "border-[#ff375f]/30", icon: ShieldAlert },
-  high:     { color: "text-[#ff6b35]", bg: "bg-[#ff6b35]/10", border: "border-[#ff6b35]/30", icon: ShieldAlert },
-  medium:   { color: "text-yellow-500", bg: "bg-yellow-500/10", border: "border-yellow-500/30", icon: AlertTriangle },
-  low:      { color: "text-blue-400", bg: "bg-blue-400/10", border: "border-blue-400/30", icon: FileWarning },
+  critical: { color: "text-[#ff375f]", bg: "bg-[#ff375f]/8", border: "border-[#ff375f]/25", icon: ShieldAlert },
+  high:     { color: "text-[#ff6b35]", bg: "bg-[#ff6b35]/8", border: "border-[#ff6b35]/25", icon: ShieldAlert },
+  medium:   { color: "text-yellow-500", bg: "bg-yellow-500/8", border: "border-yellow-500/25", icon: AlertTriangle },
+  low:      { color: "text-[#007aff]", bg: "bg-[#007aff]/8", border: "border-[#007aff]/25", icon: ShieldCheck },
 };
 
-const OVERALL_META: Record<RiskReport["overall"], { label: string; color: string; bg: string; icon: typeof Shield }> = {
-  critical: { label: "Critical Risk", color: "text-[#ff375f]", bg: "bg-[#ff375f]/15", icon: ShieldAlert },
-  high:     { label: "High Risk", color: "text-[#ff6b35]", bg: "bg-[#ff6b35]/15", icon: ShieldAlert },
-  medium:   { label: "Medium Risk", color: "text-yellow-500", bg: "bg-yellow-500/15", icon: AlertTriangle },
-  low:      { label: "Low Risk", color: "text-blue-400", bg: "bg-blue-400/15", icon: ShieldCheck },
-  safe:     { label: "No Risks Detected", color: "text-emerald-400", bg: "bg-emerald-400/15", icon: ShieldCheck },
+const OVERALL_META: Record<RiskReport["overall"], { label: string; color: string; bg: string; border: string; icon: typeof Shield }> = {
+  critical: { label: "Critical Risks Blocking Operation", color: "text-[#ff375f]", bg: "bg-[#ff375f]/10", border: "border-[#ff375f]/25", icon: ShieldAlert },
+  high:     { label: "High Risk Review Required", color: "text-[#ff6b35]", bg: "bg-[#ff6b35]/10", border: "border-[#ff6b35]/25", icon: ShieldAlert },
+  medium:   { label: "Medium Security Findings", color: "text-yellow-500", bg: "bg-yellow-500/10", border: "border-yellow-500/25", icon: AlertTriangle },
+  low:      { label: "Low Severity Warnings", color: "text-[#007aff]", bg: "bg-[#007aff]/10", border: "border-[#007aff]/25", icon: ShieldCheck },
+  safe:     { label: "No Risks Detected", color: "text-[#30d158]", bg: "bg-[#30d158]/10", border: "border-[#30d158]/25", icon: ShieldCheck },
 };
 
 export default function RiskSummaryDialog({ open, report, loading, action, onProceed, onCancel }: RiskSummaryDialogProps) {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
-  const [showAiDetails, setShowAiDetails] = useState(false);
+  const [activeTab, setActiveTab] = useState<"findings" | "copilot">("findings");
 
   useEffect(() => {
     if (open && report) {
@@ -62,151 +63,236 @@ export default function RiskSummaryDialog({ open, report, loading, action, onPro
     return acc;
   }, {}) ?? {};
 
+  // Formatter to render code snippets nicely
+  const formatCopilotText = (text: string) => {
+    const parts = text.split(/(`[^`]+`)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith("`") && part.endsWith("`")) {
+        return (
+          <code key={index} className="px-1.5 py-0.5 rounded-[3px] bg-surface-2 border border-border-40 font-mono text-[10px] text-accent select-all">
+            {part.slice(1, -1)}
+          </code>
+        );
+      }
+      return part;
+    });
+  };
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-xs" onClick={onCancel}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-md animate-in fade-in duration-200" onClick={onCancel}>
       <div
-        className="bg-surface-0 rounded-mac shadow-xl border border-border overflow-hidden w-[min(540px,92vw)] max-h-[80vh] flex flex-col"
+        className="bg-surface-0 rounded-[6px] shadow-2xl border border-border-60 overflow-hidden w-[min(540px,92vw)] max-h-[82vh] flex flex-col animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border-30 bg-surface-1/40 shrink-0 select-none">
           <div className="flex items-center gap-2">
-            <Shield size={15} className="text-accent" />
-            <span className="text-sm font-semibold text-text-primary">AI Risk Summary</span>
-            <span className="text-2xs text-text-muted capitalize">— {action}</span>
+            <Sparkles size={14} className="text-accent" />
+            <span className="text-[12px] font-bold text-text-primary">AI Review Report</span>
+            <span className="text-[10px] text-text-muted capitalize">· {action} context</span>
           </div>
-          <button onClick={onCancel} className="p-1 hover:bg-surface-2 rounded-mac transition-colors cursor-pointer">
-            <X size={14} className="text-text-muted" />
+          <button onClick={onCancel} className="p-1 hover:bg-surface-2 rounded-[4px] transition-colors cursor-pointer text-text-muted hover:text-text-primary">
+            <X size={13} />
           </button>
         </div>
 
+        {/* Tab Selection (only if report has AI summary description) */}
+        {report && report.aiSummary && (
+          <div className="flex border-b border-border-20 bg-surface-1/25 px-4 h-9 items-center shrink-0 select-none">
+            <div className="flex gap-1.5 h-full items-center">
+              <button
+                onClick={() => setActiveTab("findings")}
+                className={`flex items-center gap-1.5 px-3 h-7 rounded-[4px] text-[10px] font-bold transition-all cursor-pointer ${
+                  activeTab === "findings"
+                    ? "bg-accent text-white shadow-sm"
+                    : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
+                }`}
+              >
+                <Terminal size={11} />
+                <span>Diagnostics ({report.findings.length})</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("copilot")}
+                className={`flex items-center gap-1.5 px-3 h-7 rounded-[4px] text-[10px] font-bold transition-all cursor-pointer ${
+                  activeTab === "copilot"
+                    ? "bg-accent text-white shadow-sm"
+                    : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
+                }`}
+              >
+                <Sparkles size={11} />
+                <span>Copilot Analysis</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
           {loading && !report ? (
-            <div className="flex flex-col items-center gap-2 py-8">
-              <Loader2 size={20} className="animate-spin text-accent" />
-              <span className="text-xs text-text-muted">Analyzing changes for risks...</span>
+            <div className="flex flex-col items-center justify-center py-16 gap-3 animate-pulse">
+              <Loader2 size={24} className="animate-spin text-accent" />
+              <div className="text-center space-y-1">
+                <span className="text-[11px] font-semibold text-text-primary">Running AI Diagnostics</span>
+                <p className="text-[10px] text-text-muted max-w-[240px] leading-relaxed">
+                  Scanning changed files and patch diffs for security violations, destructive operations, or credentials...
+                </p>
+              </div>
             </div>
           ) : report ? (
             <>
-              {/* Overall Status Banner */}
-              <div className={`flex items-center gap-3 px-3.5 py-2.5 rounded-mac border ${meta.bg} ${meta.color} border-current/20`}>
-                <OverallIcon size={18} />
-                <div>
-                  <div className="text-xs font-semibold">{meta.label}</div>
-                  <div className="text-2xs opacity-75">
-                    {report.fileCount} file{report.fileCount !== 1 ? "s" : ""} analyzed · {report.findings.length} finding{report.findings.length !== 1 ? "s" : ""}
-                  </div>
-                </div>
-                {overall === "safe" && (
-                  <CheckCircle2 size={16} className="ml-auto" />
-                )}
-              </div>
-
-              {/* Findings by Category */}
-              {Object.entries(grouped).map(([category, findings]) => {
-                const worstSeverity = findings.reduce<RiskSeverity>((worst, f) => {
-                  const order: Record<RiskSeverity, number> = { critical: 0, high: 1, medium: 2, low: 3 };
-                  return order[f.severity] < order[worst] ? f.severity : worst;
-                }, "low");
-                const sMeta = SEVERITY_META[worstSeverity];
-                const expanded = expandedCategories.has(category);
-
-                return (
-                  <div key={category} className={`rounded-mac border ${sMeta.border} overflow-hidden`}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const next = new Set(expandedCategories);
-                        if (expanded) next.delete(category);
-                        else next.add(category);
-                        setExpandedCategories(next);
-                      }}
-                      className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold ${sMeta.color} ${sMeta.bg} cursor-pointer hover:opacity-90 transition-opacity`}
-                    >
-                      <sMeta.icon size={13} />
-                      <span>{category}</span>
-                      <span className="text-2xs opacity-60 ml-1">({findings.length})</span>
-                      <ChevronDown size={11} className={`ml-auto transition-transform ${expanded ? "rotate-180" : ""}`} />
-                    </button>
-                    {expanded && (
-                      <div className="px-3 py-2 space-y-1.5">
-                        {findings.map((finding, i) => {
-                          const fMeta = SEVERITY_META[finding.severity];
-                          return (
-                            <div key={i} className="flex items-start gap-2 text-2xs">
-                              <span className={`shrink-0 mt-0.5 px-1.5 py-0.5 rounded text-3xs font-bold uppercase ${fMeta.bg} ${fMeta.color}`}>
-                                {finding.severity}
-                              </span>
-                              <div className="min-w-0">
-                                <span className="text-text-primary">{finding.label}</span>
-                                {finding.file && (
-                                  <span className="ml-1.5 text-text-muted font-mono truncate">{finding.file}</span>
-                                )}
-                                {finding.detail && (
-                                  <div className="text-text-muted mt-0.5">{finding.detail}</div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
+              {activeTab === "findings" ? (
+                <div className="space-y-3.5">
+                  {/* Overall Status Banner */}
+                  <div className={`flex items-center gap-3 px-3.5 py-3 rounded-[4px] border ${meta.bg} ${meta.color} ${meta.border} select-none`}>
+                    <div className="h-7 w-7 rounded-full bg-current/10 flex items-center justify-center shrink-0">
+                      <OverallIcon size={16} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[11px] font-bold leading-tight">{meta.label}</div>
+                      <div className="text-[10px] opacity-75 mt-0.5 leading-none">
+                        {report.fileCount} file{report.fileCount !== 1 ? "s" : ""} scanned · {report.findings.length} warning{report.findings.length !== 1 ? "s" : ""}
                       </div>
+                    </div>
+                    {overall === "safe" && (
+                      <CheckCircle2 size={16} className="text-[#30d158] shrink-0" />
                     )}
                   </div>
-                );
-              })}
 
-              {/* AI Summary */}
-              {report.aiSummary && (
-                <div className="space-y-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setShowAiDetails(!showAiDetails)}
-                    className="flex items-center gap-2 text-xs font-semibold text-accent cursor-pointer hover:opacity-80 transition-opacity"
-                  >
-                    <ExternalLink size={12} />
-                    <span>AI Deep Analysis</span>
-                    <ChevronDown size={11} className={`transition-transform ${showAiDetails ? "rotate-180" : ""}`} />
-                  </button>
-                  {showAiDetails && (
-                    <div className="text-2xs text-text-secondary bg-surface-1 border border-border rounded-mac p-3 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
-                      {report.aiSummary}
+                  {/* Findings List grouped by category */}
+                  {report.findings.length === 0 ? (
+                    <div className="text-center py-10 space-y-1.5">
+                      <ShieldCheck size={32} className="text-[#30d158] mx-auto opacity-75" />
+                      <h4 className="text-[11px] font-bold text-text-primary">Clean Scan</h4>
+                      <p className="text-[10px] text-text-muted max-w-[260px] mx-auto leading-relaxed">
+                        No dangerous shell scripts, database migration patterns, or security exposures detected in this patch.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {Object.entries(grouped).map(([category, findings]) => {
+                        const worstSeverity = findings.reduce<RiskSeverity>((worst, f) => {
+                          const order: Record<RiskSeverity, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+                          return order[f.severity] < order[worst] ? f.severity : worst;
+                        }, "low");
+                        const sMeta = SEVERITY_META[worstSeverity];
+                        const expanded = expandedCategories.has(category);
+
+                        return (
+                          <div key={category} className={`rounded-[4px] border ${sMeta.border} overflow-hidden bg-surface-1/10`}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const next = new Set(expandedCategories);
+                                if (expanded) next.delete(category);
+                                else next.add(category);
+                                setExpandedCategories(next);
+                              }}
+                              className={`w-full flex items-center gap-2 px-3 py-2 text-[11px] font-bold ${sMeta.color} ${sMeta.bg} cursor-pointer transition-opacity hover:opacity-90 select-none`}
+                            >
+                              <sMeta.icon size={12} className="shrink-0" />
+                              <span>{category}</span>
+                              <span className="text-[10px] opacity-60 ml-0.5">({findings.length})</span>
+                              <ChevronDown size={11} className={`ml-auto transition-transform duration-200 ${expanded ? "rotate-180" : ""}`} />
+                            </button>
+                            
+                            {expanded && (
+                              <div className="px-3 py-2 space-y-2.5 divide-y divide-border-20">
+                                {findings.map((finding, i) => {
+                                  const fMeta = SEVERITY_META[finding.severity];
+                                  return (
+                                    <div key={i} className={`flex items-start gap-2.5 text-[11px] ${i > 0 ? "pt-2.5" : ""}`}>
+                                      <span className={`shrink-0 mt-0.5 px-1 py-0.5 rounded-[2px] text-[8px] font-bold uppercase tracking-wider ${fMeta.bg} ${fMeta.color} border border-current/15`}>
+                                        {finding.severity}
+                                      </span>
+                                      <div className="min-w-0 flex-1">
+                                        <div className="text-text-primary font-medium leading-relaxed">{finding.label}</div>
+                                        {finding.file && (
+                                          <div className="flex items-center gap-1 mt-1 text-[10px] font-mono text-text-secondary bg-surface-2 px-2 py-0.5 rounded-[3px] w-fit truncate">
+                                            <FileText size={10} className="text-text-muted" />
+                                            <span className="select-all">{finding.file}</span>
+                                          </div>
+                                        )}
+                                        {finding.detail && (
+                                          <div className="text-text-muted mt-1 text-[10px] leading-relaxed border-l-2 border-border-30 pl-2">
+                                            {finding.detail}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
+                </div>
+              ) : (
+                /* Copilot AI Analysis view */
+                <div className="space-y-4 animate-in fade-in duration-200">
+                  {/* Avatar Copilot Card */}
+                  <div className="flex gap-3 p-3.5 bg-gradient-to-br from-accent/5 to-surface-1 border border-accent-20 rounded-[4px]">
+                    <div className="h-7 w-7 rounded-full bg-accent/15 border border-accent/20 flex items-center justify-center text-accent shrink-0">
+                      <Sparkles size={13} />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-[11px] font-bold text-text-primary">GitFlow Assistant</h4>
+                      <p className="text-[10px] text-text-secondary leading-relaxed">
+                        I reviewed the changes in this patch. Below is my architectural and security assessment:
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Pre-formatted assessment report */}
+                  <div className="text-[11px] text-text-secondary bg-surface-1 border border-border-30 rounded-[4px] p-4 whitespace-pre-wrap leading-relaxed max-h-[380px] overflow-y-auto">
+                    {formatCopilotText(report.aiSummary || "")}
+                  </div>
                 </div>
               )}
             </>
           ) : null}
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border shrink-0">
-          <button
-            onClick={onCancel}
-            className="px-4 py-1.5 text-xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-2 rounded-mac transition-colors cursor-pointer"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onProceed}
-            disabled={loading}
-            className={`px-4 py-1.5 text-xs font-semibold rounded-mac transition-colors cursor-pointer disabled:opacity-40 ${
-              canProceed
-                ? "text-white bg-accent hover:bg-accent/80"
-                : "text-white bg-[#ff375f] hover:bg-[#ff375f]/80"
-            }`}
-          >
-            {loading ? (
-              <span className="flex items-center gap-1.5">
-                <Loader2 size={11} className="animate-spin" />
-                Analyzing...
+        {/* Footer Actions */}
+        <div className="flex items-center justify-between px-4 py-3 border-t border-border-30 bg-surface-1/40 shrink-0 select-none">
+          <div className="text-[10px] text-text-muted">
+            {!loading && report && !canProceed && (
+              <span className="text-[#ff375f] font-semibold flex items-center gap-1">
+                <ShieldAlert size={11} /> Blocked by Policy
               </span>
-            ) : canProceed ? (
-              `Proceed with ${action}`
-            ) : (
-              `${action} anyway`
             )}
-          </button>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onCancel}
+              className="px-3.5 py-1.5 text-[11px] font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-2 rounded-[4px] transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={onProceed}
+              disabled={loading}
+              className={`px-3.5 py-1.5 text-[11px] font-semibold rounded-[4px] transition-all cursor-pointer disabled:opacity-40 shadow-xs ${
+                canProceed
+                  ? "text-white bg-accent hover:bg-accent/90"
+                  : "text-white bg-[#ff375f] hover:bg-[#ff375f]/90"
+              }`}
+            >
+              {loading ? (
+                <span className="flex items-center gap-1.5">
+                  <Loader2 size={11} className="animate-spin" />
+                  Running Scan...
+                </span>
+              ) : canProceed ? (
+                `Proceed with ${action}`
+              ) : (
+                `${action} anyway`
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>

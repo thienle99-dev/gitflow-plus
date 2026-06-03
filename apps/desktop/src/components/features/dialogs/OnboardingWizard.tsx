@@ -159,54 +159,83 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-surface-0 rounded-xl shadow-2xl border border-border w-[min(560px,92vw)] max-h-[min(640px,90vh)] flex flex-col overflow-hidden">
+      <div className="bg-surface-0 rounded-xl shadow-2xl border border-border w-[min(680px,94vw)] max-h-[min(740px,92vh)] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-4 pb-0">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-text-primary">Setup GitFlow Desktop</span>
+        <div className="flex items-center justify-between px-6 pt-5 pb-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-accent/10 flex items-center justify-center">
+              <Sparkles size={14} className="text-accent" />
+            </div>
+            <div>
+              <span className="text-sm font-bold text-text-primary">Setup GitFlow Desktop</span>
+              <div className="text-2xs text-text-muted mt-0.5">Step {step + 1} of {totalSteps} — {steps[step].label}</div>
+            </div>
           </div>
           <button
             onClick={handleSkip}
-            className="h-6 w-6 flex items-center justify-center rounded-md hover:bg-surface-2 text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+            className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-surface-2 text-text-muted hover:text-text-primary transition-colors cursor-pointer"
             title="Skip onboarding"
           >
             <X size={14} />
           </button>
         </div>
 
-        {/* Step indicator */}
-        <div className="flex items-center gap-1 px-5 pt-3 pb-1">
-          {steps.map((s, i) => (
-            <button
-              key={s.label}
-              onClick={() => setStep(i)}
-              className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-2xs font-medium transition-all cursor-pointer ${
-                i === step
-                  ? "bg-accent/15 text-accent"
-                  : i < step
-                    ? "text-text-muted hover:text-text-secondary"
-                    : "text-text-muted/50"
-              }`}
-            >
-              <span className={`flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-bold ${
-                i < step
-                  ? "bg-accent text-accent-fg"
-                  : i === step
-                    ? "bg-accent/20 text-accent"
-                    : "bg-surface-2 text-text-muted"
-              }`}>
-                {i < step ? <Check size={9} /> : i + 1}
-              </span>
-              <span className="hidden sm:inline">{s.label}</span>
-            </button>
-          ))}
+        {/* Step indicator — modern connected stepper */}
+        <div className="px-6 pt-4 pb-0">
+          <div className="flex items-center">
+            {steps.map((s, i) => {
+              const isActive = i === step;
+              const isCompleted = i < step;
+              const isFuture = i > step;
+              return (
+                <div key={s.label} className="flex items-center flex-1 last:flex-none">
+                  {/* Step node */}
+                  <button
+                    onClick={() => setStep(i)}
+                    className={`relative flex items-center gap-2 cursor-pointer group transition-all ${
+                      isActive ? "z-10" : ""
+                    }`}
+                  >
+                    <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold transition-all ${
+                      isCompleted
+                        ? "bg-accent text-accent-fg shadow-sm shadow-accent/20"
+                        : isActive
+                          ? "bg-accent text-accent-fg ring-4 ring-accent/15 shadow-sm shadow-accent/20"
+                          : "bg-surface-2 border border-border text-text-muted group-hover:border-text-muted/40"
+                    }`}>
+                      {isCompleted ? <Check size={13} strokeWidth={3} /> : s.icon}
+                    </div>
+                    <span className={`text-2xs font-semibold whitespace-nowrap transition-colors ${
+                      isActive
+                        ? "text-accent"
+                        : isCompleted
+                          ? "text-text-secondary"
+                          : "text-text-muted/60 group-hover:text-text-muted"
+                    }`}>
+                      {s.label}
+                    </span>
+                  </button>
+                  {/* Connector line */}
+                  {i < totalSteps - 1 && (
+                    <div className="flex-1 mx-2.5 h-[2px] rounded-full overflow-hidden bg-surface-2">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ease-out ${
+                          isCompleted ? "bg-accent w-full" : isActive ? "bg-accent/40 w-1/2" : "w-0"
+                        }`}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Divider */}
-        <div className="h-px bg-border mx-5" />
+        <div className="h-px bg-border mx-6 mt-4" />
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-5 py-4">
+        <div className="flex-1 overflow-y-auto px-6 py-5">
           {step === 0 && <WelcomeStep />}
           {step === 1 && (
             <ThemeStep theme={theme} setTheme={setTheme} />
@@ -267,8 +296,8 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
         </div>
 
         {/* Footer */}
-        <div className="h-px bg-border mx-5" />
-        <div className="flex items-center justify-between px-5 py-3">
+        <div className="h-px bg-border mx-6" />
+        <div className="flex items-center justify-between px-6 py-3.5">
           <button
             onClick={handlePrev}
             disabled={isFirst}

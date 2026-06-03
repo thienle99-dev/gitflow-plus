@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronRight, ChevronDown, Terminal, Book, GitBranch, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
+import { ChevronRight, ChevronDown, Terminal, Book, GitBranch, ArrowUp, ArrowDown, Loader2, GraduationCap } from "lucide-react";
 import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
 import { useGitBranches, useGitStatus, useGitSyncStatus } from "@/queries/useGitLog";
@@ -117,8 +117,17 @@ export default function BottomBar() {
 
       <div className="flex-1" />
 
-      {/* Right side: Feature Guide + Version */}
+      {/* Right side: Feature Guide + Onboarding + Version */}
       <div className="flex items-center gap-3">
+        <button
+          onClick={() => openDialogState("onboarding")}
+          className="flex items-center gap-1 text-text-muted hover:text-accent transition-all p-0.5 rounded cursor-pointer mr-0.5"
+          title="Onboarding Wizard"
+        >
+          <GraduationCap size={11} />
+          <span className="text-[9px] font-semibold">Setup</span>
+        </button>
+
         <button
           onClick={() => openDialogState("feature-guide")}
           className="flex items-center gap-1 text-text-muted hover:text-text-primary transition-all p-0.5 rounded cursor-pointer mr-0.5"

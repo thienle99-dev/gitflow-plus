@@ -33,6 +33,14 @@ export default function MainLayout() {
   const lastFocusRefreshRef = useRef(0);
   const [showOnboarding, setShowOnboarding] = useState(() => !isOnboardingComplete());
 
+  // Sync onboarding from activeDialog ("onboarding" opened from BottomBar etc.)
+  useEffect(() => {
+    if (activeDialog === "onboarding") {
+      setShowOnboarding(true);
+      closeDialog();
+    }
+  }, [activeDialog, closeDialog]);
+
   const scheduleInvalidate = useCallback((queryKey: unknown[], delay = 250) => {
     const key = JSON.stringify(queryKey);
     const existing = invalidateTimersRef.current.get(key);

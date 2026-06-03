@@ -39,6 +39,7 @@ import {
   Plus,
   Undo2,
   X,
+  Maximize2,
 } from "lucide-react";
 
 export default function WorkingTree() {
@@ -80,7 +81,9 @@ export default function WorkingTree() {
   const [committingGroupKey, setCommittingGroupKey] = useState<string | null>(null);
   const [scopeAnalyzing, setScopeAnalyzing] = useState(false);
   const [aiReviewOpen, setAiReviewOpen] = useState(false);
+  const [aiReviewCollapsed, setAiReviewCollapsed] = useState(false);
   const [aiReviewResult, setAiReviewResult] = useState("");
+  const [aiReviewModalOpen, setAiReviewModalOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [stagedOpen, setStagedOpen] = useState(true);
   const [unstagedOpen, setUnstagedOpen] = useState(true);
@@ -106,6 +109,7 @@ export default function WorkingTree() {
     ...staged.map((file) => ({ path: file.path, stage: "staged" as const, status: file.status })),
     ...unstaged.map((file) => ({ path: file.path, stage: "unstaged" as const, status: file.status })),
   ];
+  const aiReviewTagCount = countAIReviewTags(aiReviewResult);
 
   const openDiffReview = (path: string, stage: "staged" | "unstaged") => {
     const target = reviewFiles.find((file) => file.path === path && file.stage === stage) || { path, stage };
@@ -323,6 +327,7 @@ export default function WorkingTree() {
     }
 
     setAiReviewOpen(true);
+    setAiReviewCollapsed(false);
     setAiReviewResult("");
     aiReview.reset();
 
@@ -846,40 +851,67 @@ export default function WorkingTree() {
         )}
 
         {aiReviewOpen && (
-          <div className="border border-accent-20 bg-surface-2-30 rounded-mac overflow-hidden shadow-2xs">
-            <div className="flex items-center justify-between px-3 py-2 border-b border-border-40 bg-surface-1/40">
-              <div className="flex items-center gap-1.5 min-w-0">
+          <div className="border border-accent-30 bg-surface-1 rounded-mac overflow-hidden shadow-lg shadow-black/10">
+            <div className="flex items-center justify-between gap-3 px-3 py-1.5 border-b border-border-40 bg-accent-5 select-none">
+              <div className="flex items-center gap-2 min-w-0">
                 <Sparkles size={13} className="text-accent shrink-0" />
-                <span className="text-xs font-semibold text-text-primary">AI Review</span>
-                <span className="text-3xs font-semibold text-accent bg-accent-10 border border-accent-20 rounded px-1.5 py-0.5">
-                  Custom checklist
-                </span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-[11px] font-bold text-text-primary">AI Review</span>
+                  <span className="text-[9px] font-semibold text-accent bg-accent-10 border border-accent-20 rounded px-1.5 py-0.5 leading-none shrink-0">
+                    {staged.length > 0 ? `${staged.length} staged` : `${unstaged.length} unstaged`}
+                  </span>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setAiReviewOpen(false)}
-                className="h-6 w-6 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer"
-                title="Close AI review"
-              >
-                <X size={13} />
-              </button>
+              <div className="flex items-center gap-1 shrink-0">
+                {aiReviewTagCount > 0 && (
+                  <span className="mr-1 text-[9px] font-semibold text-text-secondary bg-surface-2 border border-border-40 rounded px-1.5 py-0.5 leading-none">
+                    {aiReviewTagCount} tagged
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setAiReviewModalOpen(true)}
+                  className="h-6 w-6 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer"
+                  title="Open full AI review modal"
+                >
+                  <Maximize2 size={12} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAiReviewCollapsed((collapsed) => !collapsed)}
+                  className="h-6 w-6 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer"
+                  title={aiReviewCollapsed ? "Show AI review details" : "Hide AI review details"}
+                >
+                  <ChevronDown size={13} className={`transition-transform duration-200 ${aiReviewCollapsed ? "-rotate-90" : ""}`} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAiReviewOpen(false)}
+                  className="h-6 w-6 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer"
+                  title="Close AI review"
+                >
+                  <X size={13} />
+                </button>
+              </div>
             </div>
-            <div className="max-h-52 overflow-y-auto p-3 text-2xs leading-relaxed text-text-secondary space-y-1.5">
-              {aiReview.isPending ? (
-                <div className="flex items-center gap-2 text-text-muted">
-                  <RefreshCw size={12} className="animate-spin text-accent" />
-                  <span>Reviewing changes with AI...</span>
-                </div>
-              ) : aiReview.isError ? (
-                <div className="text-[#ff453a]">
-                  {aiReview.error instanceof Error ? aiReview.error.message : "AI review failed"}
-                </div>
-              ) : aiReviewResult ? (
-                aiReviewResult.split("\n").map((line, index) => <AIReviewLine key={index} line={line} />)
-              ) : (
-                <span className="text-text-muted">No review result yet.</span>
-              )}
-            </div>
+            {!aiReviewCollapsed && (
+              <div className="max-h-80 overflow-y-auto p-3.5 text-xs leading-relaxed text-text-secondary space-y-2">
+                {aiReview.isPending ? (
+                  <div className="flex items-center gap-2 rounded-mac border border-accent-20 bg-accent-5 px-3 py-2.5 text-text-secondary">
+                    <RefreshCw size={13} className="animate-spin text-accent" />
+                    <span>Reviewing changes with AI...</span>
+                  </div>
+                ) : aiReview.isError ? (
+                  <div className="rounded-mac border border-[#ff453a]/25 bg-[#ff453a]/10 px-3 py-2 text-[#ff453a]">
+                    {aiReview.error instanceof Error ? aiReview.error.message : "AI review failed"}
+                  </div>
+                ) : aiReviewResult ? (
+                  aiReviewResult.split("\n").map((line, index) => <AIReviewLine key={index} line={line} />)
+                ) : (
+                  <span className="text-text-muted">No review result yet.</span>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -919,6 +951,65 @@ export default function WorkingTree() {
           onClose={() => setReviewTarget(null)}
           onRefresh={invalidate}
         />
+      )}
+
+      {aiReviewModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setAiReviewModalOpen(false)}>
+          <div
+            className="bg-surface-0 rounded-[6px] shadow-2xl border border-border-60 overflow-hidden w-[min(640px,92vw)] max-h-[82vh] flex flex-col animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border-30 bg-surface-1/40 shrink-0 select-none">
+              <div className="flex items-center gap-2">
+                <Sparkles size={14} className="text-accent" />
+                <span className="text-[12px] font-bold text-text-primary">AI Review Report</span>
+                <span className="text-[10px] text-text-muted">
+                  · {staged.length > 0 ? `${staged.length} staged` : `${unstaged.length} unstaged`} changes
+                </span>
+              </div>
+              <button
+                onClick={() => setAiReviewModalOpen(false)}
+                className="p-1 hover:bg-surface-2 rounded-[4px] transition-colors cursor-pointer text-text-muted hover:text-text-primary"
+              >
+                <X size={13} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
+              <div className="flex gap-3 p-3.5 bg-gradient-to-br from-accent/5 to-surface-1 border border-accent-20 rounded-[4px]">
+                <div className="h-7 w-7 rounded-full bg-accent/15 border border-accent/20 flex items-center justify-center text-accent shrink-0">
+                  <Sparkles size={13} />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-[11px] font-bold text-text-primary">GitFlow Assistant</h4>
+                  <p className="text-[10px] text-text-secondary leading-relaxed">
+                    Here is the comprehensive AI analysis for your current code changes:
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-[11px] text-text-secondary bg-surface-1 border border-border-30 rounded-[4px] p-4 whitespace-pre-wrap leading-relaxed max-h-[380px] overflow-y-auto font-sans">
+                {aiReviewResult ? (
+                  aiReviewResult.split("\n").map((line, index) => <AIReviewLine key={index} line={line} />)
+                ) : (
+                  <span className="text-text-muted">No review result yet.</span>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border-30 bg-surface-1/40 shrink-0 select-none">
+              <button
+                onClick={() => setAiReviewModalOpen(false)}
+                className="px-3.5 py-1.5 text-[11px] font-semibold text-white bg-accent hover:bg-accent/90 rounded-[4px] transition-colors cursor-pointer shadow-2xs"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {toast && <div className="toast">{toast}</div>}
@@ -1441,45 +1532,69 @@ function statusColor(status: string) {
 }
 
 function AIReviewLine({ line }: { line: string }) {
-  const match = line.match(/^\s*(?:[-*]\s*)?(?:\*\*)?\[(BUG|SECURITY|PERF|STYLE|BEST-PRACTICE|LINTER|TEST|A11Y|UX)\](?:\*\*)?\s*(.*)$/i);
+  const match = line.match(aiReviewTagPattern());
   if (!match) {
-    return <p className="whitespace-pre-wrap">{line || "\u00A0"}</p>;
+    const heading = line.match(/^\s*#{1,6}\s+(.+)$/);
+    if (heading) {
+      return <h4 className="pt-1 text-xs font-bold text-text-primary">{stripInlineMarkdown(heading[1])}</h4>;
+    }
+    if (/^\s*[-*]\s+/.test(line)) {
+      return <p className="ml-2 whitespace-pre-wrap text-text-secondary">{line.replace(/^\s*[-*]\s+/, "• ").replace(/^\s*\|\s*/, "")}</p>;
+    }
+    return <p className="whitespace-pre-wrap text-text-secondary">{line.replace(/^\s*\|\s*/, "") || "\u00A0"}</p>;
   }
 
   const meta = aiReviewTagMeta(match[1]);
   return (
-    <div className="flex items-start gap-2">
-      <span className={`mt-0.5 shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-bold leading-none ${meta.className}`}>
+    <div className={`flex items-start gap-2 rounded-mac border border-l-[3px] px-2.5 py-2 ${meta.containerClassName}`}>
+      <span className={`mt-0.5 shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-bold leading-none ${meta.badgeClassName}`}>
         {meta.label}
       </span>
-      <p className="min-w-0 flex-1 whitespace-pre-wrap text-text-secondary">{match[2]}</p>
+      <p className="min-w-0 flex-1 whitespace-pre-wrap text-text-primary">{stripInlineMarkdown(match[2])}</p>
     </div>
   );
+}
+
+function countAIReviewTags(text: string) {
+  if (!text) return 0;
+  const pattern = aiReviewTagPattern();
+  return text.split("\n").filter((line) => pattern.test(line)).length;
+}
+
+function aiReviewTagPattern() {
+  return /^\s*(?:#{1,6}\s*)?(?:[-*]\s*)?(?:\|+\s*)?(?:\*\*)?\[(BUG|SECURITY|PERF|STYLE|BEST-PRACTICE|LINTER|TEST|A11Y|UX)\](?:\*\*)?(?:\s*\|+)?(?::)?\s*(.*)$/i;
 }
 
 function aiReviewTagMeta(tag: string) {
   switch (tag.toUpperCase()) {
     case "BUG":
-      return { label: "BUG", className: "border-[#ff375f] bg-[#ff375f]/10 text-[#ff375f]" };
+      return { label: "BUG", badgeClassName: "border-[#ff375f] bg-[#ff375f]/15 text-[#ff375f]", containerClassName: "border-[#ff375f]/25 border-l-[#ff375f] bg-[#ff375f]/8" };
     case "SECURITY":
-      return { label: "SECURITY", className: "border-[#ff6b35] bg-[#ff6b35]/10 text-[#ff6b35]" };
+      return { label: "SECURITY", badgeClassName: "border-[#ff6b35] bg-[#ff6b35]/15 text-[#ff6b35]", containerClassName: "border-[#ff6b35]/25 border-l-[#ff6b35] bg-[#ff6b35]/8" };
     case "PERF":
-      return { label: "PERF", className: "border-[#ffcc00] bg-[#ffcc00]/10 text-[#ffcc00]" };
+      return { label: "PERF", badgeClassName: "border-[#ffcc00] bg-[#ffcc00]/15 text-[#ffcc00]", containerClassName: "border-[#ffcc00]/25 border-l-[#ffcc00] bg-[#ffcc00]/8" };
     case "STYLE":
-      return { label: "STYLE", className: "border-[#0a84ff] bg-[#0a84ff]/10 text-[#0a84ff]" };
+      return { label: "STYLE", badgeClassName: "border-[#0a84ff] bg-[#0a84ff]/15 text-[#0a84ff]", containerClassName: "border-[#0a84ff]/25 border-l-[#0a84ff] bg-[#0a84ff]/8" };
     case "BEST-PRACTICE":
-      return { label: "BEST", className: "border-[#bf5af2] bg-[#bf5af2]/10 text-[#bf5af2]" };
+      return { label: "BEST", badgeClassName: "border-[#bf5af2] bg-[#bf5af2]/15 text-[#bf5af2]", containerClassName: "border-[#bf5af2]/25 border-l-[#bf5af2] bg-[#bf5af2]/8" };
     case "LINTER":
-      return { label: "LINTER", className: "border-[#64d2ff] bg-[#64d2ff]/10 text-[#64d2ff]" };
+      return { label: "LINTER", badgeClassName: "border-[#64d2ff] bg-[#64d2ff]/15 text-[#64d2ff]", containerClassName: "border-[#64d2ff]/25 border-l-[#64d2ff] bg-[#64d2ff]/8" };
     case "TEST":
-      return { label: "TEST", className: "border-[#30d158] bg-[#30d158]/10 text-[#30d158]" };
+      return { label: "TEST", badgeClassName: "border-[#30d158] bg-[#30d158]/15 text-[#30d158]", containerClassName: "border-[#30d158]/25 border-l-[#30d158] bg-[#30d158]/8" };
     case "A11Y":
-      return { label: "A11Y", className: "border-[#ff9f0a] bg-[#ff9f0a]/10 text-[#ff9f0a]" };
+      return { label: "A11Y", badgeClassName: "border-[#ff9f0a] bg-[#ff9f0a]/15 text-[#ff9f0a]", containerClassName: "border-[#ff9f0a]/25 border-l-[#ff9f0a] bg-[#ff9f0a]/8" };
     case "UX":
-      return { label: "UX", className: "border-[#ff2d55] bg-[#ff2d55]/10 text-[#ff2d55]" };
+      return { label: "UX", badgeClassName: "border-[#ff2d55] bg-[#ff2d55]/15 text-[#ff2d55]", containerClassName: "border-[#ff2d55]/25 border-l-[#ff2d55] bg-[#ff2d55]/8" };
     default:
-      return { label: tag.toUpperCase(), className: "border-accent bg-accent/10 text-accent" };
+      return { label: tag.toUpperCase(), badgeClassName: "border-accent bg-accent/15 text-accent", containerClassName: "border-accent-20 border-l-accent bg-accent-5" };
   }
+}
+
+function stripInlineMarkdown(text: string) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .trim();
 }
 
 function getFileName(path: string) {
