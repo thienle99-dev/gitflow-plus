@@ -188,3 +188,184 @@ pub async fn delete_branch(
         Err(format!("Failed to delete branch: {}", stderr.trim()))
     }
 }
+
+#[derive(serde::Serialize, Clone, Debug)]
+pub struct BranchComparison {
+    pub ahead: usize,
+    pub behind: usize,
+    pub files: Vec<BranchFileChange>,
+}
+
+#[derive(serde::Serialize, Clone, Debug)]
+pub struct BranchFileChange {
+    pub path: String,
+    pub old_path: Option<String>,
+    pub status: String,
+}
+
+#[tauri::command]
+pub async fn compare_branches(
+    path: String,
+    base: String,
+    target: String,
+) -> Result<BranchComparison, String> {
+    // Get ahead/behind counts
+    let rev_list = Command::new("git")
+        .args([
+            "--no-pager",
+            "-C",
+            &path,
+            "rev-list",
+            "--left-right",
+            "--count",
+            &format!("{}...{}", base, target),
+        ])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run git: {}", e))?;
+
+    let (ahead, behind) = if rev_list.status.success() {
+        let stdout = String::from_utf8_lossy(&rev_list.stdout);
+        let parts: Vec<&str> = stdout.trim().split_whitespace().collect();
+        if parts.len() == 2 {
+            (
+                parts[0].parse::<usize>().unwrap_or(0),
+                parts[1].parse::<usize>().unwrap_or(0),
+            )
+        } else {
+            (0, 0)
+        }
+    } else {
+        (0, 0)
+    };
+
+    // Get changed files between the two refs
+    let diff = Command::new("git")
+        .args([
+            "--no-pager",
+            "-C",
+            &path,
+            "diff",
+            "--name-status",
+            "-r",
+            "--find-renames",
+            &format!("{}...{}", base, target),
+        ])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run git: {}", e))?;
+
+    let files = if diff.status.success() {
+        let stdout = String::from_utf8_lossy(&diff.stdout);
+        parse_branch_file_changes(&stdout)
+    } else {
+        Vec::new()
+    };
+
+    Ok(BranchComparison {
+        ahead,
+        behind,
+        files,
+    })
+}
+
+fn parse_branch_file_changes(stdout: &str) -> Vec<BranchFileChange> {
+    stdout
+        .lines()
+        .filter_map(|line| {
+            let parts: Vec<&str> = line.split('\t').collect();
+            if parts.len() < 2 {
+                return None;
+            }
+            let raw_status = parts[0];
+            let status = match raw_status.chars().next().unwrap_or('M') {
+                'A' => "added",
+                'D' => "deleted",
+                'R' => "renamed",
+                'C' => "copied",
+                'M' => "modified",
+                'T' => "typechange",
+                'U' => "unmerged",
+                _ => "modified",
+            };
+
+            if raw_status.starts_with('R') || raw_status.starts_with('C') {
+                if parts.len() < 3 {
+                    return None;
+                }
+                Some(BranchFileChange {
+                    path: parts[2].to_string(),
+                    old_path: Some(parts[1].to_string()),
+                    status: status.to_string(),
+                })
+            } else {
+                Some(BranchFileChange {
+                    path: parts[1].to_string(),
+                    old_path: None,
+                    status: status.to_string(),
+                })
+            }
+        })
+        .collect()
+}
+
+#[tauri::command]
+pub async fn branch_file_diff(
+    path: String,
+    base: String,
+    target: String,
+    file_path: String,
+    context: Option<u32>,
+) -> Result<String, String> {
+    let context_arg = format!("-U{}", context.unwrap_or(3));
+    let output = Command::new("git")
+        .args([
+            "--no-pager",
+            "-C",
+            &path,
+            "diff",
+            &context_arg,
+            "--no-color",
+            "--find-renames",
+            &format!("{}...{}", base, target),
+            "--",
+            &file_path,
+        ])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run git: {}", e))?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Diff failed: {}", stderr.trim()))
+    }
+}
+
+#[cfg(test)]
+mod compare_tests {
+    use super::*;
+
+    #[test]
+    fn parses_branch_file_changes() {
+        let input = "M\tsrc/main.rs\nA\tREADME.md\nR100\told.rs\tnew.rs\nD\tremoved.txt\n";
+        let files = parse_branch_file_changes(input);
+        assert_eq!(files.len(), 4);
+        assert_eq!(files[0].path, "src/main.rs");
+        assert_eq!(files[0].status, "modified");
+        assert_eq!(files[1].path, "README.md");
+        assert_eq!(files[1].status, "added");
+        assert_eq!(files[2].path, "new.rs");
+        assert_eq!(files[2].old_path.as_deref(), Some("old.rs"));
+        assert_eq!(files[2].status, "renamed");
+        assert_eq!(files[3].path, "removed.txt");
+        assert_eq!(files[3].status, "deleted");
+    }
+
+    #[test]
+    fn handles_empty_diff_output() {
+        let files = parse_branch_file_changes("");
+        assert_eq!(files.len(), 0);
+    }
+}

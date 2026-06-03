@@ -226,6 +226,8 @@ pub fn run() {
             commands::branch::create_branch,
             commands::branch::checkout_branch,
             commands::branch::delete_branch,
+            commands::branch::compare_branches,
+            commands::branch::branch_file_diff,
             commands::commit::stage_file,
             commands::commit::unstage_file,
             commands::commit::stage_all,

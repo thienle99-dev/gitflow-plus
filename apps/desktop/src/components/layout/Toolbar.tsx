@@ -20,7 +20,6 @@ import {
   Archive,
   Settings,
   BarChart3,
-  LogOut,
   Database,
 } from "lucide-react";
 import CreateBranchDialog from "@/components/features/dialogs/CreateBranchDialog";
@@ -116,23 +115,7 @@ export default function Toolbar() {
       >
 
         {/* Left Side: Status Capsule Badge */}
-        <div className={`flex items-center gap-2 ${isMac ? "pl-[80px]" : ""}`}>
-          <button
-            onClick={() => {
-              closeRepo();
-              useUIStore.setState({
-                selectedCommit: null,
-                selectedFile: null,
-                selectedFileStage: null,
-                activeDialog: null,
-              });
-            }}
-            className="h-8 w-8 flex items-center justify-center rounded-mac bg-surface-2-40 hover:bg-surface-2 border border-border-40 hover:border-border text-text-muted hover:text-text-primary transition-all shrink-0 cursor-pointer"
-            title="Close Repository"
-          >
-            <LogOut size={13} />
-          </button>
-          <div className="w-[1px] h-3.5 bg-border-40/60 mr-1" />
+        <div className="flex items-center gap-2">
           {changes && changes.length > 0 ? (
             <button
               onClick={showChanges}
