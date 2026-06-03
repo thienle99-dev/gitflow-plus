@@ -81,7 +81,7 @@ export default function RiskSummaryDialog({ open, report, loading, action, onPro
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-md animate-in fade-in duration-200" onClick={onCancel}>
       <div
-        className="bg-surface-0 rounded-[6px] shadow-2xl border border-border-60 overflow-hidden w-[min(540px,92vw)] max-h-[82vh] flex flex-col animate-in zoom-in-95 duration-200"
+        className="bg-surface-0 rounded-[6px] shadow-2xl border border-border-60 overflow-hidden w-[min(540px,92vw)] h-[540px] max-h-[82vh] flex flex-col animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -129,7 +129,7 @@ export default function RiskSummaryDialog({ open, report, loading, action, onPro
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
           {loading && !report ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-3 animate-pulse">
+            <div className="flex flex-col items-center justify-center h-full gap-3 animate-pulse">
               <Loader2 size={24} className="animate-spin text-accent" />
               <div className="text-center space-y-1">
                 <span className="text-[11px] font-semibold text-text-primary">Running AI Diagnostics</span>

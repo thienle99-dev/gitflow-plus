@@ -192,9 +192,10 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
                   {/* Step node */}
                   <button
                     onClick={() => setStep(i)}
-                    className={`relative flex items-center gap-2 cursor-pointer group transition-all ${
+                    className={`relative flex items-center cursor-pointer group transition-all ${
                       isActive ? "z-10" : ""
                     }`}
+                    title={s.label}
                   >
                     <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold transition-all ${
                       isCompleted
@@ -205,15 +206,6 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
                     }`}>
                       {isCompleted ? <Check size={13} strokeWidth={3} /> : s.icon}
                     </div>
-                    <span className={`text-2xs font-semibold whitespace-nowrap transition-colors ${
-                      isActive
-                        ? "text-accent"
-                        : isCompleted
-                          ? "text-text-secondary"
-                          : "text-text-muted/60 group-hover:text-text-muted"
-                    }`}>
-                      {s.label}
-                    </span>
                   </button>
                   {/* Connector line */}
                   {i < totalSteps - 1 && (
@@ -301,7 +293,7 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
           <button
             onClick={handlePrev}
             disabled={isFirst}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-text-secondary hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer rounded-lg hover:bg-surface-2"
           >
             <ChevronLeft size={14} />
             Back
@@ -310,14 +302,14 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
             {!isLast && (
               <button
                 onClick={handleSkip}
-                className="px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text-secondary transition-colors cursor-pointer"
+                className="px-3.5 py-2 text-xs font-medium text-text-muted hover:text-text-secondary transition-colors cursor-pointer rounded-lg hover:bg-surface-2"
               >
                 Skip All
               </button>
             )}
             <button
               onClick={handleNext}
-              className="flex items-center gap-1 px-4 py-1.5 text-xs font-semibold bg-accent text-accent-fg rounded-md hover:opacity-90 transition-opacity cursor-pointer"
+              className="flex items-center gap-1.5 px-5 py-2 text-xs font-semibold bg-accent text-accent-fg rounded-lg hover:opacity-90 transition-opacity cursor-pointer shadow-sm shadow-accent/15"
             >
               {isLast ? "Get Started" : "Continue"}
               {!isLast && <ChevronRight size={14} />}
@@ -333,22 +325,22 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
 
 function WelcomeStep() {
   return (
-    <div className="flex flex-col items-center text-center py-4 space-y-4">
-      <div className="w-16 h-16 rounded-2xl bg-accent/10 flex items-center justify-center">
-        <img src="/logo.png" alt="GitFlow" className="w-10 h-10" />
+    <div className="flex flex-col items-center text-center py-6 space-y-5">
+      <div className="w-20 h-20 rounded-2xl bg-accent/10 flex items-center justify-center border border-accent/20 shadow-sm shadow-accent/10">
+        <img src="/logo.png" alt="GitFlow" className="w-12 h-12" />
       </div>
-      <div className="space-y-1.5">
-        <h2 className="text-lg font-bold text-text-primary">Welcome to GitFlow Desktop</h2>
-        <p className="text-xs text-text-secondary max-w-[360px] leading-relaxed">
+      <div className="space-y-2">
+        <h2 className="text-xl font-bold text-text-primary">Welcome to GitFlow Desktop</h2>
+        <p className="text-xs text-text-secondary max-w-[400px] leading-relaxed">
           A modern, high-performance Git client with AI-powered commit messages,
           interactive commit graph, and full GitFlow workflow support.
         </p>
       </div>
-      <div className="grid grid-cols-2 gap-2 w-full max-w-[380px] pt-2">
-        <FeatureCard icon={<Sparkles size={14} />} title="AI Commits" desc="Generate commit messages from staged changes" />
-        <FeatureCard icon={<Palette size={14} />} title="Themes" desc="Dark, light, and Gruvbox color schemes" />
-        <FeatureCard icon={<Globe size={14} />} title="GitFlow" desc="Feature, release & hotfix branch workflows" />
-        <FeatureCard icon={<Rocket size={14} />} title="Fast" desc="Canvas-rendered graph with infinite scroll" />
+      <div className="grid grid-cols-2 gap-2.5 w-full max-w-[440px] pt-1">
+        <FeatureCard icon={<Sparkles size={15} />} title="AI Commits" desc="Generate commit messages from staged changes" />
+        <FeatureCard icon={<Palette size={15} />} title="Themes" desc="Dark, light, and Gruvbox color schemes" />
+        <FeatureCard icon={<Globe size={15} />} title="GitFlow" desc="Feature, release & hotfix branch workflows" />
+        <FeatureCard icon={<Rocket size={15} />} title="Fast" desc="Canvas-rendered graph with infinite scroll" />
       </div>
     </div>
   );
@@ -789,10 +781,10 @@ function PreferencesStep({
 
 function FeatureCard({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
   return (
-    <div className="flex flex-col items-center gap-1 p-2.5 rounded-lg bg-surface-1 border border-border text-center">
-      <div className="text-accent">{icon}</div>
-      <span className="text-2xs font-semibold text-text-primary">{title}</span>
-      <span className="text-[9px] text-text-muted leading-tight">{desc}</span>
+    <div className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-surface-1 border border-border hover:border-accent/20 hover:bg-accent/5 transition-all text-center group">
+      <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent group-hover:bg-accent/15 transition-colors">{icon}</div>
+      <span className="text-2xs font-bold text-text-primary">{title}</span>
+      <span className="text-[10px] text-text-muted leading-relaxed">{desc}</span>
     </div>
   );
 }

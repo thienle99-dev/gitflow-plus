@@ -154,19 +154,19 @@
 - [ ] Stash Panel Polish — Unify button styling, confirm trước Drop, thêm inline stash preview summary
 
 ### First-Launch Onboarding Wizard
-- [ ] Show onboarding wizard on first app launch only (`gitflowOnboardingCompleted !== "true"`)
-- [ ] Allow users to skip onboarding; skipped setup still marks onboarding complete
-- [ ] Add Settings/Help entry point to run onboarding again
-- [ ] Replace automatic first-session feature guide popup with onboarding; keep feature guide manually accessible
-- [ ] Welcome step — explain app briefly, offer Open Repository, Clone Repository, Continue setup
-- [ ] Theme step — choose theme using existing theme cards and save to `theme`
-- [ ] Git basics step — configure auto-fetch, fetch interval, confirm dangerous actions, reopen last repo
-- [ ] AI setup step — optional API key, custom API URL, commit model, review model, token limit
-- [ ] Custom prompt step — configure custom AI rules, commit style, AI detail level, review language
-- [ ] Finish step — show setup summary and actions to Open Repository, Clone Repository, or Finish
-- [ ] Persist onboarding metadata: `gitflowOnboardingCompleted`, `gitflowOnboardingSkipped`, `gitflowOnboardingVersion`
-- [ ] Dispatch `gitflow-settings-updated` after saving onboarding settings
-- [ ] Reuse existing settings keys so Settings dialog and onboarding stay in sync
+- [x] Show onboarding wizard on first app launch only (`gitflowOnboardingCompleted !== "true"`)
+- [x] Allow users to skip onboarding; skipped setup still marks onboarding complete
+- [x] Add Settings/Help entry point to run onboarding again (BottomBar "Setup" icon + MainLayout `activeDialog === "onboarding"` wiring)
+- [x] Replace automatic first-session feature guide popup with onboarding; keep feature guide manually accessible
+- [x] Welcome step — explain app briefly, offer Open Repository, Clone Repository, Continue setup
+- [x] Theme step — choose theme using existing theme cards and save to `theme`
+- [x] Git basics step — configure auto-fetch, fetch interval, confirm dangerous actions, reopen last repo
+- [x] AI setup step — optional API key, custom API URL, commit model, review model, token limit
+- [x] Custom prompt step — configure custom AI rules, commit style, AI detail level, review language
+- [x] Finish step — show setup summary and actions to Open Repository, Clone Repository, or Finish
+- [x] Persist onboarding metadata: `gitflowOnboardingCompleted`, `gitflowOnboardingSkipped`, `gitflowOnboardingVersion`
+- [x] Dispatch `gitflow-settings-updated` after saving onboarding settings
+- [x] Reuse existing settings keys so Settings dialog and onboarding stay in sync
 - [ ] Tests: first launch opens onboarding, skip persists, finish saves settings, rerun loads current settings
 
 ### Pre-Commit Lint Gate (Code + Commit Message Lint)
@@ -226,12 +226,12 @@
 - [x] **AI Code Review Assist** — flag bugs, suggest improvements, đề xuất test cases
 - [x] **AI Commit Scope Suggestion** — gợi ý tách commit nếu staged changes quá lớn/không liên quan
 - [ ] **AI Branch Naming** — suggest branch name từ description
-- [ ] Context-aware prompts (partial) — backend đã đọc project conventions (.cursorrules, CLAUDE.md, AGENTS.md); cần wire vào toàn bộ prompt flows + settings preview
-- [ ] Rate limiting + response caching cho cùng diff
+- [x] Context-aware prompts — backend đọc project conventions (.cursorrules, CLAUDE.md, AGENTS.md), wired vào tất cả 7 prompt flows + settings preview showing detected convention files
+- [x] Rate limiting + response caching cho cùng diff — DJB2 hash cache (10min TTL, 50 max), sliding window rate limiter (10 req/60s)
 - [x] Fallback: API fail → toast error, manual workflow vẫn hoạt động bình thường
 - [ ] **AI PR/MR Description** — generate PR title/body từ commits + diff, detect breaking changes, checklist, test plan
 - [ ] **AI Release Notes** — gom commits/tags thành changelog theo Conventional Commits hoặc custom format
-- [ ] **AI Risk Summary** — phân tích diff trước merge/push: files nhạy cảm, migration, config/env, auth, destructive changes
+- [x] **AI Risk Summary** — phân tích diff trước merge/push: local pattern scanner (sensitive files, migration, config/env, auth, destructive diffs) + optional AI deep analysis; RiskSummaryDialog wired into push flow
 - [ ] **AI Test Suggestion** — đề xuất test cần chạy/thêm dựa trên staged diff hoặc branch diff
 - [ ] **AI Conflict Explanation** — ngoài resolve conflict, giải thích vì sao conflict xảy ra và bên nào thay đổi gì
 - [ ] **AI Commit Splitter** — đề xuất tách staged changes thành nhiều commits logic, có thể stage theo nhóm file/hunk

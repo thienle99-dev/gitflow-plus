@@ -628,7 +628,6 @@ export default function WorkingTree() {
           onToggleOpen={() => setUnstagedOpen((open) => !open)}
           onMenu={(x, y, file) => setCtxMenu({ x, y, file, stage: "unstaged" })}
           onFileMultiClick={handleFileClick}
-          grow
         />
         {selectedFiles.size > 0 && (
           <div className="flex items-center gap-2 px-3 py-1.5 bg-accent-5 border-b border-accent-20 shrink-0">
@@ -647,6 +646,71 @@ export default function WorkingTree() {
       </div>
 
       <div className="px-3 py-3 border-t border-border-60 bg-surface-1-10 space-y-2.5 shrink-0">
+        {aiReviewOpen && (
+          <div className={`border border-accent-30 bg-surface-1 overflow-hidden transition-all ${aiReviewCollapsed ? "rounded-[5px] shadow-2xs" : "rounded-mac shadow-lg shadow-black/10"}`}>
+            <div className={`flex items-center justify-between gap-2 select-none ${aiReviewCollapsed ? "px-2 py-1 bg-surface-2-30" : "px-3 py-1.5 border-b border-border-40 bg-accent-5"}`}>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Sparkles size={aiReviewCollapsed ? 11 : 13} className="text-accent shrink-0" />
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className={`${aiReviewCollapsed ? "text-[10px]" : "text-[11px]"} font-bold text-text-primary`}>AI Review</span>
+                  <span className="text-[9px] font-semibold text-accent bg-accent-10 border border-accent-20 rounded px-1.5 py-0.5 leading-none shrink-0">
+                    {staged.length > 0 ? `${staged.length} staged` : `${unstaged.length} unstaged`}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                {aiReviewTagCount > 0 && (
+                  <span className="mr-1 text-[9px] font-semibold text-text-secondary bg-surface-2 border border-border-40 rounded px-1.5 py-0.5 leading-none">
+                    {aiReviewTagCount} tagged
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setAiReviewModalOpen(true)}
+                  className={`${aiReviewCollapsed ? "h-5 w-5" : "h-6 w-6"} inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer`}
+                  title="Open full AI review modal"
+                >
+                  <Maximize2 size={aiReviewCollapsed ? 11 : 12} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAiReviewCollapsed((collapsed) => !collapsed)}
+                  className={`${aiReviewCollapsed ? "h-5 w-5" : "h-6 w-6"} inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer`}
+                  title={aiReviewCollapsed ? "Show AI review details" : "Hide AI review details"}
+                >
+                  <ChevronDown size={aiReviewCollapsed ? 11 : 13} className={`transition-transform duration-200 ${aiReviewCollapsed ? "-rotate-90" : ""}`} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAiReviewOpen(false)}
+                  className={`${aiReviewCollapsed ? "h-5 w-5" : "h-6 w-6"} inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer`}
+                  title="Close AI review"
+                >
+                  <X size={aiReviewCollapsed ? 11 : 13} />
+                </button>
+              </div>
+            </div>
+            {!aiReviewCollapsed && (
+              <div className="h-[200px] overflow-y-auto p-3.5 text-xs leading-relaxed text-text-secondary space-y-2">
+                {aiReview.isPending ? (
+                  <div className="flex items-center gap-2 rounded-mac border border-accent-20 bg-accent-5 px-3 py-2.5 text-text-secondary">
+                    <RefreshCw size={13} className="animate-spin text-accent" />
+                    <span>Reviewing changes with AI...</span>
+                  </div>
+                ) : aiReview.isError ? (
+                  <div className="rounded-mac border border-[#ff453a]/25 bg-[#ff453a]/10 px-3 py-2 text-[#ff453a]">
+                    {aiReview.error instanceof Error ? aiReview.error.message : "AI review failed"}
+                  </div>
+                ) : aiReviewResult ? (
+                  aiReviewResult.split("\n").map((line, index) => <AIReviewLine key={index} line={line} />)
+                ) : (
+                  <span className="text-text-muted">No review result yet.</span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex flex-col bg-surface-2-30 border border-border-40 rounded-mac p-2.5 focus-within:border-accent-60 focus-within:ring-1 focus-within:ring-accent-15 transition-all shadow-2xs">
           <textarea
             ref={textareaRef}
@@ -721,6 +785,32 @@ export default function WorkingTree() {
                   <Sparkles size={11} />
                 )}
                 <span>Generate with AI</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCommit}
+                disabled={!commitMessage.trim() || (staged.length === 0 && unstaged.length === 0) || committing || lintRunning}
+                className={`h-7 px-3 rounded-[5px] text-3xs font-semibold inline-flex items-center gap-1 transition-all shadow-sm cursor-pointer select-none ${commitMessage.trim() && (staged.length > 0 || unstaged.length > 0)
+                  ? "bg-[#30d158] text-[#07140a] hover:bg-[#30d158]/90 active:scale-[0.99]"
+                  : "bg-surface-3 text-text-muted opacity-40 cursor-not-allowed"
+                  } ${committing || lintRunning ? "opacity-60" : ""}`}
+                title={
+                  !commitMessage.trim()
+                    ? "Enter a commit message"
+                    : staged.length === 0 && unstaged.length === 0
+                      ? "No changes to commit"
+                      : staged.length === 0
+                        ? "Commit all changes"
+                        : "Commit (⌘↵)"
+                }
+              >
+                {lintRunning ? (
+                  <RefreshCw size={11} className="animate-spin" />
+                ) : (
+                  <Check size={11} />
+                )}
+                <span>{committing ? "Committing..." : lintRunning ? "Linting..." : unstaged.length > 0 ? "Commit All" : "Commit"}</span>
               </button>
             </div>
           </div>
@@ -850,97 +940,6 @@ export default function WorkingTree() {
           </div>
         )}
 
-        {aiReviewOpen && (
-          <div className="border border-accent-30 bg-surface-1 rounded-mac overflow-hidden shadow-lg shadow-black/10">
-            <div className="flex items-center justify-between gap-3 px-3 py-1.5 border-b border-border-40 bg-accent-5 select-none">
-              <div className="flex items-center gap-2 min-w-0">
-                <Sparkles size={13} className="text-accent shrink-0" />
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="text-[11px] font-bold text-text-primary">AI Review</span>
-                  <span className="text-[9px] font-semibold text-accent bg-accent-10 border border-accent-20 rounded px-1.5 py-0.5 leading-none shrink-0">
-                    {staged.length > 0 ? `${staged.length} staged` : `${unstaged.length} unstaged`}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                {aiReviewTagCount > 0 && (
-                  <span className="mr-1 text-[9px] font-semibold text-text-secondary bg-surface-2 border border-border-40 rounded px-1.5 py-0.5 leading-none">
-                    {aiReviewTagCount} tagged
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setAiReviewModalOpen(true)}
-                  className="h-6 w-6 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer"
-                  title="Open full AI review modal"
-                >
-                  <Maximize2 size={12} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAiReviewCollapsed((collapsed) => !collapsed)}
-                  className="h-6 w-6 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer"
-                  title={aiReviewCollapsed ? "Show AI review details" : "Hide AI review details"}
-                >
-                  <ChevronDown size={13} className={`transition-transform duration-200 ${aiReviewCollapsed ? "-rotate-90" : ""}`} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAiReviewOpen(false)}
-                  className="h-6 w-6 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer"
-                  title="Close AI review"
-                >
-                  <X size={13} />
-                </button>
-              </div>
-            </div>
-            {!aiReviewCollapsed && (
-              <div className="max-h-80 overflow-y-auto p-3.5 text-xs leading-relaxed text-text-secondary space-y-2">
-                {aiReview.isPending ? (
-                  <div className="flex items-center gap-2 rounded-mac border border-accent-20 bg-accent-5 px-3 py-2.5 text-text-secondary">
-                    <RefreshCw size={13} className="animate-spin text-accent" />
-                    <span>Reviewing changes with AI...</span>
-                  </div>
-                ) : aiReview.isError ? (
-                  <div className="rounded-mac border border-[#ff453a]/25 bg-[#ff453a]/10 px-3 py-2 text-[#ff453a]">
-                    {aiReview.error instanceof Error ? aiReview.error.message : "AI review failed"}
-                  </div>
-                ) : aiReviewResult ? (
-                  aiReviewResult.split("\n").map((line, index) => <AIReviewLine key={index} line={line} />)
-                ) : (
-                  <span className="text-text-muted">No review result yet.</span>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleCommit}
-            disabled={!commitMessage.trim() || (staged.length === 0 && unstaged.length === 0) || committing || lintRunning}
-            className={`flex-1 h-8 inline-flex items-center justify-center gap-1.5 px-4 text-2xs font-semibold rounded-[5px] transition-all shadow-2xs cursor-pointer select-none ${commitMessage.trim() && (staged.length > 0 || unstaged.length > 0)
-              ? "bg-accent text-accent-fg hover:opacity-90 active:scale-[0.99] shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]"
-              : "bg-surface-3 text-text-muted opacity-40 cursor-not-allowed"
-              } ${committing || lintRunning ? "opacity-60" : ""}`}
-            title={
-              !commitMessage.trim()
-                ? "Enter a commit message"
-                : staged.length === 0 && unstaged.length === 0
-                  ? "No changes to commit"
-                  : staged.length === 0
-                    ? "Commit all changes"
-                    : "Commit (⌘↵)"
-            }
-          >
-            {lintRunning ? (
-              <RefreshCw size={12} className="animate-spin text-accent-fg" />
-            ) : (
-              <Check size={12} className={commitMessage.trim() && (staged.length > 0 || unstaged.length > 0) ? "text-accent-fg" : "text-text-muted"} />
-            )}
-            <span>{committing ? "Committing..." : lintRunning ? "Linting changes..." : unstaged.length > 0 ? "Commit All" : "Commit"}</span>
-          </button>
-        </div>
       </div>
 
       {reviewTarget && (
@@ -956,7 +955,7 @@ export default function WorkingTree() {
       {aiReviewModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setAiReviewModalOpen(false)}>
           <div
-            className="bg-surface-0 rounded-[6px] shadow-2xl border border-border-60 overflow-hidden w-[min(640px,92vw)] max-h-[82vh] flex flex-col animate-in zoom-in-95 duration-200"
+            className="bg-surface-0 rounded-[6px] shadow-2xl border border-border-60 overflow-hidden w-[min(900px,95vw)] h-[600px] max-h-[85vh] flex flex-col animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -977,8 +976,8 @@ export default function WorkingTree() {
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
-              <div className="flex gap-3 p-3.5 bg-gradient-to-br from-accent/5 to-surface-1 border border-accent-20 rounded-[4px]">
+            <div className="flex-1 p-4 space-y-4 min-h-0 flex flex-col">
+              <div className="flex gap-3 p-3.5 bg-gradient-to-br from-accent/5 to-surface-1 border border-accent-20 rounded-[4px] shrink-0">
                 <div className="h-7 w-7 rounded-full bg-accent/15 border border-accent/20 flex items-center justify-center text-accent shrink-0">
                   <Sparkles size={13} />
                 </div>
@@ -990,7 +989,7 @@ export default function WorkingTree() {
                 </div>
               </div>
 
-              <div className="text-[11px] text-text-secondary bg-surface-1 border border-border-30 rounded-[4px] p-4 whitespace-pre-wrap leading-relaxed max-h-[380px] overflow-y-auto font-sans">
+              <div className="flex-1 text-[11px] text-text-secondary bg-surface-1 border border-border-30 rounded-[4px] p-4 whitespace-pre-wrap leading-relaxed overflow-y-auto font-sans">
                 {aiReviewResult ? (
                   aiReviewResult.split("\n").map((line, index) => <AIReviewLine key={index} line={line} />)
                 ) : (
