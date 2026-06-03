@@ -169,6 +169,16 @@
 - [ ] Reuse existing settings keys so Settings dialog and onboarding stay in sync
 - [ ] Tests: first launch opens onboarding, skip persists, finish saves settings, rerun loads current settings
 
+### Pre-Commit Lint Gate (Code + Commit Message Lint)
+- [ ] Setup Configurable Settings & States (`stores/ui.ts` / `stores/repo.ts` / `SettingsDialog.tsx`)
+- [ ] Implement Commit Message Lint Engine (`lib/commit-lint.ts` with Conventional Commits regex + 7 rules)
+- [ ] Add Inline Commit message feedback & Character Counter in CommitForm
+- [ ] Implement Rust backend for Linter detection & Execution (`commands/lint.rs`)
+- [ ] Connect Rust linting commands to Frontend via API layer and query hooks (`api/tauri.ts`, `queries/useLint.ts`)
+- [ ] Design and build `LintWarningDialog` (displaying message issues & ESLint/Biome/Ruff code warnings)
+- [ ] Integrate Pre-Commit Gate to handleCommit in `WorkingTree.tsx` and `TrayPanelView.tsx`
+- [ ] Add Unit Tests for Lint engine and UI states
+
 ---
 
 ## Phase 2: Advanced Git + AI Features (after Phase 1 ships)

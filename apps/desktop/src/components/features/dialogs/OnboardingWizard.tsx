@@ -34,6 +34,7 @@ interface OnboardingWizardProps {
 const LS_KEY_AI_API_KEY = "gitflowAiApiKey";
 const LS_KEY_AI_API_URL = "gitflowAiApiUrl";
 const LS_KEY_AI_MODEL = "gitflowAiModel";
+const LS_KEY_AI_REVIEW_MODEL = "gitflowAiReviewModel";
 const LS_KEY_GITHUB_TOKEN = "gitflowGithubToken";
 const LS_KEY_GITLAB_TOKEN = "gitflowGitlabToken";
 const LS_KEY_GITLAB_HOST = "gitflowGitlabHost";
@@ -48,7 +49,8 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
   // AI state
   const [aiApiKey, setAiApiKey] = useState(() => localStorage.getItem(LS_KEY_AI_API_KEY) || "");
   const [aiApiUrl, setAiApiUrl] = useState(() => localStorage.getItem(LS_KEY_AI_API_URL) || "https://api.openai.com/v1");
-  const [aiModel, setAiModel] = useState(() => localStorage.getItem(LS_KEY_AI_MODEL) || "gpt-4o");
+  const [aiModel, setAiModel] = useState(() => localStorage.getItem(LS_KEY_AI_MODEL) || "claude-sonnet-4-20250514");
+  const [aiReviewModel, setAiReviewModel] = useState(() => localStorage.getItem(LS_KEY_AI_REVIEW_MODEL) || localStorage.getItem(LS_KEY_AI_MODEL) || "claude-sonnet-4-20250514");
   const [showApiKey, setShowApiKey] = useState(false);
 
   // Git host state
@@ -76,6 +78,7 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
     else localStorage.removeItem(LS_KEY_AI_API_KEY);
     localStorage.setItem(LS_KEY_AI_API_URL, aiApiUrl);
     localStorage.setItem(LS_KEY_AI_MODEL, aiModel);
+    localStorage.setItem(LS_KEY_AI_REVIEW_MODEL, aiReviewModel);
     // Git host
     if (githubToken) localStorage.setItem(LS_KEY_GITHUB_TOKEN, githubToken);
     else localStorage.removeItem(LS_KEY_GITHUB_TOKEN);
@@ -185,6 +188,8 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
               setAiApiUrl={setAiApiUrl}
               aiModel={aiModel}
               setAiModel={setAiModel}
+              aiReviewModel={aiReviewModel}
+              setAiReviewModel={setAiReviewModel}
               showApiKey={showApiKey}
               setShowApiKey={setShowApiKey}
             />
@@ -353,6 +358,8 @@ interface AIStepProps {
   setAiApiUrl: (v: string) => void;
   aiModel: string;
   setAiModel: (v: string) => void;
+  aiReviewModel: string;
+  setAiReviewModel: (v: string) => void;
   showApiKey: boolean;
   setShowApiKey: (v: boolean) => void;
 }
@@ -361,6 +368,7 @@ function AIStep({
   aiApiKey, setAiApiKey,
   aiApiUrl, setAiApiUrl,
   aiModel, setAiModel,
+  aiReviewModel, setAiReviewModel,
   showApiKey, setShowApiKey,
 }: AIStepProps) {
   return (
@@ -403,12 +411,26 @@ function AIStep({
           </div>
         </div>
         <div>
-          <label className="text-2xs font-medium text-text-secondary block mb-1">Model</label>
+          <label className="text-2xs font-medium text-text-secondary block mb-1">
+            Model — Commit Messages
+          </label>
           <input
             type="text"
             value={aiModel}
             onChange={(e) => setAiModel(e.target.value)}
-            placeholder="gpt-4o"
+            placeholder="claude-sonnet-4-20250514"
+            className="w-full h-7 px-2.5 text-xs bg-surface-1 border border-border rounded-md text-text-primary placeholder:text-text-muted/60 focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none"
+          />
+        </div>
+        <div>
+          <label className="text-2xs font-medium text-text-secondary block mb-1">
+            Model — Code Review & Explain
+          </label>
+          <input
+            type="text"
+            value={aiReviewModel}
+            onChange={(e) => setAiReviewModel(e.target.value)}
+            placeholder="claude-sonnet-4-20250514"
             className="w-full h-7 px-2.5 text-xs bg-surface-1 border border-border rounded-md text-text-primary placeholder:text-text-muted/60 focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none"
           />
         </div>
