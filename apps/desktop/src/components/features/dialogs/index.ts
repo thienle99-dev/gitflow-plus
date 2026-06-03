@@ -13,4 +13,5 @@ export { default as FeatureGuideDialog } from "./FeatureGuideDialog";
 export { default as OnboardingWizard } from "./OnboardingWizard";
 export { default as LintWarningDialog } from "./LintWarningDialog";
 export { default as RiskSummaryDialog } from "./RiskSummaryDialog";
+export { default as BranchCompareDialog } from "./BranchCompareDialog";
 export { isOnboardingComplete, resetOnboarding } from "./OnboardingWizard";

@@ -267,7 +267,7 @@
 - [ ] Custom aliases — user define git aliases, show trong toolbar/menu
 - [ ] Commit message templates per project (snippets)
 - [ ] Activity heatmap — contribution graph (như GitHub profile)
-- [ ] Branch comparison — so sánh 2 branches side-by-side (ahead/behind + diff)
+- [x] Branch comparison — so sánh 2 branches side-by-side (ahead/behind + diff)
 - [ ] Gitignore editor — visual editor cho `.gitignore`, browse files, add patterns, test matching
 - [ ] Patch export/import — export commits thành `.patch` file, apply patch từ file
 - [x] Git LFS support — detect LFS-tracked files, show LFS status, hỗ trợ lfs pull/push

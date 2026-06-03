@@ -12,7 +12,7 @@ import Sidebar from "@/components/features/sidebar/Sidebar";
 import CommitGraph from "@/components/features/graph/CommitGraph";
 import RightPanel from "@/components/layout/RightPanel";
 import BottomBar from "@/components/layout/BottomBar";
-import { SearchDialog, KeyboardShortcutsModal, CherryPickDialog, SettingsDialog, AnalyticsDialog, CreateBranchDialog, MergeRequestDialog, MergePreviewDialog, CloneDialog, FeatureGuideDialog, OnboardingWizard, isOnboardingComplete } from "@/components/features/dialogs";
+import { SearchDialog, KeyboardShortcutsModal, CherryPickDialog, SettingsDialog, AnalyticsDialog, CreateBranchDialog, MergeRequestDialog, MergePreviewDialog, CloneDialog, FeatureGuideDialog, OnboardingWizard, isOnboardingComplete, BranchCompareDialog } from "@/components/features/dialogs";
 import ErrorBoundary from "@/components/ui/feedback/ErrorBoundary";
 import { AlertOctagon, RefreshCw, Trash2 } from "lucide-react";
 
@@ -23,7 +23,9 @@ export default function MainLayout() {
   const closeDialog = useUIStore((s) => s.closeDialog);
   const selectedCommit = useUIStore((s) => s.selectedCommit);
   const mergeTargetBranch = useUIStore((s) => s.mergeTargetBranch);
+  const compareBranchTarget = useUIStore((s) => s.compareBranchTarget);
   const repoPath = useRepoStore((s) => s.repoPath);
+  const selectedRef = useRepoStore((s) => s.selectedRef);
   const openRepo = useRepoStore((s) => s.openRepo);
   const closeRepo = useRepoStore((s) => s.closeRepo);
   const toggleTheme = useRepoStore((s) => s.toggleTheme);
@@ -308,6 +310,13 @@ export default function MainLayout() {
     analytics: <AnalyticsDialog open={true} onClose={closeDialog} />,
     "merge-request": <MergeRequestDialog onClose={closeDialog} />,
     merge: <MergePreviewDialog initialBranch={mergeTargetBranch ?? undefined} onClose={closeDialog} />,
+    "branch-compare": compareBranchTarget ? (
+      <BranchCompareDialog
+        baseBranch={selectedRef ?? ""}
+        targetBranch={compareBranchTarget}
+        onClose={closeDialog}
+      />
+    ) : null,
     "clone": <CloneDialog open={true} onClose={closeDialog} />,
     "feature-guide": <FeatureGuideDialog open={true} onClose={closeDialog} />,
   };
@@ -319,6 +328,8 @@ export default function MainLayout() {
           ? "h-[min(760px,88vh)] w-[min(1180px,92vw)]"
           : overlayDialog === "settings" || overlayDialog === "ai-settings" || overlayDialog === "accounts-settings"
             ? "h-[min(680px,88vh)] w-[min(900px,90vw)]"
+          : overlayDialog === "branch-compare"
+            ? "h-[min(700px,85vh)] w-[min(900px,92vw)]"
           : "min-w-[480px] max-w-[600px] max-h-[80vh]"
       }`}>
         {dialogComponents[overlayDialog] || (

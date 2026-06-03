@@ -23,6 +23,10 @@ import {
   RotateCcw,
   Sparkles,
   User,
+  ChevronDown,
+  Folder,
+  List,
+  FolderTree,
 } from "lucide-react";
 import { useAICommitExplain, useAICommitReview } from "@/queries/useAI";
 import { AI_REVIEW_MODE_OPTIONS, readLastAIReviewMode, saveLastAIReviewMode, type AIReviewMode } from "@/lib/ai";
@@ -44,6 +48,50 @@ export default function CommitDetail() {
   const [reviewMode, setReviewMode] = useState<AIReviewMode>(() => readLastAIReviewMode());
   const aiExplain = useAICommitExplain();
   const aiReview = useAICommitReview();
+
+  const [isTreeView, setIsTreeView] = useState(() => {
+    return localStorage.getItem("gitflowTreeViewMode") !== "false";
+  });
+
+  const toggleTreeView = () => {
+    setIsTreeView((prev) => {
+      const next = !prev;
+      localStorage.setItem("gitflowTreeViewMode", next ? "true" : "false");
+      window.dispatchEvent(new Event("gitflow-viewmode-updated"));
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    const handleViewModeUpdate = () => {
+      setIsTreeView(localStorage.getItem("gitflowTreeViewMode") !== "false");
+    };
+    window.addEventListener("gitflow-viewmode-updated", handleViewModeUpdate);
+    return () => {
+      window.removeEventListener("gitflow-viewmode-updated", handleViewModeUpdate);
+    };
+  }, []);
+
+  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
+
+  const handleToggleFolder = (folderPath: string) => {
+    setCollapsedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderPath)) {
+        next.delete(folderPath);
+      } else {
+        next.add(folderPath);
+      }
+      return next;
+    });
+  };
+
+  const treeRoot = useMemo(() => {
+    if (isTreeView && changedFiles) {
+      return buildCommitFileTree(changedFiles);
+    }
+    return null;
+  }, [changedFiles, isTreeView]);
 
   // Reset explanation & review when commit changes
   useEffect(() => {
@@ -280,60 +328,86 @@ export default function CommitDetail() {
       )}
 
       <div className="flex-1 px-3 py-2">
-        <div className="text-xs font-semibold text-text-primary mb-2">
-          Changed Files{changedFiles ? ` (${changedFiles.length})` : ""}
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-xs font-semibold text-text-primary">
+            Changed Files{changedFiles ? ` (${changedFiles.length})` : ""}
+          </div>
+          {changedFiles && changedFiles.length > 0 && (
+            <button
+              className={`h-6 w-6 inline-flex items-center justify-center rounded-md transition-colors ${
+                isTreeView
+                  ? "text-accent bg-accent-10 hover:bg-accent-20"
+                  : "text-text-muted hover:text-text-primary hover:bg-surface-2"
+              }`}
+              onClick={toggleTreeView}
+              title={isTreeView ? "Switch to List View" : "Switch to Tree View"}
+            >
+              {isTreeView ? <FolderTree size={13} /> : <List size={13} />}
+            </button>
+          )}
         </div>
         {filesLoading ? (
           <div className="text-2xs text-text-muted">Loading files...</div>
         ) : filesError ? (
           <div className="text-2xs text-[#ff375f]">Unable to load changed files</div>
         ) : changedFiles && changedFiles.length > 0 ? (
-          <div className="space-y-[1px]">
-            {changedFiles.map((file) => {
-              const displayPath = file.old_path ? `${file.old_path} -> ${file.path}` : file.path;
-              const fileName = getFileName(file.path);
-              const folder = file.old_path
-                ? `${getFolder(file.old_path)} -> ${getFolder(file.path)}`
-                : getFolder(file.path);
-              const isSelected = selectedFile === file.path;
+          isTreeView && treeRoot ? (
+            <CommitFileTreeRenderer
+              node={treeRoot}
+              depth={0}
+              selectedFile={selectedFile}
+              selectFile={selectFile}
+              collapsedFolders={collapsedFolders}
+              onToggleFolder={handleToggleFolder}
+            />
+          ) : (
+            <div className="space-y-[1px]">
+              {changedFiles.map((file) => {
+                const displayPath = file.old_path ? `${file.old_path} -> ${file.path}` : file.path;
+                const fileName = getFileName(file.path);
+                const folder = file.old_path
+                  ? `${getFolder(file.old_path)} -> ${getFolder(file.path)}`
+                  : getFolder(file.path);
+                const isSelected = selectedFile === file.path;
 
-              return (
-                <div
-                  key={`${file.status}:${file.old_path || ""}:${file.path}`}
-                  className={`tree-item w-full grid grid-cols-[16px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5 text-left transition-all ${
-                    isSelected ? "selected" : ""
-                  }`}
-                  onClick={() => selectFile(file.path)}
-                  title={`${statusText(file.status)}: ${displayPath}`}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      selectFile(file.path);
-                    }
-                  }}
-                >
-                  <span className="h-4 w-4 flex items-center justify-center shrink-0">
-                    {fileIcon(file.path, file.status)}
-                  </span>
-                  <span className="min-w-0 flex flex-col justify-center">
-                    <span className={`block text-xs font-medium text-current truncate leading-4 ${file.status === "deleted" ? "line-through opacity-60" : ""}`}>
-                      {fileName}
+                return (
+                  <div
+                    key={`${file.status}:${file.old_path || ""}:${file.path}`}
+                    className={`tree-item w-full grid grid-cols-[16px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5 text-left transition-all ${
+                      isSelected ? "selected" : ""
+                    }`}
+                    onClick={() => selectFile(file.path)}
+                    title={`${statusText(file.status)}: ${displayPath}`}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        selectFile(file.path);
+                      }
+                    }}
+                  >
+                    <span className="h-4 w-4 flex items-center justify-center shrink-0">
+                      {fileIcon(file.path, file.status)}
                     </span>
-                    {folder && (
-                      <span className={`block text-[10px] truncate leading-3 ${isSelected ? "text-accent-fg opacity-75" : "text-text-muted"}`}>
-                        {folder}
+                    <span className="min-w-0 flex flex-col justify-center">
+                      <span className={`block text-xs font-medium text-current truncate leading-4 ${file.status === "deleted" ? "line-through opacity-60" : ""}`}>
+                        {fileName}
                       </span>
-                    )}
-                  </span>
-                  <span className="flex items-center justify-end min-w-[20px]">
-                    <StatusBadge status={file.status} selected={isSelected} />
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+                      {folder && (
+                        <span className={`block text-[10px] truncate leading-3 ${isSelected ? "text-accent-fg opacity-75" : "text-text-muted"}`}>
+                          {folder}
+                        </span>
+                      )}
+                    </span>
+                    <span className="flex items-center justify-end min-w-[20px]">
+                      <StatusBadge status={file.status} selected={isSelected} />
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )
         ) : (
           <div className="text-2xs text-text-muted">No changed files</div>
         )}
@@ -793,4 +867,175 @@ function renderAIResult(text: string): React.ReactNode[] {
   if (inCodeBlock) flushCodeBlock();
 
   return elements;
+}
+
+interface CommitFileTreeNode {
+  type: "file";
+  name: string;
+  path: string;
+  file: CommitFileChange;
+}
+
+interface CommitFolderTreeNode {
+  type: "folder";
+  name: string;
+  path: string;
+  children: { [key: string]: CommitFileTreeNode | CommitFolderTreeNode };
+}
+
+interface CommitFileChange {
+  path: string;
+  old_path?: string | null;
+  status: string;
+}
+
+function buildCommitFileTree(files: CommitFileChange[]): CommitFolderTreeNode {
+  const root: CommitFolderTreeNode = {
+    type: "folder",
+    name: "",
+    path: "",
+    children: {},
+  };
+
+  for (const file of files) {
+    const parts = file.path.split("/");
+    let current = root;
+
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      const isLast = i === parts.length - 1;
+      const currentPath = parts.slice(0, i + 1).join("/");
+
+      if (isLast) {
+        current.children[part] = {
+          type: "file",
+          name: part,
+          path: file.path,
+          file,
+        };
+      } else {
+        if (!current.children[part]) {
+          current.children[part] = {
+            type: "folder",
+            name: part,
+            path: currentPath,
+            children: {},
+          };
+        }
+        current = current.children[part] as CommitFolderTreeNode;
+      }
+    }
+  }
+
+  return root;
+}
+
+interface CommitFileTreeRendererProps {
+  node: CommitFolderTreeNode;
+  depth: number;
+  selectedFile: string | null;
+  selectFile: (path: string) => void;
+  collapsedFolders: Set<string>;
+  onToggleFolder: (path: string) => void;
+}
+
+function CommitFileTreeRenderer({
+  node,
+  depth,
+  selectedFile,
+  selectFile,
+  collapsedFolders,
+  onToggleFolder,
+}: CommitFileTreeRendererProps) {
+  const sortedKeys = Object.keys(node.children).sort((a, b) => {
+    const childA = node.children[a];
+    const childB = node.children[b];
+    if (childA.type !== childB.type) {
+      return childA.type === "folder" ? -1 : 1;
+    }
+    return a.localeCompare(b);
+  });
+
+  return (
+    <div className="space-y-[1px]">
+      {sortedKeys.map((key) => {
+        const child = node.children[key];
+        if (child.type === "folder") {
+          const isCollapsed = collapsedFolders.has(child.path);
+          return (
+            <div key={child.path}>
+              <div
+                className="tree-item group w-full flex items-center gap-1.5 px-3 py-1 hover:bg-surface-2 cursor-pointer text-left select-none text-xs text-text-secondary"
+                style={{ paddingLeft: `${depth * 16 + 12}px` }}
+                onClick={() => onToggleFolder(child.path)}
+              >
+                <span
+                  className="h-3.5 w-3.5 flex items-center justify-center shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleFolder(child.path);
+                  }}
+                >
+                  <ChevronDown
+                    size={12}
+                    className={`text-text-muted transition-transform duration-150 shrink-0 ${isCollapsed ? "-rotate-90" : ""}`}
+                  />
+                </span>
+
+                <Folder size={12} className="text-accent shrink-0" />
+                <span className="truncate font-semibold text-text-primary flex-1">{child.name}</span>
+              </div>
+              {!isCollapsed && (
+                <CommitFileTreeRenderer
+                  node={child}
+                  depth={depth + 1}
+                  selectedFile={selectedFile}
+                  selectFile={selectFile}
+                  collapsedFolders={collapsedFolders}
+                  onToggleFolder={onToggleFolder}
+                />
+              )}
+            </div>
+          );
+        } else {
+          const displayPath = child.file.old_path ? `${child.file.old_path} -> ${child.file.path}` : child.file.path;
+          const isSelected = selectedFile === child.file.path;
+          return (
+            <div
+              key={`${child.file.status}:${child.file.old_path || ""}:${child.file.path}`}
+              style={{ paddingLeft: `${depth * 16}px` }}
+            >
+              <div
+                className={`tree-item w-full grid grid-cols-[16px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5 text-left transition-all ${
+                  isSelected ? "selected" : ""
+                }`}
+                onClick={() => selectFile(child.file.path)}
+                title={`${statusText(child.file.status)}: ${displayPath}`}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    selectFile(child.file.path);
+                  }
+                }}
+              >
+                <span className="h-4 w-4 flex items-center justify-center shrink-0">
+                  {fileIcon(child.file.path, child.file.status)}
+                </span>
+                <span className="min-w-0 flex flex-col justify-center">
+                  <span className={`block text-xs font-medium text-current truncate leading-4 ${child.file.status === "deleted" ? "line-through opacity-60" : ""}`}>
+                    {child.name}
+                  </span>
+                </span>
+                <span className="flex items-center justify-end min-w-[20px]">
+                  <StatusBadge status={child.file.status} selected={isSelected} />
+                </span>
+              </div>
+            </div>
+          );
+        }
+      })}
+    </div>
+  );
 }

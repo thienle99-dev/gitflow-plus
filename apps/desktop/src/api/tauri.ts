@@ -34,6 +34,18 @@ export interface Branch {
   remote: string | null;
 }
 
+export interface BranchComparison {
+  ahead: number;
+  behind: number;
+  files: BranchFileChange[];
+}
+
+export interface BranchFileChange {
+  path: string;
+  old_path: string | null;
+  status: string;
+}
+
 export interface RepoInfo {
   path: string;
   current_branch: string;
@@ -215,6 +227,10 @@ export const api = {
       invoke<string>("checkout_branch", { path, name }),
     delete: (path: string, name: string, force?: boolean) =>
       invoke<string>("delete_branch", { path, name, force: force ?? false }),
+    compare: (path: string, base: string, target: string) =>
+      invoke<BranchComparison>("compare_branches", { path, base, target }),
+    fileDiff: (path: string, base: string, target: string, filePath: string, context?: number) =>
+      invoke<string>("branch_file_diff", { path, base, target, filePath, context: context ?? null }),
   },
 
   commit: {

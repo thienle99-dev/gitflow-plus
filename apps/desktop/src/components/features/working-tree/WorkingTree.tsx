@@ -40,6 +40,9 @@ import {
   Undo2,
   X,
   Maximize2,
+  Folder,
+  List,
+  FolderTree,
 } from "lucide-react";
 
 export default function WorkingTree() {
@@ -93,6 +96,29 @@ export default function WorkingTree() {
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const lastClickedRef = useRef<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const [isTreeView, setIsTreeView] = useState(() => {
+    return localStorage.getItem("gitflowTreeViewMode") !== "false";
+  });
+
+  const toggleTreeView = () => {
+    setIsTreeView((prev) => {
+      const next = !prev;
+      localStorage.setItem("gitflowTreeViewMode", next ? "true" : "false");
+      window.dispatchEvent(new Event("gitflow-viewmode-updated"));
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    const handleViewModeUpdate = () => {
+      setIsTreeView(localStorage.getItem("gitflowTreeViewMode") !== "false");
+    };
+    window.addEventListener("gitflow-viewmode-updated", handleViewModeUpdate);
+    return () => {
+      window.removeEventListener("gitflow-viewmode-updated", handleViewModeUpdate);
+    };
+  }, []);
 
   // Pre-Commit Gate States
   const [lintWarningOpen, setLintWarningOpen] = useState(false);
@@ -573,6 +599,17 @@ export default function WorkingTree() {
         </div>
         <div className="flex items-center gap-1.5">
           <button
+            className={`h-6 w-6 inline-flex items-center justify-center rounded-md transition-colors ${
+              isTreeView
+                ? "text-accent bg-accent-10 hover:bg-accent-20"
+                : "text-text-muted hover:text-text-primary hover:bg-surface-2"
+            }`}
+            onClick={toggleTreeView}
+            title={isTreeView ? "Switch to List View" : "Switch to Tree View"}
+          >
+            {isTreeView ? <FolderTree size={13} /> : <List size={13} />}
+          </button>
+          <button
             className="h-6 w-6 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
             onClick={invalidate}
             title="Refresh changes"
@@ -621,6 +658,7 @@ export default function WorkingTree() {
           onToggleOpen={() => setStagedOpen((open) => !open)}
           onMenu={(x, y, file) => setCtxMenu({ x, y, file, stage: "staged" })}
           onFileMultiClick={handleFileClick}
+          isTreeView={isTreeView}
         />
         <ChangeSection
           title="Unstaged files"
@@ -639,6 +677,7 @@ export default function WorkingTree() {
           onToggleOpen={() => setUnstagedOpen((open) => !open)}
           onMenu={(x, y, file) => setCtxMenu({ x, y, file, stage: "unstaged" })}
           onFileMultiClick={handleFileClick}
+          isTreeView={isTreeView}
         />
         {selectedFiles.size > 0 && (
           <div className="flex items-center gap-2 px-3 py-1.5 bg-accent-5 border-b border-accent-20 shrink-0">
@@ -1059,6 +1098,192 @@ export default function WorkingTree() {
   );
 }
 
+interface FileTreeNode {
+  type: "file";
+  name: string;
+  path: string;
+  file: FileChange;
+}
+
+interface FolderTreeNode {
+  type: "folder";
+  name: string;
+  path: string;
+  children: { [key: string]: FileTreeNode | FolderTreeNode };
+}
+
+function buildFileTree(files: FileChange[]): FolderTreeNode {
+  const root: FolderTreeNode = {
+    type: "folder",
+    name: "",
+    path: "",
+    children: {},
+  };
+
+  for (const file of files) {
+    const parts = file.path.split("/");
+    let current = root;
+
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      const isLast = i === parts.length - 1;
+      const currentPath = parts.slice(0, i + 1).join("/");
+
+      if (isLast) {
+        current.children[part] = {
+          type: "file",
+          name: part,
+          path: file.path,
+          file,
+        };
+      } else {
+        if (!current.children[part]) {
+          current.children[part] = {
+            type: "folder",
+            name: part,
+            path: currentPath,
+            children: {},
+          };
+        }
+        current = current.children[part] as FolderTreeNode;
+      }
+    }
+  }
+
+  return root;
+}
+
+interface FileTreeRendererProps {
+  node: FolderTreeNode;
+  depth: number;
+  checked: boolean;
+  selectedFile: string | null;
+  selectedStage: "staged" | "unstaged" | null;
+  stage: "staged" | "unstaged";
+  multiSelectedFiles: Set<string>;
+  onToggleFile: (path: string) => void;
+  onSelect: (path: string) => void;
+  onAIInlineReview: (path: string) => void;
+  onMenu: (x: number, y: number, file: FileChange) => void;
+  onFileMultiClick: (path: string, e: React.MouseEvent) => void;
+  collapsedFolders: Set<string>;
+  onToggleFolder: (path: string) => void;
+}
+
+function FileTreeRenderer({
+  node,
+  depth,
+  checked,
+  selectedFile,
+  selectedStage,
+  stage,
+  multiSelectedFiles,
+  onToggleFile,
+  onSelect,
+  onAIInlineReview,
+  onMenu,
+  onFileMultiClick,
+  collapsedFolders,
+  onToggleFolder,
+}: FileTreeRendererProps) {
+  const sortedKeys = Object.keys(node.children).sort((a, b) => {
+    const childA = node.children[a];
+    const childB = node.children[b];
+    if (childA.type !== childB.type) {
+      return childA.type === "folder" ? -1 : 1;
+    }
+    return a.localeCompare(b);
+  });
+
+  return (
+    <div className="space-y-[1px]">
+      {sortedKeys.map((key) => {
+        const child = node.children[key];
+        if (child.type === "folder") {
+          const isCollapsed = collapsedFolders.has(child.path);
+          return (
+            <div key={child.path}>
+              <div
+                className="tree-item group w-full flex items-center gap-1.5 px-3 py-1 hover:bg-surface-2 cursor-pointer text-left select-none text-xs text-text-secondary"
+                style={{ paddingLeft: `${depth * 16 + 12}px` }}
+                onClick={() => onToggleFolder(child.path)}
+              >
+                <span
+                  className="h-3.5 w-3.5 flex items-center justify-center shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleFolder(child.path);
+                  }}
+                >
+                  <ChevronDown
+                    size={12}
+                    className={`text-text-muted transition-transform duration-150 shrink-0 ${isCollapsed ? "-rotate-90" : ""}`}
+                  />
+                </span>
+
+                <Folder size={12} className="text-accent shrink-0" />
+                <span className="truncate font-semibold text-text-primary flex-1">{child.name}</span>
+
+                <span
+                  className={`h-3.5 w-3.5 rounded-[4px] border flex items-center justify-center transition-all cursor-pointer mr-1 opacity-0 group-hover:opacity-100 ${checked
+                    ? "bg-accent border-accent text-accent-fg"
+                    : "border-border text-transparent hover:border-text-secondary hover:bg-surface-2"
+                  }`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleFile(child.path);
+                  }}
+                  title={checked ? "Unstage folder" : "Stage folder"}
+                >
+                  {checked && <Check size={9} strokeWidth={3.5} />}
+                </span>
+              </div>
+              {!isCollapsed && (
+                <FileTreeRenderer
+                  node={child}
+                  depth={depth + 1}
+                  checked={checked}
+                  selectedFile={selectedFile}
+                  selectedStage={selectedStage}
+                  stage={stage}
+                  multiSelectedFiles={multiSelectedFiles}
+                  onToggleFile={onToggleFile}
+                  onSelect={onSelect}
+                  onAIInlineReview={onAIInlineReview}
+                  onMenu={onMenu}
+                  onFileMultiClick={onFileMultiClick}
+                  collapsedFolders={collapsedFolders}
+                  onToggleFolder={onToggleFolder}
+                />
+              )}
+            </div>
+          );
+        } else {
+          return (
+            <div
+              key={`${stage}:${child.path}`}
+              style={{ paddingLeft: `${depth * 16}px` }}
+            >
+              <ChangeRow
+                file={child.file}
+                checked={checked}
+                selected={selectedFile === child.path && selectedStage === stage}
+                multiSelected={multiSelectedFiles.has(child.path)}
+                onSelect={() => onSelect(child.path)}
+                onToggle={() => onToggleFile(child.path)}
+                onAIInlineReview={() => onAIInlineReview(child.path)}
+                onMenu={(x, y) => onMenu(x, y, child.file)}
+                onMultiClick={(e) => onFileMultiClick(child.path, e)}
+                hideFolder
+              />
+            </div>
+          );
+        }
+      })}
+    </div>
+  );
+}
+
 interface ChangeSectionProps {
   title: string;
   checked: boolean;
@@ -1077,6 +1302,7 @@ interface ChangeSectionProps {
   onMenu: (x: number, y: number, file: FileChange) => void;
   onFileMultiClick: (path: string, e: React.MouseEvent) => void;
   grow?: boolean;
+  isTreeView?: boolean;
 }
 
 function ChangeSection({
@@ -1097,7 +1323,29 @@ function ChangeSection({
   onMenu,
   onFileMultiClick,
   grow,
+  isTreeView,
 }: ChangeSectionProps) {
+  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
+
+  const handleToggleFolder = (folderPath: string) => {
+    setCollapsedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderPath)) {
+        next.delete(folderPath);
+      } else {
+        next.add(folderPath);
+      }
+      return next;
+    });
+  };
+
+  const treeRoot = useMemo(() => {
+    if (isTreeView) {
+      return buildFileTree(files);
+    }
+    return null;
+  }, [files, isTreeView]);
+
   return (
     <div className={`border-b border-border-60 min-h-0 flex flex-col ${grow && open ? "flex-1" : "shrink-0"} ${!grow && open ? "max-h-[42%]" : ""}`}>
       <div className="h-9 px-3 flex items-center gap-2 bg-surface-1/55 shrink-0">
@@ -1134,6 +1382,23 @@ function ChangeSection({
         <div className="flex-1 overflow-y-auto py-1.5">
           {files.length === 0 ? (
             <div className="px-5 py-4 text-xs text-text-muted/80">{empty}</div>
+          ) : isTreeView && treeRoot ? (
+            <FileTreeRenderer
+              node={treeRoot}
+              depth={0}
+              checked={checked}
+              selectedFile={selectedFile}
+              selectedStage={selectedStage}
+              stage={stage}
+              multiSelectedFiles={multiSelectedFiles}
+              onToggleFile={onToggleFile}
+              onSelect={onSelect}
+              onAIInlineReview={onAIInlineReview}
+              onMenu={onMenu}
+              onFileMultiClick={onFileMultiClick}
+              collapsedFolders={collapsedFolders}
+              onToggleFolder={handleToggleFolder}
+            />
           ) : (
             files.map((file) => (
               <ChangeRow
@@ -1166,6 +1431,7 @@ interface ChangeRowProps {
   onAIInlineReview: () => void;
   onMenu: (x: number, y: number) => void;
   onMultiClick?: (e: React.MouseEvent) => void;
+  hideFolder?: boolean;
 }
 
 function StatusBadge({ status, selected }: { status: string; selected: boolean }) {
@@ -1202,7 +1468,7 @@ function StatusBadge({ status, selected }: { status: string; selected: boolean }
   );
 }
 
-function ChangeRow({ file, checked, selected, multiSelected, onSelect, onToggle, onAIInlineReview, onMenu, onMultiClick }: ChangeRowProps) {
+function ChangeRow({ file, checked, selected, multiSelected, onSelect, onToggle, onAIInlineReview, onMenu, onMultiClick, hideFolder }: ChangeRowProps) {
   const fileName = getFileName(file.path);
   const folder = getFolder(file.path);
 
@@ -1256,7 +1522,7 @@ function ChangeRow({ file, checked, selected, multiSelected, onSelect, onToggle,
         <span className={`block text-xs font-medium text-current truncate leading-4 ${file.status === "deleted" ? "line-through opacity-60" : ""}`}>
           {fileName}
         </span>
-        {folder && (
+        {!hideFolder && folder && (
           <span className={`block text-[10px] truncate leading-3 ${selected ? "text-accent-fg opacity-75" : "text-text-muted"}`}>
             {folder}
           </span>

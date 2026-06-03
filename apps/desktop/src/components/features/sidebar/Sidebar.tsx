@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useGitBranches } from "@/queries/useGitLog";
@@ -32,6 +32,7 @@ export default function Sidebar() {
   const selectedFile = useUIStore((s) => s.selectedFile);
   const openDialogState = useUIStore((s) => s.openDialog);
   const setMergeTargetBranch = useUIStore((s) => s.setMergeTargetBranch);
+  const setCompareBranchTarget = useUIStore((s) => s.setCompareBranchTarget);
   const { data: branches } = useGitBranches(repoPath);
   const { data: tags } = useTagList(repoPath);
   const { data: submodules } = useSubmoduleList(repoPath);
@@ -65,6 +66,28 @@ export default function Sidebar() {
 
   const localBranches = branches?.filter((b) => !b.remote) || [];
   const remoteBranches = branches?.filter((b) => b.remote) || [];
+
+  const [collapsedBranchFolders, setCollapsedBranchFolders] = useState<Set<string>>(new Set());
+
+  const handleToggleBranchFolder = (folderPath: string) => {
+    setCollapsedBranchFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderPath)) {
+        next.delete(folderPath);
+      } else {
+        next.add(folderPath);
+      }
+      return next;
+    });
+  };
+
+  const localBranchTree = useMemo(() => {
+    return buildBranchTree(localBranches);
+  }, [localBranches]);
+
+  const remoteBranchTree = useMemo(() => {
+    return buildBranchTree(remoteBranches);
+  }, [remoteBranches]);
 
   const handleCheckout = async (name: string) => {
     try {
@@ -255,26 +278,16 @@ export default function Sidebar() {
             <GitBranch size={12} className={!selectedRef ? "text-accent" : "text-text-secondary"} />
             <span className="min-w-0 flex-1 truncate text-xs">All Branches</span>
           </div>
-          {localBranches.map((b) => (
-            <div
-              key={b.name}
-              className={`tree-item flex items-center gap-2 px-3 py-[3px] mx-1 ${selectedRef === b.name ? "selected" : ""}`}
-              onClick={() => selectRef(b.name)}
-              onDoubleClick={() => handleCheckout(b.name)}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                setBranchCtxMenu({ branch: b.name, x: e.clientX, y: e.clientY });
-              }}
-            >
-              <GitBranch size={12} className={selectedRef === b.name ? "text-accent" : b.current ? "text-[#30d158]" : "text-text-secondary"} />
-              <span className={`min-w-0 flex-1 truncate text-xs ${b.current ? "font-semibold text-text-primary" : "text-text-secondary"}`}>{b.name}</span>
-              {b.current && (
-                <span className="shrink-0 rounded bg-[#30d158]/10 px-1 py-0.5 text-[9px] font-bold text-[#30d158] border border-[#30d158]/20">
-                  HEAD
-                </span>
-              )}
-            </div>
-          ))}
+          <BranchTreeRenderer
+            node={localBranchTree}
+            depth={0}
+            selectedRef={selectedRef}
+            selectRef={selectRef}
+            handleCheckout={handleCheckout}
+            setBranchCtxMenu={setBranchCtxMenu}
+            collapsedFolders={collapsedBranchFolders}
+            onToggleFolder={handleToggleBranchFolder}
+          />
         </div>
       )}
 
@@ -317,17 +330,16 @@ export default function Sidebar() {
       <SectionHeader title="Remotes" open={remotesOpen} onToggle={() => setRemotesOpen(!remotesOpen)} />
       {remotesOpen && (
         <div className="space-y-[1px]">
-          {remoteBranches.map((b) => (
-            <div
-              key={b.name}
-              className={`tree-item flex items-center gap-2 px-3 py-[3px] mx-1 ${selectedRef === b.name ? "selected" : ""}`}
-              onClick={() => selectRef(b.name)}
-              onDoubleClick={() => handleCheckout(b.name)}
-            >
-              <GitBranch size={12} className={selectedRef === b.name ? "text-accent" : "text-text-secondary"} />
-              <span className={`min-w-0 flex-1 truncate text-xs ${selectedRef === b.name ? "" : "text-text-secondary"}`}>{b.name}</span>
-            </div>
-          ))}
+          <BranchTreeRenderer
+            node={remoteBranchTree}
+            depth={0}
+            selectedRef={selectedRef}
+            selectRef={selectRef}
+            handleCheckout={handleCheckout}
+            setBranchCtxMenu={() => {}}
+            collapsedFolders={collapsedBranchFolders}
+            onToggleFolder={handleToggleBranchFolder}
+          />
         </div>
       )}
 
@@ -397,6 +409,14 @@ export default function Sidebar() {
                 openDialogState("merge");
               },
             },
+            {
+              label: "Compare with current branch…",
+              icon: <ArrowLeftRight size={12} />,
+              action: () => {
+                setCompareBranchTarget(branchCtxMenu.branch);
+                openDialogState("branch-compare");
+              },
+            },
             { separator: true, label: "", action: () => {} },
             {
               label: "Delete branch…",
@@ -411,6 +431,171 @@ export default function Sidebar() {
           onClose={() => setBranchCtxMenu(null)}
         />
       )}
+    </div>
+  );
+}
+
+interface BranchLeafNode {
+  type: "branch";
+  name: string;
+  current: boolean;
+  remote: string | null;
+  fullName: string;
+}
+
+interface BranchFolderNode {
+  type: "folder";
+  name: string;
+  path: string;
+  children: { [key: string]: BranchLeafNode | BranchFolderNode };
+}
+
+function buildBranchTree(branches: Array<{ name: string; current: boolean; remote: string | null }>): BranchFolderNode {
+  const root: BranchFolderNode = {
+    type: "folder",
+    name: "",
+    path: "",
+    children: {},
+  };
+
+  for (const branch of branches) {
+    const parts = branch.name.split("/");
+    let current = root;
+
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      const isLast = i === parts.length - 1;
+      const currentPath = parts.slice(0, i + 1).join("/");
+
+      if (isLast) {
+        current.children[part] = {
+          type: "branch",
+          name: part,
+          current: branch.current,
+          remote: branch.remote,
+          fullName: branch.name,
+        };
+      } else {
+        if (!current.children[part]) {
+          current.children[part] = {
+            type: "folder",
+            name: part,
+            path: currentPath,
+            children: {},
+          };
+        }
+        current = current.children[part] as BranchFolderNode;
+      }
+    }
+  }
+
+  return root;
+}
+
+interface BranchTreeRendererProps {
+  node: BranchFolderNode;
+  depth: number;
+  selectedRef: string | null;
+  selectRef: (ref: string | null) => void;
+  handleCheckout: (name: string) => void;
+  setBranchCtxMenu: (menu: { branch: string; x: number; y: number } | null) => void;
+  collapsedFolders: Set<string>;
+  onToggleFolder: (path: string) => void;
+}
+
+function BranchTreeRenderer({
+  node,
+  depth,
+  selectedRef,
+  selectRef,
+  handleCheckout,
+  setBranchCtxMenu,
+  collapsedFolders,
+  onToggleFolder,
+}: BranchTreeRendererProps) {
+  const sortedKeys = Object.keys(node.children).sort((a, b) => {
+    const childA = node.children[a];
+    const childB = node.children[b];
+    if (childA.type !== childB.type) {
+      return childA.type === "folder" ? -1 : 1;
+    }
+    return a.localeCompare(b);
+  });
+
+  return (
+    <div className="space-y-[1px]">
+      {sortedKeys.map((key) => {
+        const child = node.children[key];
+        if (child.type === "folder") {
+          const isCollapsed = collapsedFolders.has(child.path);
+          return (
+            <div key={child.path}>
+              <div
+                className="tree-item group w-full flex items-center gap-1.5 px-3 py-1 hover:bg-surface-2 cursor-pointer text-left select-none text-xs text-text-secondary"
+                style={{ paddingLeft: `${depth * 16 + 12}px` }}
+                onClick={() => onToggleFolder(child.path)}
+              >
+                <span
+                  className="h-3.5 w-3.5 flex items-center justify-center shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleFolder(child.path);
+                  }}
+                >
+                  <ChevronDown
+                    size={12}
+                    className={`text-text-muted transition-transform duration-150 shrink-0 ${isCollapsed ? "-rotate-90" : ""}`}
+                  />
+                </span>
+                <Folder size={12} className="text-text-muted opacity-75 shrink-0" />
+                <span className="truncate font-semibold text-text-primary flex-1">{child.name}</span>
+              </div>
+              {!isCollapsed && (
+                <BranchTreeRenderer
+                  node={child}
+                  depth={depth + 1}
+                  selectedRef={selectedRef}
+                  selectRef={selectRef}
+                  handleCheckout={handleCheckout}
+                  setBranchCtxMenu={setBranchCtxMenu}
+                  collapsedFolders={collapsedFolders}
+                  onToggleFolder={onToggleFolder}
+                />
+              )}
+            </div>
+          );
+        } else {
+          const isSelected = selectedRef === child.fullName;
+          return (
+            <div
+              key={child.fullName}
+              style={{ paddingLeft: `${depth * 16}px` }}
+            >
+              <div
+                className={`tree-item flex items-center gap-2 px-3 py-[3px] mx-1 ${isSelected ? "selected" : ""}`}
+                onClick={() => selectRef(child.fullName)}
+                onDoubleClick={() => handleCheckout(child.fullName)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  if (!child.remote) {
+                    setBranchCtxMenu({ branch: child.fullName, x: e.clientX, y: e.clientY });
+                  }
+                }}
+              >
+                <GitBranch size={12} className={isSelected ? "text-accent" : child.current ? "text-[#30d158]" : "text-text-secondary"} />
+                <span className={`min-w-0 flex-1 truncate text-xs ${child.current ? "font-semibold text-text-primary" : "text-text-secondary"}`}>
+                  {child.name}
+                </span>
+                {child.current && (
+                  <span className="shrink-0 rounded bg-[#30d158]/10 px-1 py-0.5 text-[9px] font-bold text-[#30d158] border border-[#30d158]/20">
+                    HEAD
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        }
+      })}
     </div>
   );
 }
