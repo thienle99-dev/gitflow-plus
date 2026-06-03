@@ -144,6 +144,41 @@ export interface ConventionFile {
   content: string;
 }
 
+export interface HealthFinding {
+  category: string;
+  severity: string;
+  path: string;
+  message: string;
+  detail: string | null;
+}
+
+export interface HealthReport {
+  findings: HealthFinding[];
+  scanned_files: number;
+  large_file_threshold_bytes: number;
+}
+
+export interface DiagnosticBundle {
+  app_version: string;
+  git_version: string;
+  os_info: string;
+  repo_path: string;
+  current_branch: string;
+  remote_url: string | null;
+  head_commit: string;
+  branch_count: number;
+  tag_count: number;
+  total_commits: number;
+  staged_files: number;
+  unstaged_files: number;
+  untracked_files: number;
+  lfs_enabled: boolean;
+  conflict_state: boolean;
+  rebase_in_progress: boolean;
+  merge_in_progress: boolean;
+  recent_errors: string[];
+}
+
 export interface ReflogEntry {
   index: number;
   commit_hash: string;
@@ -407,6 +442,12 @@ export const api = {
     update: (path: string, submodulePath?: string) =>
       invoke<string>("submodule_update", { path, submodulePath: submodulePath ?? null }),
     remove: (path: string, submodulePath: string) =>
-      invoke<string>("submodule_remove", { path, submodulePath }),
-  },
-};
+        invoke<string>("submodule_remove", { path, submodulePath }),
+    },
+    health: {
+      check: (path: string) =>
+        invoke<HealthReport>("repo_health_check", { path }),
+      diagnostics: (path: string) =>
+        invoke<DiagnosticBundle>("diagnostic_bundle", { path }),
+    },
+  };
