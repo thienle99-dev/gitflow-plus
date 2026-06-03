@@ -122,6 +122,17 @@ export default function Toolbar() {
 
         {/* Left Side: Status Capsule Badge */}
         <div className="flex items-center gap-2">
+          {/* Sidebar Toggle Button (Left) */}
+          <button
+            onClick={toggleSidebar}
+            className={`h-8 w-8 flex items-center justify-center rounded-mac border border-border-40 bg-surface-2-40 hover:bg-surface-2 hover:border-border transition-all cursor-pointer shadow-2xs shrink-0 ${
+              sidebarOpen ? "text-[#0a84ff] bg-[#0a84ff]/10" : "text-text-muted hover:text-text-primary"
+            }`}
+            title="Toggle Left Sidebar (⌘B)"
+          >
+            <PanelLeft size={14} />
+          </button>
+
           {changes && changes.length > 0 ? (
             <button
               onClick={showChanges}
@@ -309,35 +320,6 @@ export default function Toolbar() {
 
         {/* Right Side: Integrations (PR & SettingsDropdown) */}
         <div className="flex items-center gap-3">
-          {/* Panel Layout Toggles */}
-          <div className="flex items-center bg-surface-2-40 border border-border-40 rounded-mac p-0.5 shadow-2xs">
-            <button
-              onClick={toggleSidebar}
-              className={`h-7 w-7 flex items-center justify-center rounded-[5px] transition-all cursor-pointer ${
-                sidebarOpen 
-                  ? "text-[#0a84ff] bg-[#0a84ff]/10 font-bold" 
-                  : "text-text-muted hover:text-text-primary hover:bg-surface-3"
-              }`}
-              title="Toggle Left Sidebar (⌘B)"
-            >
-              <PanelLeft size={13} />
-            </button>
-            <div className="w-[1px] h-3.5 bg-border-40/50" />
-            <button
-              onClick={toggleRightPanel}
-              className={`h-7 w-7 flex items-center justify-center rounded-[5px] transition-all cursor-pointer ${
-                rightPanelOpen 
-                  ? "text-[#0a84ff] bg-[#0a84ff]/10 font-bold" 
-                  : "text-text-muted hover:text-text-primary hover:bg-surface-3"
-              }`}
-              title="Toggle Right Details Panel (⌘I)"
-            >
-              <PanelRight size={13} />
-            </button>
-          </div>
-
-          <div className="w-[1px] h-3.5 bg-border-40/60" />
-
           {/* PR Trigger */}
           <button
             onClick={() => openDialog("merge-request")}
@@ -345,6 +327,19 @@ export default function Toolbar() {
             title="Merge / Pull Requests"
           >
             <GitPullRequest size={14} />
+          </button>
+
+          <div className="w-[1px] h-3.5 bg-border-40/60" />
+
+          {/* Details Panel Toggle Button (Right) */}
+          <button
+            onClick={toggleRightPanel}
+            className={`h-8 w-8 flex items-center justify-center rounded-mac border border-border-40 bg-surface-2-40 hover:bg-surface-2 hover:border-border transition-all cursor-pointer shadow-2xs shrink-0 ${
+              rightPanelOpen ? "text-[#0a84ff] bg-[#0a84ff]/10" : "text-text-muted hover:text-text-primary"
+            }`}
+            title="Toggle Right Details Panel (⌘I)"
+          >
+            <PanelRight size={14} />
           </button>
 
           <div className="w-[1px] h-3.5 bg-border-40/60" />

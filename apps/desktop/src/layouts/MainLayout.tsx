@@ -3,7 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Commit, FileChange, Branch, RepoInfo, SyncStatus } from "@/api/tauri";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import { Panel, PanelGroup, PanelResizeHandle, type ImperativePanelHandle } from "react-resizable-panels";
 import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
 import { api } from "@/api/tauri";
@@ -35,6 +35,8 @@ export default function MainLayout() {
   const queryClient = useQueryClient();
   const invalidateTimersRef = useRef<Map<string, number>>(new Map());
   const lastFocusRefreshRef = useRef(0);
+  const sidebarPanelRef = useRef<ImperativePanelHandle>(null);
+  const rightPanelRef = useRef<ImperativePanelHandle>(null);
   const [showOnboarding, setShowOnboarding] = useState(() => !isOnboardingComplete());
 
   // Sync onboarding from activeDialog ("onboarding" opened from BottomBar etc.)
@@ -294,6 +296,30 @@ export default function MainLayout() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
+  // Synchronize sidebarOpen state with the actual panel ref
+  useEffect(() => {
+    const panel = sidebarPanelRef.current;
+    if (panel) {
+      if (sidebarOpen && panel.isCollapsed()) {
+        panel.expand();
+      } else if (!sidebarOpen && !panel.isCollapsed()) {
+        panel.collapse();
+      }
+    }
+  }, [sidebarOpen]);
+
+  // Synchronize rightPanelOpen state with the actual panel ref
+  useEffect(() => {
+    const panel = rightPanelRef.current;
+    if (panel) {
+      if (rightPanelOpen && panel.isCollapsed()) {
+        panel.expand();
+      } else if (!rightPanelOpen && !panel.isCollapsed()) {
+        panel.collapse();
+      }
+    }
+  }, [rightPanelOpen]);
+
   const overlayDialog = activeDialog && activeDialog !== "stash" && activeDialog !== "tag"
     ? activeDialog
     : null;
@@ -392,26 +418,27 @@ function InlineErrorFallback({ name }: { name: string }) {
       <Toolbar />
       <div className="flex-1 min-h-0 overflow-hidden">
         <PanelGroup direction="horizontal" autoSaveId="main-layout" className="h-full min-h-0">
-          {sidebarOpen && (
-            <>
-              <Panel
-                defaultSize={20}
-                minSize={15}
-                maxSize={35}
-                collapsible={true}
-                onCollapse={() => useUIStore.setState({ sidebarOpen: false })}
-                onExpand={() => useUIStore.setState({ sidebarOpen: true })}
-                className="h-full min-h-0"
-              >
-                <div className="vibrancy h-full border-r border-border overflow-hidden">
-                  <ErrorBoundary fallback={<InlineErrorFallback name="Sidebar" />}>
-                    <Sidebar />
-                  </ErrorBoundary>
-                </div>
-              </Panel>
-              <PanelResizeHandle className="w-[3px] bg-transparent hover:bg-accent transition-colors cursor-col-resize" />
-            </>
-          )}
+          <Panel
+            ref={sidebarPanelRef}
+            defaultSize={20}
+            minSize={15}
+            maxSize={35}
+            collapsible={true}
+            onCollapse={() => useUIStore.setState({ sidebarOpen: false })}
+            onExpand={() => useUIStore.setState({ sidebarOpen: true })}
+            className="h-full min-h-0"
+          >
+            <div className="vibrancy h-full border-r border-border overflow-hidden">
+              <ErrorBoundary fallback={<InlineErrorFallback name="Sidebar" />}>
+                <Sidebar />
+              </ErrorBoundary>
+            </div>
+          </Panel>
+          <PanelResizeHandle 
+            className={`w-[3px] bg-transparent hover:bg-accent transition-colors cursor-col-resize ${
+              sidebarOpen ? "" : "pointer-events-none opacity-0 !w-0"
+            }`} 
+          />
           <Panel defaultSize={100 - (sidebarOpen ? 20 : 0) - (rightPanelOpen ? 34 : 0)} minSize={30} className="h-full min-h-0">
             <div className="h-full min-h-0 overflow-hidden bg-surface-0">
               <ErrorBoundary fallback={<InlineErrorFallback name="Commit Graph" />}>
@@ -419,26 +446,27 @@ function InlineErrorFallback({ name }: { name: string }) {
               </ErrorBoundary>
             </div>
           </Panel>
-          {rightPanelOpen && (
-            <>
-              <PanelResizeHandle className="w-[3px] bg-transparent hover:bg-accent transition-colors cursor-col-resize" />
-              <Panel
-                defaultSize={34}
-                minSize={22}
-                maxSize={55}
-                collapsible={true}
-                onCollapse={() => useUIStore.setState({ rightPanelOpen: false })}
-                onExpand={() => useUIStore.setState({ rightPanelOpen: true })}
-                className="h-full min-h-0"
-              >
-                <div className="h-full min-h-0 overflow-hidden">
-                  <ErrorBoundary fallback={<InlineErrorFallback name="Details Panel" />}>
-                    <RightPanel />
-                  </ErrorBoundary>
-                </div>
-              </Panel>
-            </>
-          )}
+          <PanelResizeHandle 
+            className={`w-[3px] bg-transparent hover:bg-accent transition-colors cursor-col-resize ${
+              rightPanelOpen ? "" : "pointer-events-none opacity-0 !w-0"
+            }`} 
+          />
+          <Panel
+            ref={rightPanelRef}
+            defaultSize={34}
+            minSize={22}
+            maxSize={55}
+            collapsible={true}
+            onCollapse={() => useUIStore.setState({ rightPanelOpen: false })}
+            onExpand={() => useUIStore.setState({ rightPanelOpen: true })}
+            className="h-full min-h-0"
+          >
+            <div className="h-full min-h-0 overflow-hidden">
+              <ErrorBoundary fallback={<InlineErrorFallback name="Details Panel" />}>
+                <RightPanel />
+              </ErrorBoundary>
+            </div>
+          </Panel>
         </PanelGroup>
       </div>
       <BottomBar />
