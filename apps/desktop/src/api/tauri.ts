@@ -57,6 +57,9 @@ export interface SyncStatus {
   behind: number;
 }
 
+/** Map of "YYYY-MM-DD" → commit count */
+export type ActivityMap = Record<string, number>;
+
 
 export interface MergeResult {
   success: boolean;
@@ -233,6 +236,12 @@ export const api = {
       page: page ?? 0,
       perPage: perPage ?? 200,
       refName: refName ?? null,
+    }),
+
+  activity: (path: string, days?: number) =>
+    invoke<ActivityMap>("git_activity", {
+      path,
+      days: days ?? 365,
     }),
 
   logSince: (path: string, knownHash: string, maxCount?: number, refName?: string | null) =>

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct Commit {
     pub hash: String,
@@ -241,6 +243,55 @@ pub async fn file_history(
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     Ok(parse_log_output(&stdout))
+}
+
+/// Returns commit counts keyed by date (YYYY-MM-DD) for the last year.
+/// Efficient: only extracts dates via `--format='%aI'`, not full commit data.
+#[tauri::command]
+pub async fn git_activity(
+    path: String,
+    days: Option<u32>,
+) -> Result<HashMap<String, u32>, String> {
+    let days = days.unwrap_or(365).clamp(30, 730);
+    let since = chrono::Utc::now() - chrono::Duration::days(days as i64);
+    let since_str = since.format("%Y-%m-%d").to_string();
+
+    let output = Command::new("git")
+        .args([
+            "--no-pager",
+            "-C",
+            &path,
+            "log",
+            "--all",
+            "--format=%aI",
+            &format!("--since={}", since_str),
+            "--max-count=50000",
+        ])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run git log: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Git error: {}", stderr.trim()));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut activity: HashMap<String, u32> = HashMap::new();
+
+    for line in stdout.lines() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        // ISO 8601 format: "2026-06-01T09:00:00+07:00" → extract first 10 chars
+        if line.len() >= 10 {
+            let date_key = &line[..10];
+            *activity.entry(date_key.to_string()).or_insert(0) += 1;
+        }
+    }
+
+    Ok(activity)
 }
 
 fn parse_log_output(stdout: &str) -> Vec<Commit> {

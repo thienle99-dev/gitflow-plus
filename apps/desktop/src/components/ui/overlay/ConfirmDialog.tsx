@@ -14,6 +14,7 @@ export interface ConfirmDialogProps {
 /**
  * macOS-style confirmation dialog with backdrop, focus trap, Escape to close.
  * Destructive variant uses a red confirm button.
+ * Focus defaults to the cancel button (safe default) for destructive actions.
  */
 export default function ConfirmDialog({
   open,
@@ -27,17 +28,19 @@ export default function ConfirmDialog({
 }: ConfirmDialogProps) {
   return (
     <Dialog open={open} onClose={onCancel} title={title} maxWidth="400px" showCloseButton={false}>
-      <p className="text-sm text-text-secondary leading-relaxed mb-5">{message}</p>
-      <div className="flex items-center justify-end gap-2">
+      <p id="confirm-dialog-message" className="text-sm text-text-secondary leading-relaxed mb-5">{message}</p>
+      <div className="flex items-center justify-end gap-2" role="group" aria-label="Dialog actions">
         <button
           onClick={onCancel}
+          autoFocus={variant === "destructive"}
           className="px-4 py-1.5 text-xs font-medium text-text-secondary bg-surface-2 hover:bg-surface-3 border border-border rounded-md transition-colors"
         >
           {cancelLabel}
         </button>
         <button
           onClick={onConfirm}
-          autoFocus
+          autoFocus={variant !== "destructive"}
+          aria-label={confirmLabel}
           className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${
             variant === "destructive"
               ? "bg-[#ff375f] text-white hover:bg-[#ff375f]/85"

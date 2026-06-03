@@ -229,7 +229,7 @@ export default function CommitGraph() {
 
   if ((isLoading || commits.length === 0) && !graphIndex.commitByHash.size) {
     return (
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col" role="status" aria-label="Loading commit graph">
         <div className="h-[28px] flex items-center px-3 border-b border-border text-xs text-text-muted font-medium">
           <div className="flex items-center gap-1">
             {repoPath?.split("/").pop()}
@@ -297,7 +297,7 @@ export default function CommitGraph() {
 
   return (
     <>
-    <div className="h-full min-h-0 w-full overflow-hidden flex flex-col">
+    <div className="h-full min-h-0 w-full overflow-hidden flex flex-col" role="application" aria-label="Commit graph">
       {/* Header */}
       <div className="min-h-9 flex items-center gap-3 px-3 py-1.5 border-b border-border text-xs text-text-muted font-medium shrink-0">
         <div className="flex min-w-0 flex-1 items-center gap-1">
@@ -307,11 +307,12 @@ export default function CommitGraph() {
             {selectedRef || "All Branches"} — {isFiltering ? `${commits.length} of ${layout.commits.length}` : commits.length} commits
           </span>
         </div>
-        <div className="flex w-[min(380px,42vw)] min-w-[260px] items-center overflow-hidden rounded border border-border-40 bg-surface-1-30 focus-within:border-accent-60">
+        <div className="flex w-[min(380px,42vw)] min-w-[260px] items-center overflow-hidden rounded border border-border-40 bg-surface-1-30 focus-within:border-accent-60" role="search" aria-label="Filter commits">
           <select
             value={filterScope}
             onChange={(e) => setFilterScope(e.target.value as CommitFilterScope)}
             className="h-6 w-[86px] shrink-0 border-r border-border-30 bg-transparent px-2 text-[10px] font-bold uppercase tracking-wide text-text-secondary outline-none"
+            aria-label="Filter field"
             title="Filter field"
           >
             {FILTER_SCOPE_OPTIONS.map((option) => (
@@ -327,6 +328,7 @@ export default function CommitGraph() {
               onChange={(e) => setFilterQuery(e.target.value)}
               placeholder={FILTER_SCOPE_OPTIONS.find((option) => option.value === filterScope)?.placeholder}
               className="h-6 w-full bg-transparent pl-7 pr-7 text-[11px] font-medium text-text-primary outline-none placeholder:text-text-muted-60"
+              aria-label="Search commits"
             />
             {filterQuery && (
               <button
@@ -363,6 +365,8 @@ export default function CommitGraph() {
           <div style={{ minHeight: "100%", height: totalSize, position: "relative" }}>
             <canvas
               ref={canvasRef}
+              role="img"
+              aria-label="Commit graph visualization. Right-click for context menu."
               style={{ position: "sticky", top: 0, display: "block", cursor: "pointer" }}
               onMouseMove={handleMouseMove}
               onMouseLeave={handleMouseLeave}

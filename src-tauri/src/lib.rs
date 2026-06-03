@@ -222,6 +222,7 @@ pub fn run() {
             commands::log::git_log_since,
             commands::log::git_log_stream,
             commands::log::file_history,
+            commands::log::git_activity,
             commands::status::git_status,
             commands::branch::list_branches,
             commands::branch::create_branch,

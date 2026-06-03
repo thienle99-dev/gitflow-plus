@@ -191,6 +191,8 @@ export default function Toolbar() {
     <>
       <div
         ref={containerRef}
+        role="toolbar"
+        aria-label="Main toolbar"
         className={`vibrancy relative z-[200] border-b border-border-60 bg-surface-1-40 backdrop-blur-md flex items-center justify-between px-4 select-none animate-in fade-in duration-200 ${
           isMac ? "h-[52px]" : "h-[44px]"
         }`}
@@ -202,6 +204,8 @@ export default function Toolbar() {
           {/* Sidebar Toggle Button (Left) */}
           <button
             onClick={toggleSidebar}
+            aria-label="Toggle Left Sidebar"
+            aria-pressed={sidebarOpen}
             className={`h-8 w-8 flex items-center justify-center rounded-mac border border-border-40 bg-surface-2-40 hover:bg-surface-2 hover:border-border transition-all cursor-pointer shadow-2xs shrink-0 ${
               sidebarOpen ? "text-[#0a84ff] bg-[#0a84ff]/10" : "text-text-muted hover:text-text-primary"
             }`}
@@ -213,6 +217,7 @@ export default function Toolbar() {
           {changes && changes.length > 0 ? (
             <button
               onClick={showChanges}
+              aria-label={`${changes.filter(c => c.staged).length} staged, ${changes.filter(c => !c.staged).length} unstaged changes`}
               className="flex items-center gap-2.5 px-3.5 h-8 text-2xs font-bold rounded-full bg-accent-10 border border-accent-20 hover:bg-accent-15 text-text-primary transition-all cursor-pointer shadow-2xs shrink-0"
               title={`${changes.filter(c => c.staged).length} staged, ${changes.filter(c => !c.staged).length} unstaged — click to view`}
             >
@@ -236,6 +241,7 @@ export default function Toolbar() {
           ) : (
             <button
               onClick={showChanges}
+              aria-label="No changes — up to date"
               className="flex items-center gap-2.5 px-3.5 h-8 text-2xs font-semibold rounded-full bg-surface-2-60 border border-border-40 hover:bg-surface-2 text-text-secondary hover:text-text-primary transition-all cursor-pointer shadow-2xs shrink-0"
               title="Show current changes"
             >
@@ -248,11 +254,12 @@ export default function Toolbar() {
         {/* Middle Side: Action Button Segment Groups */}
         <div className="flex items-center gap-3 min-w-0">
           {/* Sync Segment Group (Pull, Fetch, Push) — always visible */}
-          <div className="flex items-center bg-surface-2-40 border border-border-40 rounded-mac p-0.5 shadow-2xs">
+          <div className="flex items-center bg-surface-2-40 border border-border-40 rounded-mac p-0.5 shadow-2xs" role="group" aria-label="Sync actions">
             <button
               className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all disabled:opacity-40 cursor-pointer"
               onClick={() => doAction("pull", () => api.remote.pull(repoPath!))}
               disabled={!!loading}
+              aria-label={`Pull remote changes${syncStatus?.behind ? ` (${syncStatus.behind} behind)` : ""}`}
               title="Pull remote changes"
             >
               <ArrowDownToLine size={13} className="text-text-muted group-hover:text-text-primary" />
@@ -268,6 +275,7 @@ export default function Toolbar() {
               className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all disabled:opacity-40 cursor-pointer"
               onClick={() => doAction("fetch", () => api.remote.fetch(repoPath!))}
               disabled={!!loading}
+              aria-label="Fetch remote changes"
               title="Fetch remote changes"
             >
               <RefreshCw size={13} className={`${loading === "fetch" ? "animate-spin text-accent" : "text-text-muted"}`} />
@@ -278,6 +286,7 @@ export default function Toolbar() {
               className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all disabled:opacity-40 cursor-pointer"
               onClick={handlePush}
               disabled={!!loading}
+              aria-label={`Push local commits${syncStatus?.ahead ? ` (${syncStatus.ahead} ahead)` : ""}`}
               title="Push local commits (risk analysis runs first)"
             >
               <ArrowUpFromLine size={13} className="text-text-muted" />
@@ -292,7 +301,7 @@ export default function Toolbar() {
 
           {/* LFS Segment Group — visible when not collapsed */}
           {!collapsed && hasLfsFiles && (
-            <div className="flex items-center bg-surface-2-40 border border-border-40 rounded-mac p-0.5 shadow-2xs">
+            <div className="flex items-center bg-surface-2-40 border border-border-40 rounded-mac p-0.5 shadow-2xs" role="group" aria-label="Git LFS actions">
               <div
                 className="h-7 px-2.5 flex items-center gap-1.5 text-2xs font-semibold text-text-secondary"
                 title={`${lfsStatus.tracked_files.length} Git LFS tracked file${lfsStatus.tracked_files.length === 1 ? "" : "s"}${lfsDirtyCount > 0 ? `, ${lfsDirtyCount} changed` : ""}`}
@@ -332,10 +341,11 @@ export default function Toolbar() {
           )}
 
           {/* Git Operations Segment Group (Branch, Merge, Stash) — always visible */}
-          <div className="flex items-center bg-surface-2-40 border border-border-40 rounded-mac p-0.5 shadow-2xs">
+          <div className="flex items-center bg-surface-2-40 border border-border-40 rounded-mac p-0.5 shadow-2xs" role="group" aria-label="Git operations">
             <button
               className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer"
               onClick={() => setShowBranchDialog(true)}
+              aria-label="Create branch"
               title="Create branch"
             >
               <GitBranchPlus size={13} className="text-text-muted" />
@@ -348,6 +358,7 @@ export default function Toolbar() {
                 : "text-text-secondary hover:text-text-primary"
                 }`}
               onClick={() => openDialog("merge")}
+              aria-label={inMerge ? "Merge in progress — click to resolve conflicts" : "Merge branches"}
               title={inMerge ? "Merge in progress — click to resolve conflicts" : "Merge branches"}
             >
               <ArrowLeftRight size={13} className={inMerge ? "text-[#ff9f0a]" : "text-text-muted"} />
@@ -357,6 +368,7 @@ export default function Toolbar() {
             <button
               className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer"
               onClick={() => openDialog("stash")}
+              aria-label="Manage stashes"
               title="Manage stashes"
             >
               <Archive size={13} className="text-text-muted" />
@@ -366,10 +378,11 @@ export default function Toolbar() {
 
           {/* Utilities Segment Group — visible when not collapsed */}
           {!collapsed && (
-            <div className="flex items-center bg-surface-2-40 border border-border-40 rounded-mac p-0.5 shadow-2xs">
+            <div className="flex items-center bg-surface-2-40 border border-border-40 rounded-mac p-0.5 shadow-2xs" role="group" aria-label="Utilities">
               <button
                 className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer"
                 onClick={() => openDialog("search")}
+                aria-label="Spotlight Search"
                 title="Spotlight Search"
               >
                 <Search size={13} className="text-text-muted" />
@@ -379,6 +392,7 @@ export default function Toolbar() {
               <button
                 className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer"
                 onClick={() => openDialog("analytics")}
+                aria-label="View Repository Activity Analytics"
                 title="View Repository Activity Analytics"
               >
                 <BarChart3 size={13} className="text-text-muted" />
@@ -389,6 +403,7 @@ export default function Toolbar() {
                 className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all disabled:opacity-40 cursor-pointer"
                 onClick={() => doAction("undo", () => undoLast.mutateAsync())}
                 disabled={undoLast.isPending}
+                aria-label="Undo last Git action"
                 title="Undo last Git action"
               >
                 <RotateCcw size={13} className="text-text-muted" />
@@ -403,16 +418,21 @@ export default function Toolbar() {
               <button
                 className="h-7 w-7 flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-mac transition-all cursor-pointer"
                 onClick={() => setMoreOpen(!moreOpen)}
+                aria-label="More actions"
+                aria-expanded={moreOpen}
+                aria-haspopup="menu"
                 title="More actions"
               >
                 <MoreHorizontal size={16} />
               </button>
               {moreOpen && (
-                <div className="absolute top-full right-0 mt-1 z-50 min-w-[180px] py-1 bg-surface-1 border border-border rounded-mac shadow-lg animate-toast-in">
+                <div role="menu" aria-label="More actions" className="absolute top-full right-0 mt-1 z-50 min-w-[180px] py-1 bg-surface-1 border border-border rounded-mac shadow-lg animate-toast-in">
                   {moreMenuItems.map((item, i) => (
                     <button
                       key={i}
+                      role="menuitem"
                       disabled={item.disabled}
+                      aria-disabled={item.disabled}
                       className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text-primary hover:bg-accent hover:text-accent-fg disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
                       onClick={() => {
                         item.action();
@@ -434,6 +454,7 @@ export default function Toolbar() {
           {/* PR Trigger */}
           <button
             onClick={() => openDialog("merge-request")}
+            aria-label="Merge / Pull Requests"
             className="ghost h-8 w-8 flex items-center justify-center text-text-muted hover:text-text-primary rounded-mac hover:bg-surface-2 transition-all cursor-pointer"
             title="Merge / Pull Requests"
           >
@@ -445,6 +466,8 @@ export default function Toolbar() {
           {/* Details Panel Toggle Button (Right) */}
           <button
             onClick={toggleRightPanel}
+            aria-label="Toggle Right Details Panel"
+            aria-pressed={rightPanelOpen}
             className={`h-8 w-8 flex items-center justify-center rounded-mac border border-border-40 bg-surface-2-40 hover:bg-surface-2 hover:border-border transition-all cursor-pointer shadow-2xs shrink-0 ${
               rightPanelOpen ? "text-[#0a84ff] bg-[#0a84ff]/10" : "text-text-muted hover:text-text-primary"
             }`}

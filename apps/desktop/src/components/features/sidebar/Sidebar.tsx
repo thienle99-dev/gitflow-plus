@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, lazy, Suspense } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useGitBranches, useGitSyncStatus } from "@/queries/useGitLog";
@@ -27,7 +27,10 @@ import {
   ArrowLeftRight,
   ArrowUp,
   ArrowDown,
+  Activity,
 } from "lucide-react";
+
+const LazyActivityHeatmap = lazy(() => import("@/components/features/activity/ActivityHeatmap"));
 
 export default function Sidebar() {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -44,6 +47,7 @@ export default function Sidebar() {
   const [branchesOpen, setBranchesOpen] = useState(true);
   const [remotesOpen, setRemotesOpen] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(true);
   const [repoMenuOpen, setRepoMenuOpen] = useState(false);
   const [repoSearchQuery, setRepoSearchQuery] = useState("");
   const [branchCtxMenu, setBranchCtxMenu] = useState<{ branch: string; x: number; y: number } | null>(null);
@@ -122,7 +126,7 @@ export default function Sidebar() {
 
   return (
     <>
-    <div className="h-full overflow-y-auto py-2 sidebar-panel">
+    <nav className="h-full overflow-y-auto py-2 sidebar-panel" role="navigation" aria-label="Repository sidebar">
       {/* Repository Selector */}
       <div className="relative px-4 mb-3 flex items-center gap-1.5">
         <button
@@ -294,10 +298,14 @@ export default function Sidebar() {
       />
 
       {branchesOpen && (
-        <div className="space-y-[1px]">
+        <div className="space-y-[1px]" role="tree" aria-label="Local branches">
           <div
+            role="treeitem"
+            aria-selected={!selectedRef}
+            tabIndex={0}
             className={`tree-item flex items-center gap-2 px-3 py-[3px] mx-1 rounded-md ${!selectedRef ? "selected" : ""}`}
             onClick={() => selectRef(null)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectRef(null); } }}
           >
             <GitBranch size={12} className={!selectedRef ? "text-accent" : "text-text-secondary"} />
             <span className="min-w-0 flex-1 truncate text-xs">All Branches</span>
@@ -364,7 +372,7 @@ export default function Sidebar() {
         count={remoteBranches.length}
       />
       {remotesOpen && (
-        <div className="space-y-[1px]">
+        <div className="space-y-[1px]" role="tree" aria-label="Remote branches">
           <BranchTreeRenderer
             node={remoteBranchTree}
             depth={0}
@@ -389,13 +397,16 @@ export default function Sidebar() {
         count={tags?.length || 0}
       />
       {tagsOpen && (
-        <div className="space-y-[1px]">
+        <div className="space-y-[1px]" role="list" aria-label="Tags">
           {tags && tags.length > 0 ? (
             tags.map((t) => (
               <div
                 key={t.name}
+                role="listitem"
+                tabIndex={0}
                 className={`tree-item group flex items-center gap-2 px-3 py-[3px] mx-1 rounded-md cursor-pointer ${selectedRef === t.name ? "selected" : ""}`}
                 onClick={() => selectRef(t.name)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectRef(t.name); } }}
               >
                 <Tag size={12} className={selectedRef === t.name ? "text-accent" : "text-text-secondary transition-colors group-hover:text-[#bf5af2]"} />
                 <span className="min-w-0 flex-1 truncate text-xs">{t.name}</span>
@@ -440,6 +451,22 @@ export default function Sidebar() {
         </>
       )}
 
+      {/* Activity Heatmap */}
+      <div className="my-2 mx-4 border-t border-border-50" />
+      <SectionHeader
+        title="Activity"
+        open={activityOpen}
+        onToggle={() => setActivityOpen(!activityOpen)}
+        action={
+          <Activity size={11} className="text-text-muted" />
+        }
+      />
+      {activityOpen && (
+        <Suspense fallback={<div className="px-4 py-3 text-[10px] text-text-muted animate-pulse">Loading activity...</div>}>
+          <LazyActivityHeatmap />
+        </Suspense>
+      )}
+
       {branchCtxMenu && (
         <ContextMenu
           x={branchCtxMenu.x}
@@ -478,7 +505,7 @@ export default function Sidebar() {
           onClose={() => setBranchCtxMenu(null)}
         />
       )}
-    </div>
+    </nav>
 
     <ConfirmDialog
       open={!!confirmDeleteBranch}
@@ -606,11 +633,13 @@ function BranchTreeRenderer({
           const isCollapsed = collapsedFolders.has(child.path);
           const branchCount = countBranchLeaves(child);
           return (
-            <div key={child.path}>
+            <div key={child.path} role="treeitem" aria-expanded={!isCollapsed}>
               <div
                 className="tree-item group w-full flex items-center gap-1.5 px-3 py-1 hover:bg-surface-2-60 cursor-pointer text-left select-none text-xs text-text-secondary rounded-md mx-1"
                 style={{ paddingLeft: `${depth * 16 + 12}px` }}
                 onClick={() => onToggleFolder(child.path)}
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggleFolder(child.path); } }}
               >
                 <span
                   className="h-3.5 w-3.5 flex items-center justify-center shrink-0"
@@ -651,12 +680,16 @@ function BranchTreeRenderer({
           return (
             <div
               key={child.fullName}
+              role="treeitem"
+              aria-selected={isSelected}
               style={{ paddingLeft: `${depth * 16}px` }}
             >
               <div
                 className={`tree-item flex items-center gap-2 px-3 py-[3px] mx-1 rounded-md ${isSelected ? "selected" : ""}`}
+                tabIndex={0}
                 onClick={() => selectRef(child.fullName)}
                 onDoubleClick={() => handleCheckout(child.fullName)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectRef(child.fullName); } }}
                 onContextMenu={(e) => {
                   e.preventDefault();
                   if (!child.remote) {
@@ -710,8 +743,13 @@ function SectionHeader({
 }) {
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-expanded={open}
+      aria-label={`${title}${count !== undefined && count > 0 ? ` (${count})` : ""}`}
       className="flex items-center justify-between px-4 py-1.5 cursor-pointer hover:bg-surface-2-40 select-none group"
       onClick={onToggle}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } }}
     >
       <div className="flex items-center gap-1">
         <ChevronRight
