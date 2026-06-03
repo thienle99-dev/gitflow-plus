@@ -7,6 +7,7 @@ interface LazyDiffViewerProps {
   filePath: string;
   source?: "working" | "staged" | "commit";
   onPatchApplied?: () => void;
+  autoInlineReview?: boolean;
 }
 
 function DiffLoadingSkeleton() {

@@ -465,6 +465,110 @@ button.ghost:active {
   pointer-events: none;
 }
 
+/* Inline AI Review Comment Widgets */
+.inline-review-comment-container {
+  padding: 6px 8px 6px 20px;
+  width: 100%;
+}
+
+.inline-review-comment-card {
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-bottom: 4px;
+  border-left: 3px solid;
+  font-size: 11px;
+  line-height: 16px;
+  animation: inline-comment-in 200ms ease-out;
+}
+
+.inline-review-comment-card:last-child {
+  margin-bottom: 0;
+}
+
+@keyframes inline-comment-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.inline-review-comment-error {
+  border-left-color: #ff375f;
+  background: rgba(255, 55, 95, 0.08);
+}
+
+.inline-review-comment-warning {
+  border-left-color: #ff9f0a;
+  background: rgba(255, 159, 10, 0.08);
+}
+
+.inline-review-comment-info {
+  border-left-color: #0a84ff;
+  background: rgba(10, 132, 255, 0.06);
+}
+
+.inline-review-comment-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+
+.inline-review-comment-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: currentColor;
+  opacity: 0.15;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.inline-review-comment-error .inline-review-comment-badge {
+  color: #ff375f;
+  background: rgba(255, 55, 95, 0.15);
+}
+
+.inline-review-comment-warning .inline-review-comment-badge {
+  color: #ff9f0a;
+  background: rgba(255, 159, 10, 0.15);
+}
+
+.inline-review-comment-info .inline-review-comment-badge {
+  color: #0a84ff;
+  background: rgba(10, 132, 255, 0.15);
+}
+
+.inline-review-comment-severity {
+  font-size: 8px;
+  line-height: 1;
+}
+
+.inline-review-comment-error .inline-review-comment-severity {
+  color: #ff375f;
+}
+
+.inline-review-comment-warning .inline-review-comment-severity {
+  color: #ff9f0a;
+}
+
+.inline-review-comment-info .inline-review-comment-severity {
+  color: #0a84ff;
+}
+
+.inline-review-comment-body {
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 16px;
+}
+
 .diff-prefix-widget.placeholder {
   color: transparent;
 }

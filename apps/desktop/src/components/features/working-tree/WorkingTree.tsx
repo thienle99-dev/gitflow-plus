@@ -9,7 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import ContextMenu, { type ContextMenuItem } from "@/components/ui/overlay/ContextMenu";
 import UndoButton from "@/components/features/actions/UndoButton";
 import LazyDiffViewer from "@/components/features/diff/LazyDiffViewer";
-import { AlertCircle, ShieldAlert } from "lucide-react";
+import { AlertCircle, ShieldAlert, MessageSquare } from "lucide-react";
 import { lintCommitMessage, autoFixCommitMessage, type CommitLintResult } from "@/lib/commit-lint";
 import { LintWarningDialog } from "@/components/features/dialogs";
 import {
@@ -1061,6 +1061,7 @@ interface ChangeSectionProps {
   onToggleAll: () => void;
   onToggleFile: (path: string) => void;
   onSelect: (path: string) => void;
+  onAIInlineReview: (path: string) => void;
   onToggleOpen: () => void;
   onMenu: (x: number, y: number, file: FileChange) => void;
   onFileMultiClick: (path: string, e: React.MouseEvent) => void;
@@ -1268,6 +1269,7 @@ interface DiffReviewTarget {
   path: string;
   stage: "staged" | "unstaged";
   status?: string;
+  autoInlineReview?: boolean;
 }
 
 interface DiffReviewModalProps {

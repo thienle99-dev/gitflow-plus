@@ -5,6 +5,7 @@ import {
   type AIReviewMode,
   generateCommitMessageWithAI,
   reviewDiffWithAI,
+  generateInlineReviewComments,
   explainCommitWithAI,
   reviewCommitWithAI,
   analyzeCommitScope,
@@ -25,6 +26,13 @@ export function useAIDiffReview() {
   return useMutation({
     mutationFn: ({ filePath, diff, repoPath, mode }: { filePath: string; diff: string; repoPath?: string; mode?: AIReviewMode }) =>
       reviewDiffWithAI(filePath, diff, repoPath, mode),
+  });
+}
+
+export function useAIInlineComments() {
+  return useMutation({
+    mutationFn: ({ filePath, diff, repoPath, mode }: { filePath: string; diff: string; repoPath?: string; mode?: AIReviewMode }) =>
+      generateInlineReviewComments(filePath, diff, repoPath, mode),
   });
 }
 

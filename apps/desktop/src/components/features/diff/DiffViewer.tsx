@@ -81,6 +81,7 @@ interface DiffViewerProps {
   filePath: string;
   source?: "working" | "staged" | "commit";
   onPatchApplied?: () => void;
+  autoInlineReview?: boolean;
 }
 
 export default function DiffViewer({
@@ -88,6 +89,7 @@ export default function DiffViewer({
   filePath,
   source = "commit",
   onPatchApplied,
+  autoInlineReview = false,
 }: DiffViewerProps) {
   const diffViewMode = useUIStore((s) => s.diffViewMode);
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -112,6 +114,15 @@ export default function DiffViewer({
     setShowInlineComments(false);
     inlineCommentsMutation.reset();
   }, [filePath, diff]);
+
+  // Auto-trigger inline review when opened from per-file hover/context menu
+  const autoFiredRef = useRef(false);
+  useEffect(() => {
+    if (autoInlineReview && diff && !autoFiredRef.current) {
+      autoFiredRef.current = true;
+      handleToggleInlineComments();
+    }
+  }, [autoInlineReview, diff]);
 
   const handleToggleAiReview = async () => {
     if (showReview) {
@@ -263,6 +274,8 @@ export default function DiffViewer({
     const oldLines = oldContent.split("\n");
     const newLines = newContent.split("\n");
 
+    const activeInlineComments = showInlineComments ? inlineComments : undefined;
+
     leftView.current = createEditor(
       leftRef.current,
       oldContent,
@@ -275,6 +288,7 @@ export default function DiffViewer({
       "old",
       oldLines,
       newLines,
+      activeInlineComments,
     );
     rightView.current = createEditor(
       rightRef.current,
@@ -288,6 +302,7 @@ export default function DiffViewer({
       "new",
       oldLines,
       newLines,
+      activeInlineComments,
     );
 
     return () => {
@@ -296,7 +311,7 @@ export default function DiffViewer({
       leftView.current = null;
       rightView.current = null;
     };
-  }, [diffViewMode, oldContent, newContent, lang, theme, hunks, source]);
+  }, [diffViewMode, oldContent, newContent, lang, theme, hunks, source, showInlineComments, inlineComments]);
 
   // Mount unified view editor
   useEffect(() => {
@@ -307,6 +322,8 @@ export default function DiffViewer({
 
     if (!unifiedRef.current) return;
 
+    const activeInlineComments = showInlineComments ? inlineComments : undefined;
+
     unifiedView.current = createEditor(
       unifiedRef.current,
       unifiedContent,
@@ -316,13 +333,17 @@ export default function DiffViewer({
       source,
       applyHunk,
       applyLine,
+      undefined,
+      undefined,
+      undefined,
+      activeInlineComments,
     );
 
     return () => {
       unifiedView.current?.destroy();
       unifiedView.current = null;
     };
-  }, [diffViewMode, unifiedContent, lang, theme, hunks, source]);
+  }, [diffViewMode, unifiedContent, lang, theme, hunks, source, showInlineComments, inlineComments]);
 
   // Synchronized scrolling for Split View
   useEffect(() => {
@@ -401,6 +422,26 @@ export default function DiffViewer({
             )}
             <span>AI Explain & Review</span>
           </button>
+          <button
+            onClick={handleToggleInlineComments}
+            disabled={inlineCommentsMutation.isPending}
+            className={`flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-surface-2 transition-all ${
+              showInlineComments ? "text-[#ff9f0a] bg-[#ff9f0a]/10" : "text-text-muted hover:text-text-secondary"
+            } ${inlineCommentsMutation.isPending ? "opacity-60 cursor-not-allowed" : ""}`}
+            title="Generate AI inline review comments on diff lines"
+          >
+            {inlineCommentsMutation.isPending ? (
+              <RefreshCw size={11} className="animate-spin text-[#ff9f0a]" />
+            ) : (
+              <MessageSquare size={11} />
+            )}
+            <span>Inline Comments</span>
+            {inlineComments.length > 0 && (
+              <span className="ml-0.5 rounded bg-[#ff9f0a]/20 px-1 text-[9px] font-bold text-[#ff9f0a]">
+                {inlineComments.length}
+              </span>
+            )}
+          </button>
         </div>
         {canPatch && hunks.length > 0 && (
           <div className="border-b border-border bg-surface-1 max-h-[120px] overflow-y-auto">
@@ -454,6 +495,21 @@ export default function DiffViewer({
         {error && (
           <div className="border-b border-border px-3 py-1 text-2xs text-[#ff375f] bg-surface-1">
             {error}
+          </div>
+        )}
+        {inlineCommentsMutation.isError && showInlineComments && (
+          <div className="border-b border-border px-3 py-1 text-2xs text-[#ff375f] bg-surface-1 flex items-center gap-2">
+            <span>Inline comments failed: {inlineCommentsMutation.error instanceof Error ? inlineCommentsMutation.error.message : "Unknown error"}</span>
+            <button
+              onClick={() => {
+                setInlineComments([]);
+                inlineCommentsMutation.reset();
+                handleToggleInlineComments();
+              }}
+              className="text-accent underline"
+            >
+              Retry
+            </button>
           </div>
         )}
         {diffViewMode === "split" ? (
