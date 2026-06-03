@@ -6,6 +6,9 @@ import { api, type FileChange, type LintDiagnostic } from "@/api/tauri";
 import { useGenerateCommitMessage, useAICommitScope, useAIDiffReview } from "@/queries/useAI";
 import { generateLocalCommitMessage, shouldAnalyzeScope, type CommitScopeSuggestion } from "@/lib/ai";
 import { useQueryClient } from "@tanstack/react-query";
+import { showToast } from "@/lib/toast";
+import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
+import { StatusBadge, fileIcon, statusLabel, statusColor } from "@/components/ui/shared";
 import ContextMenu, { type ContextMenuItem } from "@/components/ui/overlay/ContextMenu";
 import UndoButton from "@/components/features/actions/UndoButton";
 import LazyDiffViewer from "@/components/features/diff/LazyDiffViewer";
@@ -13,23 +16,10 @@ import { AlertCircle, ShieldAlert, MessageSquare } from "lucide-react";
 import { lintCommitMessage, autoFixCommitMessage, type CommitLintResult } from "@/lib/commit-lint";
 import { LintWarningDialog } from "@/components/features/dialogs";
 import {
-  Braces,
   Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Database,
-  File,
-  FileArchive,
-  FileCode,
-  FileCog,
-  FileImage,
-  FileJson,
-  FileMinus,
-  FilePlus,
-  FileSpreadsheet,
-  FileTerminal,
-  FileText,
   GitCommit,
   Layers,
   MoreHorizontal,
@@ -87,7 +77,8 @@ export default function WorkingTree() {
   const [aiReviewCollapsed, setAiReviewCollapsed] = useState(false);
   const [aiReviewResult, setAiReviewResult] = useState("");
   const [aiReviewModalOpen, setAiReviewModalOpen] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const [confirmDiscard, setConfirmDiscard] = useState<string | null>(null);
+  const [confirmDiscardAll, setConfirmDiscardAll] = useState(false);
   const [stagedOpen, setStagedOpen] = useState(true);
   const [unstagedOpen, setUnstagedOpen] = useState(true);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; file: FileChange; stage: "staged" | "unstaged" } | null>(null);
@@ -146,11 +137,6 @@ export default function WorkingTree() {
     openDiffReview(path, stage, true);
   };
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  };
-
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
   };
@@ -197,8 +183,8 @@ export default function WorkingTree() {
     }
   };
 
-  const handleDiscard = async (filePath: string) => {
-    if (!confirm(`Discard all changes in ${filePath}?`)) return;
+  const doDiscard = async (filePath: string) => {
+    setConfirmDiscard(null);
     try {
       await api.commit.discard(repoPath!, filePath);
       if (selectedFile === filePath) {
@@ -206,18 +192,18 @@ export default function WorkingTree() {
       }
       invalidate();
     } catch (e: any) {
-      showToast(`Error: ${e}`);
+      showToast(`Error: ${e}`, "error");
     }
   };
 
-  const handleDiscardAll = async () => {
-    if (!confirm("Discard all working tree changes, including untracked files?")) return;
+  const doDiscardAll = async () => {
+    setConfirmDiscardAll(false);
     try {
       await api.commit.discardAll(repoPath!);
       selectFile(null);
       invalidate();
     } catch (e: any) {
-      showToast(`Error: ${e}`);
+      showToast(`Error: ${e}`, "error");
     }
   };
 
@@ -564,7 +550,7 @@ export default function WorkingTree() {
       {
         label: "Discard changes",
         icon: <Trash2 size={13} />,
-        action: () => handleDiscard(ctxMenu.file.path),
+        action: () => setConfirmDiscard(ctxMenu.file.path),
       },
     ]
     : [];
@@ -626,7 +612,7 @@ export default function WorkingTree() {
           </button>
           <button
             className="h-6 w-6 inline-flex items-center justify-center rounded-md text-text-muted hover:text-[#ff375f] hover:bg-[#ff375f]/10 disabled:opacity-35 disabled:hover:bg-transparent transition-colors"
-            onClick={handleDiscardAll}
+            onClick={() => setConfirmDiscardAll(true)}
             disabled={totalChanges === 0}
             title="Discard all changes"
           >
@@ -1063,7 +1049,24 @@ export default function WorkingTree() {
         </div>
       )}
 
-      {toast && <div className="toast">{toast}</div>}
+      <ConfirmDialog
+        open={confirmDiscard !== null}
+        title="Discard Changes"
+        message={`Discard all changes in ${confirmDiscard}?`}
+        variant="destructive"
+        confirmLabel="Discard"
+        onConfirm={() => doDiscard(confirmDiscard!)}
+        onCancel={() => setConfirmDiscard(null)}
+      />
+      <ConfirmDialog
+        open={confirmDiscardAll}
+        title="Discard All Changes"
+        message="Discard all working tree changes, including untracked files?"
+        variant="destructive"
+        confirmLabel="Discard All"
+        onConfirm={doDiscardAll}
+        onCancel={() => setConfirmDiscardAll(false)}
+      />
       <LintWarningDialog
         open={lintWarningOpen}
         onClose={() => setLintWarningOpen(false)}
@@ -1434,40 +1437,6 @@ interface ChangeRowProps {
   hideFolder?: boolean;
 }
 
-function StatusBadge({ status, selected }: { status: string; selected: boolean }) {
-  const label = statusLabel(status);
-
-  let badgeClass = "";
-  if (selected) {
-    badgeClass = "text-accent-fg opacity-90";
-  } else {
-    switch (status) {
-      case "added":
-        badgeClass = "text-[#30d158]";
-        break;
-      case "deleted":
-        badgeClass = "text-[#ff375f]";
-        break;
-      case "renamed":
-      case "copied":
-        badgeClass = "text-[#64d2ff]";
-        break;
-      case "untracked":
-        badgeClass = "text-text-muted";
-        break;
-      default: // modified
-        badgeClass = "text-[#ff9f0a]";
-        break;
-    }
-  }
-
-  return (
-    <span className={`inline-flex items-center justify-center font-mono text-[10px] font-bold select-none px-1 leading-none ${badgeClass}`}>
-      {label}
-    </span>
-  );
-}
-
 function ChangeRow({ file, checked, selected, multiSelected, onSelect, onToggle, onAIInlineReview, onMenu, onMultiClick, hideFolder }: ChangeRowProps) {
   const fileName = getFileName(file.path);
   const folder = getFolder(file.path);
@@ -1719,111 +1688,6 @@ function DiffReviewModal({ target, files, onChangeTarget, onClose, onRefresh }: 
       </div>
     </div>
   );
-}
-
-function fileIcon(path: string, status: string, size = 14) {
-  const className = statusColor(status);
-  const ext = getExtension(path);
-  const fileName = getFileName(path).toLowerCase();
-
-  if (["package.json", "tsconfig.json", "vite.config.ts", "tailwind.config.ts"].includes(fileName)) {
-    return <FileCog size={size} className={className} />;
-  }
-
-  switch (ext) {
-    case "js":
-    case "jsx":
-    case "ts":
-    case "tsx":
-    case "java":
-    case "kt":
-    case "rs":
-    case "go":
-    case "py":
-    case "rb":
-    case "php":
-    case "c":
-    case "cpp":
-    case "h":
-    case "hpp":
-      return <FileCode size={size} className={className} />;
-    case "json":
-    case "jsonc":
-    case "lock":
-      return <FileJson size={size} className={className} />;
-    case "yml":
-    case "yaml":
-    case "toml":
-    case "ini":
-    case "env":
-      return <FileCog size={size} className={className} />;
-    case "css":
-    case "scss":
-    case "sass":
-    case "less":
-    case "html":
-    case "xml":
-    case "svg":
-      return <Braces size={size} className={className} />;
-    case "sql":
-    case "db":
-    case "sqlite":
-      return <Database size={size} className={className} />;
-    case "md":
-    case "mdx":
-    case "txt":
-    case "rst":
-      return <FileText size={size} className={className} />;
-    case "png":
-    case "jpg":
-    case "jpeg":
-    case "gif":
-    case "webp":
-    case "ico":
-      return <FileImage size={size} className={className} />;
-    case "zip":
-    case "gz":
-    case "tar":
-    case "rar":
-    case "7z":
-      return <FileArchive size={size} className={className} />;
-    case "csv":
-    case "tsv":
-    case "xls":
-    case "xlsx":
-      return <FileSpreadsheet size={size} className={className} />;
-    case "sh":
-    case "bash":
-    case "zsh":
-    case "ps1":
-      return <FileTerminal size={size} className={className} />;
-    default:
-      if (status === "added" || status === "untracked") return <FilePlus size={size} className={className} />;
-      if (status === "deleted") return <FileMinus size={size} className={className} />;
-      return <File size={size} className={className} />;
-  }
-}
-
-function statusLabel(status: string) {
-  switch (status) {
-    case "modified": return "M";
-    case "added": return "A";
-    case "deleted": return "D";
-    case "renamed": return "R";
-    case "untracked": return "?";
-    default: return status.charAt(0).toUpperCase();
-  }
-}
-
-function statusColor(status: string) {
-  switch (status) {
-    case "added": return "text-[#30d158]";
-    case "deleted": return "text-[#ff375f]";
-    case "renamed":
-    case "copied": return "text-[#64d2ff]";
-    case "untracked": return "text-text-muted";
-    default: return "text-[#ff9f0a]";
-  }
 }
 
 function AIReviewLine({ line }: { line: string }) {
