@@ -138,7 +138,7 @@ export default function BottomBar() {
         </button>
 
         <span className="text-[9px] font-medium text-text-muted-60 select-all">
-          v0.1.0
+          v1.0.2
         </span>
       </div>
     </div>

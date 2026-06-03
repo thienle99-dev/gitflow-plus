@@ -428,7 +428,7 @@ function Footer() {
               <GitBranch size={10} className="text-white" />
             </div>
             <span className="text-xs font-semibold">GitFlow Desktop</span>
-            <span className="text-xs text-neutral-400">v1.0.0</span>
+            <span className="text-xs text-neutral-400">v1.0.2</span>
           </div>
           <div className="flex items-center gap-5">
             <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="text-xs text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors flex items-center gap-1">
