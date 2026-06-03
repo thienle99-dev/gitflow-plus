@@ -135,6 +135,40 @@
 - [ ] Auth setup flow — guided setup for GitHub/GitLab token, SSH, HTTPS credentials
 - [ ] Settings connection tests — verify AI key, GitHub token, GitLab token
 
+#### UI/UX Refinement & Polish (Brainstormed)
+- [ ] Unified Toast & Error System — Tích hợp Sonner/React-Hot-Toast, xóa bỏ hoàn toàn browser native alerts
+- [ ] Custom Warning/Confirmation Modals — Tạo modal dialogs custom (destructive actions like discard changes, delete branch)
+- [ ] Welcome Screen Refresh — Thiết kế tối giản kiểu macOS native, cải thiện typography và layout recent repos list
+- [ ] Functional Status Bar — Tận dụng Bottom Bar hiển thị branch hiện tại, status sync, conflict count, remove nonfunctional terminal
+- [ ] Responsive Toolbar — Tự động dồn các action phụ (LFS, Analytics, Undo) vào menu "More" trên màn hình nhỏ
+- [ ] macOS Source List Sidebar — Cải thiện styling Sidebar, bổ sung các badges báo số lượng branches, commits behind/ahead
+- [ ] Commit Graph Visual Polish — Tăng chiều cao dòng graph, bổ sung avatar author (gravatar) và hiệu ứng selection glow
+- [ ] Tailwind Theme System Clean-up — Refactor code style, chuyển các utilities màu sắc trong index.css thành Tailwind plugin chính thức, thêm tùy chọn follow system theme (Auto)
+- [ ] Shared AI Markdown Renderer — Gộp 3 markdown parsers trùng lặp (DiffViewer, CommitDetail ×2) thành 1 component `<AIMarkdown>` dùng chung
+- [ ] Extract Shared UI Components — Gộp duplicate StatusBadge, fileIcon(), getFileName(), getFolder() vào `components/ui/shared/`
+- [ ] Base Dialog Component — Tạo `<Dialog>` base với focus trap, Escape key, backdrop, animated entry/exit. Tất cả 14 dialogs kế thừa
+- [ ] Split SettingsDialog — Tách 66KB mega-file thành tab sections: General, AI, Integrations, Git, Appearance
+- [ ] CodeMirror Theme Sync — Tạo custom CodeMirror themes matching Gruvbox variants (hiện chỉ có oneDark)
+- [ ] Split Monolithic Components — Tách WorkingTree (1149L), DiffViewer (1057L), TrayPanel (944L) thành sub-components ≤400 dòng
+- [ ] Accessibility Basics — Focus management cho dialogs, ARIA attributes cho graph rows/tree items, keyboard shortcut hints trên buttons
+- [ ] Stash Panel Polish — Unify button styling, confirm trước Drop, thêm inline stash preview summary
+
+### First-Launch Onboarding Wizard
+- [ ] Show onboarding wizard on first app launch only (`gitflowOnboardingCompleted !== "true"`)
+- [ ] Allow users to skip onboarding; skipped setup still marks onboarding complete
+- [ ] Add Settings/Help entry point to run onboarding again
+- [ ] Replace automatic first-session feature guide popup with onboarding; keep feature guide manually accessible
+- [ ] Welcome step — explain app briefly, offer Open Repository, Clone Repository, Continue setup
+- [ ] Theme step — choose theme using existing theme cards and save to `theme`
+- [ ] Git basics step — configure auto-fetch, fetch interval, confirm dangerous actions, reopen last repo
+- [ ] AI setup step — optional API key, custom API URL, commit model, review model, token limit
+- [ ] Custom prompt step — configure custom AI rules, commit style, AI detail level, review language
+- [ ] Finish step — show setup summary and actions to Open Repository, Clone Repository, or Finish
+- [ ] Persist onboarding metadata: `gitflowOnboardingCompleted`, `gitflowOnboardingSkipped`, `gitflowOnboardingVersion`
+- [ ] Dispatch `gitflow-settings-updated` after saving onboarding settings
+- [ ] Reuse existing settings keys so Settings dialog and onboarding stay in sync
+- [ ] Tests: first launch opens onboarding, skip persists, finish saves settings, rerun loads current settings
+
 ---
 
 ## Phase 2: Advanced Git + AI Features (after Phase 1 ships)

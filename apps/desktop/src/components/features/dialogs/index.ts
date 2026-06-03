@@ -10,3 +10,5 @@ export { default as SettingsDialog } from "./SettingsDialog";
 export { default as MergeRequestDialog } from "./MergeRequestDialog";
 export { default as MergePreviewDialog } from "./MergePreviewDialog";
 export { default as FeatureGuideDialog } from "./FeatureGuideDialog";
+export { default as OnboardingWizard } from "./OnboardingWizard";
+export { isOnboardingComplete, resetOnboarding } from "./OnboardingWizard";

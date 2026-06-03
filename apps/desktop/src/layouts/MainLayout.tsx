@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Commit, FileChange, Branch, RepoInfo, SyncStatus } from "@/api/tauri";
@@ -12,7 +12,7 @@ import Sidebar from "@/components/features/sidebar/Sidebar";
 import CommitGraph from "@/components/features/graph/CommitGraph";
 import RightPanel from "@/components/layout/RightPanel";
 import BottomBar from "@/components/layout/BottomBar";
-import { SearchDialog, KeyboardShortcutsModal, CherryPickDialog, SettingsDialog, AnalyticsDialog, CreateBranchDialog, MergeRequestDialog, MergePreviewDialog, CloneDialog, FeatureGuideDialog } from "@/components/features/dialogs";
+import { SearchDialog, KeyboardShortcutsModal, CherryPickDialog, SettingsDialog, AnalyticsDialog, CreateBranchDialog, MergeRequestDialog, MergePreviewDialog, CloneDialog, FeatureGuideDialog, OnboardingWizard, isOnboardingComplete } from "@/components/features/dialogs";
 import ErrorBoundary from "@/components/ui/feedback/ErrorBoundary";
 import { AlertOctagon, RefreshCw, Trash2 } from "lucide-react";
 
@@ -32,6 +32,7 @@ export default function MainLayout() {
   const invalidateTimersRef = useRef<Map<string, number>>(new Map());
   const lastFocusRefreshRef = useRef(0);
   const featureGuideOpenedRef = useRef(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => !isOnboardingComplete());
 
   const scheduleInvalidate = useCallback((queryKey: unknown[], delay = 250) => {
     const key = JSON.stringify(queryKey);
@@ -333,6 +334,7 @@ export default function MainLayout() {
       <div className="h-full min-h-0">
         <WelcomeScreen onOpen={handleOpenRepo} />
         {dialogOverlay}
+        <OnboardingWizard open={showOnboarding} onClose={() => setShowOnboarding(false)} />
       </div>
     );
   }
@@ -398,6 +400,7 @@ function InlineErrorFallback({ name }: { name: string }) {
 
       {/* Dialog overlays */}
       {dialogOverlay}
+      <OnboardingWizard open={showOnboarding} onClose={() => setShowOnboarding(false)} />
     </div>
   );
 }
