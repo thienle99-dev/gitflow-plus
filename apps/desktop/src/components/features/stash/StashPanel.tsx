@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useStashList, useStashPush, useStashPop, useStashApply, useStashDrop } from "@/queries/useGitStash";
+import { showToast } from "@/lib/toast";
 import { GitBranch, Download, Upload, Trash2, Play, FileText } from "lucide-react";
 import StashDiffViewer from "./StashDiffViewer";
 
@@ -18,12 +19,6 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
   const [showPushForm, setShowPushForm] = useState(false);
   const [message, setMessage] = useState("");
   const [includeUntracked, setIncludeUntracked] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  };
 
   const handlePush = async () => {
     try {
@@ -33,7 +28,7 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
       setShowPushForm(false);
       showToast("Changes stashed");
     } catch (e: any) {
-      showToast(`Error: ${e}`);
+      showToast(`Error: ${e}`, "error");
     }
   };
 
@@ -42,7 +37,7 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
       await stashPop.mutateAsync({ index });
       showToast(`Stash@${index} popped`);
     } catch (e: any) {
-      showToast(`Error: ${e}`);
+      showToast(`Error: ${e}`, "error");
     }
   };
 
@@ -51,7 +46,7 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
       await stashApply.mutateAsync({ index });
       showToast(`Stash@${index} applied`);
     } catch (e: any) {
-      showToast(`Error: ${e}`);
+      showToast(`Error: ${e}`, "error");
     }
   };
 
@@ -63,7 +58,7 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
         setSelectedStashIndex(null);
       }
     } catch (e: any) {
-      showToast(`Error: ${e}`);
+      showToast(`Error: ${e}`, "error");
     }
   };
 
@@ -196,11 +191,6 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
         )}
       </div>
 
-      {toast && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-surface-2 text-text-primary px-3 py-2 rounded text-xs border border-border z-50">
-          {toast}
-        </div>
-      )}
     </div>
   );
 }

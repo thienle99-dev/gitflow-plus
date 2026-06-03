@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useGitBranches } from "@/queries/useGitLog";
 import { useMergePreview, useMergeBranch } from "@/queries/useGitMerge";
+import { showToast } from "@/lib/toast";
 import { ArrowLeftRight, GitMerge, GitBranch, FileText, Loader2, AlertCircle, ChevronDown } from "lucide-react";
 
 interface MergePreviewDialogProps {
@@ -25,13 +26,6 @@ export default function MergePreviewDialog({ initialBranch, onClose }: MergePrev
   const { data: preview, isLoading, error } = useMergePreview(repoPath, selectedBranch);
   const mergeBranch = useMergeBranch(repoPath);
 
-  const [toast, setToast] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  };
-
   const handleMerge = async () => {
     if (!repoPath || !selectedBranch) return;
     try {
@@ -39,7 +33,7 @@ export default function MergePreviewDialog({ initialBranch, onClose }: MergePrev
       showToast(squash ? `Squash merged "${selectedBranch}"` : `Merged "${selectedBranch}"`);
       onClose();
     } catch (e: any) {
-      showToast(`Merge failed: ${e?.message ?? e}`);
+      showToast(`Merge failed: ${e?.message ?? e}`, "error");
     }
   };
 
@@ -245,9 +239,6 @@ export default function MergePreviewDialog({ initialBranch, onClose }: MergePrev
         </div>
       </div>
 
-      {toast && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 toast">{toast}</div>
-      )}
     </div>
   );
 }

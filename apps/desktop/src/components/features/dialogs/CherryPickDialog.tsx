@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useCherryPick, useCherryPickAbort } from "@/queries/useGitCherryPick";
+import { showToast } from "@/lib/toast";
 import { GitCommit, AlertTriangle, X, Copy, ChevronDown } from "lucide-react";
 
 function Switch({
@@ -57,12 +58,6 @@ export default function CherryPickDialog({
   const cherryPickAbort = useCherryPickAbort(repoPath);
 
   const [noCommit, setNoCommit] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  };
 
   const handleCherryPick = async () => {
     try {
@@ -72,10 +67,10 @@ export default function CherryPickDialog({
         onSuccess?.();
         onClose();
       } else {
-        showToast(`Conflicts: ${result.conflicted_files?.join(", ") || result.message}`);
+        showToast(`Conflicts: ${result.conflicted_files?.join(", ") || result.message}`, "error");
       }
     } catch (e: any) {
-      showToast(`Error: ${e}`);
+      showToast(`Error: ${e}`, "error");
     }
   };
 
@@ -85,7 +80,7 @@ export default function CherryPickDialog({
       showToast("Cherry-pick aborted");
       onClose();
     } catch (e: any) {
-      showToast(`Error: ${e}`);
+      showToast(`Error: ${e}`, "error");
     }
   };
 
@@ -204,9 +199,6 @@ export default function CherryPickDialog({
         </div>
       </div>
 
-      {toast && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 toast">{toast}</div>
-      )}
     </div>
   );
 }

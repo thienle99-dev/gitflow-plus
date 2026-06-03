@@ -4,6 +4,7 @@ import { useStashDiff } from "@/queries/useStashDiff";
 import { api } from "@/api/tauri";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { showToast } from "@/lib/toast";
 import { parseDiffFiles, countDiffChanges } from "@/lib/parse-diff";
 
 interface StashDiffViewerProps {
@@ -18,12 +19,6 @@ export default function StashDiffViewer({ stash }: StashDiffViewerProps) {
   const { data: diffOutput, isLoading } = useStashDiff(repoPath, stash.index);
   const [mode, setMode] = useState<DiffMode>("unified");
   const [loading, setLoading] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  };
 
   const handleAction = async (action: "apply" | "pop" | "drop") => {
     if (!repoPath) return;
@@ -41,7 +36,7 @@ export default function StashDiffViewer({ stash }: StashDiffViewerProps) {
       }
       queryClient.invalidateQueries({ queryKey: ["git", repoPath, "stash"] });
     } catch (e) {
-      showToast(`Error: ${e}`);
+      showToast(`Error: ${e}`, "error");
     } finally {
       setLoading(null);
     }
@@ -174,11 +169,6 @@ export default function StashDiffViewer({ stash }: StashDiffViewerProps) {
         </button>
       </div>
 
-      {toast && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-surface-2 text-text-primary px-3 py-2 rounded text-xs border border-border">
-          {toast}
-        </div>
-      )}
     </div>
   );
 }

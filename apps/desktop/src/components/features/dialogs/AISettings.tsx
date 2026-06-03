@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { showToast } from "@/lib/toast";
 import { Sparkles, Eye, EyeOff, X, ChevronDown } from "lucide-react";
 import { Input, Select } from "@/components/ui/form";
 
@@ -29,12 +30,6 @@ export default function AISettings({ onClose }: AISettingsProps) {
   const [model, setModel] = useState("claude-sonnet-4-20250514");
   const [tokenLimit, setTokenLimit] = useState(4096);
   const [hasChanges, setHasChanges] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  };
 
   // Load persisted settings on mount (theme-like pattern from repo store)
   useEffect(() => {
@@ -71,7 +66,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
       showToast("AI settings saved");
       onClose?.();
     } catch (e: any) {
-      showToast(`Error saving: ${e}`);
+      showToast(`Error saving: ${e}`, "error");
     }
   };
 
@@ -199,7 +194,6 @@ export default function AISettings({ onClose }: AISettingsProps) {
         </button>
       </div>
 
-      {toast && <div className="toast">{toast}</div>}
     </div>
   );
 }

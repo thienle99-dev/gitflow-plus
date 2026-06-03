@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { api } from "@/api/tauri";
+import { showToast } from "@/lib/toast";
 import { Check, Combine, ArrowLeft, Sparkles, RefreshCw, X, ChevronDown, ChevronRight } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -107,13 +108,7 @@ export default function ConflictResolver({ filePath, onComplete, onCancel }: Con
   const [segments, setSegments] = useState<ParsedFile["segments"]>([]);
   const [rawContent, setRawContent] = useState("");
   const [resolving, setResolving] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  };
 
   // Fetch conflicted file content
   useEffect(() => {
@@ -126,7 +121,7 @@ export default function ConflictResolver({ filePath, onComplete, onCancel }: Con
         const parsed = parseConflictMarkers(content);
         setSegments(parsed.segments);
       } catch (e: any) {
-        showToast(`Error loading conflict: ${e}`);
+        showToast(`Error loading conflict: ${e}`, "error");
       }
     })();
   }, [repoPath, filePath]);
@@ -684,7 +679,6 @@ CRITICAL INSTRUCTIONS:
         </div>
       </div>
 
-      {toast && <div className="toast">{toast}</div>}
     </div>
   );
 }

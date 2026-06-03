@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { showToast } from "@/lib/toast";
+import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
 import {
   ChevronDown,
   Database,
@@ -271,12 +273,6 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
   const [gitlabHost, setGitlabHost] = useState("");
 
   const [hasChanges, setHasChanges] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  };
 
   // Load settings on mount
   useEffect(() => {
@@ -646,8 +642,14 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
     showToast("Recent repositories cleared");
   };
 
+  // confirmState used for ConfirmDialog (will be added later)
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
+
   const handleResetSettings = () => {
-    if (!confirm("Reset GitFlow Desktop settings to defaults?")) return;
+    setConfirmResetOpen(true);
+  };
+
+  const doResetSettings = () => {
     SETTINGS_KEYS.forEach((key) => localStorage.removeItem(key));
     setSelectedTheme(currentTheme);
     setDefaultDiffMode("split");
@@ -1532,6 +1534,15 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
               </div>
             </div>
           )}
+          <ConfirmDialog
+            open={confirmResetOpen}
+            title="Reset Settings"
+            message="Reset GitFlow Desktop settings to defaults?"
+            variant="destructive"
+            confirmLabel="Reset"
+            onConfirm={() => { setConfirmResetOpen(false); doResetSettings(); }}
+            onCancel={() => setConfirmResetOpen(false)}
+          />
         </div>
 
         {/* Action Footer */}
@@ -1552,7 +1563,6 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
         </div>
       </div>
 
-      {toast && <div className="toast">{toast}</div>}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Toaster } from "sonner";
 import { applyTheme, useRepoStore } from "./stores/repo";
 import RepoView from "./pages/RepoView";
 import TrayPanelView from "./pages/TrayPanelView";
@@ -44,6 +45,24 @@ function App() {
     <ErrorBoundary>
       <ErrorProvider>
         {isTrayWindow ? <TrayPanelView /> : <RepoView />}
+        <Toaster
+          position="bottom-center"
+          toastOptions={{
+            style: {
+              background: "var(--color-surface-2, #1e1e2e)",
+              color: "var(--color-text-primary, #cdd6f4)",
+              border: "1px solid var(--color-border, #45475a)",
+              fontSize: "12px",
+              borderRadius: "8px",
+            },
+            classNames: {
+              error: "sonner-error",
+              success: "sonner-success",
+            },
+          }}
+          richColors
+          closeButton
+        />
       </ErrorProvider>
     </ErrorBoundary>
   );

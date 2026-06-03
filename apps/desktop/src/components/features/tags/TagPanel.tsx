@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useTagList, useTagCreate, useTagDelete, useTagPush } from "@/queries/useGitTag";
+import { showToast } from "@/lib/toast";
 import { Tag, Plus, Trash2, Upload, GitCommit, User, Calendar } from "lucide-react";
 import { Input } from "@/components/ui/form";
 
@@ -15,13 +16,7 @@ export default function TagPanel({ onClose }: { onClose?: () => void }) {
   const [name, setName] = useState("");
   const [target, setTarget] = useState("");
   const [message, setMessage] = useState("");
-  const [toast, setToast] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  };
 
   const handleCreate = async () => {
     if (!name.trim()) return;
@@ -37,7 +32,7 @@ export default function TagPanel({ onClose }: { onClose?: () => void }) {
       setShowCreate(false);
       showToast(`Tag "${name}" created`);
     } catch (e: any) {
-      showToast(`Error: ${e}`);
+      showToast(`Error: ${e}`, "error");
     }
   };
 
@@ -47,7 +42,7 @@ export default function TagPanel({ onClose }: { onClose?: () => void }) {
       setConfirmDelete(null);
       showToast(`Tag "${tagName}" deleted`);
     } catch (e: any) {
-      showToast(`Error: ${e}`);
+      showToast(`Error: ${e}`, "error");
     }
   };
 
@@ -56,7 +51,7 @@ export default function TagPanel({ onClose }: { onClose?: () => void }) {
       await tagPush.mutateAsync({ name: tagName });
       showToast(`Tag "${tagName}" pushed`);
     } catch (e: any) {
-      showToast(`Error: ${e}`);
+      showToast(`Error: ${e}`, "error");
     }
   };
 
@@ -210,7 +205,6 @@ export default function TagPanel({ onClose }: { onClose?: () => void }) {
         ))}
       </div>
 
-      {toast && <div className="toast">{toast}</div>}
     </div>
   );
 }

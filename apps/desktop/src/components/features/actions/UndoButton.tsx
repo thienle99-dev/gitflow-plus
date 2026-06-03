@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useReflogList, useUndoLast } from "@/queries/useGitReflog";
+import { showToast } from "@/lib/toast";
 import { Undo2, GitCommit, RotateCcw, History } from "lucide-react";
 
 interface UndoButtonProps {
@@ -16,13 +17,7 @@ export default function UndoButton({ expanded: controlledExpanded, compact = fal
   const undoLast = useUndoLast(repoPath);
 
   const [open, setOpen] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -43,7 +38,7 @@ export default function UndoButton({ expanded: controlledExpanded, compact = fal
       setOpen(false);
       onUndoComplete?.();
     } catch (e: any) {
-      showToast(`Error: ${e}`);
+      showToast(`Error: ${e}`, "error");
     }
   };
 
@@ -108,7 +103,6 @@ export default function UndoButton({ expanded: controlledExpanded, compact = fal
         </div>
       )}
 
-      {toast && <div className="fixed bottom-4 left-1/2 -translate-x-1/2 toast z-50">{toast}</div>}
     </div>
   );
 }

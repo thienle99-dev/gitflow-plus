@@ -3,6 +3,7 @@ import { useRepoStore } from "@/stores/repo";
 import { api } from "@/api/tauri";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { showToast } from "@/lib/toast";
 
 interface SubmoduleDetailProps {
   submodule: SubmoduleInfo;
@@ -12,12 +13,6 @@ export default function SubmoduleDetail({ submodule }: SubmoduleDetailProps) {
   const repoPath = useRepoStore((s) => s.repoPath);
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  };
 
   const handleAction = async (action: "init" | "update" | "remove") => {
     if (!repoPath) return;
@@ -35,7 +30,7 @@ export default function SubmoduleDetail({ submodule }: SubmoduleDetailProps) {
       }
       queryClient.invalidateQueries({ queryKey: ["git", repoPath, "submodules"] });
     } catch (e) {
-      showToast(`Error: ${e}`);
+      showToast(`Error: ${e}`, "error");
     } finally {
       setLoading(null);
     }
@@ -100,11 +95,6 @@ export default function SubmoduleDetail({ submodule }: SubmoduleDetailProps) {
         </button>
       </div>
 
-      {toast && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-surface-2 text-text-primary px-3 py-2 rounded text-xs border border-border">
-          {toast}
-        </div>
-      )}
     </div>
   );
 }
