@@ -7,26 +7,16 @@ import { useGenerateCommitMessage } from "@/queries/useAI";
 import { lintCommitMessage, autoFixCommitMessage, type CommitLintResult } from "@/lib/commit-lint";
 import { LintWarningDialog } from "@/components/features/dialogs";
 import { showToast } from "@/lib/toast";
+import { TrayCommitBox } from "./TrayCommitBox";
+import { TrayFileChanges } from "./TrayFileChanges";
+import { TrayActions } from "./TrayActions";
 import {
   ChevronDown,
-  ChevronUp,
-  GitBranch,
-  File,
-  Sparkles,
-  RefreshCw,
-  Download,
-  Upload,
-  ExternalLink,
-  Loader2,
-  Check,
-  AlertCircle,
-  ShieldAlert,
   FolderOpen,
-  CheckSquare,
-  Square,
   Search,
-  Archive,
-  History,
+  Loader2,
+  RefreshCw,
+  ExternalLink,
   Settings,
   Copy,
   MessageSquare,
@@ -70,6 +60,11 @@ export default function TrayPanelView() {
   const [syncLoading, setSyncLoading] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  // File search and selection state for TrayFileChanges
+  const [fileSearchQuery, setFileSearchQuery] = useState("");
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [selectedFileStage, setSelectedFileStage] = useState<"staged" | "unstaged" | null>(null);
+
   // Commit message linting state
   const [lintResults, setLintResults] = useState<CommitLintResult[]>([]);
 
@@ -101,26 +96,17 @@ export default function TrayPanelView() {
   const [gateStrictness, setGateStrictness] = useState<"strict" | "warn">("warn");
   const [lintRunning, setLintRunning] = useState(false);
 
-  // Branch switcher states
-  const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
-  const [branchSearchQuery, setBranchSearchQuery] = useState("");
-  const [checkingOutBranch, setCheckingOutBranch] = useState<string | null>(null);
-
   // Stash states
   const [stashLoading, setStashLoading] = useState(false);
   const [popLoading, setPopLoading] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const branchDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdowns on click outside
+  // Close repo dropdown on click outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setRepoDropdownOpen(false);
-      }
-      if (branchDropdownRef.current && !branchDropdownRef.current.contains(event.target as Node)) {
-        setBranchDropdownOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -154,17 +140,12 @@ export default function TrayPanelView() {
 
   const handleCheckoutBranch = async (branchName: string) => {
     if (!repoPath) return;
-    setCheckingOutBranch(branchName);
     try {
       await api.branches.checkout(repoPath, branchName);
       invalidate();
       showToast(`Switched to branch: ${branchName}`);
-      setBranchDropdownOpen(false);
-      setBranchSearchQuery("");
     } catch (e: any) {
       showToast(e.message || `Failed to checkout ${branchName}`, "error");
-    } finally {
-      setCheckingOutBranch(null);
     }
   };
 
@@ -204,27 +185,6 @@ export default function TrayPanelView() {
       showToast("Failed to copy", "error");
     }
   };
-
-  const filteredBranches = (branches || []).filter((branch) =>
-    branch.name.toLowerCase().includes(branchSearchQuery.toLowerCase())
-  );
-
-  const groupedBranches = useMemo(() => {
-    return filteredBranches.reduce(
-      (groups, branchItem) => {
-        if (branchItem.remote) {
-          groups.remote.push(branchItem);
-        } else {
-          groups.local.push(branchItem);
-        }
-        return groups;
-      },
-      {
-        local: [] as NonNullable<typeof branches>,
-        remote: [] as NonNullable<typeof branches>,
-      }
-    );
-  }, [filteredBranches, branches]);
 
   const invalidate = () => {
     if (repoPath) {
@@ -475,37 +435,6 @@ export default function TrayPanelView() {
     );
   };
 
-  const renderBranchItem = (branchItem: NonNullable<typeof branches>[number]) => (
-    <button
-      key={`${branchItem.remote || "local"}:${branchItem.name}`}
-      onClick={() => handleCheckoutBranch(branchItem.name)}
-      disabled={checkingOutBranch !== null}
-      className={`w-full text-left px-3 py-1.5 text-[9px] hover:bg-accent hover:text-accent-fg transition-colors flex items-center justify-between gap-1.5 ${branchItem.current ? "bg-surface-2 font-semibold text-accent" : "text-text-secondary"
-        }`}
-    >
-      <span className="truncate flex-1">{branchItem.name}</span>
-      {checkingOutBranch === branchItem.name ? (
-        <Loader2 size={9} className="animate-spin text-accent" />
-      ) : branchItem.current ? (
-        <Check size={9} className="text-accent" />
-      ) : null}
-    </button>
-  );
-
-  const renderBranchGroup = (label: string, branchItems: NonNullable<typeof branches>) => {
-    if (branchItems.length === 0) return null;
-
-    return (
-      <div className="py-1">
-        <div className="px-3 py-1 text-[8px] font-bold uppercase tracking-wider text-text-muted-80 flex items-center justify-between">
-          <span>{label}</span>
-          <span>{branchItems.length}</span>
-        </div>
-        {branchItems.map(renderBranchItem)}
-      </div>
-    );
-  };
-
   return (
     <div className="h-[584px] w-[384px] bg-transparent p-0 rounded-[20px] overflow-hidden font-sans">
       <div className="flex h-full w-full flex-col bg-surface-0 border border-border-60 rounded-[18px] overflow-hidden select-none shadow-2xl relative">
@@ -611,143 +540,47 @@ export default function TrayPanelView() {
         {repoPath ? (
           activeTab === "changes" ? (
             <>
-              {/* Working Tree Section */}
-              <div className="flex-1 flex flex-col min-h-[170px] border border-border-40 bg-surface-1-40 rounded-mac p-2.5">
-                <div className="flex items-center justify-between gap-2 border-b border-border-40 pb-1.5 shrink-0">
-                  <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
-                    Changes ({changes?.length || 0})
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={handleStashPush}
-                      disabled={stashLoading || changes?.length === 0}
-                      className="h-6 w-6 rounded border border-transparent text-text-secondary transition-all hover:border-border-40 hover:bg-surface-2 hover:text-accent disabled:opacity-40 flex items-center justify-center cursor-pointer"
-                      title="Stash changes"
-                    >
-                      {stashLoading ? <Loader2 size={11} className="animate-spin" /> : <Archive size={11} />}
-                    </button>
-                    {stashes && stashes.length > 0 && (
-                      <button
-                        onClick={handleStashPop}
-                        disabled={popLoading}
-                        className="relative h-6 w-6 rounded border border-transparent text-text-secondary transition-all hover:border-border-40 hover:bg-surface-2 hover:text-accent disabled:opacity-40 flex items-center justify-center cursor-pointer"
-                        title={`Pop latest stash (${stashes.length})`}
-                      >
-                        {popLoading ? <Loader2 size={11} className="animate-spin" /> : <History size={11} />}
-                        <span className="absolute -right-1 -top-1 min-w-[13px] rounded-[3px] bg-accent px-0.5 text-[7px] font-bold leading-[13px] text-accent-fg">
-                          {stashes.length}
-                        </span>
-                      </button>
-                    )}
-                    {unstaged.length > 0 && (
-                      <button
-                        onClick={handleStageAll}
-                        className="h-6 w-6 rounded border border-transparent text-accent transition-all hover:border-border-40 hover:bg-surface-2 flex items-center justify-center cursor-pointer"
-                        title="Stage all changes"
-                      >
-                        <CheckSquare size={11} />
-                      </button>
-                    )}
-                    {staged.length > 0 && (
-                      <button
-                        onClick={handleUnstageAll}
-                        className="h-6 w-6 rounded border border-transparent text-text-secondary transition-all hover:border-border-40 hover:bg-surface-2 hover:text-text-primary flex items-center justify-center cursor-pointer"
-                        title="Unstage all changes"
-                      >
-                        <Square size={11} />
-                      </button>
-                    )}
-                  </div>
-                </div>
+              <TrayFileChanges
+                staged={staged}
+                unstaged={unstaged}
+                searchQuery={fileSearchQuery}
+                setSearchQuery={setFileSearchQuery}
+                onStage={(path) => {
+                  const file = changes?.find((c) => c.path === path && !c.staged);
+                  if (file) handleToggleStage(file);
+                }}
+                onUnstage={(path) => {
+                  const file = changes?.find((c) => c.path === path && c.staged);
+                  if (file) handleToggleStage(file);
+                }}
+                onStageAll={handleStageAll}
+                onUnstageAll={handleUnstageAll}
+                selectedFile={selectedFile}
+                selectedFileStage={selectedFileStage}
+                onSelectFile={(path, stage) => {
+                  setSelectedFile(path);
+                  setSelectedFileStage(stage);
+                }}
+                isLoading={isLoadingStatus}
+                stashes={stashes}
+                stashLoading={stashLoading}
+                popLoading={popLoading}
+                onStashPush={handleStashPush}
+                onStashPop={handleStashPop}
+              />
 
-                {/* Scrollable File List */}
-                <div className="flex-1 overflow-y-auto mt-2 space-y-1 pr-1">
-                  {isLoadingStatus ? (
-                    <div className="h-full flex items-center justify-center py-4 text-text-muted gap-1.5">
-                      <Loader2 size={12} className="animate-spin text-accent" />
-                      <span className="text-[10px]">Loading status...</span>
-                    </div>
-                  ) : changes && changes.length > 0 ? (
-                    changes.map((file) => (
-                      <div
-                        key={file.path}
-                        className="flex items-center justify-between py-1 px-1.5 rounded hover:bg-surface-2 transition-all text-[10px]"
-                      >
-                        <button
-                          onClick={() => handleToggleStage(file)}
-                          className="flex items-center gap-2 min-w-0 flex-1 text-left"
-                        >
-                          {file.staged ? (
-                            <CheckSquare size={12} className="text-accent shrink-0" />
-                          ) : (
-                            <Square size={12} className="text-text-muted shrink-0" />
-                          )}
-                          <File size={11} className="text-text-secondary shrink-0" />
-                          <span className="text-text-primary truncate font-medium">{file.path}</span>
-                        </button>
-                        <span
-                          className={`text-[8px] font-bold uppercase px-1 rounded shrink-0 ${file.status === "added" || file.status === "untracked"
-                            ? "text-[#30d158]/80"
-                            : file.status === "deleted"
-                              ? "text-[#ff453a]/80"
-                              : "text-[#ff9f0a]/80"
-                            }`}
-                        >
-                          {file.status.slice(0, 1).toUpperCase()}
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="h-full flex flex-col items-center justify-center py-8 text-center text-text-muted space-y-1.5">
-                      <Check size={16} className="text-[#30d158]" />
-                      <span className="text-[10px] font-medium">Working directory clean</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Commit Form Section */}
-              <div className="border border-border-40 focus-within:border-accent-60 bg-surface-2 rounded-mac p-2.5 flex flex-col gap-2.5 shrink-0 transition-colors">
-                <textarea
-                  value={commitMessage}
-                  onChange={(e) => setCommitMessage(e.target.value)}
-                  placeholder="Commit message (or generate with AI...)"
-                  rows={4}
-                  className="min-h-[92px] max-h-[180px] w-full bg-transparent border-none text-[10px] text-text-primary placeholder-text-muted resize-y leading-relaxed font-mono p-0.5"
-                  style={{ outline: "none", border: "none", boxShadow: "none" }}
-                />
-
-                <div className="flex items-center justify-between gap-2 border-t border-border-40 pt-1.5">
-                  <button
-                    onClick={handleAICommitMessage}
-                    disabled={(changes?.length || 0) === 0 || generateCommit.isPending}
-                    className="h-6 w-6 rounded border border-transparent text-accent transition-all hover:border-border-40 hover:bg-surface-3 disabled:opacity-40 flex items-center justify-center cursor-pointer"
-                    title={
-                      "Generate message using all changes"
-                    }
-                  >
-                    {generateCommit.isPending ? (
-                      <Loader2 size={12} className="animate-spin" />
-                    ) : (
-                      <Sparkles size={12} />
-                    )}
-                  </button>
-
-                  <button
-                    onClick={handleCommit}
-                    disabled={committing || lintRunning || !commitMessage.trim()}
-                    className="h-7 px-2.5 bg-accent text-accent-fg text-[9px] font-bold rounded hover:opacity-95 disabled:opacity-40 transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
-                    title={`Commit changes`}
-                  >
-                    {committing || lintRunning ? (
-                      <Loader2 size={12} className="animate-spin" />
-                    ) : (
-                      <Check size={12} />
-                    )}
-                    <span>{committing ? "Committing..." : lintRunning ? "Linting..." : "Commit"}</span>
-                  </button>
-                </div>
-              </div>
+              <TrayCommitBox
+                commitMessage={commitMessage}
+                setCommitMessage={setCommitMessage}
+                lintResults={lintResults}
+                committing={committing}
+                lintRunning={lintRunning}
+                staged={staged}
+                unstaged={unstaged}
+                onCommit={handleCommit}
+                onGenerateCommit={handleAICommitMessage}
+                generateCommitPending={generateCommit.isPending}
+              />
             </>
           ) : (
             <div className="flex-1 flex flex-col border border-border-40 bg-surface-1-40 rounded-mac p-2.5 overflow-hidden">
@@ -890,111 +723,23 @@ export default function TrayPanelView() {
       </div>
 
       {/* Footer Git Actions Bar */}
-      <div className="h-12 border-t border-border-60 bg-surface-1 flex items-center justify-between px-3.5 shrink-0 relative">
-        {/* Branch Switcher (Upwards Dropdown) */}
-        {repoPath ? (
-          <div className="relative min-w-0" ref={branchDropdownRef}>
-            <button
-              onClick={() => setBranchDropdownOpen(!branchDropdownOpen)}
-              className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-surface-2 text-[10px] font-semibold text-text-primary transition-all max-w-[145px]"
-            >
-              <GitBranch size={11} className="text-accent shrink-0" />
-              <span className="truncate">{currentBranch || "no branch"}</span>
-              {syncStatus && (syncStatus.ahead > 0 || syncStatus.behind > 0) && (
-                <span
-                  className="flex items-center gap-1 rounded bg-accent-10 px-1 py-0.5 text-[8px] font-bold text-accent shrink-0"
-                  title={`${syncStatus.ahead} ahead, ${syncStatus.behind} behind`}
-                >
-                  {syncStatus.ahead > 0 && <span>↑{syncStatus.ahead}</span>}
-                  {syncStatus.behind > 0 && <span>↓{syncStatus.behind}</span>}
-                </span>
-              )}
-              <ChevronUp size={10} className="text-text-muted shrink-0" />
-            </button>
-
-            {branchDropdownOpen && (
-              <div className="absolute left-0 bottom-full mb-1 w-56 bg-surface-1 border border-border-60 rounded-mac shadow-xl z-50 py-1.5 animate-in fade-in slide-in-from-bottom-1 duration-150">
-                <div className="px-2 pb-1.5 border-b border-border-40 flex items-center gap-1.5">
-                  <Search size={10} className="text-text-muted" />
-                  <input
-                    type="text"
-                    placeholder="Search branches..."
-                    value={branchSearchQuery}
-                    onChange={(e) => setBranchSearchQuery(e.target.value)}
-                    className="w-full bg-transparent text-[9px] text-text-primary outline-none"
-                    autoFocus
-                  />
-                </div>
-                <div className="max-h-40 overflow-y-auto mt-1">
-                  {filteredBranches.length === 0 ? (
-                    <div className="px-3 py-2 text-[9px] text-text-muted italic">
-                      No branches found
-                    </div>
-                  ) : (
-                    <>
-                      {renderBranchGroup("Local", groupedBranches.local)}
-                      {renderBranchGroup("Remote", groupedBranches.remote)}
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
+      {repoPath ? (
+        <TrayActions
+          currentBranch={currentBranch}
+          branches={branches || []}
+          syncStatus={syncStatus}
+          syncLoading={syncLoading}
+          refreshing={refreshing}
+          onFetch={() => handleGitAction("fetch")}
+          onPull={() => handleGitAction("pull")}
+          onPush={() => handleGitAction("push")}
+          onCheckoutBranch={handleCheckoutBranch}
+        />
+      ) : (
+        <div className="h-12 border-t border-border-60 bg-surface-1 flex items-center justify-between px-3.5 shrink-0">
           <span className="text-[9px] font-mono text-text-muted">Ready</span>
-        )}
-
-        {repoPath && (
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => handleGitAction("fetch")}
-              disabled={syncLoading !== null}
-              className="h-8 w-8 bg-surface-2 hover:bg-surface-3 text-text-primary rounded border border-border-40 transition-all flex items-center justify-center cursor-pointer disabled:opacity-50"
-              title="Fetch remote changes"
-            >
-              {syncLoading === "fetch" ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <RefreshCw size={13} />
-              )}
-            </button>
-            <button
-              onClick={() => handleGitAction("pull")}
-              disabled={syncLoading !== null}
-              className="relative h-8 w-8 bg-surface-2 hover:bg-surface-3 text-text-primary rounded border border-border-40 transition-all flex items-center justify-center cursor-pointer disabled:opacity-50"
-              title="Pull remote changes"
-            >
-              {syncLoading === "pull" ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <Download size={13} />
-              )}
-              {!!syncStatus?.behind && (
-                <span className="absolute -right-1 -top-1 min-w-[15px] rounded-[4px] bg-[#0a84ff] px-1 py-0.5 text-[8px] font-bold leading-none text-white shadow-sm">
-                  {syncStatus.behind}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => handleGitAction("push")}
-              disabled={syncLoading !== null}
-              className="relative h-8 w-8 bg-surface-2 hover:bg-surface-3 text-text-primary rounded border border-border-40 transition-all flex items-center justify-center cursor-pointer disabled:opacity-50"
-              title="Push local commits"
-            >
-              {syncLoading === "push" ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <Upload size={13} />
-              )}
-              {!!syncStatus?.ahead && (
-                <span className="absolute -right-1 -top-1 min-w-[15px] rounded-[4px] bg-[#30d158] px-1 py-0.5 text-[8px] font-bold leading-none text-white shadow-sm">
-                  {syncStatus.ahead}
-                </span>
-              )}
-            </button>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <LintWarningDialog
         open={lintWarningOpen}

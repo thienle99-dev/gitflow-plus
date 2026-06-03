@@ -18,6 +18,16 @@ import { Search, X } from "lucide-react";
 
 const ROW_HEIGHT = 38;
 const EDGE_BLOCK_SIZE = 128;
+type CommitFilterScope = "all" | "commit" | "author" | "hash" | "date" | "ref";
+
+const FILTER_SCOPE_OPTIONS: Array<{ value: CommitFilterScope; label: string; placeholder: string }> = [
+  { value: "all", label: "All", placeholder: "Filter commits" },
+  { value: "commit", label: "Commit", placeholder: "Message text" },
+  { value: "author", label: "Author", placeholder: "Author name or email" },
+  { value: "hash", label: "Hash", placeholder: "Commit hash" },
+  { value: "date", label: "Date", placeholder: "Date, e.g. Jun 3" },
+  { value: "ref", label: "Ref", placeholder: "Branch or tag" },
+];
 
 export default function CommitGraph() {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -35,6 +45,7 @@ export default function CommitGraph() {
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; hash: string } | null>(null);
   const [confirmCherryPick, setConfirmCherryPick] = useState<string | null>(null);
   const [confirmRevert, setConfirmRevert] = useState<string | null>(null);
+  const [filterScope, setFilterScope] = useState<CommitFilterScope>("all");
   const [filterQuery, setFilterQuery] = useState("");
 
   // Graph layout + render index computed off the main thread via Web Worker
@@ -45,8 +56,8 @@ export default function CommitGraph() {
     if (!filterText) {
       return { visibleLayout: layout, visibleGraphIndex: graphIndex };
     }
-    return createFilteredGraphLayout(layout, filterText);
-  }, [layout, graphIndex, filterText]);
+    return createFilteredGraphLayout(layout, filterText, filterScope);
+  }, [layout, graphIndex, filterText, filterScope]);
   const commits = visibleLayout.commits;
 
   // TanStack Virtual — manages scroll position, total size, and infinite loading
@@ -296,24 +307,38 @@ export default function CommitGraph() {
             {selectedRef || "All Branches"} — {isFiltering ? `${commits.length} of ${layout.commits.length}` : commits.length} commits
           </span>
         </div>
-        <div className="relative w-[min(280px,34vw)] min-w-[180px]">
-          <Search size={12} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-text-muted-70" />
-          <input
-            value={filterQuery}
-            onChange={(e) => setFilterQuery(e.target.value)}
-            placeholder="Filter commits"
-            className="h-6 w-full rounded border border-border-40 bg-surface-1-30 pl-7 pr-7 text-[11px] font-medium text-text-primary outline-none transition-colors placeholder:text-text-muted-60 hover:bg-surface-2-30 focus:border-accent-60"
-          />
-          {filterQuery && (
-            <button
-              type="button"
-              onClick={() => setFilterQuery("")}
-              className="absolute right-1 top-1/2 flex h-4 w-4 -translate-y-1/2 items-center justify-center rounded text-text-muted hover:bg-surface-2-60 hover:text-text-primary"
-              title="Clear filter"
-            >
-              <X size={11} />
-            </button>
-          )}
+        <div className="flex w-[min(380px,42vw)] min-w-[260px] items-center overflow-hidden rounded border border-border-40 bg-surface-1-30 focus-within:border-accent-60">
+          <select
+            value={filterScope}
+            onChange={(e) => setFilterScope(e.target.value as CommitFilterScope)}
+            className="h-6 w-[86px] shrink-0 border-r border-border-30 bg-transparent px-2 text-[10px] font-bold uppercase tracking-wide text-text-secondary outline-none"
+            title="Filter field"
+          >
+            {FILTER_SCOPE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <div className="relative min-w-0 flex-1">
+            <Search size={12} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-text-muted-70" />
+            <input
+              value={filterQuery}
+              onChange={(e) => setFilterQuery(e.target.value)}
+              placeholder={FILTER_SCOPE_OPTIONS.find((option) => option.value === filterScope)?.placeholder}
+              className="h-6 w-full bg-transparent pl-7 pr-7 text-[11px] font-medium text-text-primary outline-none placeholder:text-text-muted-60"
+            />
+            {filterQuery && (
+              <button
+                type="button"
+                onClick={() => setFilterQuery("")}
+                className="absolute right-1 top-1/2 flex h-4 w-4 -translate-y-1/2 items-center justify-center rounded text-text-muted hover:bg-surface-2-60 hover:text-text-primary"
+                title="Clear filter"
+              >
+                <X size={11} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -399,10 +424,11 @@ export default function CommitGraph() {
 function createFilteredGraphLayout(
   layout: LayoutState,
   query: string,
+  scope: CommitFilterScope,
 ): { visibleLayout: LayoutState; visibleGraphIndex: GraphRenderIndex } {
   const terms = query.split(/\s+/).filter(Boolean);
   const commits = layout.commits
-    .filter((commit) => matchesCommitFilter(commit, terms))
+    .filter((commit) => matchesCommitFilter(commit, terms, scope))
     .map((commit, row) => ({
       ...commit,
       y: row * ROW_HEIGHT + ROW_HEIGHT / 2,
@@ -421,21 +447,60 @@ function createFilteredGraphLayout(
   };
 }
 
-function matchesCommitFilter(commit: LayoutState["commits"][number], terms: string[]) {
+function matchesCommitFilter(
+  commit: LayoutState["commits"][number],
+  terms: string[],
+  scope: CommitFilterScope,
+) {
   const refText = commit.refs
     .map((ref) => `${ref.name} ${ref.ref_type}`)
     .join(" ");
-  const haystack = [
-    commit.message,
-    commit.hash,
-    commit.hash.slice(0, 7),
-    commit.author,
-    commit.email,
-    commit.date,
-    refText,
-  ].join(" ").toLowerCase();
+  const formattedDate = formatFilterDate(commit.date);
+  const valuesByScope: Record<CommitFilterScope, string[]> = {
+    all: [
+      commit.message,
+      commit.hash,
+      commit.hash.slice(0, 7),
+      commit.author,
+      commit.email,
+      commit.date,
+      formattedDate,
+      refText,
+    ],
+    commit: [commit.message],
+    author: [commit.author, commit.email],
+    hash: [commit.hash, commit.hash.slice(0, 7)],
+    date: [commit.date, formattedDate],
+    ref: [refText],
+  };
+  const haystack = valuesByScope[scope].join(" ").toLowerCase();
 
   return terms.every((term) => haystack.includes(term));
+}
+
+function formatFilterDate(date: string) {
+  const normalized = date.replace(
+    /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) ([+-]\d{2})(\d{2})$/,
+    "$1T$2$3:$4",
+  );
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    return date;
+  }
+  return [
+    parsed.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+    parsed.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    }),
+    parsed.toISOString().slice(0, 10),
+  ].join(" ");
 }
 
 function buildRenderIndexForVisibleCommits(layout: LayoutState): GraphRenderIndex {

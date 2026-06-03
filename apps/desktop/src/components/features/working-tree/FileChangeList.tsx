@@ -476,13 +476,13 @@ export interface FileChangeListProps {
   onUnstage: (path: string) => void;
   onStageAll: () => void;
   onUnstageAll: () => void;
-  onDiscardAll: () => void;
   onSelectFile: (path: string, stage: "staged" | "unstaged") => void;
   onAIInlineReview: (path: string, stage: "staged" | "unstaged") => void;
   onContextMenu: (x: number, y: number, file: FileChange, stage: "staged" | "unstaged") => void;
   onFileMultiClick: (path: string, e: React.MouseEvent) => void;
   onRefresh: () => void;
   onToggleTreeView: () => void;
+  onToggleAllSections: () => void;
   onToggleStagedOpen: () => void;
   onToggleUnstagedOpen: () => void;
   onSetConfirmDiscardAll: (v: boolean) => void;
@@ -512,6 +512,7 @@ export default function FileChangeList({
   onFileMultiClick,
   onRefresh,
   onToggleTreeView,
+  onToggleAllSections,
   onToggleStagedOpen,
   onToggleUnstagedOpen,
   onSetConfirmDiscardAll,
@@ -522,23 +523,13 @@ export default function FileChangeList({
   const totalChanges = staged.length + unstaged.length;
   const isAllOpen = stagedOpen || unstagedOpen;
 
-  const handleToggleAllSections = () => {
-    if (isAllOpen) {
-      onToggleStagedOpen();
-      onToggleUnstagedOpen();
-    } else {
-      if (!stagedOpen) onToggleStagedOpen();
-      if (!unstagedOpen) onToggleUnstagedOpen();
-    }
-  };
-
   return (
     <>
       {/* Master Changes Header */}
       <div className="h-10 px-3 border-b border-border-60 flex items-center justify-between shrink-0 bg-surface-1-70 backdrop-blur">
         <div
           className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-text-primary uppercase tracking-wider select-none"
-          onClick={handleToggleAllSections}
+          onClick={onToggleAllSections}
           title={isAllOpen ? "Collapse all" : "Expand all"}
         >
           <ChevronDown

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useGitDiff, useGitStatus } from "@/queries/useGitLog";
@@ -8,9 +8,8 @@ import { generateLocalCommitMessage, shouldAnalyzeScope, type CommitScopeSuggest
 import { useQueryClient } from "@tanstack/react-query";
 import { showToast } from "@/lib/toast";
 import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
-import { StatusBadge, fileIcon, statusLabel, statusColor } from "@/components/ui/shared";
+import { fileIcon, statusLabel, statusColor } from "@/components/ui/shared";
 import ContextMenu, { type ContextMenuItem } from "@/components/ui/overlay/ContextMenu";
-import UndoButton from "@/components/features/actions/UndoButton";
 import LazyDiffViewer from "@/components/features/diff/LazyDiffViewer";
 import { AlertCircle, ShieldAlert, MessageSquare } from "lucide-react";
 import { lintCommitMessage, autoFixCommitMessage, type CommitLintResult } from "@/lib/commit-lint";
@@ -20,20 +19,15 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  GitCommit,
   Layers,
-  MoreHorizontal,
   RefreshCw,
   Sparkles,
   Trash2,
-  Plus,
-  Undo2,
   X,
   Maximize2,
-  Folder,
-  List,
-  FolderTree,
 } from "lucide-react";
+import FileChangeList from "./FileChangeList";
+import CommitBox from "./CommitBox";
 
 export default function WorkingTree() {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -86,7 +80,6 @@ export default function WorkingTree() {
   // Multi-select for batch stage/unstage
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const lastClickedRef = useRef<string | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [isTreeView, setIsTreeView] = useState(() => {
     return localStorage.getItem("gitflowTreeViewMode") !== "false";
@@ -387,7 +380,6 @@ export default function WorkingTree() {
     } catch (e: any) {
       showToast(`Error: ${e}`, "error");
     }
-    requestAnimationFrame(() => textareaRef.current?.focus());
   };
 
   const handleCommitGroup = async (group: { files: string[]; message: string }) => {
@@ -474,8 +466,6 @@ export default function WorkingTree() {
     } catch (err: any) {
       setCommitMessage(generateLocalCommitMessage(changes));
       showToast(`AI failed: ${err.message || err}. Used local fallback.`, "error");
-    } finally {
-      requestAnimationFrame(() => textareaRef.current?.focus());
     }
   };
 
@@ -509,9 +499,7 @@ export default function WorkingTree() {
   useEffect(() => {
     const prevCount = prevStagedCountRef.current;
     prevStagedCountRef.current = staged.length;
-    // Trigger when crossing the threshold (from <5 to ≥5) and not already analyzing
     if (staged.length >= 5 && prevCount < 5 && !scopeSuggestion && !scopeAnalyzing && !commitScope.isPending) {
-      // Only auto-trigger if shouldAnalyzeScope returns true
       if (shouldAnalyzeScope(staged)) {
         handleAnalyzeScope();
       }
@@ -555,11 +543,8 @@ export default function WorkingTree() {
     ]
     : [];
 
-  const totalChanges = staged.length + unstaged.length;
-  const isAllOpen = stagedOpen || unstagedOpen;
-
   const handleToggleAllSections = () => {
-    if (isAllOpen) {
+    if (stagedOpen || unstagedOpen) {
       setStagedOpen(false);
       setUnstagedOpen(false);
     } else {
@@ -570,415 +555,130 @@ export default function WorkingTree() {
 
   return (
     <div className="h-full flex flex-col bg-surface-0">
-      {/* Master Changes Header */}
-      <div className="h-10 px-3 border-b border-border-60 flex items-center justify-between shrink-0 bg-surface-1-70 backdrop-blur">
-        <div
-          className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-text-primary uppercase tracking-wider select-none"
-          onClick={handleToggleAllSections}
-          title={isAllOpen ? "Collapse all" : "Expand all"}
-        >
-          <ChevronDown
-            size={13}
-            className={`text-text-secondary transition-transform duration-150 ${isAllOpen ? "" : "-rotate-90"}`}
-          />
-          Changes
-        </div>
-        <div className="flex items-center gap-1.5">
-          <button
-            className={`h-6 w-6 inline-flex items-center justify-center rounded-md transition-colors ${
-              isTreeView
-                ? "text-accent bg-accent-10 hover:bg-accent-20"
-                : "text-text-muted hover:text-text-primary hover:bg-surface-2"
-            }`}
-            onClick={toggleTreeView}
-            title={isTreeView ? "Switch to List View" : "Switch to Tree View"}
-          >
-            {isTreeView ? <FolderTree size={13} /> : <List size={13} />}
-          </button>
-          <button
-            className="h-6 w-6 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
-            onClick={invalidate}
-            title="Refresh changes"
-          >
-            <RefreshCw size={13} />
-          </button>
-          <button
-            className="h-6 w-6 inline-flex items-center justify-center rounded-md text-text-muted hover:text-accent hover:bg-accent-10 disabled:opacity-35 disabled:hover:bg-transparent transition-colors"
-            onClick={handleStageAll}
-            disabled={unstaged.length === 0}
-            title="Stage all changes"
-          >
-            <Plus size={13} />
-          </button>
-          <button
-            className="h-6 w-6 inline-flex items-center justify-center rounded-md text-text-muted hover:text-[#ff375f] hover:bg-[#ff375f]/10 disabled:opacity-35 disabled:hover:bg-transparent transition-colors"
-            onClick={() => setConfirmDiscardAll(true)}
-            disabled={totalChanges === 0}
-            title="Discard all changes"
-          >
-            <Undo2 size={13} />
-          </button>
-          {totalChanges > 0 && (
-            <span className="ml-1 flex items-center justify-center min-w-[20px] h-5 rounded-full bg-[#bf5af2]/15 text-[#bf5af2] dark:text-[#da8fff] text-[10px] font-bold px-1.5 select-none">
-              {totalChanges}
-            </span>
-          )}
-        </div>
-      </div>
+      <FileChangeList
+        staged={staged}
+        unstaged={unstaged}
+        selectedFile={selectedFile}
+        selectedFileStage={selectedFileStage}
+        selectedFiles={selectedFiles}
+        isTreeView={isTreeView}
+        stagedOpen={stagedOpen}
+        unstagedOpen={unstagedOpen}
+        reviewTargetPath={reviewTarget?.path}
+        reviewTargetStage={reviewTarget?.stage}
+        onStage={handleStage}
+        onUnstage={handleUnstage}
+        onStageAll={handleStageAll}
+        onUnstageAll={handleUnstageAll}
+        onSelectFile={(path, stage) => openDiffReview(path, stage)}
+        onAIInlineReview={(path, stage) => openInlineReview(path, stage)}
+        onContextMenu={(x, y, file, stage) => setCtxMenu({ x, y, file, stage })}
+        onFileMultiClick={handleFileClick}
+        onRefresh={invalidate}
+        onToggleTreeView={toggleTreeView}
+        onToggleAllSections={handleToggleAllSections}
+        onToggleStagedOpen={() => setStagedOpen((open) => !open)}
+        onToggleUnstagedOpen={() => setUnstagedOpen((open) => !open)}
+        onSetConfirmDiscardAll={setConfirmDiscardAll}
+        onBatchStage={handleBatchStage}
+        onBatchUnstage={handleBatchUnstage}
+        onClearSelected={() => setSelectedFiles(new Set())}
+      />
 
-      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-        <ChangeSection
-          title="Staged files"
-          checked
-          open={stagedOpen}
-          files={staged}
-          empty="No staged changes"
-          selectedFile={reviewTarget?.path || selectedFile}
-          selectedStage={reviewTarget?.stage || selectedFileStage}
-          stage="staged"
-          multiSelectedFiles={selectedFiles}
-          onToggleAll={handleUnstageAll}
-          onToggleFile={handleUnstage}
-          onSelect={(path) => openDiffReview(path, "staged")}
-          onAIInlineReview={(path) => openInlineReview(path, "staged")}
-          onToggleOpen={() => setStagedOpen((open) => !open)}
-          onMenu={(x, y, file) => setCtxMenu({ x, y, file, stage: "staged" })}
-          onFileMultiClick={handleFileClick}
-          isTreeView={isTreeView}
-        />
-        <ChangeSection
-          title="Unstaged files"
-          checked={false}
-          open={unstagedOpen}
-          files={unstaged}
-          empty="No unstaged changes"
-          selectedFile={reviewTarget?.path || selectedFile}
-          selectedStage={reviewTarget?.stage || selectedFileStage}
-          stage="unstaged"
-          multiSelectedFiles={selectedFiles}
-          onToggleAll={handleStageAll}
-          onToggleFile={handleStage}
-          onSelect={(path) => openDiffReview(path, "unstaged")}
-          onAIInlineReview={(path) => openInlineReview(path, "unstaged")}
-          onToggleOpen={() => setUnstagedOpen((open) => !open)}
-          onMenu={(x, y, file) => setCtxMenu({ x, y, file, stage: "unstaged" })}
-          onFileMultiClick={handleFileClick}
-          isTreeView={isTreeView}
-        />
-        {selectedFiles.size > 0 && (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-accent-5 border-b border-accent-20 shrink-0">
-            <span className="text-2xs text-text-muted">{selectedFiles.size} selected</span>
-            <button onClick={handleBatchStage} className="text-2xs font-medium text-accent hover:underline">
-              Stage selected
-            </button>
-            <button onClick={handleBatchUnstage} className="text-2xs font-medium text-text-muted hover:text-text-primary hover:underline">
-              Unstage selected
-            </button>
-            <button onClick={() => setSelectedFiles(new Set())} className="text-2xs text-text-muted hover:text-text-primary ml-auto">
-              Clear
-            </button>
-          </div>
-        )}
-
-        {aiReviewOpen && (
-          <div className={`${aiReviewCollapsed ? "shrink-0 px-3 py-2" : "flex-1 min-h-0 px-3 py-2"} border-t border-border-60`}>
-            <div className={`h-full border border-accent-30 bg-surface-1 overflow-hidden transition-all ${aiReviewCollapsed ? "rounded-[5px] shadow-2xs" : "rounded-mac shadow-lg shadow-black/10 flex flex-col"}`}>
-              <div className={`flex items-center justify-between gap-2 select-none shrink-0 ${aiReviewCollapsed ? "px-2 py-1 bg-surface-2-30" : "px-3 py-1.5 border-b border-border-40 bg-accent-5"}`}>
+      {aiReviewOpen && (
+        <div className={`${aiReviewCollapsed ? "shrink-0 px-3 py-2" : "flex-1 min-h-0 px-3 py-2"} border-t border-border-60`}>
+          <div className={`h-full border border-accent-30 bg-surface-1 overflow-hidden transition-all ${aiReviewCollapsed ? "rounded-[5px] shadow-2xs" : "rounded-mac shadow-lg shadow-black/10 flex flex-col"}`}>
+            <div className={`flex items-center justify-between gap-2 select-none shrink-0 ${aiReviewCollapsed ? "px-2 py-1 bg-surface-2-30" : "px-3 py-1.5 border-b border-border-40 bg-accent-5"}`}>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Sparkles size={aiReviewCollapsed ? 11 : 13} className="text-accent shrink-0" />
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <Sparkles size={aiReviewCollapsed ? 11 : 13} className="text-accent shrink-0" />
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className={`${aiReviewCollapsed ? "text-[10px]" : "text-[11px]"} font-bold text-text-primary`}>AI Review</span>
-                    <span className="text-[9px] font-semibold text-accent bg-accent-10 border border-accent-20 rounded px-1.5 py-0.5 leading-none shrink-0">
-                      {staged.length > 0 ? `${staged.length} staged` : `${unstaged.length} unstaged`}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  {aiReviewTagCount > 0 && (
-                    <span className="mr-1 text-[9px] font-semibold text-text-secondary bg-surface-2 border border-border-40 rounded px-1.5 py-0.5 leading-none">
-                      {aiReviewTagCount} tagged
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setAiReviewModalOpen(true)}
-                    className={`${aiReviewCollapsed ? "h-5 w-5" : "h-6 w-6"} inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer`}
-                    title="Open full AI review modal"
-                  >
-                    <Maximize2 size={aiReviewCollapsed ? 11 : 12} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAiReviewCollapsed((collapsed) => !collapsed)}
-                    className={`${aiReviewCollapsed ? "h-5 w-5" : "h-6 w-6"} inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer`}
-                    title={aiReviewCollapsed ? "Show AI review details" : "Hide AI review details"}
-                  >
-                    <ChevronDown size={aiReviewCollapsed ? 11 : 13} className={`transition-transform duration-200 ${aiReviewCollapsed ? "-rotate-90" : ""}`} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAiReviewOpen(false)}
-                    className={`${aiReviewCollapsed ? "h-5 w-5" : "h-6 w-6"} inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer`}
-                    title="Close AI review"
-                  >
-                    <X size={aiReviewCollapsed ? 11 : 13} />
-                  </button>
+                  <span className={`${aiReviewCollapsed ? "text-[10px]" : "text-[11px]"} font-bold text-text-primary`}>AI Review</span>
+                  <span className="text-[9px] font-semibold text-accent bg-accent-10 border border-accent-20 rounded px-1.5 py-0.5 leading-none shrink-0">
+                    {staged.length > 0 ? `${staged.length} staged` : `${unstaged.length} unstaged`}
+                  </span>
                 </div>
               </div>
-              {!aiReviewCollapsed && (
-                <div className="flex-1 min-h-0 overflow-y-auto p-3.5 text-xs leading-relaxed text-text-secondary space-y-2">
-                  {aiReview.isPending ? (
-                    <div className="flex items-center gap-2 rounded-mac border border-accent-20 bg-accent-5 px-3 py-2.5 text-text-secondary">
-                      <RefreshCw size={13} className="animate-spin text-accent" />
-                      <span>Reviewing changes with AI...</span>
-                    </div>
-                  ) : aiReview.isError ? (
-                    <div className="rounded-mac border border-[#ff453a]/25 bg-[#ff453a]/10 px-3 py-2 text-[#ff453a]">
-                      {aiReview.error instanceof Error ? aiReview.error.message : "AI review failed"}
-                    </div>
-                  ) : aiReviewResult ? (
-                    aiReviewResult.split("\n").map((line, index) => <AIReviewLine key={index} line={line} />)
-                  ) : (
-                    <span className="text-text-muted">No review result yet.</span>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="px-3 py-3 border-t border-border-60 bg-surface-1-10 space-y-2.5 shrink-0">
-        <div className="flex flex-col bg-surface-2-30 border border-border-40 rounded-mac p-2.5 focus-within:border-accent-60 focus-within:ring-1 focus-within:ring-accent-15 transition-all shadow-2xs">
-          <textarea
-            ref={textareaRef}
-            value={commitMessage}
-            onChange={(e) => setCommitMessage(e.target.value)}
-            placeholder="Commit message"
-            className="w-full min-h-[96px] max-h-[240px] text-xs bg-transparent text-text-primary placeholder:text-text-muted-60 resize-y outline-none border-none p-0 leading-relaxed font-mono focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:outline-none"
-            style={{ outline: "none", border: "none", boxShadow: "none" }}
-          />
-          <div className="flex items-center justify-between gap-2 border-t border-border-60 pt-2.5 mt-2 select-none shrink-0 flex-wrap">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <button
-                type="button"
-                onClick={handleAIReview}
-                disabled={committing || aiReview.isPending || (staged.length === 0 && unstaged.length === 0)}
-                className={`h-7 px-2.5 rounded-[5px] border text-3xs font-semibold inline-flex items-center gap-1 transition-all cursor-pointer shadow-2xs bg-accent-10 border-accent-30 text-accent hover:bg-accent-20 hover:border-accent-40 active:scale-[0.99] disabled:bg-surface-2-40 disabled:border-border-40 disabled:text-text-muted disabled:opacity-45 disabled:cursor-not-allowed ${aiReview.isPending ? "opacity-70" : ""}`}
-                title="Run AI review with custom checklist"
-              >
-                {aiReview.isPending ? (
-                  <RefreshCw size={11} className="animate-spin text-accent" />
-                ) : (
-                  <Sparkles size={11} className="text-accent" />
+              <div className="flex items-center gap-1 shrink-0">
+                {aiReviewTagCount > 0 && (
+                  <span className="mr-1 text-[9px] font-semibold text-text-secondary bg-surface-2 border border-border-40 rounded px-1.5 py-0.5 leading-none">
+                    {aiReviewTagCount} tagged
+                  </span>
                 )}
-                <span>AI Review</span>
-              </button>
-
-              <UndoButton compact onUndoComplete={invalidate} />
-
-              <button
-                type="button"
-                onClick={() => setAmend(!amend)}
-                className={`h-7 px-2.5 rounded-[5px] border text-3xs font-semibold flex items-center gap-1 transition-all cursor-pointer shadow-2xs ${amend
-                  ? "bg-[#ff9f0a]/10 border-[#ff9f0a]/30 text-[#ff9f0a]"
-                  : "bg-surface-2-40 border-border-40 text-text-muted hover:text-text-primary hover:bg-surface-3"
-                  }`}
-                title="Amend last commit"
-              >
-                <GitCommit size={11} className={amend ? "text-[#ff9f0a]" : "text-text-muted"} />
-                <span>Amend</span>
-              </button>
-            </div>
-
-            <div className="flex items-center justify-end gap-1.5 flex-wrap">
-              {staged.length >= 3 && (
                 <button
                   type="button"
-                  className={`h-7 px-2.5 rounded border text-3xs font-semibold flex items-center gap-1 transition-all bg-surface-2 border-border-40 text-text-secondary hover:text-text-primary hover:bg-surface-3 active:scale-95 cursor-pointer ${scopeAnalyzing || commitScope.isPending ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
-                  onClick={handleAnalyzeScope}
-                  disabled={scopeAnalyzing || commitScope.isPending}
-                  title={scopeAnalyzing ? "Analyzing scope..." : "Analyze commit scope (suggest splitting)"}
+                  onClick={() => setAiReviewModalOpen(true)}
+                  className={`${aiReviewCollapsed ? "h-5 w-5" : "h-6 w-6"} inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer`}
+                  title="Open full AI review modal"
                 >
-                  {scopeAnalyzing || commitScope.isPending ? (
-                    <RefreshCw size={11} className="animate-spin" />
-                  ) : (
-                    <Layers size={11} />
-                  )}
-                  <span>Split Scope</span>
+                  <Maximize2 size={aiReviewCollapsed ? 11 : 12} />
                 </button>
-              )}
-              <button
-                type="button"
-                className={`h-7 px-2.5 rounded text-3xs font-semibold flex items-center gap-1 transition-all bg-accent text-accent-fg hover:opacity-95 active:scale-[0.99] active:scale-95 cursor-pointer shadow-sm ${generateCommit.isPending ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
-                onClick={handleGenerateCommit}
-                disabled={generateCommit.isPending}
-                title={generateCommit.isPending ? "Generating..." : "Generate commit message (AI)"}
-              >
-                {generateCommit.isPending ? (
-                  <RefreshCw size={11} className="animate-spin text-accent-fg" />
-                ) : (
-                  <Sparkles size={11} />
-                )}
-                <span>Generate with AI</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleCommit}
-                disabled={!commitMessage.trim() || (staged.length === 0 && unstaged.length === 0) || committing || lintRunning}
-                className={`h-7 px-3 rounded-[5px] text-3xs font-semibold inline-flex items-center gap-1 transition-all shadow-sm cursor-pointer select-none ${commitMessage.trim() && (staged.length > 0 || unstaged.length > 0)
-                  ? "bg-[#30d158] text-[#07140a] hover:bg-[#30d158]/90 active:scale-[0.99]"
-                  : "bg-surface-3 text-text-muted opacity-40 cursor-not-allowed"
-                  } ${committing || lintRunning ? "opacity-60" : ""}`}
-                title={
-                  !commitMessage.trim()
-                    ? "Enter a commit message"
-                    : staged.length === 0 && unstaged.length === 0
-                      ? "No changes to commit"
-                      : staged.length === 0
-                        ? "Commit all changes"
-                        : "Commit (⌘↵)"
-                }
-              >
-                {lintRunning ? (
-                  <RefreshCw size={11} className="animate-spin" />
-                ) : (
-                  <Check size={11} />
-                )}
-                <span>{committing ? "Committing..." : lintRunning ? "Linting..." : unstaged.length > 0 ? "Commit All" : "Commit"}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between text-2xs px-1 text-text-muted mt-1 select-none">
-          <div className="flex items-center gap-1.5 min-w-0">
-            {localStorage.getItem("gitflowCommitLintEnabled") !== "false" && lintResults.length > 0 ? (
-              <>
-                {lintResults[0].severity === "error" ? (
-                  <ShieldAlert size={11} className="text-[#ff453a] shrink-0" />
-                ) : (
-                  <AlertCircle size={11} className="text-[#ff9f0a] shrink-0" />
-                )}
-                <span className="text-text-secondary truncate max-w-[280px]" title={lintResults[0].message}>
-                  {lintResults[0].message}
-                </span>
-                {lintResults.some(r => r.autoFixable) && (
-                  <button
-                    type="button"
-                    onClick={() => setCommitMessage(autoFixCommitMessage(commitMessage, lintResults))}
-                    className="text-accent hover:underline font-semibold ml-1 cursor-pointer shrink-0"
-                  >
-                    Auto-fix
-                  </button>
-                )}
-              </>
-            ) : localStorage.getItem("gitflowCommitLintEnabled") !== "false" && commitMessage.trim().length > 0 ? (
-              <span className="text-[#30d158] flex items-center gap-1">
-                <Check size={11} className="text-[#30d158]" /> Message conforms to spec
-              </span>
-            ) : null}
-          </div>
-
-          <div className="text-2xs text-text-muted shrink-0 ml-2">
-            <span className={commitMessage.split('\n')[0].length > 72 ? "text-[#ff453a] font-semibold" : ""}>
-              {commitMessage.split('\n')[0].length}
-            </span>
-            /72
-          </div>
-        </div>
-        {scopeSuggestion && !scopeDismissed && (
-          <div className="border border-accent-20 bg-accent-5 rounded-mac p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <Layers size={13} className="text-accent" />
-                <span className="text-xs font-semibold text-accent">
-                  AI suggests splitting into {scopeSuggestion.groups.length} commits
-                </span>
+                <button
+                  type="button"
+                  onClick={() => setAiReviewCollapsed((collapsed) => !collapsed)}
+                  className={`${aiReviewCollapsed ? "h-5 w-5" : "h-6 w-6"} inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer`}
+                  title={aiReviewCollapsed ? "Show AI review details" : "Hide AI review details"}
+                >
+                  <ChevronDown size={aiReviewCollapsed ? 11 : 13} className={`transition-transform duration-200 ${aiReviewCollapsed ? "-rotate-90" : ""}`} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAiReviewOpen(false)}
+                  className={`${aiReviewCollapsed ? "h-5 w-5" : "h-6 w-6"} inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer`}
+                  title="Close AI review"
+                >
+                  <X size={aiReviewCollapsed ? 11 : 13} />
+                </button>
               </div>
-              <button
-                onClick={() => setScopeDismissed(true)}
-                className="text-text-muted hover:text-text-primary cursor-pointer"
-              >
-                <X size={14} />
-              </button>
             </div>
-            <p className="text-2xs text-text-secondary leading-relaxed">{scopeSuggestion.explanation}</p>
-
-            <div className="space-y-1.5 max-h-60 overflow-y-auto">
-              {scopeSuggestion.groups.map((group, i) => {
-                const groupColors = [
-                  { border: "border-l-[#0a84ff]", bg: "bg-[#0a84ff]/8", badge: "bg-[#0a84ff]/15 text-[#0a84ff]" },
-                  { border: "border-l-[#30d158]", bg: "bg-[#30d158]/8", badge: "bg-[#30d158]/15 text-[#30d158]" },
-                  { border: "border-l-[#ff9f0a]", bg: "bg-[#ff9f0a]/8", badge: "bg-[#ff9f0a]/15 text-[#ff9f0a]" },
-                  { border: "border-l-[#bf5af2]", bg: "bg-[#bf5af2]/8", badge: "bg-[#bf5af2]/15 text-[#bf5af2]" },
-                ];
-                const color = groupColors[i % groupColors.length];
-                return (
-                  <div
-                    key={i}
-                    className={`flex items-start gap-2.5 p-2.5 ${color.bg} rounded-mac border-l-[3px] ${color.border} border border-border-20`}
-                  >
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <p className="text-xs font-semibold text-text-primary leading-snug">
-                        {group.message}
-                      </p>
-                      <div className="flex flex-wrap gap-1">
-                        {group.files.map((f, fi) => (
-                          <span
-                            key={fi}
-                            className={`inline-flex items-center px-1.5 py-0.5 rounded text-2xs font-mono ${color.badge}`}
-                          >
-                            {f.split("/").pop()}
-                          </span>
-                        ))}
-                      </div>
-                      <p className="text-2xs text-text-secondary italic leading-relaxed">{group.reason}</p>
-                    </div>
-                    <div className="shrink-0 flex flex-col gap-1 mt-0.5">
-                      <button
-                        onClick={() => handleCommitGroup(group)}
-                        disabled={!!committingGroupKey || committing}
-                        className="text-2xs font-semibold px-2.5 py-1.5 bg-accent text-accent-fg rounded-mac hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                      >
-                        {committingGroupKey === group.message ? "Committing..." : "Commit"}
-                      </button>
-                      <button
-                        onClick={() => handleUseGroup(group)}
-                        disabled={!!committingGroupKey || committing}
-                        className="text-2xs font-semibold px-2.5 py-1.5 bg-accent-10 text-accent rounded-mac hover:bg-accent-20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                      >
-                        Use this
-                      </button>
-                    </div>
+            {!aiReviewCollapsed && (
+              <div className="flex-1 min-h-0 overflow-y-auto p-3.5 text-xs leading-relaxed text-text-secondary space-y-2">
+                {aiReview.isPending ? (
+                  <div className="flex items-center gap-2 rounded-mac border border-accent-20 bg-accent-5 px-3 py-2.5 text-text-secondary">
+                    <RefreshCw size={13} className="animate-spin text-accent" />
+                    <span>Reviewing changes with AI...</span>
                   </div>
-                );
-              })}
-            </div>
-
-            <div className="flex items-center gap-2 pt-0.5">
-              <button
-                onClick={handleCommitAllSuggested}
-                disabled={!!committingGroupKey || committing}
-                className="flex-1 text-2xs font-semibold text-accent-fg py-1.5 cursor-pointer bg-accent hover:opacity-90 rounded-mac border border-accent transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {committingGroupKey === "__all__" ? "Committing suggestions..." : "Commit all suggested"}
-              </button>
-              <button
-                onClick={() => setScopeDismissed(true)}
-                disabled={!!committingGroupKey || committing}
-                className="flex-1 text-2xs text-text-muted hover:text-text-primary py-1.5 cursor-pointer bg-surface-2-30 hover:bg-surface-2 rounded-mac border border-border-30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Commit all as one
-              </button>
-            </div>
+                ) : aiReview.isError ? (
+                  <div className="rounded-mac border border-[#ff453a]/25 bg-[#ff453a]/10 px-3 py-2 text-[#ff453a]">
+                    {aiReview.error instanceof Error ? aiReview.error.message : "AI review failed"}
+                  </div>
+                ) : aiReviewResult ? (
+                  aiReviewResult.split("\n").map((line, index) => <AIReviewLine key={index} line={line} />)
+                ) : (
+                  <span className="text-text-muted">No review result yet.</span>
+                )}
+              </div>
+            )}
           </div>
-        )}
+        </div>
+      )}
 
-      </div>
+      <CommitBox
+        commitMessage={commitMessage}
+        setCommitMessage={setCommitMessage}
+        lintResults={lintResults}
+        staged={staged}
+        unstaged={unstaged}
+        committing={committing}
+        lintRunning={lintRunning}
+        amend={amend}
+        setAmend={setAmend}
+        scopeSuggestion={scopeSuggestion}
+        scopeDismissed={scopeDismissed}
+        setScopeDismissed={setScopeDismissed}
+        scopeAnalyzing={scopeAnalyzing}
+        committingGroupKey={committingGroupKey}
+        onCommit={handleCommit}
+        onGenerateCommit={handleGenerateCommit}
+        onAnalyzeScope={handleAnalyzeScope}
+        onAIReview={handleAIReview}
+        onUseGroup={handleUseGroup}
+        onCommitGroup={handleCommitGroup}
+        onCommitAllSuggested={handleCommitAllSuggested}
+        onUndoComplete={invalidate}
+        aiReviewPending={aiReview.isPending}
+        generateCommitPending={generateCommit.isPending}
+        commitScopePending={commitScope.isPending}
+      />
 
       {reviewTarget && (
         <DiffReviewModal
@@ -1101,429 +801,7 @@ export default function WorkingTree() {
   );
 }
 
-interface FileTreeNode {
-  type: "file";
-  name: string;
-  path: string;
-  file: FileChange;
-}
-
-interface FolderTreeNode {
-  type: "folder";
-  name: string;
-  path: string;
-  children: { [key: string]: FileTreeNode | FolderTreeNode };
-}
-
-function buildFileTree(files: FileChange[]): FolderTreeNode {
-  const root: FolderTreeNode = {
-    type: "folder",
-    name: "",
-    path: "",
-    children: {},
-  };
-
-  for (const file of files) {
-    const parts = file.path.split("/");
-    let current = root;
-
-    for (let i = 0; i < parts.length; i++) {
-      const part = parts[i];
-      const isLast = i === parts.length - 1;
-      const currentPath = parts.slice(0, i + 1).join("/");
-
-      if (isLast) {
-        current.children[part] = {
-          type: "file",
-          name: part,
-          path: file.path,
-          file,
-        };
-      } else {
-        if (!current.children[part]) {
-          current.children[part] = {
-            type: "folder",
-            name: part,
-            path: currentPath,
-            children: {},
-          };
-        }
-        current = current.children[part] as FolderTreeNode;
-      }
-    }
-  }
-
-  return root;
-}
-
-interface FileTreeRendererProps {
-  node: FolderTreeNode;
-  depth: number;
-  checked: boolean;
-  selectedFile: string | null;
-  selectedStage: "staged" | "unstaged" | null;
-  stage: "staged" | "unstaged";
-  multiSelectedFiles: Set<string>;
-  onToggleFile: (path: string) => void;
-  onSelect: (path: string) => void;
-  onAIInlineReview: (path: string) => void;
-  onMenu: (x: number, y: number, file: FileChange) => void;
-  onFileMultiClick: (path: string, e: React.MouseEvent) => void;
-  collapsedFolders: Set<string>;
-  onToggleFolder: (path: string) => void;
-}
-
-function FileTreeRenderer({
-  node,
-  depth,
-  checked,
-  selectedFile,
-  selectedStage,
-  stage,
-  multiSelectedFiles,
-  onToggleFile,
-  onSelect,
-  onAIInlineReview,
-  onMenu,
-  onFileMultiClick,
-  collapsedFolders,
-  onToggleFolder,
-}: FileTreeRendererProps) {
-  const sortedKeys = Object.keys(node.children).sort((a, b) => {
-    const childA = node.children[a];
-    const childB = node.children[b];
-    if (childA.type !== childB.type) {
-      return childA.type === "folder" ? -1 : 1;
-    }
-    return a.localeCompare(b);
-  });
-
-  return (
-    <div className="space-y-[1px]">
-      {sortedKeys.map((key) => {
-        const child = node.children[key];
-        if (child.type === "folder") {
-          const isCollapsed = collapsedFolders.has(child.path);
-          return (
-            <div key={child.path}>
-              <div
-                className="tree-item group w-full flex items-center gap-1.5 px-3 py-1 hover:bg-surface-2 cursor-pointer text-left select-none text-xs text-text-secondary"
-                style={{ paddingLeft: `${depth * 16 + 12}px` }}
-                onClick={() => onToggleFolder(child.path)}
-              >
-                <span
-                  className="h-3.5 w-3.5 flex items-center justify-center shrink-0"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleFolder(child.path);
-                  }}
-                >
-                  <ChevronDown
-                    size={12}
-                    className={`text-text-muted transition-transform duration-150 shrink-0 ${isCollapsed ? "-rotate-90" : ""}`}
-                  />
-                </span>
-
-                <Folder size={12} className="text-accent shrink-0" />
-                <span className="truncate font-semibold text-text-primary flex-1">{child.name}</span>
-
-                <span
-                  className={`h-3.5 w-3.5 rounded-[4px] border flex items-center justify-center transition-all cursor-pointer mr-1 opacity-0 group-hover:opacity-100 ${checked
-                    ? "bg-accent border-accent text-accent-fg"
-                    : "border-border text-transparent hover:border-text-secondary hover:bg-surface-2"
-                  }`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleFile(child.path);
-                  }}
-                  title={checked ? "Unstage folder" : "Stage folder"}
-                >
-                  {checked && <Check size={9} strokeWidth={3.5} />}
-                </span>
-              </div>
-              {!isCollapsed && (
-                <FileTreeRenderer
-                  node={child}
-                  depth={depth + 1}
-                  checked={checked}
-                  selectedFile={selectedFile}
-                  selectedStage={selectedStage}
-                  stage={stage}
-                  multiSelectedFiles={multiSelectedFiles}
-                  onToggleFile={onToggleFile}
-                  onSelect={onSelect}
-                  onAIInlineReview={onAIInlineReview}
-                  onMenu={onMenu}
-                  onFileMultiClick={onFileMultiClick}
-                  collapsedFolders={collapsedFolders}
-                  onToggleFolder={onToggleFolder}
-                />
-              )}
-            </div>
-          );
-        } else {
-          return (
-            <div
-              key={`${stage}:${child.path}`}
-              style={{ paddingLeft: `${depth * 16}px` }}
-            >
-              <ChangeRow
-                file={child.file}
-                checked={checked}
-                selected={selectedFile === child.path && selectedStage === stage}
-                multiSelected={multiSelectedFiles.has(child.path)}
-                onSelect={() => onSelect(child.path)}
-                onToggle={() => onToggleFile(child.path)}
-                onAIInlineReview={() => onAIInlineReview(child.path)}
-                onMenu={(x, y) => onMenu(x, y, child.file)}
-                onMultiClick={(e) => onFileMultiClick(child.path, e)}
-                hideFolder
-              />
-            </div>
-          );
-        }
-      })}
-    </div>
-  );
-}
-
-interface ChangeSectionProps {
-  title: string;
-  checked: boolean;
-  open: boolean;
-  files: FileChange[];
-  empty: string;
-  selectedFile: string | null;
-  selectedStage: "staged" | "unstaged" | null;
-  stage: "staged" | "unstaged";
-  multiSelectedFiles: Set<string>;
-  onToggleAll: () => void;
-  onToggleFile: (path: string) => void;
-  onSelect: (path: string) => void;
-  onAIInlineReview: (path: string) => void;
-  onToggleOpen: () => void;
-  onMenu: (x: number, y: number, file: FileChange) => void;
-  onFileMultiClick: (path: string, e: React.MouseEvent) => void;
-  grow?: boolean;
-  isTreeView?: boolean;
-}
-
-function ChangeSection({
-  title,
-  checked,
-  open,
-  files,
-  empty,
-  selectedFile,
-  selectedStage,
-  stage,
-  multiSelectedFiles,
-  onToggleAll,
-  onToggleFile,
-  onSelect,
-  onAIInlineReview,
-  onToggleOpen,
-  onMenu,
-  onFileMultiClick,
-  grow,
-  isTreeView,
-}: ChangeSectionProps) {
-  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
-
-  const handleToggleFolder = (folderPath: string) => {
-    setCollapsedFolders((prev) => {
-      const next = new Set(prev);
-      if (next.has(folderPath)) {
-        next.delete(folderPath);
-      } else {
-        next.add(folderPath);
-      }
-      return next;
-    });
-  };
-
-  const treeRoot = useMemo(() => {
-    if (isTreeView) {
-      return buildFileTree(files);
-    }
-    return null;
-  }, [files, isTreeView]);
-
-  return (
-    <div className={`border-b border-border-60 min-h-0 flex flex-col ${grow && open ? "flex-1" : "shrink-0"} ${!grow && open ? "max-h-[42%]" : ""}`}>
-      <div className="h-9 px-3 flex items-center gap-2 bg-surface-1-55 shrink-0">
-        <button
-          className="ghost p-0.5 text-text-muted hover:text-text-primary transition-colors"
-          onClick={onToggleOpen}
-          title={open ? "Collapse" : "Expand"}
-        >
-          <ChevronDown size={13} className={`transition-transform duration-150 ${open ? "" : "-rotate-90"}`} />
-        </button>
-        <button
-          className={`h-3.5 w-3.5 rounded-[4px] border flex items-center justify-center transition-all ${checked
-            ? "bg-accent border-accent text-accent-fg"
-            : "border-border text-transparent hover:border-text-secondary hover:bg-surface-2"
-            }`}
-          onClick={onToggleAll}
-          title={checked ? "Unstage all (⌘U)" : "Stage all (⌘⇧A)"}
-          disabled={files.length === 0}
-        >
-          {checked && <Check size={9} strokeWidth={3.5} />}
-        </button>
-        <div className="flex-1 text-xs font-semibold text-text-primary">
-          {title} <span className="text-text-muted font-medium">({files.length})</span>
-        </div>
-        {files.length > 0 && (
-          <button className="text-2xs font-semibold text-text-muted hover:text-accent transition-colors" onClick={onToggleAll}
-            title={checked ? "Unstage all (⌘U)" : "Stage all (⌘⇧A)"}>
-            {checked ? "Unstage all" : "Stage all"}
-          </button>
-        )}
-      </div>
-
-      {open && (
-        <div className="flex-1 overflow-y-auto py-1.5">
-          {files.length === 0 ? (
-            <div className="px-5 py-4 text-xs text-text-muted-80">{empty}</div>
-          ) : isTreeView && treeRoot ? (
-            <FileTreeRenderer
-              node={treeRoot}
-              depth={0}
-              checked={checked}
-              selectedFile={selectedFile}
-              selectedStage={selectedStage}
-              stage={stage}
-              multiSelectedFiles={multiSelectedFiles}
-              onToggleFile={onToggleFile}
-              onSelect={onSelect}
-              onAIInlineReview={onAIInlineReview}
-              onMenu={onMenu}
-              onFileMultiClick={onFileMultiClick}
-              collapsedFolders={collapsedFolders}
-              onToggleFolder={handleToggleFolder}
-            />
-          ) : (
-            files.map((file) => (
-              <ChangeRow
-                key={`${stage}:${file.path}`}
-                file={file}
-                checked={checked}
-                selected={selectedFile === file.path && selectedStage === stage}
-                multiSelected={multiSelectedFiles.has(file.path)}
-                onSelect={() => onSelect(file.path)}
-                onToggle={() => onToggleFile(file.path)}
-                onAIInlineReview={() => onAIInlineReview(file.path)}
-                onMenu={(x, y) => onMenu(x, y, file)}
-                onMultiClick={(e) => onFileMultiClick(file.path, e)}
-              />
-            ))
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-interface ChangeRowProps {
-  file: FileChange;
-  checked: boolean;
-  selected: boolean;
-  multiSelected?: boolean;
-  onSelect: () => void;
-  onToggle: () => void;
-  onAIInlineReview: () => void;
-  onMenu: (x: number, y: number) => void;
-  onMultiClick?: (e: React.MouseEvent) => void;
-  hideFolder?: boolean;
-}
-
-function ChangeRow({ file, checked, selected, multiSelected, onSelect, onToggle, onAIInlineReview, onMenu, onMultiClick, hideFolder }: ChangeRowProps) {
-  const fileName = getFileName(file.path);
-  const folder = getFolder(file.path);
-
-  return (
-    <div
-      className={`tree-item group w-full grid grid-cols-[14px_16px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-1 text-left ${multiSelected ? "ring-1 ring-accent bg-accent-5" : selected ? "selected" : ""
-        }`}
-      onClick={(e) => {
-        if (onMultiClick && (e.shiftKey || e.metaKey || e.ctrlKey)) {
-          onMultiClick(e);
-        } else {
-          onSelect();
-        }
-      }}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        onMenu(e.clientX, e.clientY);
-      }}
-      title={file.path}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onSelect();
-        }
-      }}
-    >
-      <span
-        className={`h-3.5 w-3.5 rounded-[4px] border flex items-center justify-center transition-all cursor-pointer ${checked
-          ? selected
-            ? "bg-accent-fg border-accent-fg text-accent"
-            : "bg-accent border-accent text-accent-fg"
-          : selected
-            ? "border-accent-fg-40 hover:border-accent-fg hover:bg-accent-fg-10 text-transparent"
-            : "border-border hover:border-text-secondary hover:bg-surface-2 text-transparent"
-          }`}
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggle();
-        }}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        {checked && <Check size={9} strokeWidth={3.5} />}
-      </span>
-      <span title={checked ? "Unstage (⌘U)" : "Stage (⌘S)"}
-        className="h-4 w-4 flex items-center justify-center shrink-0">
-        {fileIcon(file.path, file.status)}
-      </span>
-      <span className="min-w-0 flex flex-col justify-center">
-        <span className={`block text-xs font-medium text-current truncate leading-4 ${file.status === "deleted" ? "line-through opacity-60" : ""}`}>
-          {fileName}
-        </span>
-        {!hideFolder && folder && (
-          <span className={`block text-[10px] truncate leading-3 ${selected ? "text-accent-fg opacity-75" : "text-text-muted"}`}>
-            {folder}
-          </span>
-        )}
-      </span>
-      <span className="flex items-center justify-end gap-1.5 min-w-[48px]">
-        <StatusBadge status={file.status} selected={selected} />
-        <span
-          className={`h-5 w-5 flex items-center justify-center rounded transition-all cursor-pointer opacity-0 group-hover:opacity-100 ${selected ? "hover:bg-accent-fg-20 text-accent-fg" : "text-text-muted hover:bg-surface-2"
-            }`}
-          onClick={(e) => {
-            e.stopPropagation();
-            onAIInlineReview();
-          }}
-          title="AI Inline Review"
-        >
-          <MessageSquare size={12} className="text-current" />
-        </span>
-        <span
-          className={`h-5 w-5 flex items-center justify-center rounded transition-all cursor-pointer opacity-0 group-hover:opacity-100 ${selected ? "hover:bg-accent-fg-20 text-accent-fg" : "text-text-muted hover:bg-surface-2"
-            }`}
-          onClick={(e) => {
-            e.stopPropagation();
-            onMenu(e.clientX, e.clientY);
-          }}
-        >
-          <MoreHorizontal size={13} className="text-current" />
-        </span>
-      </span>
-    </div>
-  );
-}
+// ─── DiffReviewTarget & DiffReviewModal ────────────────────────────────────────
 
 interface DiffReviewTarget {
   path: string;
@@ -1690,6 +968,8 @@ function DiffReviewModal({ target, files, onChangeTarget, onClose, onRefresh }: 
   );
 }
 
+// ─── AI Review helpers ─────────────────────────────────────────────────────────
+
 function AIReviewLine({ line }: { line: string }) {
   const match = line.match(aiReviewTagPattern());
   if (!match) {
@@ -1758,11 +1038,4 @@ function stripInlineMarkdown(text: string) {
 
 function getFileName(path: string) {
   return path.split("/").pop() || path;
-}
-
-
-function getFolder(path: string) {
-  const parts = path.split("/");
-  parts.pop();
-  return parts.join("/");
 }
