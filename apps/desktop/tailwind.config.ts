@@ -58,6 +58,9 @@ export default {
         "150": "150ms",
         "200": "200ms",
       },
+      boxShadow: {
+        "neon-green": "0 0 8px rgba(57, 255, 20, 0.4), 0 0 2px rgba(57, 255, 20, 0.2)",
+      },
     },
   },
   plugins: [],

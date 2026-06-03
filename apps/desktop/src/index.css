@@ -98,6 +98,90 @@
   --text-muted: #7c6f64;
 }
 
+/* Nord Theme */
+.nord {
+  --surface-0: #2e3440;
+  --surface-1: #3b4252;
+  --surface-2: #434c5e;
+  --surface-3: #4c566a;
+  --accent: #88c0d0;
+  --accent-fg: #2e3440;
+  --border: #3b4252;
+  --text-primary: #d8dee9;
+  --text-secondary: #e5e9f0;
+  --text-muted: #707a8a;
+}
+
+/* Tokyo Night Theme */
+.tokyo-night {
+  --surface-0: #1a1b26;
+  --surface-1: #1f2335;
+  --surface-2: #24283b;
+  --surface-3: #414868;
+  --accent: #7aa2f7;
+  --accent-fg: #1a1b26;
+  --border: #383e5a;
+  --text-primary: #a9b1d6;
+  --text-secondary: #9ab8e5;
+  --text-muted: #565f89;
+}
+
+/* GitHub Dark Theme */
+.github-dark {
+  --surface-0: #0d1117;
+  --surface-1: #161b22;
+  --surface-2: #21262d;
+  --surface-3: #30363d;
+  --accent: #2f81f7;
+  --accent-fg: #ffffff;
+  --border: #30363d;
+  --text-primary: #c9d1d9;
+  --text-secondary: #8b949e;
+  --text-muted: #484f58;
+}
+
+/* Dracula Theme */
+.dracula {
+  --surface-0: #282a36;
+  --surface-1: #343746;
+  --surface-2: #44475a;
+  --surface-3: #6272a4;
+  --accent: #ff79c6;
+  --accent-fg: #282a36;
+  --border: #44475a;
+  --text-primary: #f8f8f2;
+  --text-secondary: #ff79c6;
+  --text-muted: #6272a4;
+}
+
+/* Cyberpunk Neon Theme */
+.cyberpunk-green {
+  --surface-0: #0c0f12;
+  --surface-1: #161b22;
+  --surface-2: #222933;
+  --surface-3: #2d3744;
+  --accent: #39ff14;
+  --accent-fg: #0c0f12;
+  --border: #222933;
+  --text-primary: #e0e6ed;
+  --text-secondary: #39ff14;
+  --text-muted: #4f6173;
+}
+
+/* Monokai Pro Theme */
+.monokai-pro {
+  --surface-0: #2d2a2e;
+  --surface-1: #3a373b;
+  --surface-2: #4c484d;
+  --surface-3: #5b565c;
+  --accent: #ffd866;
+  --accent-fg: #2d2a2e;
+  --border: #4c484d;
+  --text-primary: #fcfcfa;
+  --text-secondary: #ffd866;
+  --text-muted: #726973;
+}
+
 * {
   margin: 0;
   padding: 0;

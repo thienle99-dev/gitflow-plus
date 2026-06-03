@@ -4,6 +4,13 @@ import { startRepoOpenMeasurement } from "@/lib/performance";
 export type Theme =
   | "dark"
   | "light"
+  | "system"
+  | "nord"
+  | "tokyo-night"
+  | "github-dark"
+  | "dracula"
+  | "cyberpunk-green"
+  | "monokai-pro"
   | "gruvbox-dark"
   | "gruvbox-dark-soft"
   | "gruvbox-dark-hard"
@@ -13,6 +20,13 @@ export type Theme =
 export const THEME_CLASSES: Theme[] = [
   "dark",
   "light",
+  "system",
+  "nord",
+  "tokyo-night",
+  "github-dark",
+  "dracula",
+  "cyberpunk-green",
+  "monokai-pro",
   "gruvbox-dark",
   "gruvbox-dark-soft",
   "gruvbox-dark-hard",
@@ -20,7 +34,14 @@ export const THEME_CLASSES: Theme[] = [
   "gruvbox-light-soft",
 ];
 
-const isDarkTheme = (theme: Theme) => theme === "dark" || theme.startsWith("gruvbox-dark");
+const isDarkTheme = (theme: Theme): boolean => {
+  if (theme === "light" || theme.startsWith("gruvbox-light")) return false;
+  if (theme === "system") {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+  return true; // "dark", "nord", "tokyo-night", "github-dark", "dracula", "cyberpunk-green", "monokai-pro", "gruvbox-dark*" are dark.
+};
 
 function isTheme(value: string | null): value is Theme {
   return !!value && THEME_CLASSES.includes(value as Theme);
@@ -31,16 +52,45 @@ export function readStoredTheme(): Theme {
   return isTheme(storedTheme) ? storedTheme : "dark";
 }
 
+let systemThemeListener: (() => void) | null = null;
+
 export function applyTheme(theme: Theme) {
   if (typeof document === "undefined") return;
 
   const targets = [document.documentElement, document.body];
 
+  // Clean up any existing OS theme listener
+  if (systemThemeListener && typeof window !== "undefined") {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    media.removeEventListener("change", systemThemeListener);
+    systemThemeListener = null;
+  }
+
+  const isDark = isDarkTheme(theme);
+
   for (const target of targets) {
     target.classList.remove(...THEME_CLASSES);
     if (theme !== "light") target.classList.add(theme);
-    if (isDarkTheme(theme)) target.classList.add("dark");
-    target.style.colorScheme = isDarkTheme(theme) ? "dark" : "light";
+    if (isDark) target.classList.add("dark");
+    target.style.colorScheme = isDark ? "dark" : "light";
+  }
+
+  // Set up OS prefers-color-scheme listener if system theme is selected
+  if (theme === "system" && typeof window !== "undefined") {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    systemThemeListener = () => {
+      const isSystemDarkNow = media.matches;
+      for (const target of targets) {
+        if (isSystemDarkNow) {
+          target.classList.add("dark");
+          target.style.colorScheme = "dark";
+        } else {
+          target.classList.remove("dark");
+          target.style.colorScheme = "light";
+        }
+      }
+    };
+    media.addEventListener("change", systemThemeListener);
   }
 }
 
@@ -84,8 +134,8 @@ export const useRepoStore = create<RepoState>((set) => ({
 
   toggleTheme: () =>
     set((state) => {
-      // Cycle: dark → light → dark for toggle
-      const next = state.theme === "dark" ? "light" : "dark";
+      // Toggle based on computed darkness of current theme
+      const next = isDarkTheme(state.theme) ? "light" : "dark";
       localStorage.setItem("theme", next);
       applyTheme(next);
       return { theme: next };
