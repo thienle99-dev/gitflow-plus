@@ -45,7 +45,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
   const queryClient = useQueryClient();
   const openSettings = () => {
     onClose();
-    useUIStore.getState().openDialog("settings");
+    useUIStore.getState().openDialog("accounts-settings");
   };
   const aiExplain = useAIMergeRequestExplain();
   const aiReview = useAIMergeRequestReview();
@@ -408,6 +408,11 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
     return selectedMr.webUrl;
   }, [selectedMr, remoteInfo]);
 
+  const isGithubRateLimitError = !!error && remoteInfo?.provider === "github" && /403|rate limit/i.test(error);
+  const errorMessage = isGithubRateLimitError
+    ? "GitHub rate limit reached for unauthenticated requests. Add a GitHub token in Accounts, then retry."
+    : error;
+
   // Keep selection matching the filter
   useEffect(() => {
     if (filteredMrs.length > 0) {
@@ -486,7 +491,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
             <div className="h-full flex flex-col items-center justify-center p-4 text-center space-y-2 text-text-muted">
               <AlertCircle size={18} className="text-[#ff453a]" />
               <span className="text-3xs font-semibold text-text-primary">Could not load merge requests</span>
-              <span className="max-w-[220px] text-[10px] leading-relaxed">{error}</span>
+              <span className="max-w-[220px] text-[10px] leading-relaxed">{errorMessage}</span>
               <div className="flex items-center gap-2 pt-1">
                 <button
                   onClick={loadMRs}
@@ -498,7 +503,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                   onClick={openSettings}
                   className="h-7 px-3 rounded border border-border-40 bg-surface-2 text-text-primary text-[10px] font-bold hover:bg-surface-3 transition-colors"
                 >
-                  Settings
+                  {isGithubRateLimitError ? "Add token" : "Settings"}
                 </button>
               </div>
             </div>
