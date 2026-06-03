@@ -3,6 +3,7 @@ import { type FileChange } from "@/api/tauri";
 import { type CommitScopeSuggestion } from "@/lib/ai";
 import { type CommitLintResult, autoFixCommitMessage } from "@/lib/commit-lint";
 import UndoButton from "@/components/features/actions/UndoButton";
+import CommitTemplatePicker from "./CommitTemplatePicker";
 import { AlertCircle, ShieldAlert } from "lucide-react";
 import {
   Check,
@@ -125,6 +126,9 @@ export default function CommitBox({
               <GitCommit size={11} className={amend ? "text-[#ff9f0a]" : "text-text-muted"} />
               <span>Amend</span>
             </button>
+            <CommitTemplatePicker
+              onSelect={(msg) => setCommitMessage(msg)}
+            />
           </div>
 
           <div className="flex items-center justify-end gap-1.5 flex-wrap">
