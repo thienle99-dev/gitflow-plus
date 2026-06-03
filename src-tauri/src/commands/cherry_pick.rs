@@ -1,5 +1,6 @@
 use serde::Serialize;
 use tokio::process::Command;
+use super::op_lock::RepoLocks;
 
 #[derive(Serialize)]
 pub struct CherryPickResult {
@@ -73,14 +74,20 @@ fn parse_cherry_pick_conflicts(stderr: &str) -> Vec<String> {
 // Tauri commands
 #[tauri::command]
 pub async fn cherry_pick(
+    locks: tauri::State<'_, RepoLocks>,
     path: String,
     commit_hash: String,
     no_commit: Option<bool>,
 ) -> Result<CherryPickResult, String> {
+    let _guard = locks.acquire(&path).await;
     git_cherry_pick(&path, &commit_hash, no_commit.unwrap_or(false)).await
 }
 
 #[tauri::command]
-pub async fn cherry_pick_abort(path: String) -> Result<String, String> {
+pub async fn cherry_pick_abort(
+    locks: tauri::State<'_, RepoLocks>,
+    path: String,
+) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     git_cherry_pick_abort(&path).await
 }

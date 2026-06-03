@@ -1,4 +1,5 @@
 use tokio::process::Command;
+use super::op_lock::RepoLocks;
 
 #[derive(serde::Serialize, Clone, Debug)]
 pub struct BranchInfo {
@@ -58,10 +59,12 @@ fn parse_branch_output(stdout: &str) -> Vec<BranchInfo> {
 
 #[tauri::command]
 pub async fn create_branch(
+    locks: tauri::State<'_, RepoLocks>,
     path: String,
     name: String,
     base_ref: Option<String>,
 ) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     let mut args = vec![
         "--no-pager".to_string(),
         "-C".to_string(),
@@ -117,7 +120,12 @@ mod tests {
 }
 
 #[tauri::command]
-pub async fn checkout_branch(path: String, name: String) -> Result<String, String> {
+pub async fn checkout_branch(
+    locks: tauri::State<'_, RepoLocks>,
+    path: String,
+    name: String,
+) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     let mut args = vec![
         "--no-pager".to_string(),
         "-C".to_string(),
@@ -170,10 +178,12 @@ pub async fn checkout_branch(path: String, name: String) -> Result<String, Strin
 
 #[tauri::command]
 pub async fn delete_branch(
+    locks: tauri::State<'_, RepoLocks>,
     path: String,
     name: String,
     force: Option<bool>,
 ) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     let flag = if force.unwrap_or(false) { "-D" } else { "-d" };
     let output = Command::new("git")
         .args(["--no-pager", "-C", &path, "branch", flag, &name])
