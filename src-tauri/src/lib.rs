@@ -277,6 +277,7 @@ pub fn run() {
             commands::rebase::rebase_status,
             commands::rebase::rebase_todo_list,
             commands::ai::ai_http_request,
+            commands::ai::read_convention_files,
             commands::clone::git_clone,
             commands::submodule::submodule_list,
             commands::submodule::submodule_init,

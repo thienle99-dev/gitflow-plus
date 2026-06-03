@@ -22,8 +22,8 @@ export function useGenerateCommitMessage(repoPath: string | null) {
 
 export function useAIDiffReview() {
   return useMutation({
-    mutationFn: ({ filePath, diff }: { filePath: string; diff: string }) =>
-      reviewDiffWithAI(filePath, diff),
+    mutationFn: ({ filePath, diff, repoPath }: { filePath: string; diff: string; repoPath?: string }) =>
+      reviewDiffWithAI(filePath, diff, repoPath),
   });
 }
 
@@ -64,14 +64,14 @@ export function useAICommitScope() {
 
 export function useAIMergeRequestExplain() {
   return useMutation({
-    mutationFn: ({ mergeRequest, files }: { mergeRequest: MergeRequest; files: MergeRequestFileChange[] }) =>
-      explainMergeRequestWithAI(mergeRequest, files),
+    mutationFn: ({ mergeRequest, files, repoPath }: { mergeRequest: MergeRequest; files: MergeRequestFileChange[]; repoPath?: string }) =>
+      explainMergeRequestWithAI(mergeRequest, files, repoPath),
   });
 }
 
 export function useAIMergeRequestReview() {
   return useMutation({
-    mutationFn: ({ mergeRequest, files }: { mergeRequest: MergeRequest; files: MergeRequestFileChange[] }) =>
-      reviewMergeRequestWithAI(mergeRequest, files),
+    mutationFn: ({ mergeRequest, files, repoPath }: { mergeRequest: MergeRequest; files: MergeRequestFileChange[]; repoPath?: string }) =>
+      reviewMergeRequestWithAI(mergeRequest, files, repoPath),
   });
 }

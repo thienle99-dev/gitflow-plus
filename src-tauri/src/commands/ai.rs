@@ -125,3 +125,63 @@ pub async fn ai_http_request(request: HttpRequestData) -> Result<HttpResponseDat
 
     Ok(HttpResponseData { status, body })
 }
+
+#[derive(Serialize)]
+pub struct ConventionFile {
+    pub name: String,
+    pub content: String,
+}
+
+/// Reads well-known project convention files (CLAUDE.md, .cursorrules, etc.) from a repo.
+/// Returns a list of found files with their content, capped at ~4KB total.
+#[tauri::command]
+pub async fn read_convention_files(path: String) -> Result<Vec<ConventionFile>, String> {
+    let repo = std::path::Path::new(&path);
+
+    // Convention files to search for, in priority order
+    let candidates: &[&str] = &[
+        "CLAUDE.md",
+        ".cursorrules",
+        ".cursor/rules",
+        ".cursorrules.md",
+        ".github/copilot-instructions.md",
+        ".windsurfrules",
+        ".clinerules",
+        "AGENTS.md",
+        ".agents.md",
+    ];
+
+    let mut found = Vec::new();
+    let mut total_bytes: usize = 0;
+    let max_total: usize = 4096;
+
+    for &name in candidates {
+        let file_path = repo.join(name);
+        if file_path.is_file() {
+            match fs::read_to_string(&file_path) {
+                Ok(content) => {
+                    let trimmed = content.trim().to_string();
+                    if !trimmed.is_empty() {
+                        let remaining = max_total.saturating_sub(total_bytes);
+                        if remaining == 0 {
+                            break;
+                        }
+                        let truncated = if trimmed.len() > remaining {
+                            format!("{}...(truncated)", &trimmed[..remaining])
+                        } else {
+                            trimmed
+                        };
+                        total_bytes += truncated.len();
+                        found.push(ConventionFile {
+                            name: name.to_string(),
+                            content: truncated,
+                        });
+                    }
+                }
+                Err(_) => continue,
+            }
+        }
+    }
+
+    Ok(found)
+}

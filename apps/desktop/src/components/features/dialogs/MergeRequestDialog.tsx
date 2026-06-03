@@ -153,6 +153,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
       const explanation = await aiExplain.mutateAsync({
         mergeRequest: selectedMr,
         files: changedFiles,
+        repoPath: repoPath ?? undefined,
       });
       setAiExplanation(explanation);
     } catch {
@@ -166,6 +167,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
       const review = await aiReview.mutateAsync({
         mergeRequest: selectedMr,
         files: changedFiles,
+        repoPath: repoPath ?? undefined,
       });
       setAiReviewResult(review);
     } catch {

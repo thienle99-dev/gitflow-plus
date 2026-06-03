@@ -106,7 +106,7 @@
 - [x] Frontend listener → invalidate relevant queries
 - [x] Start/stop watcher on repo open/close
 
-### Step 12: Polish
+### Step 12: Polish / Release Readiness
 - [x] Dark/light theme complete (all components)
 - [x] Keyboard shortcuts (Cmd+B sidebar, Cmd+Enter commit, etc.)
 - [x] Recent repos list (localStorage)
@@ -118,6 +118,22 @@
 - [x] Error UX phân loại: network error / auth error / conflict error → UX riêng
 - [x] Undo last commit (git reset --soft HEAD~1) button
 - [x] Performance logging — measure open repo, render graph, status refresh (đo trước khi optimize)
+- [ ] Operation lock/queue — tránh chạy đồng thời pull/push/fetch/merge/rebase/cherry-pick trên cùng repo
+- [ ] Long-running operation progress + cancel affordance khi git command hỗ trợ
+- [ ] Pre-flight safety checks — dirty worktree, untracked files, detached HEAD, conflict/rebase/merge-in-progress
+- [ ] Confirm destructive actions — discard/reset/delete branch/drop stash cần confirm rõ impact
+- [ ] Release gates — build app, run tests, smoke test real repo, verify packaged app launch
+
+### UX Improvements
+- [ ] Command palette (Cmd+K) — quick actions, branch/commit search, recent repos
+- [ ] Operation center — show running git/AI tasks, progress, cancel, recent results
+- [ ] Smart pre-flight dialogs — summarize risk before merge/rebase/cherry-pick/push/discard
+- [ ] Improved interactive staging UX — applied state, patch failure explanation, undo last hunk action
+- [ ] AI result actions — apply/copy/regenerate/change tone/change language
+- [ ] PR/MR review summary strip — CI, approvals, conflicts, changed files, branch direction
+- [ ] File diff filters — search changed files, filter by status, sort by risk/size
+- [ ] Auth setup flow — guided setup for GitHub/GitLab token, SSH, HTTPS credentials
+- [ ] Settings connection tests — verify AI key, GitHub token, GitLab token
 
 ---
 
@@ -131,6 +147,7 @@
 - [ ] Hotfix: start (`git checkout -b hotfix/<version> main`), finish (merge → main + develop, tag)
 - [ ] GitFlow toolbar section — dedicated buttons cho từng action
 - [ ] Visual indicator trên commit graph — highlight gitflow branches theo màu riêng
+- [ ] GitFlow action previews — show target branches, changed files, conflicts risk trước khi finish/release/hotfix
 
 ### Git Advanced
 - [x] Merge branch + detect conflict state
@@ -156,7 +173,8 @@
 
 ### AI Features (Cloud LLM API)
 - [x] Settings UI: API key input (Claude/OpenAI), model selector, token limit
-- [ ] API key storage in OS keychain (`keyring` crate)
+- [ ] API key storage in OS keychain (`keyring` crate), migrate existing localStorage secrets safely
+- [ ] Secret hygiene — mask tokens in UI, avoid logging secrets, clear secrets from diagnostics/crash reports
 - [ ] Rust backend: LLM API client + streaming response via Tauri events
 - [x] **AI Conflict Resolution** — phân tích ours/theirs + surrounding context, đề xuất merged result
 - [x] **AI Commit Message** — phân tích staged diff, generate conventional commit (type: subject + body)
@@ -164,9 +182,19 @@
 - [x] **AI Code Review Assist** — flag bugs, suggest improvements, đề xuất test cases
 - [x] **AI Commit Scope Suggestion** — gợi ý tách commit nếu staged changes quá lớn/không liên quan
 - [ ] **AI Branch Naming** — suggest branch name từ description
-- [ ] Context-aware prompts — gửi kèm project conventions (.cursorrules, CLAUDE.md) nếu có
+- [ ] Context-aware prompts (partial) — backend đã đọc project conventions (.cursorrules, CLAUDE.md, AGENTS.md); cần wire vào toàn bộ prompt flows + settings preview
 - [ ] Rate limiting + response caching cho cùng diff
 - [x] Fallback: API fail → toast error, manual workflow vẫn hoạt động bình thường
+- [ ] **AI PR/MR Description** — generate PR title/body từ commits + diff, detect breaking changes, checklist, test plan
+- [ ] **AI Release Notes** — gom commits/tags thành changelog theo Conventional Commits hoặc custom format
+- [ ] **AI Risk Summary** — phân tích diff trước merge/push: files nhạy cảm, migration, config/env, auth, destructive changes
+- [ ] **AI Test Suggestion** — đề xuất test cần chạy/thêm dựa trên staged diff hoặc branch diff
+- [ ] **AI Conflict Explanation** — ngoài resolve conflict, giải thích vì sao conflict xảy ra và bên nào thay đổi gì
+- [ ] **AI Commit Splitter** — đề xuất tách staged changes thành nhiều commits logic, có thể stage theo nhóm file/hunk
+- [ ] **AI Sensitive Data Scan** — cảnh báo secrets/API keys/token/private certs trước commit/push
+- [ ] **AI Git Command Assistant** — user mô tả ý định bằng tự nhiên, app đề xuất Git action an toàn kèm preview trước khi chạy
+- [ ] **AI Branch/Issue Summary** — tóm tắt branch hiện tại: mục tiêu, commits chính, files thay đổi, rủi ro còn lại
+- [ ] **AI Review Comment Drafts** — tạo comment review inline cho diff, dùng khi review PR/MR
 
 ## Phase 3: Remote Integration (after Phase 2)
 
@@ -182,6 +210,8 @@
 - [ ] Desktop notifications — notify khi long-running ops xong hoặc CI/CD status thay đổi
 - [ ] Workspace (multi-repo)
 - [ ] Bulk fetch/pull
+- [ ] Remote operation dry-run/preview — protected branch warning, push target confirmation, force-push guard
+- [ ] Credential health check — verify GitHub/GitLab token scopes and SSH remote availability
 
 ## Phase 4: Productivity & Collaboration (after Phase 3)
 
@@ -198,6 +228,8 @@
 - [ ] Patch export/import — export commits thành `.patch` file, apply patch từ file
 - [x] Git LFS support — detect LFS-tracked files, show LFS status, hỗ trợ lfs pull/push
 - [ ] Repository health check — scan large files không LFS-tracked, sensitive data patterns, broken symlinks
+- [ ] Diagnostic bundle — collect app version, git version, repo state summary, redacted logs for bug reports
+- [ ] Test fixture repos — conflict, binary, LFS, submodule, large history, rename/delete, detached HEAD, shallow clone
 
 ## Phase 5: Plugin System & Extensibility (future)
 
@@ -211,6 +243,8 @@
 
 ## Verification Checklist
 
+> Release checklist nên phân biệt rõ: implemented / UI wired / manually verified / automated tests.
+
 - [ ] `cargo tauri dev` launches without crash
 - [ ] Open real git repo → graph renders
 - [ ] Stage → commit → push cycle works
@@ -220,3 +254,10 @@
 - [ ] Dark/light toggle works
 - [ ] `cargo test` passes
 - [ ] `npm test` passes
+
+## Plan Review Notes
+
+- Treat `[x]` as "implemented enough to inspect", not "release verified". For complex features, track backend, frontend wiring, manual QA, and automated tests separately.
+- Prioritize release blockers before adding more feature breadth: credentials/keychain, interactive staging, pre-flight safety, destructive-action confirmation, and packaged-app verification.
+- Move GitFlow workflow higher in priority because it is the core brand promise of GitFlow Desktop.
+- Keep remote/PR integration behind solid auth, token storage, and operation safety foundations.

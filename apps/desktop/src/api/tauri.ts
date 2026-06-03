@@ -127,6 +127,11 @@ export interface BlameLine {
   content: string;
 }
 
+export interface ConventionFile {
+  name: string;
+  content: string;
+}
+
 export interface ReflogEntry {
   index: number;
   commit_hash: string;
@@ -355,6 +360,8 @@ export const api = {
       invoke<{ status: number; body: string }>("ai_http_request", {
         request: { url, method, headers, body: body ?? null }
       }),
+    readConventionFiles: (path: string) =>
+      invoke<ConventionFile[]>("read_convention_files", { path }),
   },
 
   submodules: {

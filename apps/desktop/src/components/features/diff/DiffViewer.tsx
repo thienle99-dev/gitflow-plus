@@ -85,7 +85,7 @@ export default function DiffViewer({
     if (reviewResult) return;
 
     try {
-      setReviewResult(await aiReview.mutateAsync({ filePath, diff }));
+      setReviewResult(await aiReview.mutateAsync({ filePath, diff, repoPath: repoPath ?? undefined }));
     } catch {
       // Error is rendered from the mutation state.
     }

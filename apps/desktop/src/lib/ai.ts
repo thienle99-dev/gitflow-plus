@@ -1,7 +1,11 @@
-import { api, type FileChange, type Branch } from "@/api/tauri";
+import { api, type FileChange, type Branch, type ConventionFile } from "@/api/tauri";
 import type { MergeRequest, MergeRequestFileChange } from "@/api/gitHost";
 
 const DEFAULT_MODEL = "claude-sonnet-4-20250514";
+
+// Convention file cache (keyed by repoPath, TTL 5 min)
+const conventionCache = new Map<string, { files: ConventionFile[]; ts: number }>();
+const CONVENTION_TTL_MS = 5 * 60 * 1000;
 
 interface AISettings {
   apiKey: string;
@@ -72,7 +76,8 @@ export async function generateCommitMessageWithAI(
     };
   }
 
-  const prompt = buildCommitPrompt(diff, settings, branchName);
+  const conventionContext = await getConventionContext(repoPath);
+  const prompt = buildCommitPrompt(diff, settings, branchName, conventionContext);
   const message = cleanAIText(await requestAIText(prompt, settings));
   if (!message) {
     throw new Error("Empty response from AI");
@@ -81,7 +86,7 @@ export async function generateCommitMessageWithAI(
   return { message, fallback: false };
 }
 
-export async function reviewDiffWithAI(filePath: string, diff: string) {
+export async function reviewDiffWithAI(filePath: string, diff: string, repoPath?: string) {
   const settings = readAISettings();
   if (!hasProvider(settings)) {
     throw new Error("Configure an AI API key or local model in settings");
@@ -89,12 +94,13 @@ export async function reviewDiffWithAI(filePath: string, diff: string) {
 
   const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
   const customRulesInstruction = buildCustomRulesInstruction(settings.customRules);
+  const conventionInstruction = repoPath ? await getConventionContext(repoPath) : "";
   const prompt = `You are a world-class senior software architect. Analyze the git diff below for the file "${filePath}" and provide two structured sections:
 1. CODE EXPLANATION: A clear, high-level summary of WHAT was changed and WHY.
 2. CODE REVIEW & SUGGESTIONS: Inspect the code changes for potential bugs, security issues, performance optimization opportunities, or style improvements. If everything looks good, say that clearly.
 
 Be professional, direct, constructive, and use markdown styling.
-${languageInstruction}${customRulesInstruction}
+${languageInstruction}${customRulesInstruction}${conventionInstruction}
 
 Diff:
 ${diff.slice(0, 8000)}`;
@@ -128,6 +134,7 @@ export async function explainCommitWithAI(
   const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
 
   const customRulesInstruction = buildCustomRulesInstruction(settings.customRules);
+  const conventionInstruction = await getConventionContext(repoPath);
   const prompt = `You are a senior software engineer reviewing a Git commit. Explain this commit for code review.
 
 ${branchContext}Commit message: ${commitMessage}
@@ -141,7 +148,7 @@ INSTRUCTIONS:
 3. List the KEY CHANGES as bullet points (max 5-6).
 4. If there are potential RISKS or BREAKING CHANGES, mention them briefly.
 5. Be concise and direct. No markdown code blocks.
-${languageInstruction}${customRulesInstruction}`;
+${languageInstruction}${customRulesInstruction}${conventionInstruction}`;
 
   const explanation = cleanAIText(await requestAIText(prompt, withReviewModel(settings)));
   if (!explanation) {
@@ -171,6 +178,7 @@ export async function reviewCommitWithAI(
   const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
 
   const customRulesInstruction = buildCustomRulesInstruction(settings.customRules);
+  const conventionInstruction = await getConventionContext(repoPath);
   const prompt = `You are a world-class senior software architect performing a thorough code review. Analyze the git diff below for this commit.
 
 ${branchContext}Commit: ${commitMessage}
@@ -185,7 +193,7 @@ INSTRUCTIONS:
    - [BEST-PRACTICE] best practice violation
 3. If the code looks solid with no issues, say so clearly — do not invent problems.
 4. Be professional, direct, constructive. Use markdown styling.
-${languageInstruction}${customRulesInstruction}
+${languageInstruction}${customRulesInstruction}${conventionInstruction}
 
 Diff:
 ${truncatedDiff}`;
@@ -200,6 +208,7 @@ ${truncatedDiff}`;
 export async function explainMergeRequestWithAI(
   mergeRequest: MergeRequest,
   files: MergeRequestFileChange[],
+  repoPath?: string,
 ): Promise<string> {
   const settings = readAISettings();
   if (!hasProvider(settings)) {
@@ -222,6 +231,7 @@ export async function explainMergeRequestWithAI(
   const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
 
   const customRulesInstruction = buildCustomRulesInstruction(settings.customRules);
+  const conventionInstruction = repoPath ? await getConventionContext(repoPath) : "";
   const prompt = `You are a senior engineer reviewing a merge request. Explain the change and call out review-relevant details.
 
 Title: ${mergeRequest.title}
@@ -243,7 +253,7 @@ INSTRUCTIONS:
 2. List key file-level changes as bullets.
 3. Mention risk areas, testing focus, or possible regressions.
 4. Keep it useful for code review. No code blocks.
-${languageInstruction}${customRulesInstruction}`;
+${languageInstruction}${customRulesInstruction}${conventionInstruction}`;
 
   const explanation = cleanAIText(await requestAIText(prompt, withReviewModel(settings)));
   if (!explanation) {
@@ -255,6 +265,7 @@ ${languageInstruction}${customRulesInstruction}`;
 export async function reviewMergeRequestWithAI(
   mergeRequest: MergeRequest,
   files: MergeRequestFileChange[],
+  repoPath?: string,
 ): Promise<string> {
   const settings = readAISettings();
   if (!hasProvider(settings)) {
@@ -277,6 +288,7 @@ export async function reviewMergeRequestWithAI(
   const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
 
   const customRulesInstruction = buildCustomRulesInstruction(settings.customRules);
+  const conventionInstruction = repoPath ? await getConventionContext(repoPath) : "";
   const prompt = `You are a rigorous senior engineer performing a merge request review.
 
 Title: ${mergeRequest.title}
@@ -300,7 +312,7 @@ INSTRUCTIONS:
 4. If no concrete issues are found, say "No blocking issues found" and list residual risks or tests to run.
 5. End with a short recommendation: Approve, Approve with comments, or Request changes.
 6. Be concise and practical. Use markdown bullets, no code blocks.
-${languageInstruction}${customRulesInstruction}`;
+${languageInstruction}${customRulesInstruction}${conventionInstruction}`;
 
   const review = cleanAIText(await requestAIText(prompt, withReviewModel(settings)));
   if (!review) {
@@ -329,6 +341,7 @@ export async function analyzeCommitScope(
   const branchName = await getCurrentBranchName(repoPath);
   const branchContext = branchName ? `Branch: ${branchName}\n` : "";
   const customRulesInstruction = buildCustomRulesInstruction(settings.customRules);
+  const conventionInstruction = await getConventionContext(repoPath);
 
   const prompt = `You are an expert developer reviewing staged git changes. Analyze the diff and determine if the changes should be split into multiple atomic commits.
 
@@ -353,7 +366,7 @@ RULES:
 - Each message follows format: type(scope): description
 - Maximum 4 groups
 - Return ONLY the JSON, no markdown code blocks, no wrapping
-${customRulesInstruction}
+${customRulesInstruction}${conventionInstruction}
 ${branchContext}Staged diff:
 ${diff.slice(0, 12_000)}`;
 
@@ -455,6 +468,26 @@ function buildCustomRulesInstruction(customRules: string): string {
     : "";
 }
 
+function buildConventionInstruction(files: ConventionFile[]): string {
+  if (!files.length) return "";
+  const block = files.map((f) => `### ${f.name}\n${f.content}`).join("\n\n");
+  return `\nPROJECT CONVENTIONS (from repo root — must follow these):\n${block}\n`;
+}
+
+async function getConventionContext(repoPath: string): Promise<string> {
+  try {
+    const cached = conventionCache.get(repoPath);
+    if (cached && Date.now() - cached.ts < CONVENTION_TTL_MS) {
+      return buildConventionInstruction(cached.files);
+    }
+    const files = await api.ai.readConventionFiles(repoPath);
+    conventionCache.set(repoPath, { files, ts: Date.now() });
+    return buildConventionInstruction(files);
+  } catch {
+    return "";
+  }
+}
+
 function buildReviewLanguageInstruction(language: AIReviewLanguage) {
   if (language === "auto") {
     return "LANGUAGE: Match the user's language when it is clear from the request or commit/MR text; otherwise use English.";
@@ -498,7 +531,7 @@ async function getCurrentBranchName(repoPath: string) {
   }
 }
 
-export function buildCommitPrompt(diff: string, settings: AISettings, branchName: string) {
+export function buildCommitPrompt(diff: string, settings: AISettings, branchName: string, conventionContext = "") {
   const formatInstruction = commitStyleInstruction(settings.commitStyle);
   const styleInstruction = settings.detailLevel === "ultra-minimal"
     ? "3. Return ONLY a single line (the subject line). No body."
@@ -524,7 +557,7 @@ CRITICAL INSTRUCTIONS:
 ${styleInstruction}
 4. No markdown code blocks, no introductory text, no quotes. Return ONLY the raw commit message.
 5. Use English unless custom rules say otherwise.
-${branchContext}${customRules}
+${branchContext}${customRules}${conventionContext}
 Staged diff:
 ${diff.slice(0, 8000)}`;
 }
