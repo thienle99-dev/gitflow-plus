@@ -149,7 +149,7 @@ export default function WorkingTree() {
       }
       invalidate();
     } catch (e: any) {
-      showToast(`Error: ${e}`);
+      showToast(`Error: ${e}`, "error");
     }
   };
 
@@ -161,7 +161,7 @@ export default function WorkingTree() {
       }
       invalidate();
     } catch (e: any) {
-      showToast(`Error: ${e}`);
+      showToast(`Error: ${e}`, "error");
     }
   };
 
@@ -170,7 +170,7 @@ export default function WorkingTree() {
       await api.commit.stageAll(repoPath!);
       invalidate();
     } catch (e: any) {
-      showToast(`Error: ${e}`);
+      showToast(`Error: ${e}`, "error");
     }
   };
 
@@ -179,7 +179,7 @@ export default function WorkingTree() {
       await api.commit.unstageAll(repoPath!);
       invalidate();
     } catch (e: any) {
-      showToast(`Error: ${e}`);
+      showToast(`Error: ${e}`, "error");
     }
   };
 
@@ -245,7 +245,7 @@ export default function WorkingTree() {
       setSelectedFiles(new Set());
       invalidate();
     } catch (e: any) {
-      showToast(`Error: ${e}`);
+      showToast(`Error: ${e}`, "error");
     }
   };
 
@@ -258,7 +258,7 @@ export default function WorkingTree() {
       setSelectedFiles(new Set());
       invalidate();
     } catch (e: any) {
-      showToast(`Error: ${e}`);
+      showToast(`Error: ${e}`, "error");
     }
   };
 
@@ -274,7 +274,7 @@ export default function WorkingTree() {
       setAmend(false);
       invalidate();
     } catch (e: any) {
-      showToast(`Error: ${e}`);
+      showToast(`Error: ${e}`, "error");
     } finally {
       setCommitting(false);
     }
@@ -338,7 +338,7 @@ export default function WorkingTree() {
     const hasStaged = staged.length > 0;
     const filesToReview = hasStaged ? staged : unstaged;
     if (filesToReview.length === 0) {
-      showToast("No changes to review");
+      showToast("No changes to review", "info");
       return;
     }
 
@@ -353,7 +353,7 @@ export default function WorkingTree() {
         : (await Promise.all(filesToReview.slice(0, 20).map((file) => api.diff.file(repoPath, file.path).catch(() => "")))).filter(Boolean).join("\n\n");
 
       if (!diff.trim()) {
-        showToast("No diff found for AI review");
+        showToast("No diff found for AI review", "info");
         setAiReviewOpen(false);
         return;
       }
@@ -366,7 +366,7 @@ export default function WorkingTree() {
       });
       setAiReviewResult(result);
     } catch (err: any) {
-      showToast(`AI review failed: ${err?.message || err}`);
+      showToast(`AI review failed: ${err?.message || err}`, "error");
     }
   };
 
@@ -385,7 +385,7 @@ export default function WorkingTree() {
       });
       showToast(`Staged ${group.files.length} files for this commit. Press Commit or ⌘↵`);
     } catch (e: any) {
-      showToast(`Error: ${e}`);
+      showToast(`Error: ${e}`, "error");
     }
     requestAnimationFrame(() => textareaRef.current?.focus());
   };
@@ -412,7 +412,7 @@ export default function WorkingTree() {
       showToast(result || `Committed ${group.files.length} files`);
       invalidate();
     } catch (e: any) {
-      showToast(`Error: ${e}`);
+      showToast(`Error: ${e}`, "error");
     } finally {
       setCommitting(false);
       setCommittingGroupKey(null);
@@ -438,7 +438,7 @@ export default function WorkingTree() {
       showToast(`Committed ${scopeSuggestion.groups.length} suggested commits`);
       invalidate();
     } catch (e: any) {
-      showToast(`Error: ${e}`);
+      showToast(`Error: ${e}`, "error");
     } finally {
       setCommitting(false);
       setCommittingGroupKey(null);
@@ -448,14 +448,14 @@ export default function WorkingTree() {
   const handleGenerateCommit = async () => {
     if (generateCommit.isPending) return;
     if (!changes || changes.length === 0) {
-      showToast("No changes to generate a commit message");
+      showToast("No changes to generate a commit message", "info");
       return;
     }
 
     setScopeSuggestion(null);
     setScopeDismissed(false);
 
-    showToast("Generating commit message for all changes...");
+    showToast("Generating commit message for all changes...", "info");
     try {
       const result = await generateCommit.mutateAsync({ files: changes });
       setCommitMessage(result.message);
@@ -473,7 +473,7 @@ export default function WorkingTree() {
       }
     } catch (err: any) {
       setCommitMessage(generateLocalCommitMessage(changes));
-      showToast(`AI failed: ${err.message || err}. Used local fallback.`);
+      showToast(`AI failed: ${err.message || err}. Used local fallback.`, "error");
     } finally {
       requestAnimationFrame(() => textareaRef.current?.focus());
     }
@@ -482,13 +482,13 @@ export default function WorkingTree() {
   const handleAnalyzeScope = async () => {
     if (!repoPath || scopeAnalyzing || commitScope.isPending) return;
     if (staged.length === 0) {
-      showToast("Stage some files first to analyze scope");
+      showToast("Stage some files first to analyze scope", "info");
       return;
     }
     setScopeAnalyzing(true);
     setScopeDismissed(false);
     setScopeSuggestion(null);
-    showToast("Analyzing commit scope...");
+    showToast("Analyzing commit scope...", "info");
     try {
       const scope = await commitScope.mutateAsync({ repoPath, files: changes || staged });
       if (scope?.shouldSplit && scope.groups.length > 1) {
@@ -498,7 +498,7 @@ export default function WorkingTree() {
         showToast("Changes look cohesive — single commit is fine");
       }
     } catch {
-      showToast("Scope analysis failed");
+      showToast("Scope analysis failed", "error");
     } finally {
       setScopeAnalyzing(false);
     }
@@ -1760,11 +1760,6 @@ function getFileName(path: string) {
   return path.split("/").pop() || path;
 }
 
-function getExtension(path: string) {
-  const fileName = getFileName(path).toLowerCase();
-  const index = fileName.lastIndexOf(".");
-  return index > -1 ? fileName.slice(index + 1) : fileName;
-}
 
 function getFolder(path: string) {
   const parts = path.split("/");
