@@ -111,9 +111,13 @@ export default function WorkingTree() {
   ];
   const aiReviewTagCount = countAIReviewTags(aiReviewResult);
 
-  const openDiffReview = (path: string, stage: "staged" | "unstaged") => {
+  const openDiffReview = (path: string, stage: "staged" | "unstaged", autoInlineReview = false) => {
     const target = reviewFiles.find((file) => file.path === path && file.stage === stage) || { path, stage };
-    setReviewTarget(target);
+    setReviewTarget({ ...target, autoInlineReview });
+  };
+
+  const openInlineReview = (path: string, stage: "staged" | "unstaged") => {
+    openDiffReview(path, stage, true);
   };
 
   const showToast = (msg: string) => {
@@ -519,6 +523,11 @@ export default function WorkingTree() {
         action: () => openDiffReview(ctxMenu.file.path, ctxMenu.stage),
       },
       {
+        label: "AI Inline Review",
+        icon: <MessageSquare size={13} />,
+        action: () => openInlineReview(ctxMenu.file.path, ctxMenu.stage),
+      },
+      {
         label: ctxMenu.stage === "staged" ? "Unstage file" : "Stage file",
         icon: <Check size={13} />,
         action: () =>
@@ -608,6 +617,7 @@ export default function WorkingTree() {
           onToggleAll={handleUnstageAll}
           onToggleFile={handleUnstage}
           onSelect={(path) => openDiffReview(path, "staged")}
+          onAIInlineReview={(path) => openInlineReview(path, "staged")}
           onToggleOpen={() => setStagedOpen((open) => !open)}
           onMenu={(x, y, file) => setCtxMenu({ x, y, file, stage: "staged" })}
           onFileMultiClick={handleFileClick}
@@ -625,6 +635,7 @@ export default function WorkingTree() {
           onToggleAll={handleStageAll}
           onToggleFile={handleStage}
           onSelect={(path) => openDiffReview(path, "unstaged")}
+          onAIInlineReview={(path) => openInlineReview(path, "unstaged")}
           onToggleOpen={() => setUnstagedOpen((open) => !open)}
           onMenu={(x, y, file) => setCtxMenu({ x, y, file, stage: "unstaged" })}
           onFileMultiClick={handleFileClick}
@@ -1081,6 +1092,7 @@ function ChangeSection({
   onToggleAll,
   onToggleFile,
   onSelect,
+  onAIInlineReview,
   onToggleOpen,
   onMenu,
   onFileMultiClick,
@@ -1132,6 +1144,7 @@ function ChangeSection({
                 multiSelected={multiSelectedFiles.has(file.path)}
                 onSelect={() => onSelect(file.path)}
                 onToggle={() => onToggleFile(file.path)}
+                onAIInlineReview={() => onAIInlineReview(file.path)}
                 onMenu={(x, y) => onMenu(x, y, file)}
                 onMultiClick={(e) => onFileMultiClick(file.path, e)}
               />
@@ -1150,6 +1163,7 @@ interface ChangeRowProps {
   multiSelected?: boolean;
   onSelect: () => void;
   onToggle: () => void;
+  onAIInlineReview: () => void;
   onMenu: (x: number, y: number) => void;
   onMultiClick?: (e: React.MouseEvent) => void;
 }
@@ -1188,7 +1202,7 @@ function StatusBadge({ status, selected }: { status: string; selected: boolean }
   );
 }
 
-function ChangeRow({ file, checked, selected, multiSelected, onSelect, onToggle, onMenu, onMultiClick }: ChangeRowProps) {
+function ChangeRow({ file, checked, selected, multiSelected, onSelect, onToggle, onAIInlineReview, onMenu, onMultiClick }: ChangeRowProps) {
   const fileName = getFileName(file.path);
   const folder = getFolder(file.path);
 
@@ -1250,6 +1264,17 @@ function ChangeRow({ file, checked, selected, multiSelected, onSelect, onToggle,
       </span>
       <span className="flex items-center justify-end gap-1.5 min-w-[48px]">
         <StatusBadge status={file.status} selected={selected} />
+        <span
+          className={`h-5 w-5 flex items-center justify-center rounded transition-all cursor-pointer opacity-0 group-hover:opacity-100 ${selected ? "hover:bg-accent-fg/20 text-accent-fg" : "text-text-muted hover:bg-surface-2"
+            }`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onAIInlineReview();
+          }}
+          title="AI Inline Review"
+        >
+          <MessageSquare size={12} className="text-current" />
+        </span>
         <span
           className={`h-5 w-5 flex items-center justify-center rounded transition-all cursor-pointer opacity-0 group-hover:opacity-100 ${selected ? "hover:bg-accent-fg/20 text-accent-fg" : "text-text-muted hover:bg-surface-2"
             }`}
@@ -1419,6 +1444,7 @@ function DiffReviewModal({ target, files, onChangeTarget, onClose, onRefresh }: 
               filePath={target.path}
               source={target.stage === "staged" ? "staged" : "working"}
               onPatchApplied={refreshDiff}
+              autoInlineReview={target.autoInlineReview}
             />
           ) : (
             <div className="flex h-full items-center justify-center text-xs text-text-muted">No changes</div>
