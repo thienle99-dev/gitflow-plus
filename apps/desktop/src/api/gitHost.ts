@@ -338,3 +338,160 @@ export async function fetchGitHubCheckRuns(remoteUrl: string, sha: string): Prom
   }
   return [];
 }
+
+export async function approveMergeRequest(remoteUrl: string, mr: MergeRequest): Promise<string> {
+  const { provider, owner, repo, host } = parseRemoteUrl(remoteUrl);
+  if (!provider) throw new Error("Unable to identify provider from remote URL.");
+
+  if (provider === "github") {
+    const url = `https://api.github.com/repos/${owner}/${repo}/pulls/${mr.iid}/reviews`;
+    const headers = mergeRequestAuthHeaders("github");
+    headers["Content-Type"] = "application/json";
+    const body = JSON.stringify({ event: "APPROVE" });
+    const response = await api.ai.request(url, "POST", headers, body);
+    if (response.status !== 200) {
+      let errDetail = "";
+      try { errDetail = JSON.parse(response.body).message; } catch { errDetail = response.body; }
+      throw new Error(`GitHub API Error (${response.status}): ${errDetail}`);
+    }
+    return "PR approved successfully.";
+  }
+
+  const gitlabHost = host || localStorage.getItem("gitflowGitlabHost") || "https://gitlab.com";
+  const projectId = encodeURIComponent(`${owner}/${repo}`);
+  const url = `${gitlabHost}/api/v4/projects/${projectId}/merge_requests/${mr.iid}/approve`;
+  const response = await api.ai.request(url, "POST", mergeRequestAuthHeaders("gitlab"));
+  if (response.status !== 201) {
+    let errDetail = "";
+    try { errDetail = JSON.parse(response.body).message || JSON.parse(response.body).error; } catch { errDetail = response.body; }
+    throw new Error(`GitLab API Error (${response.status}): ${errDetail}`);
+  }
+  return "MR approved successfully.";
+}
+
+export async function unapproveMergeRequest(remoteUrl: string, mr: MergeRequest): Promise<string> {
+  const { provider, owner, repo, host } = parseRemoteUrl(remoteUrl);
+  if (!provider) throw new Error("Unable to identify provider from remote URL.");
+
+  if (provider === "github") {
+    const url = `https://api.github.com/repos/${owner}/${repo}/pulls/${mr.iid}/reviews`;
+    const headers = mergeRequestAuthHeaders("github");
+    headers["Content-Type"] = "application/json";
+    const body = JSON.stringify({ event: "COMMENT" });
+    // GitHub doesn't have a direct "unapprove" via reviews API — we just note it
+    return "Use GitHub web UI to dismiss approval.";
+  }
+
+  const gitlabHost = host || localStorage.getItem("gitflowGitlabHost") || "https://gitlab.com";
+  const projectId = encodeURIComponent(`${owner}/${repo}`);
+  const url = `${gitlabHost}/api/v4/projects/${projectId}/merge_requests/${mr.iid}/unapprove`;
+  const response = await api.ai.request(url, "POST", mergeRequestAuthHeaders("gitlab"));
+  if (response.status !== 201) {
+    let errDetail = "";
+    try { errDetail = JSON.parse(response.body).message || JSON.parse(response.body).error; } catch { errDetail = response.body; }
+    throw new Error(`GitLab API Error (${response.status}): ${errDetail}`);
+  }
+  return "MR approval revoked.";
+}
+
+export async function mergeMergeRequest(remoteUrl: string, mr: MergeRequest, mergeMethod?: "merge" | "squash" | "rebase"): Promise<string> {
+  const { provider, owner, repo, host } = parseRemoteUrl(remoteUrl);
+  if (!provider) throw new Error("Unable to identify provider from remote URL.");
+
+  if (provider === "github") {
+    const url = `https://api.github.com/repos/${owner}/${repo}/pulls/${mr.iid}/merge`;
+    const headers = mergeRequestAuthHeaders("github");
+    headers["Content-Type"] = "application/json";
+    const body = JSON.stringify({ merge_method: mergeMethod || "merge" });
+    const response = await api.ai.request(url, "PUT", headers, body);
+    if (response.status !== 200) {
+      let errDetail = "";
+      try { errDetail = JSON.parse(response.body).message; } catch { errDetail = response.body; }
+      throw new Error(`GitHub API Error (${response.status}): ${errDetail}`);
+    }
+    return "PR merged successfully.";
+  }
+
+  const gitlabHost = host || localStorage.getItem("gitflowGitlabHost") || "https://gitlab.com";
+  const projectId = encodeURIComponent(`${owner}/${repo}`);
+  const url = `${gitlabHost}/api/v4/projects/${projectId}/merge_requests/${mr.iid}/merge`;
+  const headers = mergeRequestAuthHeaders("gitlab");
+  headers["Content-Type"] = "application/json";
+  const body = JSON.stringify({
+    ...(mergeMethod === "squash" ? { squash: true } : {}),
+    ...(mergeMethod === "rebase" ? { should_remove_source_branch: true } : {}),
+  });
+  const response = await api.ai.request(url, "PUT", headers, body);
+  if (response.status !== 200) {
+    let errDetail = "";
+    try { errDetail = JSON.parse(response.body).message || JSON.parse(response.body).error; } catch { errDetail = response.body; }
+    throw new Error(`GitLab API Error (${response.status}): ${errDetail}`);
+  }
+  return "MR merged successfully.";
+}
+
+export async function closeMergeRequest(remoteUrl: string, mr: MergeRequest): Promise<string> {
+  const { provider, owner, repo, host } = parseRemoteUrl(remoteUrl);
+  if (!provider) throw new Error("Unable to identify provider from remote URL.");
+
+  if (provider === "github") {
+    const url = `https://api.github.com/repos/${owner}/${repo}/pulls/${mr.iid}`;
+    const headers = mergeRequestAuthHeaders("github");
+    headers["Content-Type"] = "application/json";
+    const body = JSON.stringify({ state: "closed" });
+    const response = await api.ai.request(url, "PATCH", headers, body);
+    if (response.status !== 200) {
+      let errDetail = "";
+      try { errDetail = JSON.parse(response.body).message; } catch { errDetail = response.body; }
+      throw new Error(`GitHub API Error (${response.status}): ${errDetail}`);
+    }
+    return "PR closed.";
+  }
+
+  const gitlabHost = host || localStorage.getItem("gitflowGitlabHost") || "https://gitlab.com";
+  const projectId = encodeURIComponent(`${owner}/${repo}`);
+  const url = `${gitlabHost}/api/v4/projects/${projectId}/merge_requests/${mr.iid}`;
+  const headers = mergeRequestAuthHeaders("gitlab");
+  headers["Content-Type"] = "application/json";
+  const body = JSON.stringify({ state_event: "close" });
+  const response = await api.ai.request(url, "PUT", headers, body);
+  if (response.status !== 200) {
+    let errDetail = "";
+    try { errDetail = JSON.parse(response.body).message || JSON.parse(response.body).error; } catch { errDetail = response.body; }
+    throw new Error(`GitLab API Error (${response.status}): ${errDetail}`);
+  }
+  return "MR closed.";
+}
+
+export async function reopenMergeRequest(remoteUrl: string, mr: MergeRequest): Promise<string> {
+  const { provider, owner, repo, host } = parseRemoteUrl(remoteUrl);
+  if (!provider) throw new Error("Unable to identify provider from remote URL.");
+
+  if (provider === "github") {
+    const url = `https://api.github.com/repos/${owner}/${repo}/pulls/${mr.iid}`;
+    const headers = mergeRequestAuthHeaders("github");
+    headers["Content-Type"] = "application/json";
+    const body = JSON.stringify({ state: "open" });
+    const response = await api.ai.request(url, "PATCH", headers, body);
+    if (response.status !== 200) {
+      let errDetail = "";
+      try { errDetail = JSON.parse(response.body).message; } catch { errDetail = response.body; }
+      throw new Error(`GitHub API Error (${response.status}): ${errDetail}`);
+    }
+    return "PR reopened.";
+  }
+
+  const gitlabHost = host || localStorage.getItem("gitflowGitlabHost") || "https://gitlab.com";
+  const projectId = encodeURIComponent(`${owner}/${repo}`);
+  const url = `${gitlabHost}/api/v4/projects/${projectId}/merge_requests/${mr.iid}`;
+  const headers = mergeRequestAuthHeaders("gitlab");
+  headers["Content-Type"] = "application/json";
+  const body = JSON.stringify({ state_event: "reopen" });
+  const response = await api.ai.request(url, "PUT", headers, body);
+  if (response.status !== 200) {
+    let errDetail = "";
+    try { errDetail = JSON.parse(response.body).message || JSON.parse(response.body).error; } catch { errDetail = response.body; }
+    throw new Error(`GitLab API Error (${response.status}): ${errDetail}`);
+  }
+  return "MR reopened.";
+}
