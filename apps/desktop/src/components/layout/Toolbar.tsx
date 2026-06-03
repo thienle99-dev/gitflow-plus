@@ -104,13 +104,19 @@ export default function Toolbar() {
   const inMerge = mergeStatus?.merging;
   const hasLfsFiles = !!lfsStatus?.installed && lfsStatus.tracked_files.length > 0;
   const lfsDirtyCount = lfsStatus?.dirty_files.length ?? 0;
+  const isMac = typeof window !== "undefined" && navigator.userAgent.includes("Mac");
 
   return (
     <>
-      <div className="vibrancy h-[44px] border-b border-border-60 bg-surface-1/40 backdrop-blur-md flex items-center justify-between px-4 select-none animate-in fade-in duration-200">
+      <div
+        className={`vibrancy border-b border-border-60 bg-surface-1/40 backdrop-blur-md flex items-center justify-between px-4 select-none animate-in fade-in duration-200 ${
+          isMac ? "h-[52px]" : "h-[44px]"
+        }`}
+        data-tauri-drag-region
+      >
 
         {/* Left Side: Status Capsule Badge */}
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center gap-2 ${isMac ? "pl-[80px]" : ""}`}>
           <button
             onClick={() => {
               closeRepo();
