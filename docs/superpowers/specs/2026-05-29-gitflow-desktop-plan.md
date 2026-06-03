@@ -238,7 +238,7 @@
 - [ ] **AI Sensitive Data Scan** — cảnh báo secrets/API keys/token/private certs trước commit/push
 - [ ] **AI Git Command Assistant** — user mô tả ý định bằng tự nhiên, app đề xuất Git action an toàn kèm preview trước khi chạy
 - [ ] **AI Branch/Issue Summary** — tóm tắt branch hiện tại: mục tiêu, commits chính, files thay đổi, rủi ro còn lại
-- [ ] **AI Review Comment Drafts** — tạo comment review inline cho diff, dùng khi review PR/MR
+- [x] **AI Review Comment Drafts** — tạo comment review inline cho diff, dùng khi review PR/MR: generateInlineReviewComments() returns structured JSON, InlineCommentWidget in CodeMirror, toggle button in DiffViewer toolbar, per-file trigger via hover icon + right-click context menu in WorkingTree
 
 ## Phase 3: Remote Integration (after Phase 2)
 
