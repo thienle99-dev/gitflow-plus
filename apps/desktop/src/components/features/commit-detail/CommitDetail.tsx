@@ -540,6 +540,34 @@ function reviewCategoryMeta(category: string) {
         bg: "bg-[#bf5af2]/8",
         badge: "bg-[#bf5af2]/20 text-[#bf5af2]",
       };
+    case "LINTER":
+      return {
+        label: "Linter",
+        border: "border-[#64d2ff]",
+        bg: "bg-[#64d2ff]/8",
+        badge: "bg-[#64d2ff]/20 text-[#64d2ff]",
+      };
+    case "TEST":
+      return {
+        label: "Test",
+        border: "border-[#30d158]",
+        bg: "bg-[#30d158]/8",
+        badge: "bg-[#30d158]/20 text-[#30d158]",
+      };
+    case "A11Y":
+      return {
+        label: "A11y",
+        border: "border-[#ff9f0a]",
+        bg: "bg-[#ff9f0a]/8",
+        badge: "bg-[#ff9f0a]/20 text-[#ff9f0a]",
+      };
+    case "UX":
+      return {
+        label: "UX",
+        border: "border-[#ff2d55]",
+        bg: "bg-[#ff2d55]/8",
+        badge: "bg-[#ff2d55]/20 text-[#ff2d55]",
+      };
     default:
       return {
         label: category,
@@ -551,7 +579,7 @@ function reviewCategoryMeta(category: string) {
 }
 
 function matchReviewCategory(line: string) {
-  return line.match(/^\s*(?:#{1,6}\s*)?(?:[-*]\s*)?(?:\*\*)?\[(BUG|SECURITY|PERF|STYLE|BEST-PRACTICE)\](?:\*\*)?\s*(.*)$/i);
+  return line.match(/^\s*(?:#{1,6}\s*)?(?:[-*]\s*)?(?:\*\*)?\[(BUG|SECURITY|PERF|STYLE|BEST-PRACTICE|LINTER|TEST|A11Y|UX)\](?:\*\*)?\s*(.*)$/i);
 }
 
 /** Render AI Review result with color-coded findings, code block support, and bold text */

@@ -78,6 +78,48 @@ interface GeneratedCommitMessage {
 
 type CommitMessageStyle = "conventional" | "plain" | "gitmoji" | "jira";
 type CommitMessageDetailLevel = "ultra-minimal" | "minimal" | "medium" | "detailed" | "comprehensive";
+export type AIReviewMode =
+  | "all"
+  | "custom"
+  | "bugs"
+  | "security"
+  | "performance"
+  | "style"
+  | "linter"
+  | "best-practices"
+  | "tests"
+  | "accessibility"
+  | "ux";
+
+export const AI_REVIEW_CHECKLIST_OPTIONS: { id: Exclude<AIReviewMode, "all" | "custom">; label: string; tag: string; description: string }[] = [
+  { id: "bugs", label: "Bugs", tag: "BUG", description: "Correctness, logic errors, regressions, data loss" },
+  { id: "security", label: "Security", tag: "SECURITY", description: "Secrets, auth, injection, unsafe data handling" },
+  { id: "performance", label: "Performance", tag: "PERF", description: "Slow paths, unnecessary work, rendering or query cost" },
+  { id: "style", label: "Style", tag: "STYLE", description: "Readability, naming, structure, maintainability" },
+  { id: "linter", label: "Linter", tag: "LINTER", description: "Formatting, conventions, likely lint/type issues" },
+  { id: "best-practices", label: "Best Practices", tag: "BEST-PRACTICE", description: "Framework, API, and architecture best practices" },
+  { id: "tests", label: "Tests", tag: "TEST", description: "Missing tests, weak coverage, edge cases to verify" },
+  { id: "accessibility", label: "Accessibility", tag: "A11Y", description: "Keyboard, semantics, screen reader and contrast issues" },
+  { id: "ux", label: "UX", tag: "UX", description: "User-facing flows, states, copy, and interaction risks" },
+];
+
+export const AI_REVIEW_MODE_OPTIONS: { id: AIReviewMode; label: string }[] = [
+  { id: "all", label: "Review all" },
+  { id: "custom", label: "Custom checklist" },
+  ...AI_REVIEW_CHECKLIST_OPTIONS.map((option) => ({ id: option.id, label: option.label })),
+];
+
+export const DEFAULT_AI_REVIEW_CHECKLIST: Exclude<AIReviewMode, "all" | "custom">[] = [
+  "bugs",
+  "security",
+  "performance",
+  "style",
+  "linter",
+  "best-practices",
+  "tests",
+];
+
+const LS_KEY_AI_REVIEW_CHECKLIST = "gitflowAiReviewChecklist";
 type AIReviewLanguage =
   | "auto"
   | "english"
@@ -137,7 +179,7 @@ export async function generateCommitMessageWithAI(
   return { message, fallback: false };
 }
 
-export async function reviewDiffWithAI(filePath: string, diff: string, repoPath?: string) {
+export async function reviewDiffWithAI(filePath: string, diff: string, repoPath?: string, mode: AIReviewMode = "all") {
   const settings = readAISettings();
   if (!hasProvider(settings)) {
     throw new Error("Configure an AI API key or local model in settings");
@@ -146,11 +188,13 @@ export async function reviewDiffWithAI(filePath: string, diff: string, repoPath?
   const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
   const customRulesInstruction = buildCustomRulesInstruction(settings.customRules);
   const conventionInstruction = repoPath ? await getConventionContext(repoPath) : "";
+  const reviewFocusInstruction = buildReviewFocusInstruction(mode);
   const prompt = `You are a world-class senior software architect. Analyze the git diff below for the file "${filePath}" and provide two structured sections:
 1. CODE EXPLANATION: A clear, high-level summary of WHAT was changed and WHY.
-2. CODE REVIEW & SUGGESTIONS: Inspect the code changes for potential bugs, security issues, performance optimization opportunities, or style improvements. If everything looks good, say that clearly.
+2. CODE REVIEW & SUGGESTIONS: Inspect the code changes using the selected review mode. If everything looks good, say that clearly.
 
 Be professional, direct, constructive, and use markdown styling.
+${reviewFocusInstruction}
 ${languageInstruction}${customRulesInstruction}${conventionInstruction}
 
 Diff:
@@ -161,6 +205,42 @@ ${diff.slice(0, 8000)}`;
     throw new Error("Empty response from AI reviewer");
   }
   return review;
+}
+
+export function readAIReviewChecklist(): Exclude<AIReviewMode, "all" | "custom">[] {
+  const saved = localStorage.getItem(LS_KEY_AI_REVIEW_CHECKLIST);
+  if (!saved) return DEFAULT_AI_REVIEW_CHECKLIST;
+  try {
+    const parsed = JSON.parse(saved);
+    if (!Array.isArray(parsed)) return DEFAULT_AI_REVIEW_CHECKLIST;
+    const valid = new Set(AI_REVIEW_CHECKLIST_OPTIONS.map((option) => option.id));
+    const filtered = parsed.filter((value): value is Exclude<AIReviewMode, "all" | "custom"> => valid.has(value));
+    return filtered.length > 0 ? filtered : DEFAULT_AI_REVIEW_CHECKLIST;
+  } catch {
+    return DEFAULT_AI_REVIEW_CHECKLIST;
+  }
+}
+
+function selectedReviewOptions(mode: AIReviewMode) {
+  if (mode === "all") return AI_REVIEW_CHECKLIST_OPTIONS;
+  if (mode === "custom") {
+    const selected = new Set(readAIReviewChecklist());
+    return AI_REVIEW_CHECKLIST_OPTIONS.filter((option) => selected.has(option.id));
+  }
+  return AI_REVIEW_CHECKLIST_OPTIONS.filter((option) => option.id === mode);
+}
+
+function buildReviewFocusInstruction(mode: AIReviewMode) {
+  const options = selectedReviewOptions(mode);
+  const labels = options.map((option) => `- [${option.tag}] ${option.description}`).join("\n");
+  const modeLabel = AI_REVIEW_MODE_OPTIONS.find((option) => option.id === mode)?.label || "Review";
+
+  return `REVIEW MODE: ${modeLabel}
+Focus only on these categories:
+${labels}
+
+When listing findings, start each finding with exactly one matching tag from the list above, e.g. [BUG] \`path/to/file.ts\`: finding text.
+If the selected categories have no concrete findings, say so clearly and list any residual checks to run.`;
 }
 
 export async function explainCommitWithAI(
@@ -212,6 +292,7 @@ export async function reviewCommitWithAI(
   repoPath: string,
   commitHash: string,
   commitMessage: string,
+  mode: AIReviewMode = "all",
 ): Promise<string> {
   const settings = readAISettings();
   if (!hasProvider(settings)) {
@@ -230,20 +311,17 @@ export async function reviewCommitWithAI(
 
   const customRulesInstruction = buildCustomRulesInstruction(settings.customRules);
   const conventionInstruction = await getConventionContext(repoPath);
+  const reviewFocusInstruction = buildReviewFocusInstruction(mode);
   const prompt = `You are a world-class senior software architect performing a thorough code review. Analyze the git diff below for this commit.
 
 ${branchContext}Commit: ${commitMessage}
 
 INSTRUCTIONS:
 1. RISK ASSESSMENT: Rate the overall risk level (Low / Medium / High) with a one-line justification.
-2. FINDINGS: List specific code review findings. Each finding bullet MUST reference the file path wrapped in backticks, e.g. \`src/auth/login.ts\`. Always use the exact file path from the diff header. Categorize each as:
-   - [BUG] potential bug or logic error
-   - [SECURITY] security concern
-   - [PERF] performance issue
-   - [STYLE] code style or readability improvement
-   - [BEST-PRACTICE] best practice violation
+2. FINDINGS: List specific code review findings. Each finding MUST reference the file path wrapped in backticks, e.g. \`src/auth/login.ts\`. Always use the exact file path from the diff header.
 3. If the code looks solid with no issues, say so clearly — do not invent problems.
 4. Be professional, direct, constructive. Use markdown styling.
+${reviewFocusInstruction}
 ${languageInstruction}${customRulesInstruction}${conventionInstruction}
 
 Diff:
@@ -317,6 +395,7 @@ export async function reviewMergeRequestWithAI(
   mergeRequest: MergeRequest,
   files: MergeRequestFileChange[],
   repoPath?: string,
+  mode: AIReviewMode = "all",
 ): Promise<string> {
   const settings = readAISettings();
   if (!hasProvider(settings)) {
@@ -340,6 +419,7 @@ export async function reviewMergeRequestWithAI(
 
   const customRulesInstruction = buildCustomRulesInstruction(settings.customRules);
   const conventionInstruction = repoPath ? await getConventionContext(repoPath) : "";
+  const reviewFocusInstruction = buildReviewFocusInstruction(mode);
   const prompt = `You are a rigorous senior engineer performing a merge request review.
 
 Title: ${mergeRequest.title}
@@ -357,12 +437,13 @@ Diff snippets:
 ${diffSnippets || "(No patch snippets returned)"}
 
 INSTRUCTIONS:
-1. Review for correctness bugs, security issues, regressions, data loss risks, performance problems, missing validation, and missing tests.
+1. Review using the selected review mode.
 2. Lead with review findings. For each finding include severity, file path, and why it matters.
 3. FORMAT: Each finding bullet MUST reference the file path wrapped in backticks, e.g. \`src/auth/login.ts\`. Always use the exact file path from the diff header.
 4. If no concrete issues are found, say "No blocking issues found" and list residual risks or tests to run.
 5. End with a short recommendation: Approve, Approve with comments, or Request changes.
 6. Be concise and practical. Use markdown bullets, no code blocks.
+${reviewFocusInstruction}
 ${languageInstruction}${customRulesInstruction}${conventionInstruction}`;
 
   const review = cleanAIText(await requestAIText(prompt, withReviewModel(settings)));

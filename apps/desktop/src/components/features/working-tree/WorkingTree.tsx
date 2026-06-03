@@ -610,42 +610,46 @@ export default function WorkingTree() {
       </div>
 
       <div className="px-3 py-3 border-t border-border-60 bg-surface-1-10 space-y-2.5 shrink-0">
-        <div className="relative bg-surface-2-30 border border-border-40 rounded-mac p-2 focus-within:border-accent-60 focus-within:ring-1 focus-within:ring-accent-15 transition-all shadow-2xs">
+        <div className="flex flex-col bg-surface-2-30 border border-border-40 rounded-mac p-2.5 focus-within:border-accent-60 focus-within:ring-1 focus-within:ring-accent-15 transition-all shadow-2xs">
           <textarea
             ref={textareaRef}
             value={commitMessage}
             onChange={(e) => setCommitMessage(e.target.value)}
             placeholder="Commit message"
-            className="w-full h-[58px] text-xs bg-transparent text-text-primary placeholder:text-text-muted/60 resize-none outline-none border-none p-0 leading-relaxed"
+            className="w-full min-h-[96px] max-h-[240px] text-xs bg-transparent text-text-primary placeholder:text-text-muted/60 resize-y outline-none border-none p-0 leading-relaxed font-mono"
           />
-          <div className="absolute right-1.5 bottom-1.5 flex items-center gap-0.5">
+          <div className="flex items-center justify-end gap-1.5 border-t border-border-40/50 pt-2 mt-2 select-none shrink-0">
             {staged.length >= 3 && (
               <button
-                className={`p-1.5 rounded-full hover:bg-accent-15 text-text-muted hover:text-accent transition-all active:scale-95 cursor-pointer ${scopeAnalyzing || commitScope.isPending ? "opacity-50 cursor-not-allowed text-accent" : ""
+                type="button"
+                className={`px-2 py-1 text-3xs font-medium text-text-secondary hover:text-text-primary hover:bg-surface-3 border border-border-40 rounded transition-all flex items-center gap-1 active:scale-95 cursor-pointer ${scopeAnalyzing || commitScope.isPending ? "opacity-50 cursor-not-allowed" : ""
                   }`}
                 onClick={handleAnalyzeScope}
                 disabled={scopeAnalyzing || commitScope.isPending}
                 title={scopeAnalyzing ? "Analyzing scope..." : "Analyze commit scope (suggest splitting)"}
               >
                 {scopeAnalyzing || commitScope.isPending ? (
-                  <RefreshCw size={13} className="animate-spin" />
+                  <RefreshCw size={11} className="animate-spin" />
                 ) : (
-                  <Layers size={13} />
+                  <Layers size={11} />
                 )}
+                <span>Split Scope</span>
               </button>
             )}
             <button
-              className={`p-1.5 rounded-full hover:bg-accent-15 text-text-muted hover:text-accent transition-all active:scale-95 cursor-pointer ${generateCommit.isPending ? "opacity-50 cursor-not-allowed text-accent" : ""
+              type="button"
+              className={`px-2 py-1 text-3xs font-medium bg-accent-10 text-accent hover:bg-accent hover:text-accent-fg border border-accent/20 hover:border-accent rounded transition-all flex items-center gap-1 active:scale-95 cursor-pointer ${generateCommit.isPending ? "opacity-50 cursor-not-allowed" : ""
                 }`}
               onClick={handleGenerateCommit}
               disabled={generateCommit.isPending}
               title={generateCommit.isPending ? "Generating..." : "Generate commit message (AI)"}
             >
               {generateCommit.isPending ? (
-                <RefreshCw size={13} className="animate-spin" />
+                <RefreshCw size={11} className="animate-spin" />
               ) : (
-                <Sparkles size={13} />
+                <Sparkles size={11} />
               )}
+              <span>Generate with AI</span>
             </button>
           </div>
         </div>

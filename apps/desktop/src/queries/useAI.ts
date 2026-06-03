@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import type { FileChange } from "@/api/tauri";
 import type { MergeRequest, MergeRequestFileChange } from "@/api/gitHost";
 import {
+  type AIReviewMode,
   generateCommitMessageWithAI,
   reviewDiffWithAI,
   explainCommitWithAI,
@@ -22,8 +23,8 @@ export function useGenerateCommitMessage(repoPath: string | null) {
 
 export function useAIDiffReview() {
   return useMutation({
-    mutationFn: ({ filePath, diff, repoPath }: { filePath: string; diff: string; repoPath?: string }) =>
-      reviewDiffWithAI(filePath, diff, repoPath),
+    mutationFn: ({ filePath, diff, repoPath, mode }: { filePath: string; diff: string; repoPath?: string; mode?: AIReviewMode }) =>
+      reviewDiffWithAI(filePath, diff, repoPath, mode),
   });
 }
 
@@ -33,11 +34,13 @@ export function useAICommitReview() {
       repoPath,
       commitHash,
       commitMessage,
+      mode,
     }: {
       repoPath: string;
       commitHash: string;
       commitMessage: string;
-    }) => reviewCommitWithAI(repoPath, commitHash, commitMessage),
+      mode?: AIReviewMode;
+    }) => reviewCommitWithAI(repoPath, commitHash, commitMessage, mode),
   });
 }
 
@@ -71,7 +74,7 @@ export function useAIMergeRequestExplain() {
 
 export function useAIMergeRequestReview() {
   return useMutation({
-    mutationFn: ({ mergeRequest, files, repoPath }: { mergeRequest: MergeRequest; files: MergeRequestFileChange[]; repoPath?: string }) =>
-      reviewMergeRequestWithAI(mergeRequest, files, repoPath),
+    mutationFn: ({ mergeRequest, files, repoPath, mode }: { mergeRequest: MergeRequest; files: MergeRequestFileChange[]; repoPath?: string; mode?: AIReviewMode }) =>
+      reviewMergeRequestWithAI(mergeRequest, files, repoPath, mode),
   });
 }

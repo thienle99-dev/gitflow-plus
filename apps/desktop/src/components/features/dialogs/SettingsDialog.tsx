@@ -19,6 +19,7 @@ import {
 import { useRepoStore } from "@/stores/repo";
 import { api } from "@/api/tauri";
 import { Switch } from "@/components/ui/form";
+import { AI_REVIEW_CHECKLIST_OPTIONS, DEFAULT_AI_REVIEW_CHECKLIST, type AIReviewMode } from "@/lib/ai";
 const LS_KEY_API_KEY = "gitflowAiApiKey";
 const LS_KEY_API_URL = "gitflowAiApiUrl";
 const LS_KEY_MODEL = "gitflowAiModel";
@@ -31,6 +32,7 @@ const LS_KEY_AI_DETAIL_LEVEL = "gitflowAiDetailLevel";
 const LS_KEY_COMMIT_STYLE = "gitflowCommitMessageStyle";
 const LS_KEY_AI_CUSTOM_RULES = "gitflowAiCustomRules";
 const LS_KEY_AI_REVIEW_LANGUAGE = "gitflowAiReviewLanguage";
+const LS_KEY_AI_REVIEW_CHECKLIST = "gitflowAiReviewChecklist";
 const LS_KEY_FETCH_INTERVAL = "gitflowFetchIntervalMinutes";
 const LS_KEY_AUTO_PRUNE = "gitflowAutoPruneOnFetch";
 const LS_KEY_CONFIRM_DANGEROUS = "gitflowConfirmDangerousActions";
@@ -77,6 +79,7 @@ const SETTINGS_KEYS = [
   LS_KEY_COMMIT_STYLE,
   LS_KEY_AI_CUSTOM_RULES,
   LS_KEY_AI_REVIEW_LANGUAGE,
+  LS_KEY_AI_REVIEW_CHECKLIST,
   LS_KEY_GITHUB_TOKEN,
   LS_KEY_GITLAB_TOKEN,
   LS_KEY_GITLAB_HOST,
@@ -227,6 +230,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
   const [commitStyle, setCommitStyle] = useState<"conventional" | "plain" | "gitmoji" | "jira">("conventional");
   const [customRules, setCustomRules] = useState("");
   const [reviewLanguage, setReviewLanguage] = useState("auto");
+  const [reviewChecklist, setReviewChecklist] = useState<Exclude<AIReviewMode, "all" | "custom">[]>(DEFAULT_AI_REVIEW_CHECKLIST);
 
   // Advanced Tab States
   const [largeDiffMode, setLargeDiffMode] = useState<"full" | "prompt" | "summary">("prompt");
@@ -276,6 +280,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       const savedCommitStyle = localStorage.getItem(LS_KEY_COMMIT_STYLE) as "conventional" | "plain" | "gitmoji" | "jira";
       const savedCustomRules = localStorage.getItem(LS_KEY_AI_CUSTOM_RULES) || "";
       const savedReviewLanguage = localStorage.getItem(LS_KEY_AI_REVIEW_LANGUAGE) || "auto";
+      const savedReviewChecklist = localStorage.getItem(LS_KEY_AI_REVIEW_CHECKLIST);
 
       if (savedDiffMode) setDefaultDiffMode(savedDiffMode);
       if (savedAutoFetch !== null) setAutoFetch(savedAutoFetch === "true");
@@ -310,6 +315,18 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       if (savedCommitStyle) setCommitStyle(savedCommitStyle);
       setCustomRules(savedCustomRules);
       setReviewLanguage(savedReviewLanguage);
+      if (savedReviewChecklist) {
+        try {
+          const parsed = JSON.parse(savedReviewChecklist);
+          const valid = new Set(AI_REVIEW_CHECKLIST_OPTIONS.map((option) => option.id));
+          const filtered = Array.isArray(parsed)
+            ? parsed.filter((value): value is Exclude<AIReviewMode, "all" | "custom"> => valid.has(value))
+            : [];
+          setReviewChecklist(filtered.length > 0 ? filtered : DEFAULT_AI_REVIEW_CHECKLIST);
+        } catch {
+          setReviewChecklist(DEFAULT_AI_REVIEW_CHECKLIST);
+        }
+      }
       
       const savedGithubToken = localStorage.getItem(LS_KEY_GITHUB_TOKEN);
       const savedGitlabToken = localStorage.getItem(LS_KEY_GITLAB_TOKEN);
@@ -354,6 +371,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
     const storedCommitStyle = (localStorage.getItem(LS_KEY_COMMIT_STYLE) as "conventional" | "plain" | "gitmoji" | "jira") || "conventional";
     const storedCustomRules = localStorage.getItem(LS_KEY_AI_CUSTOM_RULES) || "";
     const storedReviewLanguage = localStorage.getItem(LS_KEY_AI_REVIEW_LANGUAGE) || "auto";
+    const storedReviewChecklist = localStorage.getItem(LS_KEY_AI_REVIEW_CHECKLIST) || JSON.stringify(DEFAULT_AI_REVIEW_CHECKLIST);
     const storedGithubToken = localStorage.getItem(LS_KEY_GITHUB_TOKEN) || "";
     const storedGitlabToken = localStorage.getItem(LS_KEY_GITLAB_TOKEN) || "";
     const storedGitlabHost = localStorage.getItem(LS_KEY_GITLAB_HOST) || "";
@@ -388,6 +406,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       commitStyle !== storedCommitStyle ||
       customRules !== storedCustomRules ||
       reviewLanguage !== storedReviewLanguage ||
+      JSON.stringify(reviewChecklist) !== storedReviewChecklist ||
       githubToken !== storedGithubToken ||
       gitlabToken !== storedGitlabToken ||
       gitlabHost !== storedGitlabHost
@@ -423,6 +442,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
     commitStyle,
     customRules,
     reviewLanguage,
+    reviewChecklist,
     githubToken,
     gitlabToken,
     gitlabHost,
@@ -510,6 +530,16 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
     }
   };
 
+  const toggleReviewChecklistItem = (id: Exclude<AIReviewMode, "all" | "custom">) => {
+    setReviewChecklist((current) => {
+      if (current.includes(id)) {
+        const next = current.filter((item) => item !== id);
+        return next.length > 0 ? next : current;
+      }
+      return [...current, id];
+    });
+  };
+
   const handleSave = () => {
     try {
       setTheme(theme);
@@ -541,6 +571,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       localStorage.setItem(LS_KEY_COMMIT_STYLE, commitStyle);
       localStorage.setItem(LS_KEY_AI_CUSTOM_RULES, customRules);
       localStorage.setItem(LS_KEY_AI_REVIEW_LANGUAGE, reviewLanguage);
+      localStorage.setItem(LS_KEY_AI_REVIEW_CHECKLIST, JSON.stringify(reviewChecklist));
       localStorage.setItem(LS_KEY_GITHUB_TOKEN, githubToken);
       localStorage.setItem(LS_KEY_GITLAB_TOKEN, gitlabToken);
       localStorage.setItem(LS_KEY_GITLAB_HOST, gitlabHost);
@@ -602,6 +633,8 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
     setAiDetailLevel("medium");
     setCommitStyle("conventional");
     setCustomRules("");
+    setReviewLanguage("auto");
+    setReviewChecklist(DEFAULT_AI_REVIEW_CHECKLIST);
     setGithubToken("");
     setGitlabToken("");
     setGitlabHost("");
@@ -1260,6 +1293,50 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
                   </div>
                   <p className="text-2xs text-text-muted">
                     Used for AI diff reviews, commit explanations, and merge request reviews.
+                  </p>
+                </div>
+
+                {/* AI Review Checklist */}
+                <div className="space-y-2 border-t border-border-40 pt-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-xs font-semibold text-text-primary">Custom Review Checklist</label>
+                    <button
+                      type="button"
+                      onClick={() => setReviewChecklist(DEFAULT_AI_REVIEW_CHECKLIST)}
+                      className="text-2xs font-medium text-text-muted hover:text-accent transition-colors"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {AI_REVIEW_CHECKLIST_OPTIONS.map((option) => {
+                      const checked = reviewChecklist.includes(option.id);
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => toggleReviewChecklistItem(option.id)}
+                          className={`flex items-start gap-2 rounded-mac border px-2.5 py-2 text-left transition-all ${
+                            checked
+                              ? "border-accent-30 bg-accent-10 text-text-primary"
+                              : "border-border-40 bg-surface-1/40 text-text-secondary hover:bg-surface-2"
+                          }`}
+                        >
+                          <span className={`mt-0.5 h-3.5 w-3.5 rounded-[4px] border flex items-center justify-center shrink-0 ${
+                            checked ? "border-accent bg-accent text-accent-fg" : "border-border"
+                          }`}>
+                            {checked && <span className="text-[9px] leading-none">✓</span>}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block text-2xs font-semibold">{option.label}</span>
+                            <span className="block text-3xs text-text-muted leading-normal">{option.description}</span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-2xs text-text-muted">
+                    Used when you choose "Custom checklist" from any AI Review dropdown.
                   </p>
                 </div>
 

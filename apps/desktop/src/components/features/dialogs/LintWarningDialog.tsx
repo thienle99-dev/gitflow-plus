@@ -121,9 +121,9 @@ export default function LintWarningDialog({
                       <p className="text-xs text-text-primary leading-normal font-medium">
                         {error.message}
                       </p>
-                      {error.rule && (
+                      {error.ruleId && (
                         <p className="text-3xs font-mono text-text-muted">
-                          Rule: {error.rule}
+                          Rule: {error.ruleId}
                         </p>
                       )}
                     </div>

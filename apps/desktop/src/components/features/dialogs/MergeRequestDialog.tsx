@@ -304,7 +304,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
   const renderAIText = (text: string) => {
     return text.split("\n").map((line, index) => {
       const trimmed = line.trim();
-      const categoryMatch = trimmed.match(/^\s*(?:#{1,6}\s*)?(?:[-*]\s*)?(?:\*\*)?\[(BUG|SECURITY|PERF|STYLE|BEST-PRACTICE)\](?:\*\*)?\s*(.*)$/i);
+      const categoryMatch = trimmed.match(/^\s*(?:#{1,6}\s*)?(?:[-*]\s*)?(?:\*\*)?\[(BUG|SECURITY|PERF|STYLE|BEST-PRACTICE|LINTER|TEST|A11Y|UX)\](?:\*\*)?\s*(.*)$/i);
       const isFinding =
         /severity|risk|bug|security|regression|request changes|blocking/i.test(trimmed);
       const isPositive =
@@ -324,11 +324,19 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                 ? "border-[#ffcc00]/35 bg-[#ffcc00]/10 text-[#ffcc00]"
                 : category === "STYLE"
                   ? "border-[#0a84ff]/35 bg-[#0a84ff]/10 text-[#0a84ff]"
-                  : "border-[#bf5af2]/35 bg-[#bf5af2]/10 text-[#bf5af2]";
+                  : category === "BEST-PRACTICE"
+                    ? "border-[#bf5af2]/35 bg-[#bf5af2]/10 text-[#bf5af2]"
+                    : category === "LINTER"
+                      ? "border-[#64d2ff]/35 bg-[#64d2ff]/10 text-[#64d2ff]"
+                      : category === "TEST"
+                        ? "border-[#30d158]/35 bg-[#30d158]/10 text-[#30d158]"
+                        : category === "A11Y"
+                          ? "border-[#ff9f0a]/35 bg-[#ff9f0a]/10 text-[#ff9f0a]"
+                          : "border-[#ff2d55]/35 bg-[#ff2d55]/10 text-[#ff2d55]";
         return (
           <div key={index} className={`rounded-mac border-l-2 px-2.5 py-1.5 ${colors}`}>
             <span className="mr-2 inline-flex rounded bg-current/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
-              {category === "BEST-PRACTICE" ? "Best Practice" : category}
+              {category === "BEST-PRACTICE" ? "Best Practice" : category === "A11Y" ? "A11y" : category}
             </span>
             <span className="text-text-secondary">{renderTextWithFileLinks(categoryMatch[2])}</span>
           </div>

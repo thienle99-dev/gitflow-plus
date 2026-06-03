@@ -58,13 +58,21 @@ function reviewCategoryMeta(category: string) {
       return { label: "Style", className: "border-[#0a84ff] bg-[#0a84ff]/10 text-[#0a84ff]" };
     case "BEST-PRACTICE":
       return { label: "Best Practice", className: "border-[#bf5af2] bg-[#bf5af2]/10 text-[#bf5af2]" };
+    case "LINTER":
+      return { label: "Linter", className: "border-[#64d2ff] bg-[#64d2ff]/10 text-[#64d2ff]" };
+    case "TEST":
+      return { label: "Test", className: "border-[#30d158] bg-[#30d158]/10 text-[#30d158]" };
+    case "A11Y":
+      return { label: "A11y", className: "border-[#ff9f0a] bg-[#ff9f0a]/10 text-[#ff9f0a]" };
+    case "UX":
+      return { label: "UX", className: "border-[#ff2d55] bg-[#ff2d55]/10 text-[#ff2d55]" };
     default:
       return { label: category, className: "border-accent bg-accent/10 text-accent" };
   }
 }
 
 function matchReviewCategory(line: string) {
-  return line.match(/^\s*(?:#{1,6}\s*)?(?:[-*]\s*)?(?:\*\*)?\[(BUG|SECURITY|PERF|STYLE|BEST-PRACTICE)\](?:\*\*)?\s*(.*)$/i);
+  return line.match(/^\s*(?:#{1,6}\s*)?(?:[-*]\s*)?(?:\*\*)?\[(BUG|SECURITY|PERF|STYLE|BEST-PRACTICE|LINTER|TEST|A11Y|UX)\](?:\*\*)?\s*(.*)$/i);
 }
 
 interface DiffViewerProps {
