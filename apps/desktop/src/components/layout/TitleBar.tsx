@@ -214,7 +214,7 @@ export default function TitleBar() {
 
                   {isOpen && (
                     <div
-                      className="absolute left-0 mt-[3px] w-56 bg-surface-1/95 backdrop-blur-lg border border-border-40 rounded-mac shadow-xl py-1 z-[9999] animate-in fade-in duration-100"
+                      className="absolute left-0 mt-[3px] w-56 bg-surface-1-95 backdrop-blur-lg border border-border-40 rounded-mac shadow-xl py-1 z-[9999] animate-in fade-in duration-100"
                       onMouseEnter={(e) => e.stopPropagation()}
                     >
                       {items.map((item, idx) => {

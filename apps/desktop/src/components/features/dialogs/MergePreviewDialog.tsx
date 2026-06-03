@@ -43,7 +43,7 @@ export default function MergePreviewDialog({ initialBranch, onClose }: MergePrev
     <div className="w-[560px] max-h-[80vh] flex flex-col bg-surface-0 rounded-mac overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-3 px-5 py-4 border-b border-border-40">
-        <div className="h-8 w-8 rounded-full bg-accent/10 flex items-center justify-center">
+        <div className="h-8 w-8 rounded-full bg-accent-10 flex items-center justify-center">
           <ArrowLeftRight size={16} className="text-accent" />
         </div>
         <div className="flex-1 min-w-0">
@@ -97,7 +97,7 @@ export default function MergePreviewDialog({ initialBranch, onClose }: MergePrev
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-mac bg-accent/10 border border-accent/20">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-mac bg-accent-10 border border-accent-20">
               <GitBranch size={12} className="text-accent" />
               <span className="text-xs font-semibold text-accent">{selectedBranch}</span>
             </div>
@@ -203,7 +203,7 @@ export default function MergePreviewDialog({ initialBranch, onClose }: MergePrev
       </div>
 
       {/* Footer with actions */}
-      <div className="flex items-center justify-between px-5 py-3 border-t border-border-40 bg-surface-1/30">
+      <div className="flex items-center justify-between px-5 py-3 border-t border-border-40 bg-surface-1-30">
         <label className="flex items-center gap-2 cursor-pointer select-none">
           <div className="relative">
             <input
@@ -227,7 +227,7 @@ export default function MergePreviewDialog({ initialBranch, onClose }: MergePrev
           <button
             onClick={handleMerge}
             disabled={!selectedBranch || mergeBranch.isPending || (preview?.behind === 0 && preview?.ahead === 0)}
-            className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-accent hover:bg-accent/80 rounded-mac transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-accent hover:bg-accent-80 rounded-mac transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             {mergeBranch.isPending ? (
               <Loader2 size={12} className="animate-spin" />

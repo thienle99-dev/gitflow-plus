@@ -437,7 +437,7 @@ CRITICAL INSTRUCTIONS:
   return (
     <div className="h-full flex flex-col bg-surface-0">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border-60 bg-surface-1/40 backdrop-blur-md">
+      <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border-60 bg-surface-1-40 backdrop-blur-md">
         <button onClick={onCancel} className="ghost p-1 text-text-muted hover:text-text-primary" title="Back">
           <ArrowLeft size={14} />
         </button>
@@ -450,7 +450,7 @@ CRITICAL INSTRUCTIONS:
       </div>
 
       {/* Global actions bar */}
-      <div className="flex items-center gap-2 px-4 py-2 border-b border-border-40 bg-surface-1/30">
+      <div className="flex items-center gap-2 px-4 py-2 border-b border-border-40 bg-surface-1-30">
         <span className="text-3xs text-text-muted font-medium mr-1">Bulk:</span>
         <button
           className="conflict-bulk-btn accept-ours"

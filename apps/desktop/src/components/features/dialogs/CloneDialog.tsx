@@ -80,7 +80,7 @@ export default function CloneDialog({ open, onClose }: CloneDialogProps) {
     <div className="fixed inset-0 bg-[#000000]/65 backdrop-blur-md z-[9998] flex items-center justify-center p-6 animate-in fade-in duration-200">
       <div className="w-full max-w-md bg-surface-0 border border-border rounded-mac shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-surface-1/40">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-surface-1-40">
           <div className="flex items-center gap-2">
             <Download size={14} className="text-accent" />
             <span className="text-sm font-semibold text-text-primary">Clone Repository</span>

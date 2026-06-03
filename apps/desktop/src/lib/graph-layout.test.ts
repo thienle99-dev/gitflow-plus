@@ -14,7 +14,7 @@ function makeCommit(hash: string, parents: string[], opts?: { refs?: Ref[]; mess
   };
 }
 
-const ROW_HEIGHT = 28;
+const ROW_HEIGHT = 38;
 const LANE_WIDTH = 12;
 const GRAPH_LEFT_PADDING = 18;
 

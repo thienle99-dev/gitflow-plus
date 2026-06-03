@@ -97,7 +97,7 @@ export default function CherryPickDialog({
       <div className="absolute inset-0 bg-[#000000]/45" />
       <div className="relative w-[420px] bg-surface-0 border border-border rounded-mac shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-surface-1/40">
+        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-surface-1-40">
           {hasConflicts ? (
             <AlertTriangle size={15} className="text-[#ff9500] shrink-0" />
           ) : (
@@ -113,7 +113,7 @@ export default function CherryPickDialog({
 
         <div className="p-4 space-y-4">
           {/* Commit Info Card */}
-          <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-2.5">
+          <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-2.5">
             <div className="flex items-center gap-2">
               <span className="text-2xs font-mono text-text-muted">commit</span>
               <code className="text-xs font-mono text-accent bg-accent-10 px-1.5 py-0.5 rounded-sm font-semibold">
@@ -136,7 +136,7 @@ export default function CherryPickDialog({
 
           {/* Options Card */}
           {!hasConflicts && (
-            <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 animate-in slide-in-from-top-1 duration-150">
+            <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 animate-in slide-in-from-top-1 duration-150">
               <Switch
                 checked={noCommit}
                 onChange={setNoCommit}
@@ -155,7 +155,7 @@ export default function CherryPickDialog({
               </div>
               <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
                 {cherryPick.data.conflicted_files.map((f) => (
-                  <div key={f} className="text-2xs text-text-muted font-mono bg-surface-1/30 border border-border-40 rounded px-2 py-1 truncate">
+                  <div key={f} className="text-2xs text-text-muted font-mono bg-surface-1-30 border border-border-40 rounded px-2 py-1 truncate">
                     {f}
                   </div>
                 ))}

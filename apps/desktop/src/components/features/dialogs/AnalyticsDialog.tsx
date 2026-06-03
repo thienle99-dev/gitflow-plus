@@ -265,7 +265,7 @@ export default function AnalyticsDialog({ open, onClose }: AnalyticsDialogProps)
 
       <div className="relative w-[740px] max-h-[85vh] bg-surface-0 border border-border rounded-mac shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="px-4 py-3 border-b border-border-60 flex items-center justify-between bg-surface-1/40 backdrop-blur-md">
+        <div className="px-4 py-3 border-b border-border-60 flex items-center justify-between bg-surface-1-40 backdrop-blur-md">
           <div className="flex items-center gap-2 text-text-primary">
             <BarChart3 size={16} className="text-accent" />
             <h3 className="text-sm font-semibold">Git Activity Analytics</h3>
@@ -294,7 +294,7 @@ export default function AnalyticsDialog({ open, onClose }: AnalyticsDialogProps)
             <>
               {/* Summary Cards */}
               <div className="grid grid-cols-4 gap-3">
-                <div className="p-3.5 bg-surface-1/30 border border-border-40 rounded-mac space-y-1">
+                <div className="p-3.5 bg-surface-1-30 border border-border-40 rounded-mac space-y-1">
                   <div className="text-3xs text-text-muted font-bold uppercase tracking-wider">Total Commits</div>
                   <div className="text-lg font-bold text-text-primary flex items-center gap-1.5">
                     <GitCommit size={14} className="text-accent" />
@@ -302,7 +302,7 @@ export default function AnalyticsDialog({ open, onClose }: AnalyticsDialogProps)
                   </div>
                 </div>
 
-                <div className="p-3.5 bg-surface-1/30 border border-border-40 rounded-mac space-y-1">
+                <div className="p-3.5 bg-surface-1-30 border border-border-40 rounded-mac space-y-1">
                   <div className="text-3xs text-text-muted font-bold uppercase tracking-wider">Conventional Commits</div>
                   <div className="text-lg font-bold text-text-primary flex items-center gap-1.5">
                     <CheckCircle size={14} className="text-[#30d158]" />
@@ -310,14 +310,14 @@ export default function AnalyticsDialog({ open, onClose }: AnalyticsDialogProps)
                   </div>
                 </div>
 
-                <div className="p-3.5 bg-surface-1/30 border border-border-40 rounded-mac space-y-1">
+                <div className="p-3.5 bg-surface-1-30 border border-border-40 rounded-mac space-y-1">
                   <div className="text-3xs text-text-muted font-bold uppercase tracking-wider">Conventional Ratio</div>
                   <div className="text-lg font-bold text-text-primary flex items-center justify-between">
                     <span>{Math.round(stats.conventionalRatio * 100)}%</span>
                   </div>
                 </div>
 
-                <div className="p-3.5 bg-surface-1/30 border border-border-40 rounded-mac space-y-1 flex items-center justify-between">
+                <div className="p-3.5 bg-surface-1-30 border border-border-40 rounded-mac space-y-1 flex items-center justify-between">
                   <div className="space-y-1">
                     <div className="text-3xs text-text-muted font-bold uppercase tracking-wider">Repo Health Grade</div>
                     <div className={`text-lg font-black ${stats.gradeColor}`}>{stats.grade}</div>
@@ -329,7 +329,7 @@ export default function AnalyticsDialog({ open, onClose }: AnalyticsDialogProps)
               {/* Main charts section */}
               <div className="grid grid-cols-2 gap-4">
                 {/* Timeline chart */}
-                <div className="p-4 bg-surface-1/30 border border-border-40 rounded-mac space-y-3">
+                <div className="p-4 bg-surface-1-30 border border-border-40 rounded-mac space-y-3">
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
                     <Calendar size={13} className="text-accent" />
                     <span>Weekly Commit Frequency</span>
@@ -340,7 +340,7 @@ export default function AnalyticsDialog({ open, onClose }: AnalyticsDialogProps)
                 </div>
 
                 {/* Donut conventional charts */}
-                <div className="p-4 bg-surface-1/30 border border-border-40 rounded-mac space-y-3">
+                <div className="p-4 bg-surface-1-30 border border-border-40 rounded-mac space-y-3">
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
                     <BarChart3 size={13} className="text-[#30d158]" />
                     <span>Commit Types Distribution</span>
@@ -377,7 +377,7 @@ export default function AnalyticsDialog({ open, onClose }: AnalyticsDialogProps)
               </div>
 
               {/* Contributors Grid */}
-              <div className="p-4 bg-surface-1/30 border border-border-40 rounded-mac space-y-3">
+              <div className="p-4 bg-surface-1-30 border border-border-40 rounded-mac space-y-3">
                 <h4 className="text-xs font-semibold text-text-primary">Top Contributors (Latest 300 Commits)</h4>
                 <div className="space-y-3">
                   {stats.topAuthors.map(([author, count], idx) => {

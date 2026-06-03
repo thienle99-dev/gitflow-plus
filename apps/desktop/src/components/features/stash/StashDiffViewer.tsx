@@ -48,7 +48,7 @@ export default function StashDiffViewer({ stash }: StashDiffViewerProps) {
   return (
     <div className="h-full flex flex-col">
       {/* Metadata */}
-      <div className="p-3 border-b border-border/40 space-y-2">
+      <div className="p-3 border-b border-border-40 space-y-2">
         <h3 className="text-sm font-semibold text-text-primary">
           {stash.message}
         </h3>
@@ -59,7 +59,7 @@ export default function StashDiffViewer({ stash }: StashDiffViewerProps) {
       </div>
 
       {/* Mode Toggle */}
-      <div className="flex gap-1 p-2 border-b border-border/40">
+      <div className="flex gap-1 p-2 border-b border-border-40">
         {(["unified", "sideBySide", "inline"] as DiffMode[]).map((m) => (
           <button
             key={m}
@@ -67,7 +67,7 @@ export default function StashDiffViewer({ stash }: StashDiffViewerProps) {
             className={`px-2 py-1 text-xs rounded ${
               mode === m
                 ? "bg-accent text-white"
-                : "bg-surface-2 text-text-primary hover:bg-surface-2/80"
+                : "bg-surface-2 text-text-primary hover:bg-surface-2-80"
             }`}
           >
             {m === "sideBySide" ? "Side-by-Side" : m === "inline" ? "Inline" : "Unified"}
@@ -96,7 +96,7 @@ export default function StashDiffViewer({ stash }: StashDiffViewerProps) {
               <div key={file.path} className="col-span-2">
                 <div className="text-xs font-semibold text-text-muted mb-1">=== {file.path} ===</div>
                 <div className="grid grid-cols-2 gap-1">
-                  <div className="border border-border/40 rounded text-xs font-mono">
+                  <div className="border border-border-40 rounded text-xs font-mono">
                     <div className="bg-red-500/10 px-2 py-0.5 text-red-400 text-[10px] font-semibold">Before</div>
                     {file.hunks.flatMap(h => h.lines).filter(l => l.type === "delete" || l.type === "context").map((l, i) => (
                       <div key={i} className={`px-2 py-0.5 ${l.type === "delete" ? "bg-red-500/10 text-red-300" : "text-text-primary"}`}>
@@ -104,7 +104,7 @@ export default function StashDiffViewer({ stash }: StashDiffViewerProps) {
                       </div>
                     ))}
                   </div>
-                  <div className="border border-border/40 rounded text-xs font-mono">
+                  <div className="border border-border-40 rounded text-xs font-mono">
                     <div className="bg-green-500/10 px-2 py-0.5 text-green-400 text-[10px] font-semibold">After</div>
                     {file.hunks.flatMap(h => h.lines).filter(l => l.type === "add" || l.type === "context").map((l, i) => (
                       <div key={i} className={`px-2 py-0.5 ${l.type === "add" ? "bg-green-500/10 text-green-300" : "text-text-primary"}`}>
@@ -119,7 +119,7 @@ export default function StashDiffViewer({ stash }: StashDiffViewerProps) {
         ) : (
           <div className="space-y-2">
             {files.map((file) => (
-              <details key={file.path} className="border border-border/40 rounded">
+              <details key={file.path} className="border border-border-40 rounded">
                 <summary className="px-2 py-1 text-xs cursor-pointer hover:bg-surface-2">
                   <span className="font-medium">{file.path}</span>
                   <span className="ml-2 text-text-muted">
@@ -145,7 +145,7 @@ export default function StashDiffViewer({ stash }: StashDiffViewerProps) {
       </div>
 
       {/* Actions */}
-      <div className="flex gap-2 p-3 border-t border-border/40">
+      <div className="flex gap-2 p-3 border-t border-border-40">
         <button
           onClick={() => handleAction("apply")}
           disabled={loading === "apply"}

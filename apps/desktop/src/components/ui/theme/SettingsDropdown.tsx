@@ -53,7 +53,7 @@ export default function SettingsDropdown({ onOpenSettings, onOpenKeyboardShortcu
             {isDark ? "Light Mode" : "Dark Mode"}
           </button>
 
-          <div className="h-[1px] bg-border/40 my-1" />
+          <div className="h-[1px] bg-border-40 my-1" />
 
           <button
             onClick={() => {
@@ -90,7 +90,7 @@ export default function SettingsDropdown({ onOpenSettings, onOpenKeyboardShortcu
 
           {onOpenHealthCheck && (
             <>
-              <div className="h-[1px] bg-border/40 my-1" />
+              <div className="h-[1px] bg-border-40 my-1" />
               <button
                 onClick={() => {
                   onOpenHealthCheck();

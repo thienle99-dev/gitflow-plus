@@ -10,8 +10,10 @@ import { useCanvasRenderer } from "./useCanvasRenderer";
 import { useHitTest } from "./useHitTest";
 import { useGraphLayoutWorker } from "@/lib/useGraphLayoutWorker";
 import CommitTooltip from "./CommitTooltip";
+import { showToast } from "@/lib/toast";
+import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
 
-const ROW_HEIGHT = 28;
+const ROW_HEIGHT = 38;
 
 export default function CommitGraph() {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -27,6 +29,8 @@ export default function CommitGraph() {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; hash: string } | null>(null);
+  const [confirmCherryPick, setConfirmCherryPick] = useState<string | null>(null);
+  const [confirmRevert, setConfirmRevert] = useState<string | null>(null);
 
   // Graph layout + render index computed off the main thread via Web Worker
   const { layout, graphIndex } = useGraphLayoutWorker(data, repoPath);
@@ -162,32 +166,40 @@ export default function CommitGraph() {
     }
   };
 
-  const cherryPickCommit = async (hash: string) => {
+  const cherryPickCommit = (hash: string) => {
     if (!repoPath) return;
-    if (!confirm(`Are you sure you want to cherry-pick commit ${hash.substring(0, 7)}?`)) return;
+    setConfirmCherryPick(hash);
+  };
+
+  const doCherryPick = async (hash: string) => {
+    setConfirmCherryPick(null);
     try {
-      const res = await api.cherryPick.pick(repoPath, hash);
+      const res = await api.cherryPick.pick(repoPath!, hash);
       if (res.success) {
         queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
       } else {
-        alert(`Cherry-pick had conflicts: \n${res.conflicted_files.join("\n")}`);
+        showToast(`Cherry-pick had conflicts: \n${res.conflicted_files.join("\n")}`, "error");
         queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
       }
     } catch (e) {
       console.error(e);
-      alert(`Cherry-pick failed: ${e}`);
+      showToast(`Cherry-pick failed: ${e}`, "error");
     }
   };
 
-  const revertCommit = async (hash: string) => {
+  const revertCommit = (hash: string) => {
     if (!repoPath) return;
-    if (!confirm(`Are you sure you want to revert commit ${hash.substring(0, 7)}? This will create a new commit that undoes the changes.`)) return;
+    setConfirmRevert(hash);
+  };
+
+  const doRevert = async (hash: string) => {
+    setConfirmRevert(null);
     try {
-      await api.commit.revert(repoPath, hash);
+      await api.commit.revert(repoPath!, hash);
       queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
     } catch (e) {
       console.error(e);
-      alert(`Revert failed: ${e}`);
+      showToast(`Revert failed: ${e}`, "error");
     }
   };
 
@@ -260,6 +272,7 @@ export default function CommitGraph() {
     : [];
 
   return (
+    <>
     <div className="h-full min-h-0 w-full overflow-hidden flex flex-col">
       {/* Header */}
       <div className="h-[28px] flex items-center px-3 border-b border-border text-xs text-text-muted font-medium shrink-0">
@@ -315,6 +328,27 @@ export default function CommitGraph() {
         />
       )}
     </div>
+
+    <ConfirmDialog
+      open={!!confirmCherryPick}
+      title="Cherry-pick Commit"
+      message={`Are you sure you want to cherry-pick commit ${confirmCherryPick?.substring(0, 7)}?`}
+      confirmLabel="Cherry-pick"
+      cancelLabel="Cancel"
+      onConfirm={() => doCherryPick(confirmCherryPick!)}
+      onCancel={() => setConfirmCherryPick(null)}
+    />
+    <ConfirmDialog
+      open={!!confirmRevert}
+      title="Revert Commit"
+      message={`Are you sure you want to revert commit ${confirmRevert?.substring(0, 7)}? This will create a new commit that undoes the changes.`}
+      confirmLabel="Revert"
+      cancelLabel="Cancel"
+      variant="destructive"
+      onConfirm={() => doRevert(confirmRevert!)}
+      onCancel={() => setConfirmRevert(null)}
+    />
+    </>
   );
 }
 

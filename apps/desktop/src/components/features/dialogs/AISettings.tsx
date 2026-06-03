@@ -88,7 +88,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
   return (
     <div className="h-full flex flex-col bg-surface-0">
       {/* Header */}
-      <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border-60 bg-surface-1/40 backdrop-blur-md">
+      <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border-60 bg-surface-1-40 backdrop-blur-md">
         <Sparkles size={15} className="text-accent" />
         <span className="text-xs font-semibold text-text-primary flex-1">
           AI Integration Settings
@@ -102,7 +102,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
 
       {/* Settings form */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-        <div className="bg-surface-1/30 border border-border-40 rounded-mac p-4 space-y-4">
+        <div className="bg-surface-1-30 border border-border-40 rounded-mac p-4 space-y-4">
           {/* API Key */}
           <div className="space-y-1.5">
             <label className="text-[11px] font-semibold text-text-primary">API Key</label>

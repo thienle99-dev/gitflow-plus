@@ -14,7 +14,7 @@ import RightPanel from "@/components/layout/RightPanel";
 import BottomBar from "@/components/layout/BottomBar";
 import { SearchDialog, KeyboardShortcutsModal, CherryPickDialog, SettingsDialog, AnalyticsDialog, CreateBranchDialog, MergeRequestDialog, MergePreviewDialog, CloneDialog, FeatureGuideDialog, OnboardingWizard, isOnboardingComplete, BranchCompareDialog, HealthCheckDialog, DiagnosticDialog } from "@/components/features/dialogs";
 import ErrorBoundary from "@/components/ui/feedback/ErrorBoundary";
-import { AlertOctagon, RefreshCw, Trash2 } from "lucide-react";
+import { AlertOctagon, RefreshCw, Trash2, FolderOpen, GitBranch, Clock } from "lucide-react";
 
 export default function MainLayout() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
@@ -485,44 +485,62 @@ function WelcomeScreen({ onOpen }: { onOpen: () => void }) {
 
   return (
     <div className="h-full flex items-center justify-center bg-surface-0">
-      <div className="text-center space-y-6 max-w-md w-[320px]">
-        <div className="text-4xl font-semibold text-text-secondary">GitFlow Desktop</div>
-        <p className="text-text-muted text-sm">
-          Open a local Git repository to get started
-        </p>
+      <div className="flex flex-col items-center w-full max-w-lg px-8">
+        {/* App Icon */}
+        <div className="mb-8 flex flex-col items-center gap-4">
+          <img src="/logo.png" alt="GitFlow Desktop" className="w-16 h-16 rounded-2xl shadow-lg" />
+          <div className="text-center">
+            <h1 className="text-lg font-semibold text-text-primary tracking-tight">GitFlow Desktop</h1>
+            <p className="text-xs text-text-muted mt-1">Open a Git repository to get started</p>
+          </div>
+        </div>
+
+        {/* Primary Action */}
         <button
           onClick={onOpen}
-          className="px-6 py-2 bg-accent text-accent-fg rounded-mac text-sm font-medium hover:opacity-90 transition-opacity"
+          className="flex items-center gap-2 px-5 py-2 bg-accent text-accent-fg rounded-lg text-sm font-medium hover:opacity-90 active:scale-[0.98] transition-all shadow-sm mb-8"
         >
+          <FolderOpen size={15} />
           Open Repository
         </button>
+
+        {/* Recent Repos */}
         {recentRepos.length > 0 && (
-          <div className="mt-8">
-            <div className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2 text-left px-2">
-              Recent Repositories
+          <div className="w-full max-w-sm">
+            <div className="flex items-center gap-1.5 text-[10px] font-medium text-text-muted uppercase tracking-widest mb-2 px-1">
+              <Clock size={10} />
+              Recent
             </div>
-            <div className="space-y-1">
-              {recentRepos.map((repo) => (
-                <div
-                  key={repo}
-                  className="group flex items-center justify-between px-3 py-1.5 text-sm rounded-mac hover:bg-surface-2 transition-all gap-2"
-                >
-                  <button
-                    onClick={() => openRepo(repo)}
-                    className="flex-1 text-left text-text-secondary hover:text-text-primary transition-colors truncate text-xs font-medium cursor-pointer"
-                    title={repo}
+            <div className="bg-surface-1-50 border border-border-40 rounded-lg overflow-hidden divide-y divide-border-30">
+              {recentRepos.map((repo) => {
+                const name = repo.split(/[/\\]/).filter(Boolean).pop() || repo;
+                const parent = repo.split(/[/\\]/).filter(Boolean).slice(-2, -1)[0] || "";
+                return (
+                  <div
+                    key={repo}
+                    className="group flex items-center px-3 py-2 hover:bg-surface-2-60 transition-colors gap-2.5"
                   >
-                    {repo.split(/[/\\]/).filter(Boolean).pop() || repo}
-                  </button>
-                  <button
-                    onClick={() => removeRecentRepo(repo)}
-                    className="h-5 w-5 flex items-center justify-center rounded hover:bg-surface-3 text-text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all cursor-pointer shrink-0"
-                    title="Remove from list"
-                  >
-                    <Trash2 size={11} />
-                  </button>
-                </div>
-              ))}
+                    <GitBranch size={13} className="text-text-muted shrink-0" />
+                    <button
+                      onClick={() => openRepo(repo)}
+                      className="flex-1 text-left min-w-0 cursor-pointer"
+                      title={repo}
+                    >
+                      <div className="text-xs font-medium text-text-primary truncate">{name}</div>
+                      {parent && parent !== name && (
+                        <div className="text-[10px] text-text-muted truncate">{parent}</div>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => removeRecentRepo(repo)}
+                      className="h-5 w-5 flex items-center justify-center rounded hover:bg-surface-3 text-text-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all cursor-pointer shrink-0"
+                      title="Remove from list"
+                    >
+                      <Trash2 size={10} />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

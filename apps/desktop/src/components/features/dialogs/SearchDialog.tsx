@@ -263,14 +263,14 @@ CRITICAL INSTRUCTIONS:
       {/* Dialog */}
       <div className="relative w-[600px] max-h-[70vh] bg-surface-0 border border-border rounded-mac shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Spotlight Header & Segmented Tabs */}
-        <div className="p-3 border-b border-border bg-surface-1/40 flex items-center justify-between gap-3">
+        <div className="p-3 border-b border-border bg-surface-1-40 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Search size={15} className="text-accent shrink-0" />
             <span className="text-xs font-semibold text-text-primary">Search Repository</span>
           </div>
           
           {/* Segmented Control */}
-          <div className="grid grid-cols-2 p-0.5 rounded-mac bg-surface-2/60 border border-border-40 w-[240px]">
+          <div className="grid grid-cols-2 p-0.5 rounded-mac bg-surface-2-60 border border-border-40 w-[240px]">
             <button
               onClick={() => setSearchMode("standard")}
               className={`h-6 text-3xs font-semibold rounded-[5px] transition-all flex items-center justify-center border border-transparent outline-none ${
@@ -310,7 +310,7 @@ CRITICAL INSTRUCTIONS:
                   value={semanticQuery}
                   onChange={(e) => setSemanticQuery(e.target.value)}
                   placeholder="Ask AI using natural language (e.g. Find where I fixed CORS yesterday)..."
-                  className="h-8 pl-8 pr-20 text-xs rounded-mac placeholder:text-text-muted/60"
+                  className="h-8 pl-8 pr-20 text-xs rounded-mac placeholder:text-text-muted-60"
                 />
                 <button
                   type="submit"
@@ -343,7 +343,7 @@ CRITICAL INSTRUCTIONS:
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Type keywords to search commit messages..."
-                className="h-8 pl-8 pr-8 text-xs font-medium rounded-mac placeholder:text-text-muted/60"
+                className="h-8 pl-8 pr-8 text-xs font-medium rounded-mac placeholder:text-text-muted-60"
               />
               {query && (
                 <button onClick={() => setQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 ghost p-0.5 text-text-muted hover:text-text-primary border border-transparent outline-none">
@@ -353,7 +353,7 @@ CRITICAL INSTRUCTIONS:
             </div>
 
             {/* Filter Grid Card */}
-            <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3 space-y-2.5">
+            <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3 space-y-2.5">
               <div className="grid grid-cols-2 gap-2.5">
                 {/* Author */}
                 <div className="relative">
@@ -372,7 +372,7 @@ CRITICAL INSTRUCTIONS:
                   <select
                     value={branch}
                     onChange={(e) => setBranch(e.target.value)}
-                    className="w-full h-7 pl-7 pr-7 text-2xs bg-surface-2/40 border border-border-40 hover:border-border rounded-[5px] text-text-primary outline-none focus:border-accent appearance-none cursor-pointer font-medium transition-colors"
+                    className="w-full h-7 pl-7 pr-7 text-2xs bg-surface-2-40 border border-border-40 hover:border-border rounded-[5px] text-text-primary outline-none focus:border-accent appearance-none cursor-pointer font-medium transition-colors"
                   >
                     <option value="">All branches</option>
                     {branchGroups.local.length > 0 && (
@@ -450,7 +450,7 @@ CRITICAL INSTRUCTIONS:
               )}
               {!loadingSemantic && semanticResults.length === 0 && !semanticError && (
                 <div className="text-xs text-text-muted text-center py-12 flex flex-col items-center justify-center space-y-1">
-                  <Sparkles size={16} className="text-text-muted/40 mb-1" />
+                  <Sparkles size={16} className="text-text-muted-40 mb-1" />
                   <span className="font-semibold text-text-primary">No Semantic Results Yet</span>
                   <span className="text-3xs opacity-60">Try: "Find where I fixed CORS yesterday" or "When was reqwest added?"</span>
                 </div>
@@ -458,7 +458,7 @@ CRITICAL INSTRUCTIONS:
               {!loadingSemantic && semanticResults.map((commit) => (
                 <div
                   key={commit.hash}
-                  className="flex items-start gap-3 px-3 py-2 rounded-mac hover:bg-surface-1/50 transition-colors cursor-pointer group"
+                  className="flex items-start gap-3 px-3 py-2 rounded-mac hover:bg-surface-1-50 transition-colors cursor-pointer group"
                 >
                   <GitCommit size={14} className="mt-0.5 shrink-0 text-accent opacity-75 group-hover:opacity-100 transition-opacity" />
                   <div className="min-w-0 flex-1">
@@ -488,7 +488,7 @@ CRITICAL INSTRUCTIONS:
               {results?.map((commit) => (
                 <div
                   key={commit.hash}
-                  className="flex items-start gap-3 px-3 py-2 rounded-mac hover:bg-surface-1/50 transition-colors cursor-pointer group"
+                  className="flex items-start gap-3 px-3 py-2 rounded-mac hover:bg-surface-1-50 transition-colors cursor-pointer group"
                 >
                   <GitCommit size={14} className="mt-0.5 shrink-0 text-text-muted group-hover:text-accent transition-colors" />
                   <div className="min-w-0 flex-1">

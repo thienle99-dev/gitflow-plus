@@ -1,13 +1,12 @@
 import { useState } from "react";
-import { ChevronRight, ChevronDown, Terminal, Book, GitBranch, ArrowUp, ArrowDown, Loader2, GraduationCap } from "lucide-react";
+import { Book, GitBranch, ArrowUp, ArrowDown, Loader2, GraduationCap, AlertTriangle } from "lucide-react";
 import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
 import { useGitBranches, useGitStatus, useGitSyncStatus } from "@/queries/useGitLog";
+import { useMergeStatus } from "@/queries/useGitMerge";
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 
 export default function BottomBar() {
-  const [logs, setLogs] = useState<string[]>([]);
-  const [expanded, setExpanded] = useState(false);
   const repoPath = useRepoStore((s) => s.repoPath);
   const openDialogState = useUIStore((s) => s.openDialog);
 
@@ -20,6 +19,7 @@ export default function BottomBar() {
   const { data: branches } = useGitBranches(repoPath);
   const { data: status } = useGitStatus(repoPath);
   const { data: syncStatus } = useGitSyncStatus(repoPath);
+  const { data: mergeStatus } = useMergeStatus(repoPath);
 
   const currentBranch = branches?.find((b) => b.current)?.name || "";
   const stagedCount = status?.filter((f) => f.staged).length || 0;
@@ -29,24 +29,12 @@ export default function BottomBar() {
   const aheadCount = syncStatus?.ahead || 0;
   const behindCount = syncStatus?.behind || 0;
 
+  const hasConflicts = !!mergeStatus?.conflicts?.length;
+  const conflictCount = mergeStatus?.conflicts?.length || 0;
+
   return (
     <div className="h-[26px] border-t border-border-60 bg-surface-1-40 backdrop-blur-md flex items-center px-4 text-2xs text-text-muted select-none shrink-0">
-      
-      {/* Left side: Terminal Log expand toggle */}
-      <button
-        className="flex items-center gap-1 text-text-muted hover:text-text-primary transition-all p-0.5 rounded cursor-pointer mr-2.5"
-        onClick={() => setExpanded(!expanded)}
-        title="Toggle Git logs console"
-      >
-        {expanded ? (
-          <ChevronDown size={11} className="transition-transform duration-200" />
-        ) : (
-          <ChevronRight size={11} className="transition-transform duration-200" />
-        )}
-        <Terminal size={11} />
-      </button>
 
-      {/* Connection / State Indicator (Pulse Dot) */}
       {/* Connection / State Indicator (Pulse Dot / Loader) */}
       <div className="flex items-center gap-1.5 border-r border-border-20 pr-3 mr-3 h-4 min-w-[56px]">
         {isLoading ? (
@@ -70,12 +58,24 @@ export default function BottomBar() {
       {/* Contextual Git Metrics */}
       {repoPath && (
         <div className="flex items-center gap-3">
-          {/* Branch switching status */}
+          {/* Current Branch */}
           {currentBranch && (
             <div className="flex items-center gap-1 text-text-secondary font-medium">
               <GitBranch size={11} className="text-text-muted" />
               <span>{currentBranch}</span>
             </div>
+          )}
+
+          {/* Conflict Indicator */}
+          {hasConflicts && (
+            <button
+              className="flex items-center gap-1 text-[10px] font-semibold border-l border-border-20 pl-3 h-3 text-[#ff375f] hover:text-[#ff6482] transition-colors cursor-pointer"
+              onClick={() => openDialogState("merge")}
+              title={`${conflictCount} conflict${conflictCount === 1 ? "" : "s"} — click to resolve`}
+            >
+              <AlertTriangle size={10} />
+              <span>{conflictCount} conflict{conflictCount === 1 ? "" : "s"}</span>
+            </button>
           )}
 
           {/* Sync Stats (Ahead/Behind) */}
@@ -137,7 +137,7 @@ export default function BottomBar() {
           <span className="text-[9px] font-semibold">Guide</span>
         </button>
 
-        <span className="text-[9px] font-medium text-text-muted/60 select-all">
+        <span className="text-[9px] font-medium text-text-muted-60 select-all">
           v0.1.0
         </span>
       </div>

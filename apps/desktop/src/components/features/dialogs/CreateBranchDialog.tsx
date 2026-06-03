@@ -321,7 +321,7 @@ export default function CreateBranchDialog({ open, onClose }: CreateBranchDialog
           </div>
 
           {/* Options Card */}
-          <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5">
+          <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5">
             <Switch
               checked={checkoutNew}
               onChange={setCheckoutNew}

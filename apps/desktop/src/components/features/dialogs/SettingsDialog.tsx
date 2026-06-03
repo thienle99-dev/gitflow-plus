@@ -800,7 +800,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       {/* Right Content Area (420px) */}
       <div className="flex-1 flex flex-col min-w-0 h-full">
         {/* Dynamic Detail Header */}
-        <div className="px-5 py-3 border-b border-border-60 bg-surface-1/10 shrink-0">
+        <div className="px-5 py-3 border-b border-border-60 bg-surface-1-10 shrink-0">
           <h2 className="text-xs font-semibold text-text-primary">
             {activeTab === "general" && "General Settings"}
             {activeTab === "git" && "Git Core Settings"}
@@ -815,7 +815,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
           {activeTab === "general" && (
             <div className="space-y-4">
               {/* Color Theme Card */}
-              <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
+              <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-text-primary">Color Theme</label>
                   <div className="space-y-3">
@@ -847,7 +847,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
               </div>
 
               {/* Diff & Graph Preferences Card */}
-              <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
+              <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
                 {/* Default Diff Mode Selector */}
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-text-primary">Default Diff View Mode</label>
@@ -910,7 +910,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
 
                 <div className="space-y-2 border-t border-border-40 pt-3">
                   <label className="text-xs font-semibold text-text-primary">Commit List Columns</label>
-                  <div className="grid grid-cols-3 gap-2 bg-surface-1/40 rounded-mac p-2 border border-border-40">
+                  <div className="grid grid-cols-3 gap-2 bg-surface-1-40 rounded-mac p-2 border border-border-40">
                     {[
                       ["Hash", graphShowHash, setGraphShowHash],
                       ["Author", graphShowAuthor, setGraphShowAuthor],
@@ -935,7 +935,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
           {activeTab === "git" && (
             <div className="space-y-4">
               {/* Background Synchronization Card */}
-              <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
+              <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
                 <div>
                   <Switch
                     checked={autoFetch}
@@ -970,7 +970,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
               </div>
 
               {/* Operations & Launch Preferences Card */}
-              <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3">
+              <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
                 <Switch
                   checked={autoPrune}
                   onChange={setAutoPrune}
@@ -1013,7 +1013,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
               </div>
 
               {/* Pre-Commit Quality Gates Card */}
-              <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
+              <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary mb-1">
                   <ShieldAlert size={13} className="text-accent" />
                   Pre-Commit Quality Gates
@@ -1063,7 +1063,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
           {activeTab === "accounts" && (
             <div className="space-y-4">
               {/* GitHub Card */}
-              <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3">
+              <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
                 <div className="flex items-center gap-2">
                   <div className="w-5 h-5 rounded-[5px] bg-[#24292f] dark:bg-[#e6edf2] flex items-center justify-center text-white dark:text-[#24292f] shrink-0">
                     <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 16 16">
@@ -1090,7 +1090,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
               </div>
 
               {/* GitLab Card */}
-              <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3">
+              <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
                 <div className="flex items-center gap-2">
                   <div className="w-5 h-5 rounded-[5px] bg-[#e24329] flex items-center justify-center text-white shrink-0">
                     <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 16 16">
@@ -1135,7 +1135,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
           {activeTab === "ai" && (
             <div className="space-y-4">
               {/* AI Provider Configuration Card */}
-              <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
+              <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
                 {/* API Key */}
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-text-primary">API Key</label>
@@ -1280,7 +1280,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
               </div>
 
               {/* Suggestion Preferences Card */}
-              <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
+              <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
                 {/* Commit Message Style */}
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-text-primary">Commit Message Style</label>
@@ -1368,7 +1368,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
                           className={`flex items-start gap-2 rounded-mac border px-2.5 py-2 text-left transition-all ${
                             checked
                               ? "border-accent-30 bg-accent-10 text-text-primary"
-                              : "border-border-40 bg-surface-1/40 text-text-secondary hover:bg-surface-2"
+                              : "border-border-40 bg-surface-1-40 text-text-secondary hover:bg-surface-2"
                           }`}
                         >
                           <span className={`mt-0.5 h-3.5 w-3.5 rounded-[4px] border flex items-center justify-center shrink-0 ${
@@ -1397,7 +1397,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
                     onChange={(e) => setCustomRules(e.target.value)}
                     placeholder="e.g. Always start with Jira ticket number [PROJ-XXXX] extracted from the branch name, or write in Vietnamese."
                     rows={3}
-                    className="w-full px-2.5 py-1.5 text-xs bg-surface-1 border border-border rounded-mac text-text-primary focus:border-accent outline-none resize-y placeholder:text-text-muted/60 hover:bg-surface-2 transition-all"
+                    className="w-full px-2.5 py-1.5 text-xs bg-surface-1 border border-border rounded-mac text-text-primary focus:border-accent outline-none resize-y placeholder:text-text-muted-60 hover:bg-surface-2 transition-all"
                   />
                 </div>
 
@@ -1446,7 +1446,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
           {activeTab === "advanced" && (
             <div className="space-y-4">
               {/* Performance Tuning Card */}
-              <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3">
+              <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary mb-1">
                   <Gauge size={13} className="text-accent" />
                   Performance Tuning
@@ -1482,7 +1482,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
               </div>
 
               {/* System Keyboard Shortcuts Card */}
-              <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3">
+              <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary mb-1">
                   <Keyboard size={13} className="text-accent" />
                   System Shortcuts
@@ -1494,7 +1494,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
                     ["Commit staged changes", "Cmd+Enter"],
                     ["Open search", "Toolbar"],
                   ].map(([label, shortcut]) => (
-                    <div key={label} className="flex items-center justify-between gap-3 bg-surface-1/40 border border-border-40 rounded-mac px-2.5 py-1.5">
+                    <div key={label} className="flex items-center justify-between gap-3 bg-surface-1-40 border border-border-40 rounded-mac px-2.5 py-1.5">
                       <span className="text-text-secondary text-2xs font-medium">{label}</span>
                       <span className="font-mono text-3xs font-semibold text-text-muted bg-surface-2 border border-border rounded px-1.5 py-0.5">
                         {shortcut}
@@ -1505,7 +1505,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
               </div>
 
               {/* Diagnostics & Maintenance Card */}
-              <div className="bg-surface-1/30 border border-border-40 rounded-mac p-3.5 space-y-3">
+              <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary mb-1">
                   <ShieldAlert size={13} className="text-[#ff9f0a]" />
                   Maintenance & Diagnostics

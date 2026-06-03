@@ -42,7 +42,7 @@ export default function FileHistoryPanel() {
           <div
             key={commit.hash}
             onClick={() => selectCommit(commit.hash)}
-            className="px-3 py-2 border-b border-border/20 hover:bg-surface-1/30 cursor-pointer transition-colors"
+            className="px-3 py-2 border-b border-border-20 hover:bg-surface-1-30 cursor-pointer transition-colors"
           >
             <div className="flex items-center gap-1.5">
               <GitCommit size={10} className="text-accent shrink-0" />

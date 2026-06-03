@@ -45,20 +45,20 @@ export default function BranchCompareDialog({ baseBranch, targetBranch, onClose 
     if (s === "A") return "text-[#30d158] bg-[#30d158]/10";
     if (s === "D") return "text-[#ff453a] bg-[#ff453a]/10";
     if (s === "R" || s === "C") return "text-[#ff9f0a] bg-[#ff9f0a]/10";
-    return "text-accent bg-accent/10";
+    return "text-accent bg-accent-10";
   };
 
   return (
     <div className="w-[900px] max-h-[85vh] flex flex-col bg-surface-0 rounded-mac overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-3 px-5 py-4 border-b border-border-40">
-        <div className="h-8 w-8 rounded-full bg-accent/10 flex items-center justify-center">
+        <div className="h-8 w-8 rounded-full bg-accent-10 flex items-center justify-center">
           <ArrowLeftRight size={16} className="text-accent" />
         </div>
         <div className="flex-1 min-w-0">
           <h2 className="text-sm font-bold text-text-primary">Branch Comparison</h2>
           <p className="text-2xs text-text-muted mt-0.5 flex items-center gap-1.5">
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-accent/10 text-accent font-mono text-2xs">
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-accent-10 text-accent font-mono text-2xs">
               <GitBranch size={10} />
               {baseBranch}
             </span>
@@ -91,7 +91,7 @@ export default function BranchCompareDialog({ baseBranch, targetBranch, onClose 
         ) : comparison ? (
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
             {/* Ahead/behind stats */}
-            <div className="flex items-center gap-3 px-5 py-3 border-b border-border-40 bg-surface-1/20">
+            <div className="flex items-center gap-3 px-5 py-3 border-b border-border-40 bg-surface-1-20">
               <div className="flex-1 rounded-mac bg-surface-2-30 border border-border-40 p-2.5 text-center">
                 <div className="text-lg font-bold text-[#30d158]">{comparison.ahead}</div>
                 <div className="text-2xs text-text-muted mt-0.5">
@@ -124,9 +124,9 @@ export default function BranchCompareDialog({ baseBranch, targetBranch, onClose 
                     <button
                       key={file.path}
                       onClick={() => setSelectedFile(file.path)}
-                      className={`w-full flex items-center gap-2 px-3 py-1.5 text-left cursor-pointer transition-colors border-b border-border-40/50 ${
+                      className={`w-full flex items-center gap-2 px-3 py-1.5 text-left cursor-pointer transition-colors border-b border-border-40 ${
                         selectedFile === file.path
-                          ? "bg-accent/10 border-l-2 border-l-accent"
+                          ? "bg-accent-10 border-l-2 border-l-accent"
                           : "hover:bg-surface-2-30 border-l-2 border-l-transparent"
                       }`}
                     >
@@ -175,7 +175,7 @@ export default function BranchCompareDialog({ baseBranch, targetBranch, onClose 
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-end px-5 py-3 border-t border-border-40 bg-surface-1/30">
+      <div className="flex items-center justify-end px-5 py-3 border-t border-border-40 bg-surface-1-30">
         <button
           onClick={onClose}
           className="px-4 py-1.5 text-xs font-medium text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-mac transition-colors cursor-pointer"

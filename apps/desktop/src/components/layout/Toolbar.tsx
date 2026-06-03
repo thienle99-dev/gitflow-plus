@@ -5,7 +5,7 @@ import { useGitBranches, useGitStatus, useGitSyncStatus } from "@/queries/useGit
 import { useGitLfsStatus } from "@/queries/useGitLfs";
 import { useMergeStatus } from "@/queries/useGitMerge";
 import { useUndoLast } from "@/queries/useGitReflog";
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   GitPullRequest,
@@ -23,6 +23,7 @@ import {
   Database,
   PanelLeft,
   PanelRight,
+  MoreHorizontal,
 } from "lucide-react";
 import CreateBranchDialog from "@/components/features/dialogs/CreateBranchDialog";
 import { RiskSummaryDialog } from "@/components/features/dialogs";
@@ -30,6 +31,8 @@ import { generateRiskSummary } from "@/lib/ai";
 import type { RiskReport } from "@/lib/risk-scanner";
 import { useErrorReporter } from "@/lib/ErrorContext";
 import SettingsDropdown from "@/components/ui/theme/SettingsDropdown";
+
+const COLLAPSE_BREAKPOINT = 900;
 
 export default function Toolbar() {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -51,11 +54,48 @@ export default function Toolbar() {
   const { reportError } = useErrorReporter();
   const [loading, setLoading] = useState<string | null>(null);
   const [showBranchDialog, setShowBranchDialog] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [riskDialog, setRiskDialog] = useState<{
     open: boolean;
     report: (RiskReport & { aiSummary?: string }) | null;
     loading: boolean;
   }>({ open: false, report: null, loading: false });
+
+  // Responsive: detect when toolbar needs to collapse
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width ?? el.clientWidth;
+      setCollapsed(width < COLLAPSE_BREAKPOINT);
+    });
+    observer.observe(el);
+    // Initial check
+    setCollapsed(el.clientWidth < COLLAPSE_BREAKPOINT);
+    return () => observer.disconnect();
+  }, []);
+
+  // Close "More" menu on outside click
+  useEffect(() => {
+    if (!moreOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
+        setMoreOpen(false);
+      }
+    };
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMoreOpen(false);
+    };
+    window.addEventListener("mousedown", handleClick);
+    window.addEventListener("keydown", handleEsc);
+    return () => {
+      window.removeEventListener("mousedown", handleClick);
+      window.removeEventListener("keydown", handleEsc);
+    };
+  }, [moreOpen]);
 
   if (!repoPath) return null;
 
@@ -85,13 +125,11 @@ export default function Toolbar() {
   const handlePush = async () => {
     setRiskDialog({ open: true, report: null, loading: true });
     try {
-      // Get staged files for risk analysis
       const staged = (changes || []).filter((c) => c.staged);
       const diff = staged.length > 0 ? await api.diff.staged(repoPath!).catch(() => "") : "";
       const report = await generateRiskSummary(repoPath!, staged, diff);
       setRiskDialog({ open: true, report, loading: false });
     } catch {
-      // Risk analysis failed — proceed anyway
       setRiskDialog({ open: false, report: null, loading: false });
       doAction("push", () => api.remote.push(repoPath!));
     }
@@ -111,17 +149,56 @@ export default function Toolbar() {
   const lfsDirtyCount = lfsStatus?.dirty_files.length ?? 0;
   const isMac = typeof window !== "undefined" && navigator.userAgent.includes("Mac");
 
+  const moreMenuItems = [
+    {
+      label: "Search Commits",
+      icon: <Search size={12} />,
+      action: () => openDialog("search"),
+    },
+    {
+      label: "Stash",
+      icon: <Archive size={12} />,
+      action: () => openDialog("stash"),
+    },
+    ...(hasLfsFiles
+      ? [
+          {
+            label: `LFS Pull (${lfsStatus!.tracked_files.length} tracked)`,
+            icon: <ArrowDownToLine size={12} />,
+            action: () => doAction("lfs-pull", () => api.lfs.pull(repoPath!)),
+          },
+          {
+            label: "LFS Push",
+            icon: <ArrowUpFromLine size={12} />,
+            action: () => doAction("lfs-push", () => api.lfs.push(repoPath!)),
+          },
+        ]
+      : []),
+    {
+      label: "Analytics",
+      icon: <BarChart3 size={12} />,
+      action: () => openDialog("analytics"),
+    },
+    {
+      label: "Undo Last Action",
+      icon: <RotateCcw size={12} />,
+      action: () => doAction("undo", () => undoLast.mutateAsync()),
+      disabled: undoLast.isPending,
+    },
+  ];
+
   return (
     <>
       <div
-        className={`vibrancy relative z-[200] border-b border-border-60 bg-surface-1/40 backdrop-blur-md flex items-center justify-between px-4 select-none animate-in fade-in duration-200 ${
+        ref={containerRef}
+        className={`vibrancy relative z-[200] border-b border-border-60 bg-surface-1-40 backdrop-blur-md flex items-center justify-between px-4 select-none animate-in fade-in duration-200 ${
           isMac ? "h-[52px]" : "h-[44px]"
         }`}
         data-tauri-drag-region
       >
 
         {/* Left Side: Status Capsule Badge */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Sidebar Toggle Button (Left) */}
           <button
             onClick={toggleSidebar}
@@ -147,7 +224,7 @@ export default function Toolbar() {
                   </span>
                 )}
                 {changes.filter(c => c.staged).length > 0 && changes.filter(c => !c.staged).length > 0 && (
-                  <span className="text-text-muted/50 font-normal">·</span>
+                  <span className="text-text-muted-50 font-normal">·</span>
                 )}
                 {changes.filter(c => !c.staged).length > 0 && (
                   <span className="text-[#ff9f0a] font-bold">
@@ -169,8 +246,8 @@ export default function Toolbar() {
         </div>
 
         {/* Middle Side: Action Button Segment Groups */}
-        <div className="flex items-center gap-3">
-          {/* Sync Segment Group (Pull, Fetch, Push) */}
+        <div className="flex items-center gap-3 min-w-0">
+          {/* Sync Segment Group (Pull, Fetch, Push) — always visible */}
           <div className="flex items-center bg-surface-2-40 border border-border-40 rounded-mac p-0.5 shadow-2xs">
             <button
               className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all disabled:opacity-40 cursor-pointer"
@@ -186,7 +263,7 @@ export default function Toolbar() {
                 </span>
               )}
             </button>
-            <div className="w-[1px] h-3.5 bg-border-40/50" />
+            <div className="w-[1px] h-3.5 bg-border-50" />
             <button
               className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all disabled:opacity-40 cursor-pointer"
               onClick={() => doAction("fetch", () => api.remote.fetch(repoPath!))}
@@ -196,7 +273,7 @@ export default function Toolbar() {
               <RefreshCw size={13} className={`${loading === "fetch" ? "animate-spin text-accent" : "text-text-muted"}`} />
               <span>Fetch</span>
             </button>
-            <div className="w-[1px] h-3.5 bg-border-40/50" />
+            <div className="w-[1px] h-3.5 bg-border-50" />
             <button
               className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all disabled:opacity-40 cursor-pointer"
               onClick={handlePush}
@@ -213,7 +290,8 @@ export default function Toolbar() {
             </button>
           </div>
 
-          {hasLfsFiles && (
+          {/* LFS Segment Group — visible when not collapsed */}
+          {!collapsed && hasLfsFiles && (
             <div className="flex items-center bg-surface-2-40 border border-border-40 rounded-mac p-0.5 shadow-2xs">
               <div
                 className="h-7 px-2.5 flex items-center gap-1.5 text-2xs font-semibold text-text-secondary"
@@ -230,7 +308,7 @@ export default function Toolbar() {
                   </span>
                 )}
               </div>
-              <div className="w-[1px] h-3.5 bg-border-40/50" />
+              <div className="w-[1px] h-3.5 bg-border-50" />
               <button
                 className="h-7 px-2.5 flex items-center gap-1.5 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all disabled:opacity-40 cursor-pointer"
                 onClick={() => doAction("lfs-pull", () => api.lfs.pull(repoPath!))}
@@ -240,7 +318,7 @@ export default function Toolbar() {
                 <ArrowDownToLine size={13} className="text-text-muted" />
                 <span>Pull</span>
               </button>
-              <div className="w-[1px] h-3.5 bg-border-40/50" />
+              <div className="w-[1px] h-3.5 bg-border-50" />
               <button
                 className="h-7 px-2.5 flex items-center gap-1.5 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all disabled:opacity-40 cursor-pointer"
                 onClick={() => doAction("lfs-push", () => api.lfs.push(repoPath!))}
@@ -253,7 +331,7 @@ export default function Toolbar() {
             </div>
           )}
 
-          {/* Git Operations Segment Group (Branch, Merge, Stash) */}
+          {/* Git Operations Segment Group (Branch, Merge, Stash) — always visible */}
           <div className="flex items-center bg-surface-2-40 border border-border-40 rounded-mac p-0.5 shadow-2xs">
             <button
               className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer"
@@ -263,7 +341,7 @@ export default function Toolbar() {
               <GitBranchPlus size={13} className="text-text-muted" />
               <span>Branch</span>
             </button>
-            <div className="w-[1px] h-3.5 bg-border-40/50" />
+            <div className="w-[1px] h-3.5 bg-border-50" />
             <button
               className={`h-7 px-4 flex items-center gap-2 text-2xs font-semibold hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer ${inMerge
                 ? "text-[#ff9f0a] bg-[#ff9f0a]/10 hover:bg-[#ff9f0a]/20"
@@ -275,7 +353,7 @@ export default function Toolbar() {
               <ArrowLeftRight size={13} className={inMerge ? "text-[#ff9f0a]" : "text-text-muted"} />
               <span>{inMerge ? "Merge →" : "Merge"}</span>
             </button>
-            <div className="w-[1px] h-3.5 bg-border-40/50" />
+            <div className="w-[1px] h-3.5 bg-border-50" />
             <button
               className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer"
               onClick={() => openDialog("stash")}
@@ -286,40 +364,73 @@ export default function Toolbar() {
             </button>
           </div>
 
-          {/* Utilities Segment Group (Search, Analytics, Undo) */}
-          <div className="flex items-center bg-surface-2-40 border border-border-40 rounded-mac p-0.5 shadow-2xs">
-            <button
-              className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer"
-              onClick={() => openDialog("search")}
-              title="Spotlight Search"
-            >
-              <Search size={13} className="text-text-muted" />
-              <span>Search</span>
-            </button>
-            <div className="w-[1px] h-3.5 bg-border-40/50" />
-            <button
-              className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer"
-              onClick={() => openDialog("analytics")}
-              title="View Repository Activity Analytics"
-            >
-              <BarChart3 size={13} className="text-text-muted" />
-              <span>Analytics</span>
-            </button>
-            <div className="w-[1px] h-3.5 bg-border-40/50" />
-            <button
-              className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all disabled:opacity-40 cursor-pointer"
-              onClick={() => doAction("undo", () => undoLast.mutateAsync())}
-              disabled={undoLast.isPending}
-              title="Undo last Git action"
-            >
-              <RotateCcw size={13} className="text-text-muted" />
-              <span>Undo</span>
-            </button>
-          </div>
+          {/* Utilities Segment Group — visible when not collapsed */}
+          {!collapsed && (
+            <div className="flex items-center bg-surface-2-40 border border-border-40 rounded-mac p-0.5 shadow-2xs">
+              <button
+                className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer"
+                onClick={() => openDialog("search")}
+                title="Spotlight Search"
+              >
+                <Search size={13} className="text-text-muted" />
+                <span>Search</span>
+              </button>
+              <div className="w-[1px] h-3.5 bg-border-50" />
+              <button
+                className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer"
+                onClick={() => openDialog("analytics")}
+                title="View Repository Activity Analytics"
+              >
+                <BarChart3 size={13} className="text-text-muted" />
+                <span>Analytics</span>
+              </button>
+              <div className="w-[1px] h-3.5 bg-border-50" />
+              <button
+                className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all disabled:opacity-40 cursor-pointer"
+                onClick={() => doAction("undo", () => undoLast.mutateAsync())}
+                disabled={undoLast.isPending}
+                title="Undo last Git action"
+              >
+                <RotateCcw size={13} className="text-text-muted" />
+                <span>Undo</span>
+              </button>
+            </div>
+          )}
+
+          {/* "More" (⋯) Button — visible when collapsed */}
+          {collapsed && (
+            <div className="relative" ref={moreRef}>
+              <button
+                className="h-7 w-7 flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-mac transition-all cursor-pointer"
+                onClick={() => setMoreOpen(!moreOpen)}
+                title="More actions"
+              >
+                <MoreHorizontal size={16} />
+              </button>
+              {moreOpen && (
+                <div className="absolute top-full right-0 mt-1 z-50 min-w-[180px] py-1 bg-surface-1 border border-border rounded-mac shadow-lg animate-toast-in">
+                  {moreMenuItems.map((item, i) => (
+                    <button
+                      key={i}
+                      disabled={item.disabled}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-text-primary hover:bg-accent hover:text-accent-fg disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
+                      onClick={() => {
+                        item.action();
+                        setMoreOpen(false);
+                      }}
+                    >
+                      <span className="w-4 h-4 flex items-center text-text-muted">{item.icon}</span>
+                      <span className="flex-1 text-left">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right Side: Integrations (PR & SettingsDropdown) */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           {/* PR Trigger */}
           <button
             onClick={() => openDialog("merge-request")}
@@ -329,7 +440,7 @@ export default function Toolbar() {
             <GitPullRequest size={14} />
           </button>
 
-          <div className="w-[1px] h-3.5 bg-border-40/60" />
+          <div className="w-[1px] h-3.5 bg-border-60" />
 
           {/* Details Panel Toggle Button (Right) */}
           <button
@@ -342,7 +453,7 @@ export default function Toolbar() {
             <PanelRight size={14} />
           </button>
 
-          <div className="w-[1px] h-3.5 bg-border-40/60" />
+          <div className="w-[1px] h-3.5 bg-border-60" />
 
           {/* Settings & Quick Actions */}
           <SettingsDropdown

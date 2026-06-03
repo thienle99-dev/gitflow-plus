@@ -164,7 +164,7 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-accent/10 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg bg-accent-10 flex items-center justify-center">
               <Sparkles size={14} className="text-accent" />
             </div>
             <div>
@@ -200,10 +200,10 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
                   >
                     <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold transition-all ${
                       isCompleted
-                        ? "bg-accent text-accent-fg shadow-sm shadow-accent/20"
+                        ? "bg-accent text-accent-fg shadow-sm shadow-accent-20"
                         : isActive
-                          ? "bg-accent text-accent-fg ring-4 ring-accent/15 shadow-sm shadow-accent/20"
-                          : "bg-surface-2 border border-border text-text-muted group-hover:border-text-muted/40"
+                          ? "bg-accent text-accent-fg ring-4 ring-accent-15 shadow-sm shadow-accent-20"
+                          : "bg-surface-2 border border-border text-text-muted group-hover:border-text-muted-40"
                     }`}>
                       {isCompleted ? <Check size={13} strokeWidth={3} /> : s.icon}
                     </div>
@@ -213,7 +213,7 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
                     <div className="flex-1 mx-2.5 h-[2px] rounded-full overflow-hidden bg-surface-2">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ease-out ${
-                          isCompleted ? "bg-accent w-full" : isActive ? "bg-accent/40 w-1/2" : "w-0"
+                          isCompleted ? "bg-accent w-full" : isActive ? "bg-accent-40 w-1/2" : "w-0"
                         }`}
                       />
                     </div>
@@ -310,7 +310,7 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
             )}
             <button
               onClick={handleNext}
-              className="flex items-center gap-1.5 px-5 py-2 text-xs font-semibold bg-accent text-accent-fg rounded-lg hover:opacity-90 transition-opacity cursor-pointer shadow-sm shadow-accent/15"
+              className="flex items-center gap-1.5 px-5 py-2 text-xs font-semibold bg-accent text-accent-fg rounded-lg hover:opacity-90 transition-opacity cursor-pointer shadow-sm shadow-accent-15"
             >
               {isLast ? "Get Started" : "Continue"}
               {!isLast && <ChevronRight size={14} />}
@@ -327,7 +327,7 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
 function WelcomeStep() {
   return (
     <div className="flex flex-col items-center text-center py-6 space-y-5">
-      <div className="w-20 h-20 rounded-2xl bg-accent/10 flex items-center justify-center border border-accent/20 shadow-sm shadow-accent/10">
+      <div className="w-20 h-20 rounded-2xl bg-accent-10 flex items-center justify-center border border-accent-20 shadow-sm shadow-accent-10">
         <img src="/logo.png" alt="GitFlow" className="w-12 h-12" />
       </div>
       <div className="space-y-2">
@@ -420,7 +420,7 @@ function AIStep({
             value={aiApiUrl}
             onChange={(e) => setAiApiUrl(e.target.value)}
             placeholder="https://api.openai.com/v1"
-            className="w-full h-7 px-2.5 text-xs bg-surface-1 border border-border rounded-md text-text-primary placeholder:text-text-muted/60 focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none"
+            className="w-full h-7 px-2.5 text-xs bg-surface-1 border border-border rounded-md text-text-primary placeholder:text-text-muted-60 focus:border-accent focus:ring-1 focus:ring-accent-20 outline-none"
           />
         </div>
         <div>
@@ -431,7 +431,7 @@ function AIStep({
               value={aiApiKey}
               onChange={(e) => setAiApiKey(e.target.value)}
               placeholder="sk-..."
-              className="w-full h-7 px-2.5 pr-8 text-xs bg-surface-1 border border-border rounded-md text-text-primary placeholder:text-text-muted/60 focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none font-mono"
+              className="w-full h-7 px-2.5 pr-8 text-xs bg-surface-1 border border-border rounded-md text-text-primary placeholder:text-text-muted-60 focus:border-accent focus:ring-1 focus:ring-accent-20 outline-none font-mono"
             />
             <button
               type="button"
@@ -451,7 +451,7 @@ function AIStep({
             value={aiModel}
             onChange={(e) => setAiModel(e.target.value)}
             placeholder="claude-sonnet-4-20250514"
-            className="w-full h-7 px-2.5 text-xs bg-surface-1 border border-border rounded-md text-text-primary placeholder:text-text-muted/60 focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none"
+            className="w-full h-7 px-2.5 text-xs bg-surface-1 border border-border rounded-md text-text-primary placeholder:text-text-muted-60 focus:border-accent focus:ring-1 focus:ring-accent-20 outline-none"
           />
         </div>
         <div>
@@ -463,7 +463,7 @@ function AIStep({
             value={aiReviewModel}
             onChange={(e) => setAiReviewModel(e.target.value)}
             placeholder="claude-sonnet-4-20250514"
-            className="w-full h-7 px-2.5 text-xs bg-surface-1 border border-border rounded-md text-text-primary placeholder:text-text-muted/60 focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none"
+            className="w-full h-7 px-2.5 text-xs bg-surface-1 border border-border rounded-md text-text-primary placeholder:text-text-muted-60 focus:border-accent focus:ring-1 focus:ring-accent-20 outline-none"
           />
         </div>
       </div>
@@ -512,7 +512,7 @@ function AIPreferencesStep({
           <select
             value={reviewLanguage}
             onChange={(e) => setReviewLanguage(e.target.value)}
-            className="w-full h-7 px-2.5 text-xs bg-surface-1 border border-border rounded-md text-text-primary focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none"
+            className="w-full h-7 px-2.5 text-xs bg-surface-1 border border-border rounded-md text-text-primary focus:border-accent focus:ring-1 focus:ring-accent-20 outline-none"
           >
             <option value="auto">Auto detect</option>
             <option value="english">English</option>
@@ -541,7 +541,7 @@ function AIPreferencesStep({
                   onClick={() => toggleChecklistItem(option.id)}
                   className={`flex items-center gap-2 rounded-md border px-2 py-1.5 text-left transition-all ${
                     checked
-                      ? "border-accent/35 bg-accent/10 text-text-primary"
+                      ? "border-accent-35 bg-accent-10 text-text-primary"
                       : "border-border bg-surface-1 text-text-secondary hover:bg-surface-2"
                   }`}
                 >
@@ -564,7 +564,7 @@ function AIPreferencesStep({
             onChange={(e) => setCustomRules(e.target.value)}
             placeholder="e.g. Review in Vietnamese, prefer Conventional Commits, focus on security and frontend UX."
             rows={4}
-            className="w-full px-2.5 py-2 text-xs bg-surface-1 border border-border rounded-md text-text-primary placeholder:text-text-muted/60 focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none resize-none"
+            className="w-full px-2.5 py-2 text-xs bg-surface-1 border border-border rounded-md text-text-primary placeholder:text-text-muted-60 focus:border-accent focus:ring-1 focus:ring-accent-20 outline-none resize-none"
           />
         </div>
       </div>
@@ -614,7 +614,7 @@ function GitHostStep({
               value={githubToken}
               onChange={(e) => setGithubToken(e.target.value)}
               placeholder="ghp_... Personal access token"
-              className="w-full h-7 px-2.5 pr-8 text-xs bg-surface-1 border border-border rounded-md text-text-primary placeholder:text-text-muted/60 focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none font-mono"
+              className="w-full h-7 px-2.5 pr-8 text-xs bg-surface-1 border border-border rounded-md text-text-primary placeholder:text-text-muted-60 focus:border-accent focus:ring-1 focus:ring-accent-20 outline-none font-mono"
             />
             <button
               type="button"
@@ -636,7 +636,7 @@ function GitHostStep({
             value={gitlabHost}
             onChange={(e) => setGitlabHost(e.target.value)}
             placeholder="https://gitlab.com"
-            className="w-full h-7 px-2.5 text-xs bg-surface-1 border border-border rounded-md text-text-primary placeholder:text-text-muted/60 focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none"
+            className="w-full h-7 px-2.5 text-xs bg-surface-1 border border-border rounded-md text-text-primary placeholder:text-text-muted-60 focus:border-accent focus:ring-1 focus:ring-accent-20 outline-none"
           />
           <div className="relative">
             <input
@@ -644,7 +644,7 @@ function GitHostStep({
               value={gitlabToken}
               onChange={(e) => setGitlabToken(e.target.value)}
               placeholder="glpat-... Personal access token"
-              className="w-full h-7 px-2.5 pr-8 text-xs bg-surface-1 border border-border rounded-md text-text-primary placeholder:text-text-muted/60 focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none font-mono"
+              className="w-full h-7 px-2.5 pr-8 text-xs bg-surface-1 border border-border rounded-md text-text-primary placeholder:text-text-muted-60 focus:border-accent focus:ring-1 focus:ring-accent-20 outline-none font-mono"
             />
             <button
               type="button"
@@ -747,8 +747,8 @@ function PreferencesStep({
 
 function FeatureCard({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
   return (
-    <div className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-surface-1 border border-border hover:border-accent/20 hover:bg-accent/5 transition-all text-center group">
-      <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent group-hover:bg-accent/15 transition-colors">{icon}</div>
+    <div className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-surface-1 border border-border hover:border-accent-20 hover:bg-accent-5 transition-all text-center group">
+      <div className="w-8 h-8 rounded-lg bg-accent-10 flex items-center justify-center text-accent group-hover:bg-accent-15 transition-colors">{icon}</div>
       <span className="text-2xs font-bold text-text-primary">{title}</span>
       <span className="text-[10px] text-text-muted leading-relaxed">{desc}</span>
     </div>

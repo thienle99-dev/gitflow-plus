@@ -4,7 +4,7 @@ const COLORS = [
   "#0a84ff", "#30d158", "#ff9f0a", "#bf5af2", "#ff375f",
   "#64d2ff", "#ffd60a", "#5e5ce6", "#ff6482", "#00c7be",
 ];
-const ROW_HEIGHT = 28;
+const ROW_HEIGHT = 38;
 const LANE_WIDTH = 12;
 const GRAPH_LEFT_PADDING = 18;
 
@@ -12,6 +12,7 @@ export interface LayoutCommit {
   hash: string;
   message: string;
   author: string;
+  email: string;
   date: string;
   refs: Ref[];
   lane: number;
@@ -71,6 +72,7 @@ export function computeGraphLayout(
       hash: commit.hash,
       message: commit.message,
       author: commit.author,
+      email: commit.email || "",
       date: commit.date,
       refs: commit.refs || [],
       lane,

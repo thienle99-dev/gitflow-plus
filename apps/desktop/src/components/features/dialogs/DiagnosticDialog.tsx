@@ -73,7 +73,7 @@ export default function DiagnosticDialog({ onClose }: DiagnosticDialogProps) {
   return (
     <div className="h-full flex flex-col bg-surface-0 text-text-primary">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3.5 border-b border-border-40 bg-surface-1/40 shrink-0">
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-border-40 bg-surface-1-40 shrink-0">
         <div className="flex items-center gap-2">
           <Activity size={16} className="text-accent" />
           <span className="text-sm font-bold">Diagnostic Bundle</span>
@@ -114,7 +114,7 @@ export default function DiagnosticDialog({ onClose }: DiagnosticDialogProps) {
             {/* System Info */}
             <div>
               <h3 className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">System</h3>
-              <div className="bg-surface-1/30 border border-border-40 rounded-mac px-3 py-1 divide-y divide-border-30">
+              <div className="bg-surface-1-30 border border-border-40 rounded-mac px-3 py-1 divide-y divide-border-30">
                 <InfoRow label="App Version" value={diag.app_version} mono />
                 <InfoRow label="Git Version" value={diag.git_version} mono />
                 <InfoRow label="OS / Arch" value={diag.os_info} />
@@ -127,7 +127,7 @@ export default function DiagnosticDialog({ onClose }: DiagnosticDialogProps) {
                 <GitBranch size={12} />
                 Repository
               </h3>
-              <div className="bg-surface-1/30 border border-border-40 rounded-mac px-3 py-1 divide-y divide-border-30">
+              <div className="bg-surface-1-30 border border-border-40 rounded-mac px-3 py-1 divide-y divide-border-30">
                 <InfoRow label="Path" value={diag.repo_path} mono />
                 <InfoRow label="Branch" value={diag.current_branch} mono />
                 <InfoRow label="Remote" value={diag.remote_url ?? "—"} mono />
@@ -142,20 +142,20 @@ export default function DiagnosticDialog({ onClose }: DiagnosticDialogProps) {
                 Statistics
               </h3>
               <div className="grid grid-cols-3 gap-2 mb-2">
-                <div className="bg-surface-1/30 border border-border-40 rounded-mac px-3 py-2 text-center">
+                <div className="bg-surface-1-30 border border-border-40 rounded-mac px-3 py-2 text-center">
                   <div className="text-lg font-bold">{diag.total_commits.toLocaleString()}</div>
                   <div className="text-2xs text-text-muted">Commits</div>
                 </div>
-                <div className="bg-surface-1/30 border border-border-40 rounded-mac px-3 py-2 text-center">
+                <div className="bg-surface-1-30 border border-border-40 rounded-mac px-3 py-2 text-center">
                   <div className="text-lg font-bold">{diag.branch_count}</div>
                   <div className="text-2xs text-text-muted">Branches</div>
                 </div>
-                <div className="bg-surface-1/30 border border-border-40 rounded-mac px-3 py-2 text-center">
+                <div className="bg-surface-1-30 border border-border-40 rounded-mac px-3 py-2 text-center">
                   <div className="text-lg font-bold">{diag.tag_count}</div>
                   <div className="text-2xs text-text-muted">Tags</div>
                 </div>
               </div>
-              <div className="bg-surface-1/30 border border-border-40 rounded-mac px-3 py-1 divide-y divide-border-30">
+              <div className="bg-surface-1-30 border border-border-40 rounded-mac px-3 py-1 divide-y divide-border-30">
                 <InfoRow label="Staged" value={diag.staged_files} />
                 <InfoRow label="Unstaged" value={diag.unstaged_files} />
                 <InfoRow label="Untracked" value={diag.untracked_files} />
@@ -168,7 +168,7 @@ export default function DiagnosticDialog({ onClose }: DiagnosticDialogProps) {
                 <HardDrive size={12} />
                 State
               </h3>
-              <div className="bg-surface-1/30 border border-border-40 rounded-mac px-3 py-1 divide-y divide-border-30">
+              <div className="bg-surface-1-30 border border-border-40 rounded-mac px-3 py-1 divide-y divide-border-30">
                 <InfoRow label="LFS Enabled" value={diag.lfs_enabled} />
                 <InfoRow label="Conflict" value={diag.conflict_state} />
                 <InfoRow label="Rebase in Progress" value={diag.rebase_in_progress} />

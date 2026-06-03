@@ -85,7 +85,7 @@ export default function RiskSummaryDialog({ open, report, loading, action, onPro
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border-30 bg-surface-1/40 shrink-0 select-none">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border-30 bg-surface-1-40 shrink-0 select-none">
           <div className="flex items-center gap-2">
             <Sparkles size={14} className="text-accent" />
             <span className="text-[12px] font-bold text-text-primary">AI Review Report</span>
@@ -98,7 +98,7 @@ export default function RiskSummaryDialog({ open, report, loading, action, onPro
 
         {/* Tab Selection (only if report has AI summary description) */}
         {report && report.aiSummary && (
-          <div className="flex border-b border-border-20 bg-surface-1/25 px-4 h-9 items-center shrink-0 select-none">
+          <div className="flex border-b border-border-20 bg-surface-1-25 px-4 h-9 items-center shrink-0 select-none">
             <div className="flex gap-1.5 h-full items-center">
               <button
                 onClick={() => setActiveTab("findings")}
@@ -178,7 +178,7 @@ export default function RiskSummaryDialog({ open, report, loading, action, onPro
                         const expanded = expandedCategories.has(category);
 
                         return (
-                          <div key={category} className={`rounded-[4px] border ${sMeta.border} overflow-hidden bg-surface-1/10`}>
+                          <div key={category} className={`rounded-[4px] border ${sMeta.border} overflow-hidden bg-surface-1-10`}>
                             <button
                               type="button"
                               onClick={() => {
@@ -233,8 +233,8 @@ export default function RiskSummaryDialog({ open, report, loading, action, onPro
                 /* Copilot AI Analysis view */
                 <div className="space-y-4 animate-in fade-in duration-200">
                   {/* Avatar Copilot Card */}
-                  <div className="flex gap-3 p-3.5 bg-gradient-to-br from-accent/5 to-surface-1 border border-accent-20 rounded-[4px]">
-                    <div className="h-7 w-7 rounded-full bg-accent/15 border border-accent/20 flex items-center justify-center text-accent shrink-0">
+                  <div className="flex gap-3 p-3.5 bg-gradient-to-br from-accent-5 to-surface-1 border border-accent-20 rounded-[4px]">
+                    <div className="h-7 w-7 rounded-full bg-accent-15 border border-accent-20 flex items-center justify-center text-accent shrink-0">
                       <Sparkles size={13} />
                     </div>
                     <div className="space-y-1">
@@ -256,7 +256,7 @@ export default function RiskSummaryDialog({ open, report, loading, action, onPro
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-border-30 bg-surface-1/40 shrink-0 select-none">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-border-30 bg-surface-1-40 shrink-0 select-none">
           <div className="text-[10px] text-text-muted">
             {!loading && report && !canProceed && (
               <span className="text-[#ff375f] font-semibold flex items-center gap-1">
@@ -277,7 +277,7 @@ export default function RiskSummaryDialog({ open, report, loading, action, onPro
               disabled={loading}
               className={`px-3.5 py-1.5 text-[11px] font-semibold rounded-[4px] transition-all cursor-pointer disabled:opacity-40 shadow-xs ${
                 canProceed
-                  ? "text-white bg-accent hover:bg-accent/90"
+                  ? "text-white bg-accent hover:bg-accent-90"
                   : "text-white bg-[#ff375f] hover:bg-[#ff375f]/90"
               }`}
             >

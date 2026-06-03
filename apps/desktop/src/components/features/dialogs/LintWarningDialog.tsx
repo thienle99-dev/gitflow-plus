@@ -59,7 +59,7 @@ export default function LintWarningDialog({
     <div className="fixed inset-0 bg-[#000000]/65 backdrop-blur-md z-[9998] flex items-center justify-center p-6 animate-in fade-in duration-200">
       <div className="w-full max-w-2xl bg-surface-0 border border-border rounded-mac shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-surface-1/40 shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-surface-1-40 shrink-0">
           <div className="flex items-center gap-2">
             {totalErrors > 0 ? (
               <ShieldAlert size={16} className="text-[#ff453a]" />
@@ -79,7 +79,7 @@ export default function LintWarningDialog({
         </div>
 
         {/* Info Banner */}
-        <div className="px-5 py-3 border-b border-border bg-surface-1/10 flex items-center justify-between shrink-0">
+        <div className="px-5 py-3 border-b border-border bg-surface-1-10 flex items-center justify-between shrink-0">
           <div className="text-2xs text-text-secondary leading-relaxed">
             Found{" "}
             <span className="font-semibold text-[#ff453a]">{totalErrors} errors</span> and{" "}
@@ -116,7 +116,7 @@ export default function LintWarningDialog({
                   </button>
                 )}
               </div>
-              <div className="border border-border bg-surface-1/20 rounded-mac divide-y divide-border overflow-hidden">
+              <div className="border border-border bg-surface-1-20 rounded-mac divide-y divide-border overflow-hidden">
                 {commitErrors.map((error, idx) => (
                   <div key={idx} className="p-3 flex items-start gap-2.5">
                     {error.severity === "error" ? (
@@ -135,7 +135,7 @@ export default function LintWarningDialog({
                       )}
                     </div>
                     {error.autoFixable && (
-                      <span className="text-3xs font-semibold text-accent bg-accent/10 px-1.5 py-0.5 rounded">
+                      <span className="text-3xs font-semibold text-accent bg-accent-10 px-1.5 py-0.5 rounded">
                         Auto-fixable
                       </span>
                     )}
@@ -153,7 +153,7 @@ export default function LintWarningDialog({
                 {Object.entries(groupedDiagnostics).map(([file, diagnostics]) => {
                   const isExpanded = expandedFiles[file] !== false; // Default expanded
                   return (
-                    <div key={file} className="border border-border bg-surface-1/10 rounded-mac overflow-hidden">
+                    <div key={file} className="border border-border bg-surface-1-10 rounded-mac overflow-hidden">
                       <button
                         onClick={() => toggleFile(file)}
                         className="w-full flex items-center justify-between px-3 py-2 bg-surface-2-40 hover:bg-surface-2 border-b border-border text-left"
@@ -208,7 +208,7 @@ export default function LintWarningDialog({
         </div>
 
         {/* Footer actions */}
-        <div className="px-5 py-4 border-t border-border bg-surface-1/40 flex items-center justify-between shrink-0">
+        <div className="px-5 py-4 border-t border-border bg-surface-1-40 flex items-center justify-between shrink-0">
           <button
             type="button"
             onClick={onClose}

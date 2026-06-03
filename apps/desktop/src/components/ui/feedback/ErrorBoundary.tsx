@@ -63,7 +63,7 @@ export default class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-0/90 backdrop-blur-md p-6 select-none animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-0-90 backdrop-blur-md p-6 select-none animate-in fade-in duration-300">
           <div className="w-[520px] bg-surface-1 border border-border shadow-2xl rounded-mac p-6 flex flex-col items-center text-center space-y-5 animate-in zoom-in-95 duration-200">
             {/* Danger Icon with Accent styling */}
             <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-[#ff453a] animate-pulse">

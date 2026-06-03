@@ -1,12 +1,14 @@
 import { useState, useRef, useMemo } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
-import { useGitBranches } from "@/queries/useGitLog";
+import { useGitBranches, useGitSyncStatus } from "@/queries/useGitLog";
 import { useTagList } from "@/queries/useGitTag";
 import { useSubmoduleList } from "@/queries/useSubmoduleList";
 import SubmoduleEntry from "./SubmoduleEntry";
 import { api } from "@/api/tauri";
 import ContextMenu from "@/components/ui/overlay/ContextMenu";
+import { showToast } from "@/lib/toast";
+import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import {
   ChevronRight,
@@ -23,6 +25,8 @@ import {
   GitPullRequest,
   Download,
   ArrowLeftRight,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -36,12 +40,14 @@ export default function Sidebar() {
   const { data: branches } = useGitBranches(repoPath);
   const { data: tags } = useTagList(repoPath);
   const { data: submodules } = useSubmoduleList(repoPath);
+  const { data: syncStatus } = useGitSyncStatus(repoPath);
   const [branchesOpen, setBranchesOpen] = useState(true);
   const [remotesOpen, setRemotesOpen] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
   const [repoMenuOpen, setRepoMenuOpen] = useState(false);
   const [repoSearchQuery, setRepoSearchQuery] = useState("");
   const [branchCtxMenu, setBranchCtxMenu] = useState<{ branch: string; x: number; y: number } | null>(null);
+  const [confirmDeleteBranch, setConfirmDeleteBranch] = useState<string | null>(null);
 
   const openRepo = useRepoStore((s) => s.openRepo);
   const closeRepo = useRepoStore((s) => s.closeRepo);
@@ -98,7 +104,24 @@ export default function Sidebar() {
     }
   };
 
+  const doDeleteBranch = async () => {
+    const branch = confirmDeleteBranch;
+    setConfirmDeleteBranch(null);
+    if (!branch || !repoPath) return;
+    try {
+      await api.branches.delete(repoPath, branch);
+      showToast(`Branch "${branch}" deleted`);
+    } catch (e) {
+      console.error(e);
+      showToast(`Failed to delete branch: ${e}`, "error");
+    }
+  };
+
+  const aheadCount = syncStatus?.ahead || 0;
+  const behindCount = syncStatus?.behind || 0;
+
   return (
+    <>
     <div className="h-full overflow-y-auto py-2 sidebar-panel">
       {/* Repository Selector */}
       <div className="relative px-4 mb-3 flex items-center gap-1.5">
@@ -254,12 +277,13 @@ export default function Sidebar() {
       </div>
 
       {/* Branches */}
-      <SectionHeader 
-        title="Branches" 
-        open={branchesOpen} 
-        onToggle={() => setBranchesOpen(!branchesOpen)} 
+      <SectionHeader
+        title="Branches"
+        open={branchesOpen}
+        onToggle={() => setBranchesOpen(!branchesOpen)}
+        count={localBranches.length}
         action={
-          <button 
+          <button
             className="ghost p-0.5 hover:bg-surface-3 rounded"
             onClick={() => openDialogState("create-branch")}
             title="Create New Branch"
@@ -272,7 +296,7 @@ export default function Sidebar() {
       {branchesOpen && (
         <div className="space-y-[1px]">
           <div
-            className={`tree-item flex items-center gap-2 px-3 py-[3px] mx-1 ${!selectedRef ? "selected" : ""}`}
+            className={`tree-item flex items-center gap-2 px-3 py-[3px] mx-1 rounded-md ${!selectedRef ? "selected" : ""}`}
             onClick={() => selectRef(null)}
           >
             <GitBranch size={12} className={!selectedRef ? "text-accent" : "text-text-secondary"} />
@@ -287,36 +311,41 @@ export default function Sidebar() {
             setBranchCtxMenu={setBranchCtxMenu}
             collapsedFolders={collapsedBranchFolders}
             onToggleFolder={handleToggleBranchFolder}
+            aheadCount={aheadCount}
+            behindCount={behindCount}
           />
         </div>
       )}
+
+      {/* Divider */}
+      <div className="my-2 mx-4 border-t border-border-50" />
 
       {/* Quick actions */}
       <SectionHeader title="Actions" open={true} onToggle={() => {}} />
       <div className="space-y-[1px] px-4 pb-2">
         <button
-          className="tree-item group w-full flex items-center gap-2 px-2 py-[3px]"
+          className="tree-item group w-full flex items-center gap-2 px-2 py-[3px] rounded-md"
           onClick={() => openDialogState("search")}
         >
           <Search size={12} className="text-text-secondary transition-colors group-hover:text-[#0a84ff]" />
           <span className="text-xs text-text-secondary">Search Commits</span>
         </button>
         <button
-          className="tree-item group w-full flex items-center gap-2 px-2 py-[3px]"
+          className="tree-item group w-full flex items-center gap-2 px-2 py-[3px] rounded-md"
           onClick={() => openDialogState("stash")}
         >
           <Archive size={12} className="text-text-secondary transition-colors group-hover:text-[#ff9f0a]" />
           <span className="text-xs text-text-secondary">Stash</span>
         </button>
         <button
-          className="tree-item group w-full flex items-center gap-2 px-2 py-[3px]"
+          className="tree-item group w-full flex items-center gap-2 px-2 py-[3px] rounded-md"
           onClick={() => openDialogState("tag")}
         >
           <Package size={12} className="text-text-secondary transition-colors group-hover:text-[#bf5af2]" />
           <span className="text-xs text-text-secondary">Manage Tags</span>
         </button>
         <button
-          className="tree-item group w-full flex items-center gap-2 px-2 py-[3px]"
+          className="tree-item group w-full flex items-center gap-2 px-2 py-[3px] rounded-md"
           onClick={() => openDialogState("merge-request")}
         >
           <GitPullRequest size={12} className="text-text-secondary transition-colors group-hover:text-[#30d158]" />
@@ -324,10 +353,16 @@ export default function Sidebar() {
         </button>
       </div>
 
-      <div className="my-1 mx-4 border-t border-border" />
+      {/* Divider */}
+      <div className="my-2 mx-4 border-t border-border-50" />
 
       {/* Remotes */}
-      <SectionHeader title="Remotes" open={remotesOpen} onToggle={() => setRemotesOpen(!remotesOpen)} />
+      <SectionHeader
+        title="Remotes"
+        open={remotesOpen}
+        onToggle={() => setRemotesOpen(!remotesOpen)}
+        count={remoteBranches.length}
+      />
       {remotesOpen && (
         <div className="space-y-[1px]">
           <BranchTreeRenderer
@@ -343,15 +378,23 @@ export default function Sidebar() {
         </div>
       )}
 
+      {/* Divider */}
+      <div className="my-2 mx-4 border-t border-border-50" />
+
       {/* Tags */}
-      <SectionHeader title="Tags" open={tagsOpen} onToggle={() => setTagsOpen(!tagsOpen)} />
+      <SectionHeader
+        title="Tags"
+        open={tagsOpen}
+        onToggle={() => setTagsOpen(!tagsOpen)}
+        count={tags?.length || 0}
+      />
       {tagsOpen && (
         <div className="space-y-[1px]">
           {tags && tags.length > 0 ? (
             tags.map((t) => (
               <div
                 key={t.name}
-                className={`tree-item group flex items-center gap-2 px-3 py-[3px] mx-1 cursor-pointer ${selectedRef === t.name ? "selected" : ""}`}
+                className={`tree-item group flex items-center gap-2 px-3 py-[3px] mx-1 rounded-md cursor-pointer ${selectedRef === t.name ? "selected" : ""}`}
                 onClick={() => selectRef(t.name)}
               >
                 <Tag size={12} className={selectedRef === t.name ? "text-accent" : "text-text-secondary transition-colors group-hover:text-[#bf5af2]"} />
@@ -374,21 +417,27 @@ export default function Sidebar() {
 
       {/* Submodules Section */}
       {submodules && submodules.length > 0 && (
-        <div className="px-4 mt-3 space-y-1">
-          <div className="text-xs font-semibold text-text-muted px-2 py-1">
-            Submodules ({submodules.length})
+        <>
+          <div className="my-2 mx-4 border-t border-border-50" />
+          <div className="px-4 mt-2 space-y-1">
+            <div className="flex items-center justify-between px-2 py-1">
+              <span className="text-xs font-medium text-text-muted uppercase tracking-wider">Submodules</span>
+              <span className="rounded-full bg-surface-3 px-1.5 py-0.5 text-[9px] font-semibold text-text-muted tabular-nums">
+                {submodules.length}
+              </span>
+            </div>
+            {submodules.map((sub) => (
+              <SubmoduleEntry
+                key={sub.path}
+                submodule={sub}
+                isSelected={selectedFile === sub.path}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                }}
+              />
+            ))}
           </div>
-          {submodules.map((sub) => (
-            <SubmoduleEntry
-              key={sub.path}
-              submodule={sub}
-              isSelected={selectedFile === sub.path}
-              onContextMenu={(e) => {
-                e.preventDefault();
-              }}
-            />
-          ))}
-        </div>
+        </>
       )}
 
       {branchCtxMenu && (
@@ -422,9 +471,7 @@ export default function Sidebar() {
               label: "Delete branch…",
               icon: <Trash2 size={12} />,
               action: () => {
-                if (confirm(`Delete branch "${branchCtxMenu.branch}"?`)) {
-                  api.branches.delete(repoPath, branchCtxMenu.branch).catch(console.error);
-                }
+                setConfirmDeleteBranch(branchCtxMenu.branch);
               },
             },
           ]}
@@ -432,6 +479,18 @@ export default function Sidebar() {
         />
       )}
     </div>
+
+    <ConfirmDialog
+      open={!!confirmDeleteBranch}
+      title="Delete Branch"
+      message={`Delete branch "${confirmDeleteBranch}"?`}
+      confirmLabel="Delete"
+      cancelLabel="Cancel"
+      variant="destructive"
+      onConfirm={doDeleteBranch}
+      onCancel={() => setConfirmDeleteBranch(null)}
+    />
+    </>
   );
 }
 
@@ -492,6 +551,19 @@ function buildBranchTree(branches: Array<{ name: string; current: boolean; remot
   return root;
 }
 
+/** Count the total branch leaves inside a folder node recursively. */
+function countBranchLeaves(node: BranchFolderNode): number {
+  let count = 0;
+  for (const child of Object.values(node.children)) {
+    if (child.type === "branch") {
+      count++;
+    } else {
+      count += countBranchLeaves(child);
+    }
+  }
+  return count;
+}
+
 interface BranchTreeRendererProps {
   node: BranchFolderNode;
   depth: number;
@@ -501,6 +573,8 @@ interface BranchTreeRendererProps {
   setBranchCtxMenu: (menu: { branch: string; x: number; y: number } | null) => void;
   collapsedFolders: Set<string>;
   onToggleFolder: (path: string) => void;
+  aheadCount?: number;
+  behindCount?: number;
 }
 
 function BranchTreeRenderer({
@@ -512,6 +586,8 @@ function BranchTreeRenderer({
   setBranchCtxMenu,
   collapsedFolders,
   onToggleFolder,
+  aheadCount = 0,
+  behindCount = 0,
 }: BranchTreeRendererProps) {
   const sortedKeys = Object.keys(node.children).sort((a, b) => {
     const childA = node.children[a];
@@ -528,10 +604,11 @@ function BranchTreeRenderer({
         const child = node.children[key];
         if (child.type === "folder") {
           const isCollapsed = collapsedFolders.has(child.path);
+          const branchCount = countBranchLeaves(child);
           return (
             <div key={child.path}>
               <div
-                className="tree-item group w-full flex items-center gap-1.5 px-3 py-1 hover:bg-surface-2 cursor-pointer text-left select-none text-xs text-text-secondary"
+                className="tree-item group w-full flex items-center gap-1.5 px-3 py-1 hover:bg-surface-2-60 cursor-pointer text-left select-none text-xs text-text-secondary rounded-md mx-1"
                 style={{ paddingLeft: `${depth * 16 + 12}px` }}
                 onClick={() => onToggleFolder(child.path)}
               >
@@ -549,6 +626,9 @@ function BranchTreeRenderer({
                 </span>
                 <Folder size={12} className="text-text-muted opacity-75 shrink-0" />
                 <span className="truncate font-semibold text-text-primary flex-1">{child.name}</span>
+                <span className="inline-flex h-4 min-w-5 shrink-0 items-center justify-center rounded-full border border-border-30 bg-surface-2-40 px-1.5 text-[9px] font-semibold leading-none text-text-secondary tabular-nums">
+                  {branchCount}
+                </span>
               </div>
               {!isCollapsed && (
                 <BranchTreeRenderer
@@ -560,6 +640,8 @@ function BranchTreeRenderer({
                   setBranchCtxMenu={setBranchCtxMenu}
                   collapsedFolders={collapsedFolders}
                   onToggleFolder={onToggleFolder}
+                  aheadCount={aheadCount}
+                  behindCount={behindCount}
                 />
               )}
             </div>
@@ -572,7 +654,7 @@ function BranchTreeRenderer({
               style={{ paddingLeft: `${depth * 16}px` }}
             >
               <div
-                className={`tree-item flex items-center gap-2 px-3 py-[3px] mx-1 ${isSelected ? "selected" : ""}`}
+                className={`tree-item flex items-center gap-2 px-3 py-[3px] mx-1 rounded-md ${isSelected ? "selected" : ""}`}
                 onClick={() => selectRef(child.fullName)}
                 onDoubleClick={() => handleCheckout(child.fullName)}
                 onContextMenu={(e) => {
@@ -586,6 +668,19 @@ function BranchTreeRenderer({
                 <span className={`min-w-0 flex-1 truncate text-xs ${child.current ? "font-semibold text-text-primary" : "text-text-secondary"}`}>
                   {child.name}
                 </span>
+                {/* Ahead/behind indicators on current branch */}
+                {child.current && aheadCount > 0 && (
+                  <span className="shrink-0 flex items-center gap-0.5 rounded bg-accent-10 px-1 py-0.5 text-[9px] font-bold text-accent" title={`${aheadCount} ahead`}>
+                    <ArrowUp size={8} />
+                    {aheadCount}
+                  </span>
+                )}
+                {child.current && behindCount > 0 && (
+                  <span className="shrink-0 flex items-center gap-0.5 rounded bg-[#ff9f0a]/15 px-1 py-0.5 text-[9px] font-bold text-[#ff9f0a]" title={`${behindCount} behind`}>
+                    <ArrowDown size={8} />
+                    {behindCount}
+                  </span>
+                )}
                 {child.current && (
                   <span className="shrink-0 rounded bg-[#30d158]/10 px-1 py-0.5 text-[9px] font-bold text-[#30d158] border border-[#30d158]/20">
                     HEAD
@@ -605,15 +700,17 @@ function SectionHeader({
   open,
   onToggle,
   action,
+  count,
 }: {
   title: string;
   open: boolean;
   onToggle: () => void;
   action?: React.ReactNode;
+  count?: number;
 }) {
   return (
     <div
-      className="flex items-center justify-between px-4 py-1.5 cursor-pointer hover:bg-surface-2 select-none group"
+      className="flex items-center justify-between px-4 py-1.5 cursor-pointer hover:bg-surface-2-40 select-none group"
       onClick={onToggle}
     >
       <div className="flex items-center gap-1">
@@ -624,6 +721,11 @@ function SectionHeader({
         <span className="text-xs font-medium text-text-muted uppercase tracking-wider">
           {title}
         </span>
+        {count !== undefined && count > 0 && (
+          <span className="ml-1 inline-flex h-4 min-w-5 items-center justify-center rounded-full border border-border-30 bg-surface-2-40 px-1.5 text-[9px] font-semibold leading-none text-text-secondary tabular-nums">
+            {count}
+          </span>
+        )}
       </div>
       {action && (
         <div onClick={(e) => e.stopPropagation()} className="opacity-0 group-hover:opacity-100 transition-opacity">

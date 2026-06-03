@@ -953,10 +953,30 @@ button.ghost:active {
 .border-border-40 {
   border-color: color-mix(in srgb, var(--border) 40%, transparent) !important;
 }
+.border-border-50 {
+  border-color: color-mix(in srgb, var(--border) 50%, transparent) !important;
+}
+
+.bg-border-40 {
+  background-color: color-mix(in srgb, var(--border) 40%, transparent) !important;
+}
+.bg-border-50 {
+  background-color: color-mix(in srgb, var(--border) 50%, transparent) !important;
+}
+.bg-border-60 {
+  background-color: color-mix(in srgb, var(--border) 60%, transparent) !important;
+}
 
 /* Theme variable opacity overrides (HEX workaround) */
+.text-accent-60 {
+  color: color-mix(in srgb, var(--accent) 60%, transparent) !important;
+}
+
 .bg-accent-5 {
   background-color: color-mix(in srgb, var(--accent) 5%, transparent) !important;
+}
+.bg-accent-8 {
+  background-color: color-mix(in srgb, var(--accent) 8%, transparent) !important;
 }
 .bg-accent-10 {
   background-color: color-mix(in srgb, var(--accent) 10%, transparent) !important;
@@ -970,7 +990,22 @@ button.ghost:active {
 .bg-accent-30 {
   background-color: color-mix(in srgb, var(--accent) 30%, transparent) !important;
 }
+.bg-accent-40 {
+  background-color: color-mix(in srgb, var(--accent) 40%, transparent) !important;
+}
 
+.from-accent-5 {
+  --tw-gradient-from: color-mix(in srgb, var(--accent) 5%, transparent) var(--tw-gradient-from-position);
+  --tw-gradient-to: color-mix(in srgb, var(--accent) 0%, transparent) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.hover\:bg-accent-5:hover {
+  background-color: color-mix(in srgb, var(--accent) 5%, transparent) !important;
+}
+.hover\:bg-accent-10:hover {
+  background-color: color-mix(in srgb, var(--accent) 10%, transparent) !important;
+}
 .hover\:bg-accent-15:hover {
   background-color: color-mix(in srgb, var(--accent) 15%, transparent) !important;
 }
@@ -980,6 +1015,15 @@ button.ghost:active {
 .hover\:bg-accent-30:hover {
   background-color: color-mix(in srgb, var(--accent) 30%, transparent) !important;
 }
+.hover\:bg-accent-80:hover {
+  background-color: color-mix(in srgb, var(--accent) 80%, transparent) !important;
+}
+.hover\:bg-accent-90:hover {
+  background-color: color-mix(in srgb, var(--accent) 90%, transparent) !important;
+}
+.group:hover .group-hover\:bg-accent-15 {
+  background-color: color-mix(in srgb, var(--accent) 15%, transparent) !important;
+}
 
 .border-accent-20 {
   border-color: color-mix(in srgb, var(--accent) 20%, transparent) !important;
@@ -987,11 +1031,94 @@ button.ghost:active {
 .border-accent-30 {
   border-color: color-mix(in srgb, var(--accent) 30%, transparent) !important;
 }
+.border-accent-35 {
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent) !important;
+}
 .border-accent-40 {
   border-color: color-mix(in srgb, var(--accent) 40%, transparent) !important;
 }
 .border-accent-60 {
   border-color: color-mix(in srgb, var(--accent) 60%, transparent) !important;
+}
+.hover\:border-accent-20:hover {
+  border-color: color-mix(in srgb, var(--accent) 20%, transparent) !important;
+}
+.hover\:border-accent-40:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent) !important;
+}
+.hover\:border-border-40:hover {
+  border-color: color-mix(in srgb, var(--border) 40%, transparent) !important;
+}
+
+.ring-accent-15 {
+  --tw-ring-color: color-mix(in srgb, var(--accent) 15%, transparent) !important;
+}
+.focus-within\:ring-accent-15:focus-within {
+  --tw-ring-color: color-mix(in srgb, var(--accent) 15%, transparent) !important;
+}
+.focus\:ring-accent-20:focus {
+  --tw-ring-color: color-mix(in srgb, var(--accent) 20%, transparent) !important;
+}
+
+.shadow-accent-10 {
+  --tw-shadow-color: color-mix(in srgb, var(--accent) 10%, transparent) !important;
+  --tw-shadow: var(--tw-shadow-colored) !important;
+}
+.shadow-accent-15 {
+  --tw-shadow-color: color-mix(in srgb, var(--accent) 15%, transparent) !important;
+  --tw-shadow: var(--tw-shadow-colored) !important;
+}
+.shadow-accent-20 {
+  --tw-shadow-color: color-mix(in srgb, var(--accent) 20%, transparent) !important;
+  --tw-shadow: var(--tw-shadow-colored) !important;
+}
+
+.bg-accent-fg-10 {
+  background-color: color-mix(in srgb, var(--accent-fg) 10%, transparent) !important;
+}
+.hover\:bg-accent-fg-10:hover {
+  background-color: color-mix(in srgb, var(--accent-fg) 10%, transparent) !important;
+}
+.hover\:bg-accent-fg-20:hover {
+  background-color: color-mix(in srgb, var(--accent-fg) 20%, transparent) !important;
+}
+.border-accent-fg-40 {
+  border-color: color-mix(in srgb, var(--accent-fg) 40%, transparent) !important;
+}
+
+.text-text-muted-30 {
+  color: color-mix(in srgb, var(--text-muted) 30%, transparent) !important;
+}
+.text-text-muted-40 {
+  color: color-mix(in srgb, var(--text-muted) 40%, transparent) !important;
+}
+.text-text-muted-50 {
+  color: color-mix(in srgb, var(--text-muted) 50%, transparent) !important;
+}
+.text-text-muted-60 {
+  color: color-mix(in srgb, var(--text-muted) 60%, transparent) !important;
+}
+.text-text-muted-70 {
+  color: color-mix(in srgb, var(--text-muted) 70%, transparent) !important;
+}
+.text-text-muted-80 {
+  color: color-mix(in srgb, var(--text-muted) 80%, transparent) !important;
+}
+.placeholder\:text-text-muted-60::placeholder {
+  color: color-mix(in srgb, var(--text-muted) 60%, transparent) !important;
+}
+.group:hover .group-hover\:border-text-muted-40 {
+  border-color: color-mix(in srgb, var(--text-muted) 40%, transparent) !important;
+}
+.bg-text-muted-40 {
+  background-color: color-mix(in srgb, var(--text-muted) 40%, transparent) !important;
+}
+
+.bg-surface-0-60 {
+  background-color: color-mix(in srgb, var(--surface-0) 60%, transparent) !important;
+}
+.bg-surface-0-90 {
+  background-color: color-mix(in srgb, var(--surface-0) 90%, transparent) !important;
 }
 
 .bg-surface-1-10 {
@@ -1000,14 +1127,29 @@ button.ghost:active {
 .bg-surface-1-20 {
   background-color: color-mix(in srgb, var(--surface-1) 20%, transparent) !important;
 }
+.bg-surface-1-25 {
+  background-color: color-mix(in srgb, var(--surface-1) 25%, transparent) !important;
+}
 .bg-surface-1-30 {
   background-color: color-mix(in srgb, var(--surface-1) 30%, transparent) !important;
 }
 .bg-surface-1-40 {
   background-color: color-mix(in srgb, var(--surface-1) 40%, transparent) !important;
 }
+.bg-surface-1-50 {
+  background-color: color-mix(in srgb, var(--surface-1) 50%, transparent) !important;
+}
+.bg-surface-1-55 {
+  background-color: color-mix(in srgb, var(--surface-1) 55%, transparent) !important;
+}
+.bg-surface-1-60 {
+  background-color: color-mix(in srgb, var(--surface-1) 60%, transparent) !important;
+}
 .bg-surface-1-70 {
   background-color: color-mix(in srgb, var(--surface-1) 70%, transparent) !important;
+}
+.bg-surface-1-95 {
+  background-color: color-mix(in srgb, var(--surface-1) 95%, transparent) !important;
 }
 
 .hover\:bg-surface-1-70:hover {
@@ -1016,7 +1158,13 @@ button.ghost:active {
 .hover\:bg-surface-1-30:hover {
   background-color: color-mix(in srgb, var(--surface-1) 30%, transparent) !important;
 }
+.hover\:bg-surface-1-50:hover {
+  background-color: color-mix(in srgb, var(--surface-1) 50%, transparent) !important;
+}
 
+.bg-surface-2-20 {
+  background-color: color-mix(in srgb, var(--surface-2) 20%, transparent) !important;
+}
 .bg-surface-2-30 {
   background-color: color-mix(in srgb, var(--surface-2) 30%, transparent) !important;
 }
@@ -1029,18 +1177,43 @@ button.ghost:active {
 .bg-surface-2-60 {
   background-color: color-mix(in srgb, var(--surface-2) 60%, transparent) !important;
 }
+.bg-surface-2-70 {
+  background-color: color-mix(in srgb, var(--surface-2) 70%, transparent) !important;
+}
+.bg-surface-2-80 {
+  background-color: color-mix(in srgb, var(--surface-2) 80%, transparent) !important;
+}
+
+.bg-surface-3-60 {
+  background-color: color-mix(in srgb, var(--surface-3) 60%, transparent) !important;
+}
 
 .hover\:bg-surface-2:hover {
   background-color: var(--surface-2) !important;
 }
-.hover\:bg-surface-2-50:hover {
-  background-color: color-mix(in srgb, var(--surface-2) 50%, transparent) !important;
-}
 .hover\:bg-surface-2-40:hover {
   background-color: color-mix(in srgb, var(--surface-2) 40%, transparent) !important;
 }
+.hover\:bg-surface-2-30:hover {
+  background-color: color-mix(in srgb, var(--surface-2) 30%, transparent) !important;
+}
+.hover\:bg-surface-2-50:hover {
+  background-color: color-mix(in srgb, var(--surface-2) 50%, transparent) !important;
+}
+.hover\:bg-surface-2-60:hover {
+  background-color: color-mix(in srgb, var(--surface-2) 60%, transparent) !important;
+}
+.hover\:bg-surface-2-70:hover {
+  background-color: color-mix(in srgb, var(--surface-2) 70%, transparent) !important;
+}
+.hover\:bg-surface-2-80:hover {
+  background-color: color-mix(in srgb, var(--surface-2) 80%, transparent) !important;
+}
 
 .focus-within\:border-accent-60:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent) !important;
+}
+.focus\:border-accent-60:focus {
   border-color: color-mix(in srgb, var(--accent) 60%, transparent) !important;
 }
 .focus-within\:ring-accent-15:focus-within {

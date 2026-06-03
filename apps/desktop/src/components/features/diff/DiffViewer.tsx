@@ -4,6 +4,8 @@ import { useRepoStore } from "@/stores/repo";
 import { api } from "@/api/tauri";
 import { useAIDiffReview, useAIInlineComments } from "@/queries/useAI";
 import { Sparkles, RefreshCw, MessageSquare } from "lucide-react";
+import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
+import AIMarkdown from "@/components/ui/feedback/AIMarkdown";
 import { EditorView, basicSetup } from "codemirror";
 import { EditorState, RangeSetBuilder, StateField } from "@codemirror/state";
 import { keymap, Decoration, type DecorationSet, WidgetType } from "@codemirror/view";
@@ -47,35 +49,6 @@ function getLang(ext: string) {
   return LANG_MAP[ext] || javascript();
 }
 
-function reviewCategoryMeta(category: string) {
-  switch (category.toUpperCase()) {
-    case "BUG":
-      return { label: "Bug", className: "border-[#ff375f] bg-[#ff375f]/10 text-[#ff375f]" };
-    case "SECURITY":
-      return { label: "Security", className: "border-[#ff6b35] bg-[#ff6b35]/10 text-[#ff6b35]" };
-    case "PERF":
-      return { label: "Perf", className: "border-[#ffcc00] bg-[#ffcc00]/10 text-[#ffcc00]" };
-    case "STYLE":
-      return { label: "Style", className: "border-[#0a84ff] bg-[#0a84ff]/10 text-[#0a84ff]" };
-    case "BEST-PRACTICE":
-      return { label: "Best Practice", className: "border-[#bf5af2] bg-[#bf5af2]/10 text-[#bf5af2]" };
-    case "LINTER":
-      return { label: "Linter", className: "border-[#64d2ff] bg-[#64d2ff]/10 text-[#64d2ff]" };
-    case "TEST":
-      return { label: "Test", className: "border-[#30d158] bg-[#30d158]/10 text-[#30d158]" };
-    case "A11Y":
-      return { label: "A11y", className: "border-[#ff9f0a] bg-[#ff9f0a]/10 text-[#ff9f0a]" };
-    case "UX":
-      return { label: "UX", className: "border-[#ff2d55] bg-[#ff2d55]/10 text-[#ff2d55]" };
-    default:
-      return { label: category, className: "border-accent bg-accent/10 text-accent" };
-  }
-}
-
-function matchReviewCategory(line: string) {
-  return line.match(/^\s*(?:#{1,6}\s*)?(?:[-*]\s*)?(?:\*\*)?\[(BUG|SECURITY|PERF|STYLE|BEST-PRACTICE|LINTER|TEST|A11Y|UX)\](?:\*\*)?\s*(.*)$/i);
-}
-
 interface DiffViewerProps {
   diff: string;
   filePath: string;
@@ -96,6 +69,8 @@ export default function DiffViewer({
   const appTheme = useRepoStore((s) => s.theme);
   const [applying, setApplying] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDiscardHunk, setConfirmDiscardHunk] = useState<{ hunk: DiffHunk; index: number } | null>(null);
+  const [confirmDiscardLine, setConfirmDiscardLine] = useState<{ hunk: DiffHunk; lineIndex: number } | null>(null);
 
   const [showReview, setShowReview] = useState(false);
   const [reviewResult, setReviewResult] = useState<string>("");
@@ -213,14 +188,49 @@ export default function DiffViewer({
   const patchPrefix = useMemo(() => getPatchPrefix(diff), [diff]);
   const canPatch = source === "working" || source === "staged";
 
+  const doDiscardHunk = async (hunk: DiffHunk, index: number) => {
+    setConfirmDiscardHunk(null);
+    if (!repoPath) return;
+    setApplying(index);
+    setError(null);
+    try {
+      await api.diff.applyHunk(repoPath, buildHunkPatch(patchPrefix, hunk), "discard");
+      onPatchApplied?.();
+    } catch (e: any) {
+      setError(String(e));
+    } finally {
+      setApplying(null);
+    }
+  };
+
   const applyHunk = async (hunk: DiffHunk, index: number, action: "stage" | "unstage" | "discard") => {
     if (!repoPath) return;
-    if (action === "discard" && !confirm("Discard this hunk from the working tree?")) return;
+    if (action === "discard") {
+      setConfirmDiscardHunk({ hunk, index });
+      return;
+    }
 
     setApplying(index);
     setError(null);
     try {
       await api.diff.applyHunk(repoPath, buildHunkPatch(patchPrefix, hunk), action);
+      onPatchApplied?.();
+    } catch (e: any) {
+      setError(String(e));
+    } finally {
+      setApplying(null);
+    }
+  };
+
+  const doDiscardLine = async (hunk: DiffHunk, lineIndex: number) => {
+    setConfirmDiscardLine(null);
+    if (!repoPath) return;
+    setApplying(lineIndex);
+    setError(null);
+    try {
+      const line = hunk.lines[lineIndex];
+      const patch = buildSingleLinePatch(patchPrefix, hunk, line);
+      await api.diff.applyHunk(repoPath, patch, "discard");
       onPatchApplied?.();
     } catch (e: any) {
       setError(String(e));
@@ -236,7 +246,10 @@ export default function DiffViewer({
     action: "stage" | "unstage" | "discard",
   ) => {
     if (!repoPath) return;
-    if (action === "discard" && !confirm("Discard this line from the working tree?")) return;
+    if (action === "discard") {
+      setConfirmDiscardLine({ hunk, lineIndex });
+      return;
+    }
 
     setApplying(lineIndex);
     setError(null);
@@ -389,9 +402,10 @@ export default function DiffViewer({
   }, [diffViewMode, oldContent, newContent]);
 
   return (
+    <>
     <div className="flex-1 flex overflow-hidden bg-surface-0">
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="border-b border-border px-3 py-1 text-2xs text-text-muted flex items-center gap-3 bg-surface-1/40 shrink-0">
+        <div className="border-b border-border px-3 py-1 text-2xs text-text-muted flex items-center gap-3 bg-surface-1-40 shrink-0">
           <span>{filePath}</span>
           <span className="text-[#ff375f]">-{deletedCount}</span>
           <span className="text-[#30d158]">+{addedCount}</span>
@@ -563,54 +577,31 @@ export default function DiffViewer({
                 </button>
               </div>
             ) : (
-              <div className="space-y-4">
-                <div className="prose prose-invert max-w-none text-xs leading-relaxed space-y-3 text-text-primary">
-                  {reviewResult.split("\n").map((line, idx) => {
-                    const cleanLine = line.trim();
-                    const categoryMatch = matchReviewCategory(cleanLine);
-                    if (categoryMatch) {
-                      const meta = reviewCategoryMeta(categoryMatch[1]);
-                      return (
-                        <div key={idx} className={`rounded-mac border-l-2 px-2.5 py-1.5 ${meta.className}`}>
-                          <span className="mr-2 inline-flex rounded bg-current/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
-                            {meta.label}
-                          </span>
-                          <span className="text-text-secondary">{categoryMatch[2]}</span>
-                        </div>
-                      );
-                    }
-                    if (cleanLine.startsWith("# ")) {
-                      return <h3 key={idx} className="text-sm font-bold text-text-primary pt-2 border-b border-border pb-1">{cleanLine.slice(2)}</h3>;
-                    }
-                    if (cleanLine.startsWith("## ")) {
-                      return <h4 key={idx} className="text-xs font-bold text-accent pt-1">{cleanLine.slice(3)}</h4>;
-                    }
-                    if (cleanLine.startsWith("### ")) {
-                      return <h5 key={idx} className="text-xs font-bold text-text-primary">{cleanLine.slice(4)}</h5>;
-                    }
-                    if (cleanLine.startsWith("- ") || cleanLine.startsWith("* ")) {
-                      return <li key={idx} className="ml-4 list-disc text-text-secondary">{cleanLine.slice(2)}</li>;
-                    }
-                    if (cleanLine.startsWith("1. ")) {
-                      return <li key={idx} className="ml-4 list-decimal text-text-secondary">{cleanLine.slice(3)}</li>;
-                    }
-                    if (line.includes("**")) {
-                      const parts = line.split("**");
-                      return (
-                        <p key={idx} className="text-text-secondary">
-                          {parts.map((part, pIdx) => pIdx % 2 === 1 ? <strong key={pIdx} className="text-text-primary font-semibold">{part}</strong> : part)}
-                        </p>
-                      );
-                    }
-                    return line ? <p key={idx} className="text-text-secondary">{line}</p> : <div key={idx} className="h-2" />;
-                  })}
-                </div>
-              </div>
+              <AIMarkdown content={reviewResult} />
             )}
           </div>
         </div>
       )}
     </div>
+    <ConfirmDialog
+      open={!!confirmDiscardHunk}
+      title="Discard Hunk"
+      message="Discard this hunk from the working tree?"
+      confirmLabel="Discard"
+      variant="destructive"
+      onConfirm={() => confirmDiscardHunk && doDiscardHunk(confirmDiscardHunk.hunk, confirmDiscardHunk.index)}
+      onCancel={() => setConfirmDiscardHunk(null)}
+    />
+    <ConfirmDialog
+      open={!!confirmDiscardLine}
+      title="Discard Line"
+      message="Discard this line from the working tree?"
+      confirmLabel="Discard"
+      variant="destructive"
+      onConfirm={() => confirmDiscardLine && doDiscardLine(confirmDiscardLine.hunk, confirmDiscardLine.lineIndex)}
+      onCancel={() => setConfirmDiscardLine(null)}
+    />
+    </>
   );
 }
 

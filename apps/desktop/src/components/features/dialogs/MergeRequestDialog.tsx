@@ -455,7 +455,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                 ? "border-[#ff9f0a]/25 bg-[#ff9f0a]/10 text-text-primary"
                 : isPositive
                   ? "border-[#30d158]/25 bg-[#30d158]/10 text-text-primary"
-                  : "border-border-40 bg-surface-0/60 text-text-secondary"
+                  : "border-border-40 bg-surface-0-60 text-text-secondary"
             }`}
           >
             <span className="mr-1 text-text-muted">•</span>
@@ -567,7 +567,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
         </div>
 
         {/* Tab Filters */}
-        <div className="px-2 py-1.5 border-b border-border-60 bg-surface-1/40 flex items-center gap-1 shrink-0">
+        <div className="px-2 py-1.5 border-b border-border-60 bg-surface-1-40 flex items-center gap-1 shrink-0">
           {(["open", "merged", "closed"] as const).map((tab) => (
             <button
               key={tab}
@@ -643,7 +643,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                   className={`w-full p-2.5 rounded-mac border text-left flex flex-col gap-1 transition-all cursor-pointer ${
                     isSelected
                       ? "bg-accent-10 border-accent-30 shadow-2xs"
-                      : "bg-surface-1/40 hover:bg-surface-2 border-transparent"
+                      : "bg-surface-1-40 hover:bg-surface-2 border-transparent"
                   }`}
                   style={{
                     borderLeftWidth: "3px",
@@ -694,7 +694,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                             ? "bg-[#ff453a]"
                             : mr.pipelineStatus === "running"
                             ? "bg-[#0a84ff] animate-pulse"
-                            : "bg-text-muted/40"
+                            : "bg-text-muted-40"
                         }`}
                         title={`Pipeline: ${mr.pipelineStatus}`}
                       />
@@ -710,7 +710,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
       {/* Main Panel - MR Details */}
       <div className="flex-1 min-w-0 flex flex-col h-full bg-surface-0 overflow-hidden">
         {/* Header */}
-        <div className="px-4 py-3 border-b border-border-60 flex items-center justify-between shrink-0 bg-surface-1/10">
+        <div className="px-4 py-3 border-b border-border-60 flex items-center justify-between shrink-0 bg-surface-1-10">
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-text-secondary">MR Details</span>
             {selectedMr && (
@@ -769,7 +769,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
               </div>
 
               {/* Branch Connection Card */}
-              <div className="flex flex-row items-center justify-between gap-3 p-3 bg-surface-1/40 border border-border-40 rounded-mac">
+              <div className="flex flex-row items-center justify-between gap-3 p-3 bg-surface-1-40 border border-border-40 rounded-mac">
                 <div className="min-w-0 flex items-center gap-2 text-xs flex-1 overflow-hidden">
                   <GitBranch size={13} className="text-accent shrink-0" />
                   <span className="min-w-0 max-w-[50%] truncate font-mono font-semibold bg-[#30d158]/10 text-[#30d158] px-1.5 py-0.5 rounded-[4px] border border-[#30d158]/20">
@@ -865,7 +865,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                 </div>
 
                 {loadingFiles ? (
-                  <div className="flex items-center gap-2 rounded-mac border border-border-40 bg-surface-1/20 p-3 text-2xs text-text-muted">
+                  <div className="flex items-center gap-2 rounded-mac border border-border-40 bg-surface-1-20 p-3 text-2xs text-text-muted">
                     <Loader2 size={12} className="animate-spin text-accent" />
                     <span>Loading changed files...</span>
                   </div>
@@ -874,11 +874,11 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                     {filesError}
                   </div>
                 ) : changedFiles.length === 0 ? (
-                  <div className="rounded-mac border border-border-40 bg-surface-1/20 p-3 text-2xs text-text-muted">
+                  <div className="rounded-mac border border-border-40 bg-surface-1-20 p-3 text-2xs text-text-muted">
                     No changed files returned by the provider.
                   </div>
                 ) : (
-                  <div className="rounded-mac border border-border-40 bg-surface-1/20 min-w-0">
+                  <div className="rounded-mac border border-border-40 bg-surface-1-20 min-w-0">
                     <div className="max-h-[190px] overflow-y-auto">
                       {changedFiles.map((file) => {
                         const isFileSelected =
@@ -895,7 +895,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                             className={`flex w-full items-center justify-between gap-2 border-b border-border-40 px-3 py-2 text-left last:border-b-0 transition-colors ${
                               isFileSelected
                                 ? "bg-accent-10"
-                                : "hover:bg-surface-2/70"
+                                : "hover:bg-surface-2-70"
                             } ${fileHasFindings ? "border-l-2 border-l-[#ff9f0a]" : ""}`}
                             title={file.oldPath ? `${file.oldPath} -> ${file.path}` : file.path}
                           >
@@ -954,7 +954,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                     </div>
 
                     {selectedChangedFile && (
-                      <div className="border-t border-border-40 bg-surface-0/60">
+                      <div className="border-t border-border-40 bg-surface-0-60">
                         <div className="flex items-center justify-between gap-2 border-b border-border-40 px-2.5 py-2">
                           <div className="min-w-0 flex items-center gap-2">
                             <span className="shrink-0 rounded bg-surface-3 px-1.5 py-0.5 text-[9px] font-bold text-text-muted uppercase font-mono">
@@ -1021,7 +1021,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                               parsedHunks.map((hunk, hunkIdx) => (
                                 <div key={hunkIdx}>
                                   {/* Hunk header separator */}
-                                  <div className="flex items-center gap-2 bg-surface-2/30 border-y border-border-40/40 px-3 py-1 text-[10px] text-text-muted">
+                                  <div className="flex items-center gap-2 bg-surface-2-30 border-y border-border-30 px-3 py-1 text-[10px] text-text-muted">
                                     <span className="font-mono text-accent">{hunk.header.match(/@@ .+ @@/)?.[0] || hunk.header}</span>
                                   </div>
                                   {/* Hunk lines with line numbers */}
@@ -1037,16 +1037,16 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                                       }`}
                                     >
                                       {/* Old line number */}
-                                      <span className="w-10 shrink-0 text-right pr-2 text-text-muted/40 select-none border-r border-border-40/20">
+                                      <span className="w-10 shrink-0 text-right pr-2 text-text-muted-40 select-none border-r border-border-20">
                                         {dLine.oldLineNumber ?? ""}
                                       </span>
                                       {/* New line number */}
-                                      <span className="w-10 shrink-0 text-right pr-2 text-text-muted/40 select-none border-r border-border-40/20">
+                                      <span className="w-10 shrink-0 text-right pr-2 text-text-muted-40 select-none border-r border-border-20">
                                         {dLine.newLineNumber ?? ""}
                                       </span>
                                       {/* Diff type indicator */}
                                       <span className={`w-5 shrink-0 text-center select-none ${
-                                        dLine.type === "add" ? "text-[#30d158]" : dLine.type === "delete" ? "text-[#ff453a]" : "text-text-muted/30"
+                                        dLine.type === "add" ? "text-[#30d158]" : dLine.type === "delete" ? "text-[#ff453a]" : "text-text-muted-30"
                                       }`}>
                                         {dLine.type === "add" ? "+" : dLine.type === "delete" ? "-" : " "}
                                       </span>
@@ -1095,7 +1095,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                 )}
                 {aiPanelKind && (
                   <div className="overflow-hidden rounded-mac border border-accent-30 bg-surface-1 select-text">
-                    <div className="flex items-center justify-between gap-2 border-b border-border-40 bg-surface-2/70 px-3 py-2">
+                    <div className="flex items-center justify-between gap-2 border-b border-border-40 bg-surface-2-70 px-3 py-2">
                       <div className="flex items-center gap-2">
                         <div className="flex h-7 w-7 items-center justify-center rounded-mac bg-accent-10 text-accent">
                           {aiPanelKind === "review" ? (
@@ -1144,7 +1144,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                     <MessageSquareText size={10} className="text-accent" />
                     Description
                   </h4>
-                  <div className="text-2xs text-text-secondary leading-relaxed bg-surface-1/20 border border-border-40 rounded-mac p-3 max-h-[120px] overflow-y-auto font-normal break-words whitespace-pre-line">
+                  <div className="text-2xs text-text-secondary leading-relaxed bg-surface-1-20 border border-border-40 rounded-mac p-3 max-h-[120px] overflow-y-auto font-normal break-words whitespace-pre-line">
                     {selectedMr.description}
                   </div>
                 </div>
@@ -1159,7 +1159,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                 
                 {/* GitLab Pipeline Info */}
                 {remoteInfo?.provider === "gitlab" && (
-                  <div className="flex items-center gap-2 p-2.5 bg-surface-1/20 border border-border-40 rounded-mac">
+                  <div className="flex items-center gap-2 p-2.5 bg-surface-1-20 border border-border-40 rounded-mac">
                     {selectedMr.pipelineStatus === "success" ? (
                       <CheckCircle2 size={14} className="text-[#30d158]" />
                     ) : selectedMr.pipelineStatus === "failed" ? (

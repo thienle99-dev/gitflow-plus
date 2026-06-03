@@ -76,8 +76,8 @@ function reviewCategoryMeta(category: string) {
       return {
         label: category,
         border: "border-accent",
-        bg: "bg-accent/8",
-        badge: "bg-accent/20 text-accent",
+        bg: "bg-accent-8",
+        badge: "bg-accent-20 text-accent",
       };
   }
 }
@@ -188,13 +188,13 @@ export default function AIMarkdown({ content, className }: AIMarkdownProps) {
   const flushCodeBlock = () => {
     if (codeLines.length > 0) {
       elements.push(
-        <div key={`cb${key++}`} className="my-2 rounded-lg overflow-hidden border border-border/40">
+        <div key={`cb${key++}`} className="my-2 rounded-lg overflow-hidden border border-border-40">
           {codeLang && (
-            <div className="px-2.5 py-1 bg-surface-3/60 text-[10px] font-mono font-medium text-text-muted uppercase tracking-wide border-b border-border/30">
+            <div className="px-2.5 py-1 bg-surface-3-60 text-[10px] font-mono font-medium text-text-muted uppercase tracking-wide border-b border-border-30">
               {codeLang}
             </div>
           )}
-          <pre className="px-3 py-2 bg-surface-2/80 overflow-x-auto">
+          <pre className="px-3 py-2 bg-surface-2-80 overflow-x-auto">
             <code className="text-[11px] font-mono text-text-secondary leading-relaxed whitespace-pre">
               {codeLines.join("\n")}
             </code>
@@ -249,7 +249,7 @@ export default function AIMarkdown({ content, className }: AIMarkdownProps) {
       elements.push(
         <div
           key={`l${key++}`}
-          className="font-semibold text-text-primary mt-2.5 mb-1 text-xs border-l-2 border-accent/40 pl-2"
+          className="font-semibold text-text-primary mt-2.5 mb-1 text-xs border-l-2 border-accent-40 pl-2"
         >
           {line.slice(4)}
         </div>,
@@ -260,7 +260,7 @@ export default function AIMarkdown({ content, className }: AIMarkdownProps) {
       elements.push(
         <div
           key={`l${key++}`}
-          className="font-semibold text-text-primary mt-2.5 mb-1 text-xs border-l-2 border-accent/40 pl-2"
+          className="font-semibold text-text-primary mt-2.5 mb-1 text-xs border-l-2 border-accent-40 pl-2"
         >
           {line.slice(3)}
         </div>,
@@ -316,7 +316,7 @@ export default function AIMarkdown({ content, className }: AIMarkdownProps) {
     if (/^\d+\.\s/.test(line)) {
       elements.push(
         <div key={`l${key++}`} className="ml-4 mt-0.5 flex gap-1.5">
-          <span className="text-accent/60 shrink-0">{line.match(/^(\d+)\./)?.[1]}.</span>
+          <span className="text-accent-60 shrink-0">{line.match(/^(\d+)\./)?.[1]}.</span>
           <span>{parseInline(line.replace(/^\d+\.\s+/, ""))}</span>
         </div>,
       );
@@ -327,7 +327,7 @@ export default function AIMarkdown({ content, className }: AIMarkdownProps) {
     if (/^\s*[-*]\s+/.test(line)) {
       elements.push(
         <div key={`l${key++}`} className="ml-2 mt-0.5 flex gap-1.5">
-          <span className="text-accent/60 shrink-0">•</span>
+          <span className="text-accent-60 shrink-0">•</span>
           <span>{parseInline(line.replace(/^\s*[-*]\s+/, "").replace(/^\s*\|\s*/, ""))}</span>
         </div>,
       );

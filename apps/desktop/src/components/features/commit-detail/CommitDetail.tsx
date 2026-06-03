@@ -6,18 +6,7 @@ import { api } from "@/api/tauri";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
-  Braces,
   Clock,
-  Database,
-  File,
-  FileArchive,
-  FileCode,
-  FileCog,
-  FileImage,
-  FileJson,
-  FileSpreadsheet,
-  FileTerminal,
-  FileText,
   GitCommit,
   MessageSquareText,
   RotateCcw,
@@ -30,6 +19,10 @@ import {
 } from "lucide-react";
 import { useAICommitExplain, useAICommitReview } from "@/queries/useAI";
 import { AI_REVIEW_MODE_OPTIONS, readLastAIReviewMode, saveLastAIReviewMode, type AIReviewMode } from "@/lib/ai";
+import { showToast } from "@/lib/toast";
+import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
+import AIMarkdown from "@/components/ui/feedback/AIMarkdown";
+import { StatusBadge, fileIcon, statusLabel, statusColor } from "@/components/ui/shared";
 
 export default function CommitDetail() {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -41,6 +34,7 @@ export default function CommitDetail() {
     useCommitChangedFiles(repoPath, selectedCommit);
   const queryClient = useQueryClient();
   const [reverting, setReverting] = useState(false);
+  const [confirmRevert, setConfirmRevert] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
   const [explanation, setExplanation] = useState("");
   const [showReview, setShowReview] = useState(false);
@@ -103,16 +97,20 @@ export default function CommitDetail() {
     aiReview.reset();
   }, [selectedCommit]);
 
-  const handleRevert = async () => {
+  const handleRevert = () => {
     if (!repoPath || !selectedCommit) return;
-    if (!confirm(`Revert commit ${selectedCommit.slice(0, 7)}? This will create a new commit that undoes the changes.`)) return;
+    setConfirmRevert(true);
+  };
+
+  const doRevert = async () => {
+    setConfirmRevert(false);
     setReverting(true);
     try {
-      const result = await api.commit.revert(repoPath, selectedCommit);
+      const result = await api.commit.revert(repoPath!, selectedCommit!);
       queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
-      alert(result);
+      showToast(result);
     } catch (e: any) {
-      alert(`Revert failed: ${e}`);
+      showToast(`Revert failed: ${e}`, "error");
     } finally {
       setReverting(false);
     }
@@ -200,6 +198,7 @@ export default function CommitDetail() {
   };
 
   return (
+    <>
     <div className="h-full flex flex-col bg-surface-0 overflow-y-auto">
       {/* Commit metadata */}
       <div className="px-3 py-2 border-b border-border space-y-1.5">
@@ -296,7 +295,7 @@ export default function CommitDetail() {
             </div>
           ) : explanation ? (
             <div className="text-2xs text-text-secondary leading-relaxed">
-              {renderAIResult(explanation)}
+              <AIMarkdown content={explanation} />
             </div>
           ) : null}
         </div>
@@ -321,7 +320,7 @@ export default function CommitDetail() {
             </div>
           ) : reviewResult ? (
             <div className="text-2xs text-text-secondary leading-relaxed">
-              {renderReviewResult(reviewResult)}
+              <AIMarkdown content={reviewResult} />
             </div>
           ) : null}
         </div>
@@ -413,130 +412,19 @@ export default function CommitDetail() {
         )}
       </div>
     </div>
+
+    <ConfirmDialog
+      open={confirmRevert}
+      title="Revert Commit"
+      message={`Revert commit ${selectedCommit?.slice(0, 7)}? This will create a new commit that undoes the changes.`}
+      confirmLabel="Revert"
+      cancelLabel="Cancel"
+      variant="destructive"
+      onConfirm={doRevert}
+      onCancel={() => setConfirmRevert(false)}
+    />
+    </>
   );
-}
-
-function StatusBadge({ status, selected }: { status: string; selected: boolean }) {
-  const label = statusLabel(status);
-  
-  let badgeClass = "";
-  if (selected) {
-    badgeClass = "text-accent-fg opacity-90";
-  } else {
-    switch (status) {
-      case "added":
-        badgeClass = "text-[#30d158]";
-        break;
-      case "deleted":
-        badgeClass = "text-[#ff375f]";
-        break;
-      case "renamed":
-      case "copied":
-        badgeClass = "text-[#64d2ff]";
-        break;
-      default: // modified
-        badgeClass = "text-[#ff9f0a]";
-        break;
-    }
-  }
-
-  return (
-    <span className={`inline-flex items-center justify-center font-mono text-[10px] font-bold select-none px-1 leading-none ${badgeClass}`}>
-      {label}
-    </span>
-  );
-}
-
-function statusLabel(status: string) {
-  switch (status) {
-    case "modified": return "M";
-    case "added": return "A";
-    case "deleted": return "D";
-    case "renamed": return "R";
-    default: return status.charAt(0).toUpperCase();
-  }
-}
-
-function fileIcon(path: string, status: string) {
-  const className = statusColor(status);
-  const ext = getExtension(path);
-  const fileName = getFileName(path).toLowerCase();
-  const size = 14;
-
-  if (["package.json", "tsconfig.json", "vite.config.ts", "tailwind.config.ts"].includes(fileName)) {
-    return <FileCog size={size} className={className} />;
-  }
-
-  switch (ext) {
-    case "js":
-    case "jsx":
-    case "ts":
-    case "tsx":
-    case "java":
-    case "kt":
-    case "rs":
-    case "go":
-    case "py":
-    case "rb":
-    case "php":
-    case "c":
-    case "cpp":
-    case "h":
-    case "hpp":
-      return <FileCode size={size} className={className} />;
-    case "json":
-    case "jsonc":
-    case "lock":
-      return <FileJson size={size} className={className} />;
-    case "yml":
-    case "yaml":
-    case "toml":
-    case "ini":
-    case "env":
-      return <FileCog size={size} className={className} />;
-    case "css":
-    case "scss":
-    case "sass":
-    case "less":
-    case "html":
-    case "xml":
-    case "svg":
-      return <Braces size={size} className={className} />;
-    case "sql":
-    case "db":
-    case "sqlite":
-      return <Database size={size} className={className} />;
-    case "md":
-    case "mdx":
-    case "txt":
-    case "rst":
-      return <FileText size={size} className={className} />;
-    case "png":
-    case "jpg":
-    case "jpeg":
-    case "gif":
-    case "webp":
-    case "ico":
-      return <FileImage size={size} className={className} />;
-    case "zip":
-    case "gz":
-    case "tar":
-    case "rar":
-    case "7z":
-      return <FileArchive size={size} className={className} />;
-    case "csv":
-    case "tsv":
-    case "xls":
-    case "xlsx":
-      return <FileSpreadsheet size={size} className={className} />;
-    case "sh":
-    case "bash":
-    case "zsh":
-    case "ps1":
-      return <FileTerminal size={size} className={className} />;
-    default:
-      return <File size={size} className={className} />;
-  }
 }
 
 function statusText(status: string) {
@@ -551,24 +439,8 @@ function statusText(status: string) {
   }
 }
 
-function statusColor(status: string) {
-  switch (status) {
-    case "added": return "text-[#30d158]";
-    case "deleted": return "text-[#ff375f]";
-    case "renamed":
-    case "copied": return "text-[#64d2ff]";
-    default: return "text-[#ff9f0a]";
-  }
-}
-
 function getFileName(path: string) {
   return path.split("/").pop() || path;
-}
-
-function getExtension(path: string) {
-  const fileName = getFileName(path).toLowerCase();
-  const index = fileName.lastIndexOf(".");
-  return index > -1 ? fileName.slice(index + 1) : fileName;
 }
 
 function getFolder(path: string) {
@@ -577,297 +449,6 @@ function getFolder(path: string) {
   return parts.join("/");
 }
 
-/** Render **bold** text in a line as React elements */
-function parseBoldText(text: string): React.ReactNode[] {
-  const parts: React.ReactNode[] = [];
-  const regex = /\*\*(.+?)\*\*/g;
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-  let key = 0;
-  while ((match = regex.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index));
-    }
-    parts.push(<span key={`b${key++}`} className="font-semibold text-text-primary">{match[1]}</span>);
-    lastIndex = regex.lastIndex;
-  }
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex));
-  }
-  return parts.length > 0 ? parts : [text];
-}
-
-function reviewCategoryMeta(category: string) {
-  switch (category.toUpperCase()) {
-    case "BUG":
-      return {
-        label: "Bug",
-        border: "border-[#ff375f]",
-        bg: "bg-[#ff375f]/8",
-        badge: "bg-[#ff375f]/20 text-[#ff375f]",
-      };
-    case "SECURITY":
-      return {
-        label: "Security",
-        border: "border-[#ff6b35]",
-        bg: "bg-[#ff6b35]/8",
-        badge: "bg-[#ff6b35]/20 text-[#ff6b35]",
-      };
-    case "PERF":
-      return {
-        label: "Perf",
-        border: "border-[#ffcc00]",
-        bg: "bg-[#ffcc00]/8",
-        badge: "bg-[#ffcc00]/20 text-[#ffcc00]",
-      };
-    case "STYLE":
-      return {
-        label: "Style",
-        border: "border-[#0a84ff]",
-        bg: "bg-[#0a84ff]/8",
-        badge: "bg-[#0a84ff]/20 text-[#0a84ff]",
-      };
-    case "BEST-PRACTICE":
-      return {
-        label: "Best Practice",
-        border: "border-[#bf5af2]",
-        bg: "bg-[#bf5af2]/8",
-        badge: "bg-[#bf5af2]/20 text-[#bf5af2]",
-      };
-    case "LINTER":
-      return {
-        label: "Linter",
-        border: "border-[#64d2ff]",
-        bg: "bg-[#64d2ff]/8",
-        badge: "bg-[#64d2ff]/20 text-[#64d2ff]",
-      };
-    case "TEST":
-      return {
-        label: "Test",
-        border: "border-[#30d158]",
-        bg: "bg-[#30d158]/8",
-        badge: "bg-[#30d158]/20 text-[#30d158]",
-      };
-    case "A11Y":
-      return {
-        label: "A11y",
-        border: "border-[#ff9f0a]",
-        bg: "bg-[#ff9f0a]/8",
-        badge: "bg-[#ff9f0a]/20 text-[#ff9f0a]",
-      };
-    case "UX":
-      return {
-        label: "UX",
-        border: "border-[#ff2d55]",
-        bg: "bg-[#ff2d55]/8",
-        badge: "bg-[#ff2d55]/20 text-[#ff2d55]",
-      };
-    default:
-      return {
-        label: category,
-        border: "border-accent",
-        bg: "bg-accent/8",
-        badge: "bg-accent/20 text-accent",
-      };
-  }
-}
-
-function matchReviewCategory(line: string) {
-  return line.match(/^\s*(?:#{1,6}\s*)?(?:[-*]\s*)?(?:\*\*)?\[(BUG|SECURITY|PERF|STYLE|BEST-PRACTICE|LINTER|TEST|A11Y|UX)\](?:\*\*)?\s*(.*)$/i);
-}
-
-/** Render AI Review result with color-coded findings, code block support, and bold text */
-function renderReviewResult(text: string): React.ReactNode[] {
-  const elements: React.ReactNode[] = [];
-  const lines = text.split("\n");
-  let inCodeBlock = false;
-  let codeLang = "";
-  let codeLines: string[] = [];
-  let key = 0;
-
-  const flushCodeBlock = () => {
-    if (codeLines.length > 0) {
-      elements.push(
-        <div key={`cb${key++}`} className="my-2 rounded-mac overflow-hidden border border-border-40">
-          {codeLang && (
-            <div className="px-2.5 py-1 bg-surface-3/60 text-2xs font-mono font-medium text-text-muted uppercase tracking-wide border-b border-border-30">
-              {codeLang}
-            </div>
-          )}
-          <pre className="px-3 py-2 bg-surface-2/80 overflow-x-auto">
-            <code className="text-2xs font-mono text-text-secondary leading-relaxed whitespace-pre">
-              {codeLines.join("\n")}
-            </code>
-          </pre>
-        </div>
-      );
-      codeLines = [];
-      codeLang = "";
-    }
-  };
-
-  for (const line of lines) {
-    if (line.startsWith("```")) {
-      if (inCodeBlock) {
-        flushCodeBlock();
-        inCodeBlock = false;
-      } else {
-        inCodeBlock = true;
-        codeLang = line.slice(3).trim();
-      }
-      continue;
-    }
-    if (inCodeBlock) {
-      codeLines.push(line);
-      continue;
-    }
-
-    const categoryMatch = matchReviewCategory(line);
-    if (categoryMatch) {
-      const meta = reviewCategoryMeta(categoryMatch[1]);
-      elements.push(
-        <div key={`l${key++}`} className={`ml-1 mt-1.5 flex gap-2 border-l-2 ${meta.border} ${meta.bg} pl-2.5 pr-2 py-1.5 rounded-r-sm`}>
-          <span className={`inline-flex items-center h-5 px-1.5 rounded text-[9px] font-bold uppercase tracking-wider ${meta.badge} shrink-0`}>
-            {meta.label}
-          </span>
-          <span className="min-w-0 text-text-secondary">{parseBoldText(categoryMatch[2])}</span>
-        </div>
-      );
-      continue;
-    }
-    if (line.startsWith("### ")) {
-      elements.push(<div key={`l${key++}`} className="font-semibold text-text-primary mt-2.5 mb-1 text-xs border-l-2 border-accent-40 pl-2">{line.slice(4)}</div>);
-      continue;
-    }
-    if (line.startsWith("## ")) {
-      elements.push(<div key={`l${key++}`} className="font-semibold text-text-primary mt-2.5 mb-1 text-xs border-l-2 border-accent-40 pl-2">{line.slice(3)}</div>);
-      continue;
-    }
-    if (line.startsWith("- **[BUG]**")) {
-      elements.push(
-        <div key={`l${key++}`} className="ml-1 mt-1 flex gap-1.5 border-l-2 border-[#ff375f] pl-2 py-0.5 bg-[#ff375f]/8 rounded-r-sm">
-          <span className="inline-flex items-center px-1 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-[#ff375f]/20 text-[#ff375f] shrink-0">Bug</span>
-          <span className="text-text-secondary">{parseBoldText(line.slice(11))}</span>
-        </div>
-      );
-      continue;
-    }
-    if (line.startsWith("- **[SECURITY]**")) {
-      elements.push(
-        <div key={`l${key++}`} className="ml-1 mt-1 flex gap-1.5 border-l-2 border-[#ff6b35] pl-2 py-0.5 bg-[#ff6b35]/8 rounded-r-sm">
-          <span className="inline-flex items-center px-1 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-[#ff6b35]/20 text-[#ff6b35] shrink-0">Security</span>
-          <span className="text-text-secondary">{parseBoldText(line.slice(16))}</span>
-        </div>
-      );
-      continue;
-    }
-    if (line.startsWith("- **[PERF]**")) {
-      elements.push(
-        <div key={`l${key++}`} className="ml-1 mt-1 flex gap-1.5 border-l-2 border-yellow-500 pl-2 py-0.5 bg-yellow-500/8 rounded-r-sm">
-          <span className="inline-flex items-center px-1 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-yellow-500/20 text-yellow-500 shrink-0">Perf</span>
-          <span className="text-text-secondary">{parseBoldText(line.slice(12))}</span>
-        </div>
-      );
-      continue;
-    }
-    if (line.startsWith("- **[STYLE]**")) {
-      elements.push(
-        <div key={`l${key++}`} className="ml-1 mt-1 flex gap-1.5 border-l-2 border-blue-500 pl-2 py-0.5 bg-blue-500/8 rounded-r-sm">
-          <span className="inline-flex items-center px-1 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-blue-500/20 text-blue-500 shrink-0">Style</span>
-          <span className="text-text-secondary">{parseBoldText(line.slice(13))}</span>
-        </div>
-      );
-      continue;
-    }
-    if (line.startsWith("- **[BEST-PRACTICE]**")) {
-      elements.push(
-        <div key={`l${key++}`} className="ml-1 mt-1 flex gap-1.5 border-l-2 border-purple-500 pl-2 py-0.5 bg-purple-500/8 rounded-r-sm">
-          <span className="inline-flex items-center px-1 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-500 shrink-0">Practice</span>
-          <span className="text-text-secondary">{parseBoldText(line.slice(20))}</span>
-        </div>
-      );
-      continue;
-    }
-    const riskMatch = line.match(/^\*\*(Low|Medium|High)\*\*(.*)/i);
-    if (riskMatch) {
-      const level = riskMatch[1].toLowerCase();
-      const colors = level === "high" ? "bg-[#ff375f]/20 text-[#ff375f] border-[#ff375f]/30" : level === "medium" ? "bg-yellow-500/20 text-yellow-500 border-yellow-500/30" : "bg-emerald-500/20 text-emerald-500 border-emerald-500/30";
-      elements.push(
-        <div key={`l${key++}`} className="flex items-center gap-2 mt-2 mb-1">
-          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${colors}`}>{riskMatch[1]} Risk</span>
-          <span className="text-text-muted">{parseBoldText(riskMatch[2])}</span>
-        </div>
-      );
-      continue;
-    }
-    if (line.match(/^\*\*.*\*\*$/)) {
-      elements.push(<div key={`l${key++}`} className="font-semibold text-text-primary mt-2">{line.replace(/\*\*/g, "")}</div>);
-      continue;
-    }
-    if (line.startsWith("- ")) {
-      elements.push(<div key={`l${key++}`} className="ml-2 mt-0.5 flex gap-1.5"><span className="text-accent/60 shrink-0">•</span><span>{parseBoldText(line.slice(2))}</span></div>);
-      continue;
-    }
-    elements.push(<div key={`l${key++}`}>{parseBoldText(line) || "\u00A0"}</div>);
-  }
-
-  if (inCodeBlock) flushCodeBlock();
-  return elements;
-}
-
-/** Render AI text with code block support (```lang ... ```) and bold text */
-function renderAIResult(text: string): React.ReactNode[] {
-  const elements: React.ReactNode[] = [];
-  const lines = text.split("\n");
-  let inCodeBlock = false;
-  let codeLang = "";
-  let codeLines: string[] = [];
-  let key = 0;
-
-  const flushCodeBlock = () => {
-    if (codeLines.length > 0) {
-      elements.push(
-        <div key={`cb${key++}`} className="my-2 rounded-mac overflow-hidden border border-border-40">
-          {codeLang && (
-            <div className="px-2.5 py-1 bg-surface-3/60 text-2xs font-mono font-medium text-text-muted uppercase tracking-wide border-b border-border-30">
-              {codeLang}
-            </div>
-          )}
-          <pre className="px-3 py-2 bg-surface-2/80 overflow-x-auto">
-            <code className="text-2xs font-mono text-text-secondary leading-relaxed whitespace-pre">
-              {codeLines.join("\n")}
-            </code>
-          </pre>
-        </div>
-      );
-      codeLines = [];
-      codeLang = "";
-    }
-  };
-
-  for (const line of lines) {
-    if (line.startsWith("```")) {
-      if (inCodeBlock) {
-        flushCodeBlock();
-        inCodeBlock = false;
-      } else {
-        inCodeBlock = true;
-        codeLang = line.slice(3).trim();
-      }
-      continue;
-    }
-    if (inCodeBlock) {
-      codeLines.push(line);
-      continue;
-    }
-    // Regular text line
-    elements.push(<div key={`l${key++}`}>{parseBoldText(line) || "\u00A0"}</div>);
-  }
-  // Unclosed code block
-  if (inCodeBlock) flushCodeBlock();
-
-  return elements;
-}
 
 interface CommitFileTreeNode {
   type: "file";

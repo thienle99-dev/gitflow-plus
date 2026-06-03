@@ -73,10 +73,10 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
   return (
     <div className="h-full flex gap-2 p-2 bg-surface-0">
       {/* Left: Stash List */}
-      <div className="w-56 flex flex-col border border-border/40 rounded-mac overflow-hidden bg-surface-0">
+      <div className="w-56 flex flex-col border border-border-40 rounded-mac overflow-hidden bg-surface-0">
         {/* Push Form */}
         {showPushForm ? (
-          <div className="p-2 border-b border-border/40 space-y-2 bg-surface-1/30">
+          <div className="p-2 border-b border-border-40 space-y-2 bg-surface-1-30">
             <input
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -109,7 +109,7 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
             </div>
           </div>
         ) : (
-          <div className="px-3 py-2 border-b border-border/40 bg-surface-1/40">
+          <div className="px-3 py-2 border-b border-border-40 bg-surface-1-40">
             <button
               onClick={() => setShowPushForm(true)}
               className="w-full flex items-center justify-center gap-1 px-2 py-1 text-xs bg-accent text-white rounded hover:opacity-90"
@@ -136,10 +136,10 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
               <div
                 key={stash.index}
                 onClick={() => setSelectedStashIndex(stash.index)}
-                className={`px-3 py-2 text-xs cursor-pointer border-b border-border/20 transition-colors ${
+                className={`px-3 py-2 text-xs cursor-pointer border-b border-border-20 transition-colors ${
                   selectedStashIndex === stash.index
                     ? "bg-accent-20 text-accent"
-                    : "hover:bg-surface-2/40 text-text-primary"
+                    : "hover:bg-surface-2-40 text-text-primary"
                 }`}
               >
                 <div className="font-semibold truncate flex items-center gap-1">
@@ -181,7 +181,7 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
       </div>
 
       {/* Right: Diff Viewer */}
-      <div className="flex-1 border border-border/40 rounded-mac overflow-hidden bg-surface-1">
+      <div className="flex-1 border border-border-40 rounded-mac overflow-hidden bg-surface-1">
         {selectedStash ? (
           <StashDiffViewer stash={selectedStash} />
         ) : (

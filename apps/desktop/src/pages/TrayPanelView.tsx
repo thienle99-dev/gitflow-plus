@@ -6,6 +6,7 @@ import { useQueryClient, useQuery, useQueries } from "@tanstack/react-query";
 import { useGenerateCommitMessage } from "@/queries/useAI";
 import { lintCommitMessage, autoFixCommitMessage, type CommitLintResult } from "@/lib/commit-lint";
 import { LintWarningDialog } from "@/components/features/dialogs";
+import { showToast } from "@/lib/toast";
 import {
   ChevronDown,
   ChevronUp,
@@ -68,7 +69,6 @@ export default function TrayPanelView() {
   const [committing, setCommitting] = useState(false);
   const [syncLoading, setSyncLoading] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   // Commit message linting state
   const [lintResults, setLintResults] = useState<CommitLintResult[]>([]);
@@ -225,11 +225,6 @@ export default function TrayPanelView() {
       }
     );
   }, [filteredBranches, branches]);
-
-  const showToast = (message: string, type: "success" | "error" = "success") => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  };
 
   const invalidate = () => {
     if (repoPath) {
@@ -471,7 +466,7 @@ export default function TrayPanelView() {
 
     return (
       <div className="py-1">
-        <div className="px-3 py-1 text-[8px] font-bold uppercase tracking-wider text-text-muted/80 flex items-center justify-between">
+        <div className="px-3 py-1 text-[8px] font-bold uppercase tracking-wider text-text-muted-80 flex items-center justify-between">
           <span>{label}</span>
           <span>{paths.length}</span>
         </div>
@@ -502,7 +497,7 @@ export default function TrayPanelView() {
 
     return (
       <div className="py-1">
-        <div className="px-3 py-1 text-[8px] font-bold uppercase tracking-wider text-text-muted/80 flex items-center justify-between">
+        <div className="px-3 py-1 text-[8px] font-bold uppercase tracking-wider text-text-muted-80 flex items-center justify-between">
           <span>{label}</span>
           <span>{branchItems.length}</span>
         </div>
@@ -617,7 +612,7 @@ export default function TrayPanelView() {
           activeTab === "changes" ? (
             <>
               {/* Working Tree Section */}
-              <div className="flex-1 flex flex-col min-h-[170px] border border-border-40 bg-surface-1/40 rounded-mac p-2.5">
+              <div className="flex-1 flex flex-col min-h-[170px] border border-border-40 bg-surface-1-40 rounded-mac p-2.5">
                 <div className="flex items-center justify-between gap-2 border-b border-border-40 pb-1.5 shrink-0">
                   <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
                     Changes ({changes?.length || 0})
@@ -755,7 +750,7 @@ export default function TrayPanelView() {
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col border border-border-40 bg-surface-1/40 rounded-mac p-2.5 overflow-hidden">
+            <div className="flex-1 flex flex-col border border-border-40 bg-surface-1-40 rounded-mac p-2.5 overflow-hidden">
               <div className="flex items-center justify-between border-b border-border-40 pb-1.5 shrink-0">
                 <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
                   Recent Commits
@@ -873,7 +868,7 @@ export default function TrayPanelView() {
               )}
             </div>
             {recentRepos.length > 0 && (
-              <div className="mt-1 w-full max-w-[250px] overflow-hidden rounded border border-border-40 bg-surface-1/60 text-left">
+              <div className="mt-1 w-full max-w-[250px] overflow-hidden rounded border border-border-40 bg-surface-1-60 text-left">
                 {recentRepos.slice(0, 4).map((path) => (
                   <button
                     key={path}
@@ -1001,21 +996,6 @@ export default function TrayPanelView() {
         )}
       </div>
 
-      {/* Floating Toast Notification */}
-      {toast && (
-        <div className="pointer-events-none absolute bottom-[54px] left-3 right-3 z-50 flex justify-center animate-in fade-in slide-in-from-bottom-1 duration-200">
-          <div className="flex max-w-[260px] items-center gap-1.5 rounded-mac border border-border-60 bg-surface-1/95 px-2.5 py-1.5 text-[9px] font-semibold text-text-primary shadow-xl backdrop-blur">
-            {toast.type === "error" ? (
-              <AlertCircle size={11} className="shrink-0 text-[#ff453a]" />
-            ) : (
-              <Check size={11} className="shrink-0 text-[#30d158]" />
-            )}
-            <span className="min-w-0 truncate whitespace-nowrap" title={toast.message}>
-              {toast.message}
-            </span>
-          </div>
-        </div>
-      )}
       <LintWarningDialog
         open={lintWarningOpen}
         onClose={() => setLintWarningOpen(false)}

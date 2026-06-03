@@ -571,7 +571,7 @@ export default function WorkingTree() {
   return (
     <div className="h-full flex flex-col bg-surface-0">
       {/* Master Changes Header */}
-      <div className="h-10 px-3 border-b border-border-60 flex items-center justify-between shrink-0 bg-surface-1/70 backdrop-blur">
+      <div className="h-10 px-3 border-b border-border-60 flex items-center justify-between shrink-0 bg-surface-1-70 backdrop-blur">
         <div
           className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-text-primary uppercase tracking-wider select-none"
           onClick={handleToggleAllSections}
@@ -755,7 +755,7 @@ export default function WorkingTree() {
             value={commitMessage}
             onChange={(e) => setCommitMessage(e.target.value)}
             placeholder="Commit message"
-            className="w-full min-h-[96px] max-h-[240px] text-xs bg-transparent text-text-primary placeholder:text-text-muted/60 resize-y outline-none border-none p-0 leading-relaxed font-mono focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:outline-none"
+            className="w-full min-h-[96px] max-h-[240px] text-xs bg-transparent text-text-primary placeholder:text-text-muted-60 resize-y outline-none border-none p-0 leading-relaxed font-mono focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:outline-none"
             style={{ outline: "none", border: "none", boxShadow: "none" }}
           />
           <div className="flex items-center justify-between gap-2 border-t border-border-60 pt-2.5 mt-2 select-none shrink-0 flex-wrap">
@@ -949,7 +949,7 @@ export default function WorkingTree() {
                       <button
                         onClick={() => handleUseGroup(group)}
                         disabled={!!committingGroupKey || committing}
-                        className="text-2xs font-semibold px-2.5 py-1.5 bg-accent/10 text-accent rounded-mac hover:bg-accent/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        className="text-2xs font-semibold px-2.5 py-1.5 bg-accent-10 text-accent rounded-mac hover:bg-accent-20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                       >
                         Use this
                       </button>
@@ -997,7 +997,7 @@ export default function WorkingTree() {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border-30 bg-surface-1/40 shrink-0 select-none">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border-30 bg-surface-1-40 shrink-0 select-none">
               <div className="flex items-center gap-2">
                 <Sparkles size={14} className="text-accent" />
                 <span className="text-[12px] font-bold text-text-primary">AI Review Report</span>
@@ -1015,8 +1015,8 @@ export default function WorkingTree() {
 
             {/* Content */}
             <div className="flex-1 p-4 space-y-4 min-h-0 flex flex-col">
-              <div className="flex gap-3 p-3.5 bg-gradient-to-br from-accent/5 to-surface-1 border border-accent-20 rounded-[4px] shrink-0">
-                <div className="h-7 w-7 rounded-full bg-accent/15 border border-accent/20 flex items-center justify-center text-accent shrink-0">
+              <div className="flex gap-3 p-3.5 bg-gradient-to-br from-accent-5 to-surface-1 border border-accent-20 rounded-[4px] shrink-0">
+                <div className="h-7 w-7 rounded-full bg-accent-15 border border-accent-20 flex items-center justify-center text-accent shrink-0">
                   <Sparkles size={13} />
                 </div>
                 <div className="space-y-1">
@@ -1037,10 +1037,10 @@ export default function WorkingTree() {
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border-30 bg-surface-1/40 shrink-0 select-none">
+            <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border-30 bg-surface-1-40 shrink-0 select-none">
               <button
                 onClick={() => setAiReviewModalOpen(false)}
-                className="px-3.5 py-1.5 text-[11px] font-semibold text-white bg-accent hover:bg-accent/90 rounded-[4px] transition-colors cursor-pointer shadow-2xs"
+                className="px-3.5 py-1.5 text-[11px] font-semibold text-white bg-accent hover:bg-accent-90 rounded-[4px] transition-colors cursor-pointer shadow-2xs"
               >
                 Done
               </button>
@@ -1351,7 +1351,7 @@ function ChangeSection({
 
   return (
     <div className={`border-b border-border-60 min-h-0 flex flex-col ${grow && open ? "flex-1" : "shrink-0"} ${!grow && open ? "max-h-[42%]" : ""}`}>
-      <div className="h-9 px-3 flex items-center gap-2 bg-surface-1/55 shrink-0">
+      <div className="h-9 px-3 flex items-center gap-2 bg-surface-1-55 shrink-0">
         <button
           className="ghost p-0.5 text-text-muted hover:text-text-primary transition-colors"
           onClick={onToggleOpen}
@@ -1384,7 +1384,7 @@ function ChangeSection({
       {open && (
         <div className="flex-1 overflow-y-auto py-1.5">
           {files.length === 0 ? (
-            <div className="px-5 py-4 text-xs text-text-muted/80">{empty}</div>
+            <div className="px-5 py-4 text-xs text-text-muted-80">{empty}</div>
           ) : isTreeView && treeRoot ? (
             <FileTreeRenderer
               node={treeRoot}
@@ -1472,7 +1472,7 @@ function ChangeRow({ file, checked, selected, multiSelected, onSelect, onToggle,
             ? "bg-accent-fg border-accent-fg text-accent"
             : "bg-accent border-accent text-accent-fg"
           : selected
-            ? "border-accent-fg/40 hover:border-accent-fg hover:bg-accent-fg/10 text-transparent"
+            ? "border-accent-fg-40 hover:border-accent-fg hover:bg-accent-fg-10 text-transparent"
             : "border-border hover:border-text-secondary hover:bg-surface-2 text-transparent"
           }`}
         onClick={(e) => {
@@ -1500,7 +1500,7 @@ function ChangeRow({ file, checked, selected, multiSelected, onSelect, onToggle,
       <span className="flex items-center justify-end gap-1.5 min-w-[48px]">
         <StatusBadge status={file.status} selected={selected} />
         <span
-          className={`h-5 w-5 flex items-center justify-center rounded transition-all cursor-pointer opacity-0 group-hover:opacity-100 ${selected ? "hover:bg-accent-fg/20 text-accent-fg" : "text-text-muted hover:bg-surface-2"
+          className={`h-5 w-5 flex items-center justify-center rounded transition-all cursor-pointer opacity-0 group-hover:opacity-100 ${selected ? "hover:bg-accent-fg-20 text-accent-fg" : "text-text-muted hover:bg-surface-2"
             }`}
           onClick={(e) => {
             e.stopPropagation();
@@ -1511,7 +1511,7 @@ function ChangeRow({ file, checked, selected, multiSelected, onSelect, onToggle,
           <MessageSquare size={12} className="text-current" />
         </span>
         <span
-          className={`h-5 w-5 flex items-center justify-center rounded transition-all cursor-pointer opacity-0 group-hover:opacity-100 ${selected ? "hover:bg-accent-fg/20 text-accent-fg" : "text-text-muted hover:bg-surface-2"
+          className={`h-5 w-5 flex items-center justify-center rounded transition-all cursor-pointer opacity-0 group-hover:opacity-100 ${selected ? "hover:bg-accent-fg-20 text-accent-fg" : "text-text-muted hover:bg-surface-2"
             }`}
           onClick={(e) => {
             e.stopPropagation();
@@ -1745,7 +1745,7 @@ function aiReviewTagMeta(tag: string) {
     case "UX":
       return { label: "UX", badgeClassName: "border-[#ff2d55] bg-[#ff2d55]/15 text-[#ff2d55]", containerClassName: "border-[#ff2d55]/25 border-l-[#ff2d55] bg-[#ff2d55]/8" };
     default:
-      return { label: tag.toUpperCase(), badgeClassName: "border-accent bg-accent/15 text-accent", containerClassName: "border-accent-20 border-l-accent bg-accent-5" };
+      return { label: tag.toUpperCase(), badgeClassName: "border-accent bg-accent-15 text-accent", containerClassName: "border-accent-20 border-l-accent bg-accent-5" };
   }
 }
 

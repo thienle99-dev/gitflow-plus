@@ -91,7 +91,7 @@ function DiffViewerPanel() {
         ? "w-[94%] h-[90%] rounded-mac border border-border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
         : "h-full"
     }`}>
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-border shrink-0 bg-surface-1/40">
+      <div className="flex items-center justify-between px-3 py-1.5 border-b border-border shrink-0 bg-surface-1-40">
         <button
           className="ghost text-xs"
           onClick={() => {
