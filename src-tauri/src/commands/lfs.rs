@@ -1,5 +1,6 @@
 use serde::Serialize;
 use tokio::process::Command;
+use super::op_lock::RepoLocks;
 
 #[derive(Serialize, Clone, Debug)]
 pub struct LfsFile {
@@ -57,12 +58,20 @@ pub async fn lfs_status(path: String) -> Result<LfsStatus, String> {
 }
 
 #[tauri::command]
-pub async fn lfs_pull(path: String) -> Result<String, String> {
+pub async fn lfs_pull(
+    locks: tauri::State<'_, RepoLocks>,
+    path: String,
+) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     run_lfs_operation(&path, "pull").await
 }
 
 #[tauri::command]
-pub async fn lfs_push(path: String) -> Result<String, String> {
+pub async fn lfs_push(
+    locks: tauri::State<'_, RepoLocks>,
+    path: String,
+) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     run_lfs_operation(&path, "push").await
 }
 

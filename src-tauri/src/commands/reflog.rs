@@ -1,5 +1,6 @@
 use serde::Serialize;
 use tokio::process::Command;
+use super::op_lock::RepoLocks;
 
 #[derive(Serialize)]
 pub struct ReflogEntry {
@@ -148,6 +149,10 @@ pub async fn reflog_list(path: String, max_count: Option<u32>) -> Result<Vec<Ref
 }
 
 #[tauri::command]
-pub async fn undo_last(path: String) -> Result<String, String> {
+pub async fn undo_last(
+    locks: tauri::State<'_, RepoLocks>,
+    path: String,
+) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     git_undo(&path).await
 }

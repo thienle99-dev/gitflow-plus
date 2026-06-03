@@ -1,5 +1,6 @@
 use serde::Serialize;
 use tokio::process::Command;
+use super::op_lock::RepoLocks;
 
 #[derive(Serialize)]
 pub struct MergePreview {
@@ -281,11 +282,13 @@ fn parse_conflicted_files(stderr: &str) -> Vec<String> {
 
 #[tauri::command]
 pub async fn merge_branch(
+    locks: tauri::State<'_, RepoLocks>,
     path: String,
     branch: String,
     squash: Option<bool>,
     no_ff: Option<bool>,
 ) -> Result<MergeResult, String> {
+    let _guard = locks.acquire(&path).await;
     git_merge(
         &path,
         &branch,
@@ -296,12 +299,21 @@ pub async fn merge_branch(
 }
 
 #[tauri::command]
-pub async fn merge_abort(path: String) -> Result<String, String> {
+pub async fn merge_abort(
+    locks: tauri::State<'_, RepoLocks>,
+    path: String,
+) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     git_merge_abort(&path).await
 }
 
 #[tauri::command]
-pub async fn merge_continue(path: String, message: Option<String>) -> Result<String, String> {
+pub async fn merge_continue(
+    locks: tauri::State<'_, RepoLocks>,
+    path: String,
+    message: Option<String>,
+) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     git_merge_continue(&path, message.as_deref()).await
 }
 

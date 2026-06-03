@@ -1,5 +1,6 @@
 use serde::Serialize;
 use tokio::process::Command;
+use super::op_lock::RepoLocks;
 
 #[derive(Serialize)]
 pub struct Tag {
@@ -149,24 +150,33 @@ pub async fn tag_list(path: String) -> Result<Vec<Tag>, String> {
 
 #[tauri::command]
 pub async fn tag_create(
+    locks: tauri::State<'_, RepoLocks>,
     path: String,
     name: String,
     target: Option<String>,
     message: Option<String>,
 ) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     git_tag_create(&path, &name, target.as_deref(), message.as_deref()).await
 }
 
 #[tauri::command]
-pub async fn tag_delete(path: String, name: String) -> Result<String, String> {
+pub async fn tag_delete(
+    locks: tauri::State<'_, RepoLocks>,
+    path: String,
+    name: String,
+) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     git_tag_delete(&path, &name).await
 }
 
 #[tauri::command]
 pub async fn tag_push(
+    locks: tauri::State<'_, RepoLocks>,
     path: String,
     name: String,
     remote: Option<String>,
 ) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     git_tag_push(&path, &name, remote.as_deref()).await
 }

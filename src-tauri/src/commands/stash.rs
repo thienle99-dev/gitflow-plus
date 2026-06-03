@@ -1,5 +1,6 @@
 use serde::Serialize;
 use tokio::process::Command;
+use super::op_lock::RepoLocks;
 
 #[derive(Serialize)]
 pub struct StashEntry {
@@ -183,10 +184,12 @@ pub async fn stash_list(path: String) -> Result<Vec<StashEntry>, String> {
 
 #[tauri::command]
 pub async fn stash_push(
+    locks: tauri::State<'_, RepoLocks>,
     path: String,
     message: Option<String>,
     include_untracked: Option<bool>,
 ) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     git_stash_push(
         &path,
         message.as_deref(),
@@ -196,17 +199,32 @@ pub async fn stash_push(
 }
 
 #[tauri::command]
-pub async fn stash_pop(path: String, index: Option<u32>) -> Result<String, String> {
+pub async fn stash_pop(
+    locks: tauri::State<'_, RepoLocks>,
+    path: String,
+    index: Option<u32>,
+) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     git_stash_pop(&path, index).await
 }
 
 #[tauri::command]
-pub async fn stash_apply(path: String, index: Option<u32>) -> Result<String, String> {
+pub async fn stash_apply(
+    locks: tauri::State<'_, RepoLocks>,
+    path: String,
+    index: Option<u32>,
+) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     git_stash_apply(&path, index).await
 }
 
 #[tauri::command]
-pub async fn stash_drop(path: String, index: Option<u32>) -> Result<String, String> {
+pub async fn stash_drop(
+    locks: tauri::State<'_, RepoLocks>,
+    path: String,
+    index: Option<u32>,
+) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     git_stash_drop(&path, index).await
 }
 

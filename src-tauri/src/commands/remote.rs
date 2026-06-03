@@ -1,11 +1,14 @@
 use tokio::process::Command;
+use super::op_lock::RepoLocks;
 
 #[tauri::command]
 pub async fn git_pull(
+    locks: tauri::State<'_, RepoLocks>,
     path: String,
     remote: Option<String>,
     branch: Option<String>,
 ) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     let mut args = vec![
         "--no-pager".to_string(),
         "-C".to_string(),
@@ -37,10 +40,12 @@ pub async fn git_pull(
 
 #[tauri::command]
 pub async fn git_push(
+    locks: tauri::State<'_, RepoLocks>,
     path: String,
     remote: Option<String>,
     branch: Option<String>,
 ) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     let mut args = vec![
         "--no-pager".to_string(),
         "-C".to_string(),
@@ -71,7 +76,12 @@ pub async fn git_push(
 }
 
 #[tauri::command]
-pub async fn git_fetch(path: String, remote: Option<String>) -> Result<String, String> {
+pub async fn git_fetch(
+    locks: tauri::State<'_, RepoLocks>,
+    path: String,
+    remote: Option<String>,
+) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     let mut args = vec![
         "--no-pager".to_string(),
         "-C".to_string(),

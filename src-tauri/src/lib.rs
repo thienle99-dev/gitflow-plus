@@ -117,6 +117,7 @@ pub fn run() {
         .manage(WatcherState(Mutex::new(Some(
             watcher::fs_watcher::RepoWatcher::new(),
         ))))
+        .manage(commands::op_lock::RepoLocks::new())
         .setup(|app| {
             let menu = create_menu(app)?;
             app.set_menu(menu)?;
@@ -288,6 +289,7 @@ pub fn run() {
             commands::submodule::submodule_remove,
             commands::health::repo_health_check,
             commands::health::diagnostic_bundle,
+            commands::op_lock::repo_lock_status,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::io::Write;
 use tokio::process::Command;
+use super::op_lock::RepoLocks;
 
 #[derive(Serialize, Clone, Debug)]
 pub struct RebaseResult {
@@ -235,25 +236,39 @@ fn parse_rebase_conflicts(stderr: &str) -> Vec<String> {
 // Tauri commands
 #[tauri::command]
 pub async fn rebase_start(
+    locks: tauri::State<'_, RepoLocks>,
     path: String,
     base: String,
     todos: Vec<RebaseTodo>,
 ) -> Result<RebaseResult, String> {
+    let _guard = locks.acquire(&path).await;
     git_rebase_interactive(&path, &base, &todos).await
 }
 
 #[tauri::command]
-pub async fn rebase_continue(path: String) -> Result<String, String> {
+pub async fn rebase_continue(
+    locks: tauri::State<'_, RepoLocks>,
+    path: String,
+) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     git_rebase_continue(&path).await
 }
 
 #[tauri::command]
-pub async fn rebase_skip(path: String) -> Result<String, String> {
+pub async fn rebase_skip(
+    locks: tauri::State<'_, RepoLocks>,
+    path: String,
+) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     git_rebase_skip(&path).await
 }
 
 #[tauri::command]
-pub async fn rebase_abort(path: String) -> Result<String, String> {
+pub async fn rebase_abort(
+    locks: tauri::State<'_, RepoLocks>,
+    path: String,
+) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     git_rebase_abort(&path).await
 }
 

@@ -118,7 +118,7 @@
 - [x] Error UX phân loại: network error / auth error / conflict error → UX riêng
 - [x] Undo last commit (git reset --soft HEAD~1) button
 - [x] Performance logging — measure open repo, render graph, status refresh (đo trước khi optimize)
-- [ ] Operation lock/queue — tránh chạy đồng thời pull/push/fetch/merge/rebase/cherry-pick trên cùng repo
+- [x] Operation lock/queue — tránh chạy đồng thời pull/push/fetch/merge/rebase/cherry-pick trên cùng repo
 - [ ] Long-running operation progress + cancel affordance khi git command hỗ trợ
 - [ ] Pre-flight safety checks — dirty worktree, untracked files, detached HEAD, conflict/rebase/merge-in-progress
 - [ ] Confirm destructive actions — discard/reset/delete branch/drop stash cần confirm rõ impact

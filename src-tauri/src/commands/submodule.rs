@@ -1,5 +1,6 @@
 use serde::Serialize;
 use tokio::process::Command;
+use super::op_lock::RepoLocks;
 
 #[derive(Serialize, Clone, Debug)]
 pub struct SubmoduleInfo {
@@ -100,9 +101,11 @@ pub async fn submodule_list(path: String) -> Result<Vec<SubmoduleInfo>, String> 
 
 #[tauri::command]
 pub async fn submodule_init(
+    locks: tauri::State<'_, RepoLocks>,
     path: String,
     submodule_path: Option<String>,
 ) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     let mut args = vec![
         "--no-pager".to_string(),
         "-C".to_string(),
@@ -130,9 +133,11 @@ pub async fn submodule_init(
 
 #[tauri::command]
 pub async fn submodule_update(
+    locks: tauri::State<'_, RepoLocks>,
     path: String,
     submodule_path: Option<String>,
 ) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     let mut args = vec![
         "--no-pager".to_string(),
         "-C".to_string(),
@@ -161,7 +166,12 @@ pub async fn submodule_update(
 }
 
 #[tauri::command]
-pub async fn submodule_remove(path: String, submodule_path: String) -> Result<String, String> {
+pub async fn submodule_remove(
+    locks: tauri::State<'_, RepoLocks>,
+    path: String,
+    submodule_path: String,
+) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     let args = vec![
         "--no-pager".to_string(),
         "-C".to_string(),

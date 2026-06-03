@@ -1,4 +1,5 @@
 use tokio::process::Command;
+use super::op_lock::RepoLocks;
 
 #[tauri::command]
 pub async fn stage_file(path: String, file_path: String) -> Result<String, String> {
@@ -137,10 +138,12 @@ pub async fn discard_all(path: String) -> Result<String, String> {
 
 #[tauri::command]
 pub async fn commit_changes(
+    locks: tauri::State<'_, RepoLocks>,
     path: String,
     message: String,
     amend: Option<bool>,
 ) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     let mut args = vec![
         "--no-pager".to_string(),
         "-C".to_string(),
@@ -176,7 +179,12 @@ pub async fn commit_changes(
 }
 
 #[tauri::command]
-pub async fn revert_commit(path: String, commit_hash: String) -> Result<String, String> {
+pub async fn revert_commit(
+    locks: tauri::State<'_, RepoLocks>,
+    path: String,
+    commit_hash: String,
+) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
     let output = Command::new("git")
         .args([
             "--no-pager",
