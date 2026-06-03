@@ -2,9 +2,35 @@ import { useState } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useStashList, useStashPush, useStashPop, useStashApply, useStashDrop } from "@/queries/useGitStash";
+import { useStashDiff } from "@/queries/useStashDiff";
 import { showToast } from "@/lib/toast";
-import { GitBranch, Download, Upload, Trash2, Play, FileText } from "lucide-react";
+import { parseDiffFiles, countDiffChanges } from "@/lib/parse-diff";
+import { GitBranch, Download, Upload, Trash2, Play, FileText, Plus, Minus } from "lucide-react";
 import StashDiffViewer from "./StashDiffViewer";
+import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
+
+/** Inline preview of stash contents (file count + insertions/deletions) */
+function StashPreview({ repoPath, stashIndex }: { repoPath: string; stashIndex: number }) {
+  const { data: diffOutput } = useStashDiff(repoPath, stashIndex);
+  if (!diffOutput) return null;
+  const files = parseDiffFiles(diffOutput);
+  const changes = countDiffChanges(files);
+  return (
+    <div className="flex items-center gap-1.5 mt-1 text-[10px] text-text-muted">
+      <span>{changes.files} file{changes.files !== 1 ? "s" : ""}</span>
+      {changes.added > 0 && (
+        <span className="inline-flex items-center gap-0.5 text-success">
+          <Plus size={8} />{changes.added}
+        </span>
+      )}
+      {changes.removed > 0 && (
+        <span className="inline-flex items-center gap-0.5 text-danger">
+          <Minus size={8} />{changes.removed}
+        </span>
+      )}
+    </div>
+  );
+}
 
 export default function StashPanel({ onClose }: { onClose?: () => void }) {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -19,6 +45,7 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
   const [showPushForm, setShowPushForm] = useState(false);
   const [message, setMessage] = useState("");
   const [includeUntracked, setIncludeUntracked] = useState(false);
+  const [dropTarget, setDropTarget] = useState<number | null>(null);
 
   const handlePush = async () => {
     try {
@@ -81,7 +108,7 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Stash message (optional)"
-              className="w-full text-xs bg-surface-2 border border-border rounded px-2 py-1 text-text-primary placeholder:text-text-muted outline-none focus:border-accent"
+              className="w-full text-xs bg-surface-2 border border-border rounded-mac px-2 py-1.5 text-text-primary placeholder:text-text-muted outline-none focus:border-accent"
             />
             <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer">
               <input
@@ -96,13 +123,13 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
               <button
                 onClick={handlePush}
                 disabled={stashPush.isPending}
-                className="flex-1 px-2 py-1 text-xs bg-accent text-white rounded disabled:opacity-50"
+                className="flex-1 px-2 py-1.5 text-xs bg-accent text-white rounded-mac disabled:opacity-50 hover:opacity-90 transition-opacity"
               >
                 {stashPush.isPending ? "Stashing..." : "Stash"}
               </button>
               <button
                 onClick={() => setShowPushForm(false)}
-                className="px-2 py-1 text-xs border border-border rounded hover:bg-surface-2"
+                className="px-2 py-1.5 text-xs border border-border rounded-mac hover:bg-surface-2 transition-colors"
               >
                 Cancel
               </button>
@@ -112,7 +139,7 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
           <div className="px-3 py-2 border-b border-border-40 bg-surface-1-40">
             <button
               onClick={() => setShowPushForm(true)}
-              className="w-full flex items-center justify-center gap-1 px-2 py-1 text-xs bg-accent text-white rounded hover:opacity-90"
+              className="w-full flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-accent text-white rounded-mac hover:opacity-90 transition-opacity"
             >
               <Upload size={12} />
               Stash Changes
@@ -151,25 +178,26 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
                   <GitBranch size={9} className="opacity-75" />
                   <span className="truncate">{branch}</span>
                 </div>
+                {repoPath && <StashPreview repoPath={repoPath} stashIndex={stash.index} />}
                 <div className="flex gap-1 mt-1.5">
                   <button
-                    className="ghost p-0.5 text-text-muted hover:text-text-primary"
+                    className="px-1.5 py-0.5 text-[10px] rounded-mac text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
                     title="Pop"
                     onClick={(e) => { e.stopPropagation(); handlePop(stash.index); }}
                   >
                     <Download size={10} />
                   </button>
                   <button
-                    className="ghost p-0.5 text-text-muted hover:text-text-primary"
+                    className="px-1.5 py-0.5 text-[10px] rounded-mac text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
                     title="Apply"
                     onClick={(e) => { e.stopPropagation(); handleApply(stash.index); }}
                   >
                     <Play size={10} />
                   </button>
                   <button
-                    className="ghost p-0.5 text-text-muted hover:text-[#ff453a]"
+                    className="px-1.5 py-0.5 text-[10px] rounded-mac text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
                     title="Drop"
-                    onClick={(e) => { e.stopPropagation(); handleDrop(stash.index); }}
+                    onClick={(e) => { e.stopPropagation(); setDropTarget(stash.index); }}
                   >
                     <Trash2 size={10} />
                   </button>
@@ -191,6 +219,16 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
         )}
       </div>
 
+      <ConfirmDialog
+        open={dropTarget !== null}
+        title="Drop Stash"
+        message={`Are you sure you want to drop stash@{${dropTarget}}? This action cannot be undone.`}
+        confirmLabel="Drop"
+        cancelLabel="Cancel"
+        variant="destructive"
+        onConfirm={() => { handleDrop(dropTarget ?? undefined); setDropTarget(null); }}
+        onCancel={() => setDropTarget(null)}
+      />
     </div>
   );
 }

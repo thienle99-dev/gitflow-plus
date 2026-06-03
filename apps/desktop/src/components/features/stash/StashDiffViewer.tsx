@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { showToast } from "@/lib/toast";
 import { parseDiffFiles, countDiffChanges } from "@/lib/parse-diff";
+import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
 
 interface StashDiffViewerProps {
   stash: StashEntry;
@@ -19,6 +20,7 @@ export default function StashDiffViewer({ stash }: StashDiffViewerProps) {
   const { data: diffOutput, isLoading } = useStashDiff(repoPath, stash.index);
   const [mode, setMode] = useState<DiffMode>("unified");
   const [loading, setLoading] = useState<string | null>(null);
+  const [showDropConfirm, setShowDropConfirm] = useState(false);
 
   const handleAction = async (action: "apply" | "pop" | "drop") => {
     if (!repoPath) return;
@@ -64,7 +66,7 @@ export default function StashDiffViewer({ stash }: StashDiffViewerProps) {
           <button
             key={m}
             onClick={() => setMode(m)}
-            className={`px-2 py-1 text-xs rounded ${
+            className={`px-2 py-1 text-xs rounded-mac transition-colors ${
               mode === m
                 ? "bg-accent text-white"
                 : "bg-surface-2 text-text-primary hover:bg-surface-2-80"
@@ -96,18 +98,18 @@ export default function StashDiffViewer({ stash }: StashDiffViewerProps) {
               <div key={file.path} className="col-span-2">
                 <div className="text-xs font-semibold text-text-muted mb-1">=== {file.path} ===</div>
                 <div className="grid grid-cols-2 gap-1">
-                  <div className="border border-border-40 rounded text-xs font-mono">
-                    <div className="bg-red-500/10 px-2 py-0.5 text-red-400 text-[10px] font-semibold">Before</div>
+                  <div className="border border-border-40 rounded-mac text-xs font-mono">
+                    <div className="bg-danger/10 px-2 py-0.5 text-danger text-[10px] font-semibold">Before</div>
                     {file.hunks.flatMap(h => h.lines).filter(l => l.type === "delete" || l.type === "context").map((l, i) => (
-                      <div key={i} className={`px-2 py-0.5 ${l.type === "delete" ? "bg-red-500/10 text-red-300" : "text-text-primary"}`}>
+                      <div key={i} className={`px-2 py-0.5 ${l.type === "delete" ? "bg-danger/10 text-danger/80" : "text-text-primary"}`}>
                         {l.content}
                       </div>
                     ))}
                   </div>
-                  <div className="border border-border-40 rounded text-xs font-mono">
-                    <div className="bg-green-500/10 px-2 py-0.5 text-green-400 text-[10px] font-semibold">After</div>
+                  <div className="border border-border-40 rounded-mac text-xs font-mono">
+                    <div className="bg-success/10 px-2 py-0.5 text-success text-[10px] font-semibold">After</div>
                     {file.hunks.flatMap(h => h.lines).filter(l => l.type === "add" || l.type === "context").map((l, i) => (
-                      <div key={i} className={`px-2 py-0.5 ${l.type === "add" ? "bg-green-500/10 text-green-300" : "text-text-primary"}`}>
+                      <div key={i} className={`px-2 py-0.5 ${l.type === "add" ? "bg-success/10 text-success/80" : "text-text-primary"}`}>
                         {l.content}
                       </div>
                     ))}
@@ -119,7 +121,7 @@ export default function StashDiffViewer({ stash }: StashDiffViewerProps) {
         ) : (
           <div className="space-y-2">
             {files.map((file) => (
-              <details key={file.path} className="border border-border-40 rounded">
+              <details key={file.path} className="border border-border-40 rounded-mac">
                 <summary className="px-2 py-1 text-xs cursor-pointer hover:bg-surface-2">
                   <span className="font-medium">{file.path}</span>
                   <span className="ml-2 text-text-muted">
@@ -130,8 +132,8 @@ export default function StashDiffViewer({ stash }: StashDiffViewerProps) {
                 <div className="px-2 py-1 font-mono text-xs">
                   {file.hunks.flatMap(h => h.lines).filter(l => l.type !== "header").map((l, i) => (
                     <div key={i} className={`${
-                      l.type === "add" ? "bg-green-500/10 text-green-300" :
-                      l.type === "delete" ? "bg-red-500/10 text-red-300" :
+                      l.type === "add" ? "bg-success/10 text-success/80" :
+                      l.type === "delete" ? "bg-danger/10 text-danger/80" :
                       "text-text-primary"
                     }`}>
                       {l.type === "add" ? "+" : l.type === "delete" ? "-" : " "} {l.content}
@@ -149,26 +151,36 @@ export default function StashDiffViewer({ stash }: StashDiffViewerProps) {
         <button
           onClick={() => handleAction("apply")}
           disabled={loading === "apply"}
-          className="flex-1 px-2 py-1 text-xs bg-accent text-white rounded disabled:opacity-50"
+          className="flex-1 px-2 py-1.5 text-xs bg-accent text-white rounded-mac disabled:opacity-50 hover:opacity-90 transition-opacity"
         >
           {loading === "apply" ? "Applying..." : "Apply"}
         </button>
         <button
           onClick={() => handleAction("pop")}
           disabled={loading === "pop"}
-          className="flex-1 px-2 py-1 text-xs bg-accent text-white rounded disabled:opacity-50"
+          className="flex-1 px-2 py-1.5 text-xs bg-accent text-white rounded-mac disabled:opacity-50 hover:opacity-90 transition-opacity"
         >
           {loading === "pop" ? "Popping..." : "Pop"}
         </button>
         <button
-          onClick={() => handleAction("drop")}
+          onClick={() => setShowDropConfirm(true)}
           disabled={loading === "drop"}
-          className="flex-1 px-2 py-1 text-xs bg-red-600 text-white rounded disabled:opacity-50"
+          className="flex-1 px-2 py-1.5 text-xs bg-danger text-white rounded-mac disabled:opacity-50 hover:opacity-90 transition-opacity"
         >
           {loading === "drop" ? "Dropping..." : "Drop"}
         </button>
       </div>
 
+      <ConfirmDialog
+        open={showDropConfirm}
+        title="Drop Stash"
+        message={`Are you sure you want to drop stash@{${stash.index}}? This action cannot be undone.`}
+        confirmLabel="Drop"
+        cancelLabel="Cancel"
+        variant="destructive"
+        onConfirm={() => { setShowDropConfirm(false); handleAction("drop"); }}
+        onCancel={() => setShowDropConfirm(false)}
+      />
     </div>
   );
 }

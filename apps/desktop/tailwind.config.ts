@@ -19,6 +19,10 @@ export default {
           secondary: "var(--text-secondary)",
           muted: "var(--text-muted)",
         },
+        success: "var(--success)",
+        danger: "var(--danger)",
+        warning: "var(--warning)",
+        info: "var(--info)",
       },
       fontFamily: {
         sans: [

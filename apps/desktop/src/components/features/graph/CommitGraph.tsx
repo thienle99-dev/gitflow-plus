@@ -9,11 +9,15 @@ import ContextMenu, { type ContextMenuItem } from "@/components/ui/overlay/Conte
 import { useCanvasRenderer } from "./useCanvasRenderer";
 import { useHitTest } from "./useHitTest";
 import { useGraphLayoutWorker } from "@/lib/useGraphLayoutWorker";
+import type { LayoutState } from "@/lib/graph-layout";
+import type { GraphRenderIndex } from "./useCanvasRenderer";
 import CommitTooltip from "./CommitTooltip";
 import { showToast } from "@/lib/toast";
 import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
+import { Search, X } from "lucide-react";
 
 const ROW_HEIGHT = 38;
+const EDGE_BLOCK_SIZE = 128;
 
 export default function CommitGraph() {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -31,10 +35,19 @@ export default function CommitGraph() {
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; hash: string } | null>(null);
   const [confirmCherryPick, setConfirmCherryPick] = useState<string | null>(null);
   const [confirmRevert, setConfirmRevert] = useState<string | null>(null);
+  const [filterQuery, setFilterQuery] = useState("");
 
   // Graph layout + render index computed off the main thread via Web Worker
   const { layout, graphIndex } = useGraphLayoutWorker(data, repoPath);
-  const commits = layout.commits;
+  const filterText = filterQuery.trim().toLowerCase();
+  const isFiltering = filterText.length > 0;
+  const { visibleLayout, visibleGraphIndex } = useMemo(() => {
+    if (!filterText) {
+      return { visibleLayout: layout, visibleGraphIndex: graphIndex };
+    }
+    return createFilteredGraphLayout(layout, filterText);
+  }, [layout, graphIndex, filterText]);
+  const commits = visibleLayout.commits;
 
   // TanStack Virtual — manages scroll position, total size, and infinite loading
   const virtualizer = useVirtualizer({
@@ -48,8 +61,8 @@ export default function CommitGraph() {
   const totalSize = virtualizer.getTotalSize();
 
   const totalLanes = useMemo(
-    () => layout.commits.reduce((max, c) => Math.max(max, c.lane + 1), 1),
-    [layout],
+    () => visibleLayout.commits.reduce((max, c) => Math.max(max, c.lane + 1), 1),
+    [visibleLayout],
   );
 
   // Track container size
@@ -98,13 +111,13 @@ export default function CommitGraph() {
 
   // Hit-test hook — hover state + event handlers
   const { hover, handleMouseMove, handleMouseLeave, handleClick, handleContextMenu } =
-    useHitTest(layout, scrollTop);
+    useHitTest(visibleLayout, scrollTop);
 
   // Canvas renderer — redraws whenever deps change
   useCanvasRenderer({
     canvasRef,
-    layout,
-    graphIndex,
+    layout: visibleLayout,
+    graphIndex: visibleGraphIndex,
     scrollTop,
     containerHeight,
     containerWidth,
@@ -118,10 +131,10 @@ export default function CommitGraph() {
   useEffect(() => {
     const lastItem = virtualItems[virtualItems.length - 1];
     if (!lastItem) return;
-    if (lastItem.index >= commits.length - 1 && hasNextPage && !isFetchingNextPage) {
+    if (!isFiltering && lastItem.index >= commits.length - 1 && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
-  }, [virtualItems, hasNextPage, isFetchingNextPage, fetchNextPage, commits.length]);
+  }, [virtualItems, hasNextPage, isFetchingNextPage, fetchNextPage, commits.length, isFiltering]);
 
   const copyHash = async (hash: string) => {
     try {
@@ -275,13 +288,32 @@ export default function CommitGraph() {
     <>
     <div className="h-full min-h-0 w-full overflow-hidden flex flex-col">
       {/* Header */}
-      <div className="h-[28px] flex items-center px-3 border-b border-border text-xs text-text-muted font-medium shrink-0">
-        <div className="flex items-center gap-1">
+      <div className="min-h-9 flex items-center gap-3 px-3 py-1.5 border-b border-border text-xs text-text-muted font-medium shrink-0">
+        <div className="flex min-w-0 flex-1 items-center gap-1">
           {repoPath?.split("/").pop()}
           <span className="text-text-muted">—</span>
-          <span className="text-text-secondary">
-            {selectedRef || "All Branches"} — {commits.length} commits
+          <span className="min-w-0 truncate text-text-secondary">
+            {selectedRef || "All Branches"} — {isFiltering ? `${commits.length} of ${layout.commits.length}` : commits.length} commits
           </span>
+        </div>
+        <div className="relative w-[min(280px,34vw)] min-w-[180px]">
+          <Search size={12} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-text-muted-70" />
+          <input
+            value={filterQuery}
+            onChange={(e) => setFilterQuery(e.target.value)}
+            placeholder="Filter commits"
+            className="h-6 w-full rounded border border-border-40 bg-surface-1-30 pl-7 pr-7 text-[11px] font-medium text-text-primary outline-none transition-colors placeholder:text-text-muted-60 hover:bg-surface-2-30 focus:border-accent-60"
+          />
+          {filterQuery && (
+            <button
+              type="button"
+              onClick={() => setFilterQuery("")}
+              className="absolute right-1 top-1/2 flex h-4 w-4 -translate-y-1/2 items-center justify-center rounded text-text-muted hover:bg-surface-2-60 hover:text-text-primary"
+              title="Clear filter"
+            >
+              <X size={11} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -290,20 +322,32 @@ export default function CommitGraph() {
         ref={containerRef}
         className="flex-1 min-h-0 w-full overflow-y-auto overflow-x-hidden"
       >
-        {/* Inner div sized by virtualizer total height */}
-        <div style={{ minHeight: "100%", height: totalSize, position: "relative" }}>
-          {/* Canvas is sticky so it stays in view while the div scrolls behind it */}
-          <canvas
-            ref={canvasRef}
-            style={{ position: "sticky", top: 0, display: "block", cursor: "pointer" }}
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
-            onClick={(e) => handleClick(e, selectCommit)}
-            onContextMenu={(e) =>
-              handleContextMenu(e, (x, y, hash) => setCtxMenu({ x, y, hash }))
-            }
-          />
-        </div>
+        {isFiltering && commits.length === 0 ? (
+          <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-xs text-text-muted">
+            <Search size={18} className="text-text-muted-60" />
+            <div className="font-semibold text-text-secondary">No loaded commits match</div>
+            <button
+              type="button"
+              onClick={() => setFilterQuery("")}
+              className="h-7 rounded border border-border-40 bg-surface-1-30 px-3 text-2xs font-semibold text-text-secondary transition-colors hover:bg-surface-2 hover:text-text-primary"
+            >
+              Clear filter
+            </button>
+          </div>
+        ) : (
+          <div style={{ minHeight: "100%", height: totalSize, position: "relative" }}>
+            <canvas
+              ref={canvasRef}
+              style={{ position: "sticky", top: 0, display: "block", cursor: "pointer" }}
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
+              onClick={(e) => handleClick(e, selectCommit)}
+              onContextMenu={(e) =>
+                handleContextMenu(e, (x, y, hash) => setCtxMenu({ x, y, hash }))
+              }
+            />
+          </div>
+        )}
       </div>
 
       {/* Load more indicator */}
@@ -350,6 +394,94 @@ export default function CommitGraph() {
     />
     </>
   );
+}
+
+function createFilteredGraphLayout(
+  layout: LayoutState,
+  query: string,
+): { visibleLayout: LayoutState; visibleGraphIndex: GraphRenderIndex } {
+  const terms = query.split(/\s+/).filter(Boolean);
+  const commits = layout.commits
+    .filter((commit) => matchesCommitFilter(commit, terms))
+    .map((commit, row) => ({
+      ...commit,
+      y: row * ROW_HEIGHT + ROW_HEIGHT / 2,
+    }));
+
+  const visibleLayout: LayoutState = {
+    commits,
+    laneMap: layout.laneMap,
+    laneColors: layout.laneColors,
+    nextLane: layout.nextLane,
+  };
+
+  return {
+    visibleLayout,
+    visibleGraphIndex: buildRenderIndexForVisibleCommits(visibleLayout),
+  };
+}
+
+function matchesCommitFilter(commit: LayoutState["commits"][number], terms: string[]) {
+  const refText = commit.refs
+    .map((ref) => `${ref.name} ${ref.ref_type}`)
+    .join(" ");
+  const haystack = [
+    commit.message,
+    commit.hash,
+    commit.hash.slice(0, 7),
+    commit.author,
+    commit.email,
+    commit.date,
+    refText,
+  ].join(" ").toLowerCase();
+
+  return terms.every((term) => haystack.includes(term));
+}
+
+function buildRenderIndexForVisibleCommits(layout: LayoutState): GraphRenderIndex {
+  const rowByHash = new Map<string, number>(
+    layout.commits.map((commit, row) => [commit.hash, row]),
+  );
+  const blockCount = Math.max(
+    1,
+    Math.ceil(Math.max(1, layout.commits.length) / EDGE_BLOCK_SIZE),
+  );
+  const edgeBlocks: GraphRenderIndex["edgeBlocks"] = Array.from(
+    { length: blockCount },
+    () => [],
+  );
+  let edgeId = 0;
+
+  for (let row = 0; row < layout.commits.length; row++) {
+    const commit = layout.commits[row];
+    for (let parentIndex = 0; parentIndex < commit.parents.length; parentIndex++) {
+      const parentRow = rowByHash.get(commit.parents[parentIndex]);
+      if (parentRow === undefined || parentRow <= row) continue;
+
+      const edge = {
+        id: edgeId++,
+        fromRow: row,
+        toRow: parentRow,
+        fromLane: commit.lane,
+        toLane: commit.parentLanes[parentIndex] ?? commit.lane,
+        color: commit.color,
+      };
+      const startBlock = Math.max(0, Math.floor(edge.fromRow / EDGE_BLOCK_SIZE));
+      const endBlock = Math.min(
+        edgeBlocks.length - 1,
+        Math.floor(edge.toRow / EDGE_BLOCK_SIZE),
+      );
+      for (let block = startBlock; block <= endBlock; block++) {
+        edgeBlocks[block].push(edge);
+      }
+    }
+  }
+
+  return {
+    commitByHash: new Map(layout.commits.map((commit) => [commit.hash, commit])),
+    edgeBlocks,
+    blockSize: EDGE_BLOCK_SIZE,
+  };
 }
 
 function CopyIcon() {

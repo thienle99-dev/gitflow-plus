@@ -9,7 +9,7 @@ import AIMarkdown from "@/components/ui/feedback/AIMarkdown";
 import { EditorView, basicSetup } from "codemirror";
 import { EditorState, RangeSetBuilder, StateField } from "@codemirror/state";
 import { keymap, Decoration, type DecorationSet, WidgetType } from "@codemirror/view";
-import { oneDark } from "@codemirror/theme-one-dark";
+import { getCodeMirrorTheme } from "@/lib/codemirror-themes";
 import { javascript } from "@codemirror/lang-javascript";
 import { python } from "@codemirror/lang-python";
 import { rust } from "@codemirror/lang-rust";
@@ -154,7 +154,7 @@ export default function DiffViewer({
   const ext = useMemo(() => filePath.split(".").pop() || "", [filePath]);
   const lang = useMemo(() => getLang(ext), [ext]);
   const theme = useMemo(
-    () => appTheme === "dark" ? [oneDark] : [],
+    () => getCodeMirrorTheme(appTheme),
     [appTheme],
   );
 
