@@ -17,7 +17,7 @@ import {
   Sparkles,
   Trash2,
 } from "lucide-react";
-import { useRepoStore } from "@/stores/repo";
+import { useRepoStore, applyTheme, readStoredTheme } from "@/stores/repo";
 import { api } from "@/api/tauri";
 import { Switch } from "@/components/ui/form";
 import { AI_REVIEW_CHECKLIST_OPTIONS, DEFAULT_AI_REVIEW_CHECKLIST, type AIReviewMode, readDetectedConventions, clearAICache } from "@/lib/ai";
@@ -96,8 +96,18 @@ interface SettingsDialogProps {
 }
 
 const THEME_CARDS = [
-  { id: "dark",             label: "macOS Dark",   group: "macOS",         colors: { bg: "#1c1c1e", surface: "#2c2c2e", sidebar: "#111113", accent: "#0a84ff", text: "#f5f5f7" } },
-  { id: "light",            label: "macOS Light",  group: "macOS",         colors: { bg: "#ffffff", surface: "#f2f2f7", sidebar: "#e8e8ed", accent: "#007aff", text: "#1d1d1f" } },
+  { id: "system",           label: "Auto (OS Sync)", group: "OS Sync",       colors: { bg: "#1e1e1e", surface: "#2d2d2d", sidebar: "#181818", accent: "#0a84ff", text: "#e0e0e0" } },
+  { id: "dark",             label: "macOS Dark",   group: "OS Sync",       colors: { bg: "#1c1c1e", surface: "#2c2c2e", sidebar: "#111113", accent: "#0a84ff", text: "#f5f5f7" } },
+  { id: "light",            label: "macOS Light",  group: "OS Sync",       colors: { bg: "#ffffff", surface: "#f2f2f7", sidebar: "#e8e8ed", accent: "#007aff", text: "#1d1d1f" } },
+  
+  { id: "github-dark",      label: "GitHub Dark",  group: "Developer Classics", colors: { bg: "#0d1117", surface: "#161b22", sidebar: "#010409", accent: "#2f81f7", text: "#c9d1d9" } },
+  { id: "nord",             label: "Nord Arctic",  group: "Developer Classics", colors: { bg: "#2e3440", surface: "#3b4252", sidebar: "#242933", accent: "#88c0d0", text: "#d8dee9" } },
+  { id: "tokyo-night",      label: "Tokyo Night",  group: "Developer Classics", colors: { bg: "#1a1b26", surface: "#1f2335", sidebar: "#16161e", accent: "#7aa2f7", text: "#a9b1d6" } },
+  { id: "dracula",          label: "Dracula",      group: "Developer Classics", colors: { bg: "#282a36", surface: "#343746", sidebar: "#1e1f29", accent: "#ff79c6", text: "#f8f8f2" } },
+  
+  { id: "cyberpunk-green",  label: "Cyberpunk Neon",group: "Highly Personalized",colors: { bg: "#0c0f12", surface: "#161b22", sidebar: "#080a0d", accent: "#39ff14", text: "#e0e6ed" } },
+  { id: "monokai-pro",      label: "Monokai Pro",  group: "Highly Personalized",colors: { bg: "#2d2a2e", surface: "#3a373b", sidebar: "#222122", accent: "#ffd866", text: "#fcfcfa" } },
+  
   { id: "gruvbox-dark",     label: "Dark Medium",  group: "Gruvbox Dark",  colors: { bg: "#282828", surface: "#3c3836", sidebar: "#1d2021", accent: "#d79921", text: "#ebdbb2" } },
   { id: "gruvbox-dark-soft",label: "Dark Soft",    group: "Gruvbox Dark",  colors: { bg: "#32302f", surface: "#3c3836", sidebar: "#282828", accent: "#d79921", text: "#ebdbb2" } },
   { id: "gruvbox-dark-hard",label: "Dark Hard",    group: "Gruvbox Dark",  colors: { bg: "#1d2021", surface: "#282828", sidebar: "#141617", accent: "#d79921", text: "#ebdbb2" } },
@@ -117,7 +127,7 @@ const AI_REVIEW_LANGUAGES = [
   { id: "german", label: "German" },
 ] as const;
 
-const THEME_GROUPS = ["macOS", "Gruvbox Dark", "Gruvbox Light"] as const;
+const THEME_GROUPS = ["OS Sync", "Developer Classics", "Highly Personalized", "Gruvbox Dark", "Gruvbox Light"] as const;
 
 function ThemeSkeletonCard({ card, selected, onClick }: {
   card: typeof THEME_CARDS[number];
@@ -125,14 +135,19 @@ function ThemeSkeletonCard({ card, selected, onClick }: {
   onClick: () => void;
 }) {
   const c = card.colors;
+  const isCyberpunk = card.id === "cyberpunk-green";
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center gap-1.5 p-1.5 rounded-mac border transition-all focus:outline-none"
+      className="flex flex-col items-center gap-1.5 p-1.5 rounded-mac border transition-all focus:outline-none cursor-pointer"
       style={{
         borderColor: selected ? c.accent : "transparent",
         background: selected ? c.accent + "18" : "transparent",
-        boxShadow: selected ? `0 0 0 1px ${c.accent}` : undefined,
+        boxShadow: selected
+          ? (isCyberpunk
+              ? "0 0 10px rgba(57, 255, 20, 0.5), 0 0 2px rgba(57, 255, 20, 0.3)"
+              : `0 0 0 1px ${c.accent}`)
+          : undefined,
       }}
       title={card.label}
     >
@@ -201,6 +216,15 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
   
   // General Tab States
   const [theme, setSelectedTheme] = useState<typeof currentTheme>(currentTheme);
+
+  // Revert preview theme on unmount if settings were not saved
+  useEffect(() => {
+    return () => {
+      const storedTheme = readStoredTheme();
+      applyTheme(storedTheme);
+    };
+  }, []);
+
   const [defaultDiffMode, setDefaultDiffMode] = useState<"split" | "unified">("split");
   const [graphDensity, setGraphDensity] = useState<"comfortable" | "compact">("comfortable");
   const [graphShowHash, setGraphShowHash] = useState(true);
@@ -806,7 +830,10 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
                                 key={card.id}
                                 card={card}
                                 selected={theme === card.id}
-                                onClick={() => setSelectedTheme(card.id as any)}
+                                onClick={() => {
+                                  setSelectedTheme(card.id as any);
+                                  applyTheme(card.id as any);
+                                }}
                               />
                             ))}
                           </div>

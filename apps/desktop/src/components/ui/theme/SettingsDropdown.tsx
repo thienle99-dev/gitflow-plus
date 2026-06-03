@@ -39,7 +39,7 @@ export default function SettingsDropdown({ onOpenSettings, onOpenKeyboardShortcu
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-1 w-48 bg-surface-0 border border-border rounded-mac shadow-lg z-50">
+        <div className="absolute right-0 mt-1 w-48 bg-surface-0 border border-border rounded-mac shadow-lg z-[1000]">
           <button
             onClick={() => {
               toggleTheme();

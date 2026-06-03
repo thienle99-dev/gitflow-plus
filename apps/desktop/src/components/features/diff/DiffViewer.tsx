@@ -105,6 +105,7 @@ export default function DiffViewer({
   const [showInlineComments, setShowInlineComments] = useState(false);
   const [inlineComments, setInlineComments] = useState<InlineReviewComment[]>([]);
   const inlineCommentsMutation = useAIInlineComments();
+  const autoFiredRef = useRef(false);
 
   useEffect(() => {
     setReviewResult("");
@@ -113,10 +114,10 @@ export default function DiffViewer({
     setInlineComments([]);
     setShowInlineComments(false);
     inlineCommentsMutation.reset();
+    autoFiredRef.current = false;
   }, [filePath, diff]);
 
   // Auto-trigger inline review when opened from per-file hover/context menu
-  const autoFiredRef = useRef(false);
   useEffect(() => {
     if (autoInlineReview && diff && !autoFiredRef.current) {
       autoFiredRef.current = true;
