@@ -4,6 +4,7 @@ import {
   Database,
   Eye,
   EyeOff,
+  FileText,
   Gauge,
   GitBranch,
   Keyboard,
@@ -345,6 +346,19 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
     }
   }, [currentTheme]);
 
+  // Load detected convention files when repoPath changes
+  useEffect(() => {
+    if (!repoPath) {
+      setConventions([]);
+      return;
+    }
+    let cancelled = false;
+    readDetectedConventions(repoPath).then((files) => {
+      if (!cancelled) setConventions(files);
+    });
+    return () => { cancelled = true; };
+  }, [repoPath]);
+
   // Check for unsaved changes
   useEffect(() => {
     const storedDiffMode = (localStorage.getItem(LS_KEY_DIFF_MODE) as "split" | "unified") || "split";
@@ -580,6 +594,8 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       localStorage.setItem(LS_KEY_GITLAB_TOKEN, gitlabToken);
       localStorage.setItem(LS_KEY_GITLAB_HOST, gitlabHost);
       
+      clearAICache();
+
       setHasChanges(false);
       showToast("Settings saved successfully");
       
@@ -1355,6 +1371,45 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
                     className="w-full px-2.5 py-1.5 text-xs bg-surface-1 border border-border rounded-mac text-text-primary focus:border-accent outline-none resize-y placeholder:text-text-muted/60 hover:bg-surface-2 transition-all"
                   />
                 </div>
+
+                {/* Convention Files Preview */}
+                {repoPath && (
+                  <div className="space-y-1.5 border-t border-border-40 pt-3">
+                    <label className="text-xs font-semibold text-text-primary">Detected Convention Files</label>
+                    <p className="text-2xs text-text-muted">
+                      Project conventions from <code className="px-1 py-0.5 bg-surface-2 rounded text-text-secondary">CLAUDE.md</code>,{" "}
+                      <code className="px-1 py-0.5 bg-surface-2 rounded text-text-secondary">.cursorrules</code>,{" "}
+                      <code className="px-1 py-0.5 bg-surface-2 rounded text-text-secondary">AGENTS.md</code>, etc. are auto-injected into all AI prompts.
+                    </p>
+                    {conventions.length === 0 ? (
+                      <p className="text-2xs text-text-muted italic">No convention files found in this repository.</p>
+                    ) : (
+                      <div className="space-y-1 mt-1.5">
+                        {conventions.map((file) => (
+                          <button
+                            key={file.name}
+                            type="button"
+                            onClick={() => setExpandedConvention(expandedConvention === file.name ? null : file.name)}
+                            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-mac bg-surface-1 border border-border hover:bg-surface-2 transition-all text-left"
+                          >
+                            <FileText size={12} className="text-accent shrink-0" />
+                            <span className="text-text-primary font-medium truncate">{file.name}</span>
+                            <span className="text-2xs text-text-muted ml-auto">{file.content.length} chars</span>
+                            <ChevronDown
+                              size={11}
+                              className={`text-text-muted shrink-0 transition-transform ${expandedConvention === file.name ? "rotate-180" : ""}`}
+                            />
+                          </button>
+                        ))}
+                        {expandedConvention && conventions.find((f) => f.name === expandedConvention) && (
+                          <div className="mt-1 p-2.5 text-2xs text-text-secondary bg-surface-1 border border-border rounded-mac max-h-40 overflow-y-auto whitespace-pre-wrap font-mono leading-relaxed">
+                            {conventions.find((f) => f.name === expandedConvention)!.content}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
