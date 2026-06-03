@@ -354,6 +354,8 @@ export default function Toolbar() {
             onOpenSettings={() => openDialog("settings")}
             onOpenKeyboardShortcuts={() => openDialog("keyboard-shortcuts")}
             onOpenFeatureGuide={() => openDialog("feature-guide")}
+            onOpenHealthCheck={() => openDialog("health-check")}
+            onOpenDiagnostics={() => openDialog("diagnostics")}
           />
         </div>
 

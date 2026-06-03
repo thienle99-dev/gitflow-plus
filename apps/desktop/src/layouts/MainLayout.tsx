@@ -12,7 +12,7 @@ import Sidebar from "@/components/features/sidebar/Sidebar";
 import CommitGraph from "@/components/features/graph/CommitGraph";
 import RightPanel from "@/components/layout/RightPanel";
 import BottomBar from "@/components/layout/BottomBar";
-import { SearchDialog, KeyboardShortcutsModal, CherryPickDialog, SettingsDialog, AnalyticsDialog, CreateBranchDialog, MergeRequestDialog, MergePreviewDialog, CloneDialog, FeatureGuideDialog, OnboardingWizard, isOnboardingComplete, BranchCompareDialog } from "@/components/features/dialogs";
+import { SearchDialog, KeyboardShortcutsModal, CherryPickDialog, SettingsDialog, AnalyticsDialog, CreateBranchDialog, MergeRequestDialog, MergePreviewDialog, CloneDialog, FeatureGuideDialog, OnboardingWizard, isOnboardingComplete, BranchCompareDialog, HealthCheckDialog, DiagnosticDialog } from "@/components/features/dialogs";
 import ErrorBoundary from "@/components/ui/feedback/ErrorBoundary";
 import { AlertOctagon, RefreshCw, Trash2 } from "lucide-react";
 
@@ -325,6 +325,8 @@ export default function MainLayout() {
     ) : null,
     "clone": <CloneDialog open={true} onClose={closeDialog} />,
     "feature-guide": <FeatureGuideDialog open={true} onClose={closeDialog} />,
+    "health-check": <HealthCheckDialog onClose={closeDialog} />,
+    "diagnostics": <DiagnosticDialog onClose={closeDialog} />,
   };
 
   const dialogOverlay = overlayDialog ? (
@@ -336,6 +338,10 @@ export default function MainLayout() {
             ? "h-[min(680px,88vh)] w-[min(900px,90vw)]"
           : overlayDialog === "branch-compare"
             ? "h-[min(700px,85vh)] w-[min(900px,92vw)]"
+          : overlayDialog === "health-check"
+            ? "h-[min(600px,80vh)] w-[min(700px,85vw)]"
+          : overlayDialog === "diagnostics"
+            ? "h-[min(580px,78vh)] w-[min(600px,80vw)]"
           : "min-w-[480px] max-w-[600px] max-h-[80vh]"
       }`}>
         {dialogComponents[overlayDialog] || (

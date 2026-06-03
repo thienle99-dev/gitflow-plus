@@ -14,4 +14,6 @@ export { default as OnboardingWizard } from "./OnboardingWizard";
 export { default as LintWarningDialog } from "./LintWarningDialog";
 export { default as RiskSummaryDialog } from "./RiskSummaryDialog";
 export { default as BranchCompareDialog } from "./BranchCompareDialog";
+export { default as HealthCheckDialog } from "./HealthCheckDialog";
+export { default as DiagnosticDialog } from "./DiagnosticDialog";
 export { isOnboardingComplete, resetOnboarding } from "./OnboardingWizard";

@@ -1,14 +1,16 @@
 import { useState, useRef, useEffect } from "react";
-import { Settings, Moon, Sun, Book } from "lucide-react";
+import { Settings, Moon, Sun, Book, ShieldAlert, Activity } from "lucide-react";
 import { useRepoStore } from "@/stores/repo";
 
 interface SettingsDropdownProps {
   onOpenSettings: () => void;
   onOpenKeyboardShortcuts: () => void;
   onOpenFeatureGuide: () => void;
+  onOpenHealthCheck?: () => void;
+  onOpenDiagnostics?: () => void;
 }
 
-export default function SettingsDropdown({ onOpenSettings, onOpenKeyboardShortcuts, onOpenFeatureGuide }: SettingsDropdownProps) {
+export default function SettingsDropdown({ onOpenSettings, onOpenKeyboardShortcuts, onOpenFeatureGuide, onOpenHealthCheck, onOpenDiagnostics }: SettingsDropdownProps) {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const theme = useRepoStore((s) => s.theme);
@@ -85,6 +87,35 @@ export default function SettingsDropdown({ onOpenSettings, onOpenKeyboardShortcu
             <Book size={13} />
             Feature Guide
           </button>
+
+          {onOpenHealthCheck && (
+            <>
+              <div className="h-[1px] bg-border/40 my-1" />
+              <button
+                onClick={() => {
+                  onOpenHealthCheck();
+                  setOpen(false);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors text-left"
+              >
+                <ShieldAlert size={13} />
+                Health Check
+              </button>
+            </>
+          )}
+
+          {onOpenDiagnostics && (
+            <button
+              onClick={() => {
+                onOpenDiagnostics();
+                setOpen(false);
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors text-left"
+            >
+              <Activity size={13} />
+              Diagnostics
+            </button>
+          )}
         </div>
       )}
     </div>
