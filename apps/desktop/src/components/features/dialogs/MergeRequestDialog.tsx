@@ -21,12 +21,20 @@ import {
   MessageSquareText,
   AlertTriangle,
   Check,
+  ShieldCheck,
+  GitMerge,
+  RotateCcw,
+  ChevronDown,
 } from "lucide-react";
 import {
   fetchMergeRequests,
   fetchMergeRequestChanges,
   fetchGitHubCheckRuns,
   parseRemoteUrl,
+  approveMergeRequest,
+  mergeMergeRequest,
+  closeMergeRequest,
+  reopenMergeRequest,
   type MergeRequest,
   type MergeRequestFileChange,
   type CheckRun,
@@ -76,6 +84,12 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutSuccess, setCheckoutSuccess] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
+  // MR action states
+  const [mrActionLoading, setMrActionLoading] = useState<string | null>(null);
+  const [mrActionMessage, setMrActionMessage] = useState<string | null>(null);
+  const [mrActionError, setMrActionError] = useState<string | null>(null);
+  const [showMergeMethodPicker, setShowMergeMethodPicker] = useState(false);
 
 
 
@@ -183,6 +197,72 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
     saveLastAIReviewMode(mode);
     setAiReviewResult("");
     aiReview.reset();
+  };
+
+  // MR approve/merge/close/reopen actions
+  const handleApproveMR = async () => {
+    if (!selectedMr || !remoteUrl) return;
+    setMrActionLoading("approve");
+    setMrActionMessage(null);
+    setMrActionError(null);
+    try {
+      const msg = await approveMergeRequest(remoteUrl, selectedMr);
+      setMrActionMessage(msg);
+      await loadMRs();
+    } catch (e: any) {
+      setMrActionError(e.message || String(e));
+    } finally {
+      setMrActionLoading(null);
+    }
+  };
+
+  const handleMergeMR = async (mergeMethod: "merge" | "squash" | "rebase" = "merge") => {
+    if (!selectedMr || !remoteUrl) return;
+    setShowMergeMethodPicker(false);
+    setMrActionLoading("merge");
+    setMrActionMessage(null);
+    setMrActionError(null);
+    try {
+      const msg = await mergeMergeRequest(remoteUrl, selectedMr, mergeMethod);
+      setMrActionMessage(msg);
+      await loadMRs();
+    } catch (e: any) {
+      setMrActionError(e.message || String(e));
+    } finally {
+      setMrActionLoading(null);
+    }
+  };
+
+  const handleCloseMR = async () => {
+    if (!selectedMr || !remoteUrl) return;
+    setMrActionLoading("close");
+    setMrActionMessage(null);
+    setMrActionError(null);
+    try {
+      const msg = await closeMergeRequest(remoteUrl, selectedMr);
+      setMrActionMessage(msg);
+      await loadMRs();
+    } catch (e: any) {
+      setMrActionError(e.message || String(e));
+    } finally {
+      setMrActionLoading(null);
+    }
+  };
+
+  const handleReopenMR = async () => {
+    if (!selectedMr || !remoteUrl) return;
+    setMrActionLoading("reopen");
+    setMrActionMessage(null);
+    setMrActionError(null);
+    try {
+      const msg = await reopenMergeRequest(remoteUrl, selectedMr);
+      setMrActionMessage(msg);
+      await loadMRs();
+    } catch (e: any) {
+      setMrActionError(e.message || String(e));
+    } finally {
+      setMrActionLoading(null);
+    }
   };
 
   // Checkout local branch
@@ -1162,26 +1242,144 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
 
         {/* Footer Actions */}
         {selectedMr && (
-          <div className="px-4 py-3 border-t border-border-60 bg-surface-1 flex flex-wrap justify-end gap-2 shrink-0">
-            <a
-              href={providerReviewUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="h-8 px-4 bg-accent hover:opacity-95 text-accent-fg text-xs font-semibold rounded-mac border border-accent-30 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
-              title="Open provider review page"
-            >
-              <MessageSquareText size={11} />
-              <span>Review MR</span>
-            </a>
-            <a
-              href={selectedMr.webUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="h-8 px-4 bg-surface-2 hover:bg-surface-3 text-text-primary text-xs font-semibold rounded-mac border border-border-40 hover:border-border transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
-            >
-              <span>View on Web</span>
-              <ExternalLink size={11} />
-            </a>
+          <div className="px-4 py-3 border-t border-border-60 bg-surface-1 flex flex-col gap-2 shrink-0">
+            {/* Action status messages */}
+            {mrActionMessage && (
+              <div className="flex items-center gap-1.5 text-xs text-green-400 bg-green-500/10 border border-green-500/20 rounded-mac px-3 py-1.5">
+                <CheckCircle2 size={12} />
+                <span>{mrActionMessage}</span>
+                <button onClick={() => setMrActionMessage(null)} className="ml-auto text-text-muted hover:text-text-primary">
+                  <X size={10} />
+                </button>
+              </div>
+            )}
+            {mrActionError && (
+              <div className="flex items-center gap-1.5 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-mac px-3 py-1.5">
+                <AlertCircle size={12} />
+                <span>{mrActionError}</span>
+                <button onClick={() => setMrActionError(null)} className="ml-auto text-text-muted hover:text-text-primary">
+                  <X size={10} />
+                </button>
+              </div>
+            )}
+
+            <div className="flex flex-wrap justify-end gap-2">
+              {/* Approve — only for open MRs */}
+              {selectedMr.state === "open" && (
+                <button
+                  onClick={handleApproveMR}
+                  disabled={!!mrActionLoading}
+                  className="h-8 px-3.5 bg-green-600 hover:bg-green-500 text-white text-xs font-semibold rounded-mac border border-green-500/30 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs disabled:opacity-50"
+                  title="Approve this merge request"
+                >
+                  {mrActionLoading === "approve" ? (
+                    <Loader2 size={11} className="animate-spin" />
+                  ) : (
+                    <ShieldCheck size={11} />
+                  )}
+                  <span>Approve</span>
+                </button>
+              )}
+
+              {/* Merge — only for open MRs, with method picker */}
+              {selectedMr.state === "open" && (
+                <div className="relative">
+                  <div className="flex">
+                    <button
+                      onClick={() => handleMergeMR("merge")}
+                      disabled={!!mrActionLoading}
+                      className="h-8 pl-3.5 pr-2 bg-accent hover:opacity-95 text-accent-fg text-xs font-semibold rounded-l-mac border border-accent-30 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs disabled:opacity-50"
+                      title="Merge this request"
+                    >
+                      {mrActionLoading === "merge" ? (
+                        <Loader2 size={11} className="animate-spin" />
+                      ) : (
+                        <GitMerge size={11} />
+                      )}
+                      <span>Merge</span>
+                    </button>
+                    <button
+                      onClick={() => setShowMergeMethodPicker((p) => !p)}
+                      disabled={!!mrActionLoading}
+                      className="h-8 px-1.5 bg-accent hover:opacity-95 text-accent-fg text-xs font-semibold rounded-r-mac border border-accent-30 border-l-0 transition-all flex items-center cursor-pointer shadow-2xs disabled:opacity-50"
+                    >
+                      <ChevronDown size={11} />
+                    </button>
+                  </div>
+                  {showMergeMethodPicker && (
+                    <div className="absolute bottom-full right-0 mb-1 bg-surface-2 border border-border-40 rounded-mac shadow-lg py-1 min-w-[140px] z-50">
+                      {(["merge", "squash", "rebase"] as const).map((method) => (
+                        <button
+                          key={method}
+                          onClick={() => handleMergeMR(method)}
+                          className="w-full text-left px-3 py-1.5 text-xs text-text-primary hover:bg-surface-3 transition-colors capitalize"
+                        >
+                          {method === "merge" ? "Create merge commit" : method === "squash" ? "Squash and merge" : "Rebase and merge"}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Close — for open MRs */}
+              {selectedMr.state === "open" && (
+                <button
+                  onClick={handleCloseMR}
+                  disabled={!!mrActionLoading}
+                  className="h-8 px-3.5 bg-surface-2 hover:bg-surface-3 text-text-secondary text-xs font-semibold rounded-mac border border-border-40 hover:border-border transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs disabled:opacity-50"
+                  title="Close this merge request"
+                >
+                  {mrActionLoading === "close" ? (
+                    <Loader2 size={11} className="animate-spin" />
+                  ) : (
+                    <XCircle size={11} />
+                  )}
+                  <span>Close</span>
+                </button>
+              )}
+
+              {/* Reopen — for closed MRs */}
+              {(selectedMr.state === "closed") && (
+                <button
+                  onClick={handleReopenMR}
+                  disabled={!!mrActionLoading}
+                  className="h-8 px-3.5 bg-surface-2 hover:bg-surface-3 text-text-secondary text-xs font-semibold rounded-mac border border-border-40 hover:border-border transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs disabled:opacity-50"
+                  title="Reopen this merge request"
+                >
+                  {mrActionLoading === "reopen" ? (
+                    <Loader2 size={11} className="animate-spin" />
+                  ) : (
+                    <RotateCcw size={11} />
+                  )}
+                  <span>Reopen</span>
+                </button>
+              )}
+
+              {/* Review on provider */}
+              <a
+                href={providerReviewUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="h-8 px-3.5 bg-surface-2 hover:bg-surface-3 text-text-primary text-xs font-semibold rounded-mac border border-border-40 hover:border-border transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                title="Open provider review page"
+              >
+                <MessageSquareText size={11} />
+                <span>Review</span>
+                <ExternalLink size={9} />
+              </a>
+
+              {/* View on Web */}
+              <a
+                href={selectedMr.webUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="h-8 px-3.5 bg-surface-2 hover:bg-surface-3 text-text-primary text-xs font-semibold rounded-mac border border-border-40 hover:border-border transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              >
+                <span>Web</span>
+                <ExternalLink size={11} />
+              </a>
+            </div>
           </div>
         )}
       </div>
