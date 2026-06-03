@@ -19,7 +19,8 @@ import {
 import { useRepoStore } from "@/stores/repo";
 import { api } from "@/api/tauri";
 import { Switch } from "@/components/ui/form";
-import { AI_REVIEW_CHECKLIST_OPTIONS, DEFAULT_AI_REVIEW_CHECKLIST, type AIReviewMode } from "@/lib/ai";
+import { AI_REVIEW_CHECKLIST_OPTIONS, DEFAULT_AI_REVIEW_CHECKLIST, type AIReviewMode, readDetectedConventions, clearAICache } from "@/lib/ai";
+import type { ConventionFile } from "@/api/tauri";
 const LS_KEY_API_KEY = "gitflowAiApiKey";
 const LS_KEY_API_URL = "gitflowAiApiUrl";
 const LS_KEY_MODEL = "gitflowAiModel";
@@ -193,6 +194,7 @@ const COMMIT_MESSAGE_STYLES = [
 export default function SettingsDialog({ onClose, initialTab = "general" }: SettingsDialogProps) {
   const currentTheme = useRepoStore((s) => s.theme);
   const setTheme = useRepoStore((s) => s.setTheme);
+  const repoPath = useRepoStore((s) => s.repoPath);
 
   const [activeTab, setActiveTab] = useState<"general" | "git" | "accounts" | "ai" | "advanced">(initialTab);
   
@@ -231,6 +233,8 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
   const [customRules, setCustomRules] = useState("");
   const [reviewLanguage, setReviewLanguage] = useState("auto");
   const [reviewChecklist, setReviewChecklist] = useState<Exclude<AIReviewMode, "all" | "custom">[]>(DEFAULT_AI_REVIEW_CHECKLIST);
+  const [conventions, setConventions] = useState<ConventionFile[]>([]);
+  const [expandedConvention, setExpandedConvention] = useState<string | null>(null);
 
   // Advanced Tab States
   const [largeDiffMode, setLargeDiffMode] = useState<"full" | "prompt" | "summary">("prompt");

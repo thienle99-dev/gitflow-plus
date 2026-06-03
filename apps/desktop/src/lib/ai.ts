@@ -630,6 +630,19 @@ async function getConventionContext(repoPath: string): Promise<string> {
   }
 }
 
+/** Returns detected convention files for a repo (from cache or fresh fetch). */
+export async function readDetectedConventions(repoPath: string): Promise<ConventionFile[]> {
+  try {
+    const cached = conventionCache.get(repoPath);
+    if (cached && Date.now() - cached.ts < CONVENTION_TTL_MS) return cached.files;
+    const files = await api.ai.readConventionFiles(repoPath);
+    conventionCache.set(repoPath, { files, ts: Date.now() });
+    return files;
+  } catch {
+    return [];
+  }
+}
+
 function buildReviewLanguageInstruction(language: AIReviewLanguage) {
   if (language === "auto") {
     return "LANGUAGE: Match the user's language when it is clear from the request or commit/MR text; otherwise use English.";

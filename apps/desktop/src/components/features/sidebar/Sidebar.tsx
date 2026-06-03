@@ -76,7 +76,7 @@ export default function Sidebar() {
   };
 
   return (
-    <div className="h-full overflow-y-auto py-2">
+    <div className="h-full overflow-y-auto py-2 sidebar-panel">
       {/* Repository Selector */}
       <div className="relative px-4 mb-3 flex items-center gap-1.5">
         <button
@@ -252,13 +252,13 @@ export default function Sidebar() {
             className={`tree-item flex items-center gap-2 px-3 py-[3px] mx-1 ${!selectedRef ? "selected" : ""}`}
             onClick={() => selectRef(null)}
           >
-            <GitBranch size={12} className={!selectedRef ? "text-accent-fg" : "text-accent"} />
+            <GitBranch size={12} className={!selectedRef ? "text-accent" : "text-text-secondary"} />
             <span className="min-w-0 flex-1 truncate text-xs">All Branches</span>
           </div>
           {localBranches.map((b) => (
             <div
               key={b.name}
-              className={`tree-item flex items-center gap-2 px-3 py-[3px] mx-1 ${selectedRef === b.name ? "selected" : ""} ${b.current ? "ring-1 ring-[#30d158]/25" : ""}`}
+              className={`tree-item flex items-center gap-2 px-3 py-[3px] mx-1 ${selectedRef === b.name ? "selected" : ""}`}
               onClick={() => selectRef(b.name)}
               onDoubleClick={() => handleCheckout(b.name)}
               onContextMenu={(e) => {
@@ -266,10 +266,10 @@ export default function Sidebar() {
                 setBranchCtxMenu({ branch: b.name, x: e.clientX, y: e.clientY });
               }}
             >
-              <GitBranch size={12} className={selectedRef === b.name ? "text-accent-fg" : b.current ? "text-[#30d158]" : "text-accent"} />
-              <span className={`min-w-0 flex-1 truncate text-xs ${b.current && selectedRef !== b.name ? "text-[#30d158] font-semibold" : ""}`}>{b.name}</span>
+              <GitBranch size={12} className={selectedRef === b.name ? "text-accent" : b.current ? "text-[#30d158]" : "text-text-secondary"} />
+              <span className={`min-w-0 flex-1 truncate text-xs ${b.current ? "font-semibold text-text-primary" : "text-text-secondary"}`}>{b.name}</span>
               {b.current && (
-                <span className="shrink-0 rounded bg-[#30d158]/15 px-1.5 py-0.5 text-[9px] font-bold text-[#30d158] border border-[#30d158]/25">
+                <span className="shrink-0 rounded bg-[#30d158]/10 px-1 py-0.5 text-[9px] font-bold text-[#30d158] border border-[#30d158]/20">
                   HEAD
                 </span>
               )}
@@ -282,31 +282,31 @@ export default function Sidebar() {
       <SectionHeader title="Actions" open={true} onToggle={() => {}} />
       <div className="space-y-[1px] px-4 pb-2">
         <button
-          className="tree-item w-full flex items-center gap-2 px-2 py-[3px]"
+          className="tree-item group w-full flex items-center gap-2 px-2 py-[3px]"
           onClick={() => openDialogState("search")}
         >
-          <Search size={12} className="text-[#0a84ff]" />
+          <Search size={12} className="text-text-secondary transition-colors group-hover:text-[#0a84ff]" />
           <span className="text-xs text-text-secondary">Search Commits</span>
         </button>
         <button
-          className="tree-item w-full flex items-center gap-2 px-2 py-[3px]"
+          className="tree-item group w-full flex items-center gap-2 px-2 py-[3px]"
           onClick={() => openDialogState("stash")}
         >
-          <Archive size={12} className="text-[#ff9f0a]" />
+          <Archive size={12} className="text-text-secondary transition-colors group-hover:text-[#ff9f0a]" />
           <span className="text-xs text-text-secondary">Stash</span>
         </button>
         <button
-          className="tree-item w-full flex items-center gap-2 px-2 py-[3px]"
+          className="tree-item group w-full flex items-center gap-2 px-2 py-[3px]"
           onClick={() => openDialogState("tag")}
         >
-          <Package size={12} className="text-[#bf5af2]" />
+          <Package size={12} className="text-text-secondary transition-colors group-hover:text-[#bf5af2]" />
           <span className="text-xs text-text-secondary">Manage Tags</span>
         </button>
         <button
-          className="tree-item w-full flex items-center gap-2 px-2 py-[3px]"
+          className="tree-item group w-full flex items-center gap-2 px-2 py-[3px]"
           onClick={() => openDialogState("merge-request")}
         >
-          <GitPullRequest size={12} className="text-[#30d158]" />
+          <GitPullRequest size={12} className="text-text-secondary transition-colors group-hover:text-[#30d158]" />
           <span className="text-xs text-text-secondary">Merge Requests</span>
         </button>
       </div>
@@ -324,7 +324,7 @@ export default function Sidebar() {
               onClick={() => selectRef(b.name)}
               onDoubleClick={() => handleCheckout(b.name)}
             >
-              <GitBranch size={12} className={selectedRef === b.name ? "text-accent-fg" : "text-[#64d2ff]"} />
+              <GitBranch size={12} className={selectedRef === b.name ? "text-accent" : "text-text-secondary"} />
               <span className={`min-w-0 flex-1 truncate text-xs ${selectedRef === b.name ? "" : "text-text-secondary"}`}>{b.name}</span>
             </div>
           ))}
@@ -339,10 +339,10 @@ export default function Sidebar() {
             tags.map((t) => (
               <div
                 key={t.name}
-                className="tree-item flex items-center gap-2 px-3 py-[3px] mx-1 cursor-pointer"
+                className={`tree-item group flex items-center gap-2 px-3 py-[3px] mx-1 cursor-pointer ${selectedRef === t.name ? "selected" : ""}`}
                 onClick={() => selectRef(t.name)}
               >
-                <Tag size={12} className="text-[#bf5af2]" />
+                <Tag size={12} className={selectedRef === t.name ? "text-accent" : "text-text-secondary transition-colors group-hover:text-[#bf5af2]"} />
                 <span className="min-w-0 flex-1 truncate text-xs">{t.name}</span>
                 {t.annotated && (
                   <span className="shrink-0 rounded bg-surface-3 px-1 py-0.5 text-[9px] text-text-muted">

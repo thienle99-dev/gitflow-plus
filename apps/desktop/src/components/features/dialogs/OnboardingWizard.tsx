@@ -484,6 +484,107 @@ function AIStep({
   );
 }
 
+interface AIPreferencesStepProps {
+  customRules: string;
+  setCustomRules: (v: string) => void;
+  reviewLanguage: string;
+  setReviewLanguage: (v: string) => void;
+  reviewChecklist: Exclude<AIReviewMode, "all" | "custom">[];
+  setReviewChecklist: (v: Exclude<AIReviewMode, "all" | "custom">[]) => void;
+}
+
+function AIPreferencesStep({
+  customRules,
+  setCustomRules,
+  reviewLanguage,
+  setReviewLanguage,
+  reviewChecklist,
+  setReviewChecklist,
+}: AIPreferencesStepProps) {
+  const toggleChecklistItem = (id: Exclude<AIReviewMode, "all" | "custom">) => {
+    if (reviewChecklist.includes(id)) {
+      const next = reviewChecklist.filter((item) => item !== id);
+      if (next.length > 0) setReviewChecklist(next);
+      return;
+    }
+    setReviewChecklist([...reviewChecklist, id]);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="text-center space-y-1">
+        <h2 className="text-sm font-bold text-text-primary">AI Review Preferences</h2>
+        <p className="text-2xs text-text-muted">
+          Tune how AI reviews code. These settings power the Custom checklist review mode.
+        </p>
+      </div>
+
+      <div className="space-y-3 max-w-[440px] mx-auto">
+        <div>
+          <label className="text-2xs font-medium text-text-secondary block mb-1">Review Language</label>
+          <select
+            value={reviewLanguage}
+            onChange={(e) => setReviewLanguage(e.target.value)}
+            className="w-full h-7 px-2.5 text-xs bg-surface-1 border border-border rounded-md text-text-primary focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none"
+          >
+            <option value="auto">Auto detect</option>
+            <option value="english">English</option>
+            <option value="vietnamese">Vietnamese</option>
+          </select>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-2xs font-medium text-text-secondary">Custom Review Checklist</label>
+            <button
+              type="button"
+              onClick={() => setReviewChecklist(DEFAULT_AI_REVIEW_CHECKLIST)}
+              className="text-3xs font-medium text-text-muted hover:text-accent transition-colors"
+            >
+              Reset
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {AI_REVIEW_CHECKLIST_OPTIONS.map((option) => {
+              const checked = reviewChecklist.includes(option.id);
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => toggleChecklistItem(option.id)}
+                  className={`flex items-center gap-2 rounded-md border px-2 py-1.5 text-left transition-all ${
+                    checked
+                      ? "border-accent/35 bg-accent/10 text-text-primary"
+                      : "border-border bg-surface-1 text-text-secondary hover:bg-surface-2"
+                  }`}
+                >
+                  <span className={`h-3.5 w-3.5 rounded-[4px] border flex items-center justify-center shrink-0 ${
+                    checked ? "border-accent bg-accent text-accent-fg" : "border-border"
+                  }`}>
+                    {checked && <Check size={9} strokeWidth={3.5} />}
+                  </span>
+                  <span className="text-2xs font-semibold">{option.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <label className="text-2xs font-medium text-text-secondary block mb-1">Custom Prompt Rules</label>
+          <textarea
+            value={customRules}
+            onChange={(e) => setCustomRules(e.target.value)}
+            placeholder="e.g. Review in Vietnamese, prefer Conventional Commits, focus on security and frontend UX."
+            rows={4}
+            className="w-full px-2.5 py-2 text-xs bg-surface-1 border border-border rounded-md text-text-primary placeholder:text-text-muted/60 focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none resize-none"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface GitHostStepProps {
   githubToken: string;
   setGithubToken: (v: string) => void;
@@ -577,6 +678,10 @@ interface PreferencesStepProps {
   setAutoFetch: (v: boolean) => void;
   reopenLastRepo: boolean;
   setReopenLastRepo: (v: boolean) => void;
+  confirmDangerous: boolean;
+  setConfirmDangerous: (v: boolean) => void;
+  defaultDiffMode: "split" | "unified";
+  setDefaultDiffMode: (v: "split" | "unified") => void;
   aiConfigured: boolean;
   githubConfigured: boolean;
   gitlabConfigured: boolean;
@@ -585,6 +690,8 @@ interface PreferencesStepProps {
 function PreferencesStep({
   autoFetch, setAutoFetch,
   reopenLastRepo, setReopenLastRepo,
+  confirmDangerous, setConfirmDangerous,
+  defaultDiffMode, setDefaultDiffMode,
   aiConfigured, githubConfigured, gitlabConfigured,
 }: PreferencesStepProps) {
   return (
@@ -609,6 +716,33 @@ function PreferencesStep({
             checked={reopenLastRepo}
             onChange={setReopenLastRepo}
           />
+        </div>
+        <div className="rounded-lg bg-surface-1 border border-border overflow-hidden">
+          <Switch
+            label="Confirm destructive actions"
+            description="Ask before discard, reset, delete branch, or drop stash actions"
+            checked={confirmDangerous}
+            onChange={setConfirmDangerous}
+          />
+        </div>
+        <div className="rounded-lg bg-surface-1 border border-border px-3 py-2">
+          <label className="text-xs font-semibold text-text-primary block mb-1">Default diff view</label>
+          <div className="grid grid-cols-2 gap-1.5">
+            {(["split", "unified"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setDefaultDiffMode(mode)}
+                className={`h-7 rounded-md text-2xs font-semibold capitalize transition-all ${
+                  defaultDiffMode === mode
+                    ? "bg-accent text-accent-fg"
+                    : "bg-surface-2 text-text-secondary hover:text-text-primary hover:bg-surface-3"
+                }`}
+              >
+                {mode}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
       {/* Summary */}

@@ -172,6 +172,12 @@ body.tray-window #root {
   color: var(--accent-fg);
 }
 
+.sidebar-panel .tree-item.selected {
+  background-color: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  font-weight: 500;
+}
+
 /* macOS-style disclosure triangle */
 .disclosure {
   transition: transform 150ms ease;
