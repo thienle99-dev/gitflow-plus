@@ -522,18 +522,6 @@ export default function WorkingTree() {
             <RefreshCw size={13} />
           </button>
           <button
-            className={`h-6 w-6 inline-flex items-center justify-center rounded-md text-text-muted hover:text-accent hover:bg-accent-10 transition-colors ${generateCommit.isPending ? "opacity-50 cursor-not-allowed text-accent" : ""}`}
-            onClick={handleGenerateCommit}
-            disabled={generateCommit.isPending}
-            title={generateCommit.isPending ? "Generating message..." : "Generate commit message (AI)"}
-          >
-            {generateCommit.isPending ? (
-              <RefreshCw size={13} className="animate-spin" />
-            ) : (
-              <Sparkles size={13} />
-            )}
-          </button>
-          <button
             className="h-6 w-6 inline-flex items-center justify-center rounded-md text-text-muted hover:text-accent hover:bg-accent-10 disabled:opacity-35 disabled:hover:bg-transparent transition-colors"
             onClick={handleStageAll}
             disabled={unstaged.length === 0}
@@ -616,13 +604,14 @@ export default function WorkingTree() {
             value={commitMessage}
             onChange={(e) => setCommitMessage(e.target.value)}
             placeholder="Commit message"
-            className="w-full min-h-[96px] max-h-[240px] text-xs bg-transparent text-text-primary placeholder:text-text-muted/60 resize-y outline-none border-none p-0 leading-relaxed font-mono"
+            className="w-full min-h-[96px] max-h-[240px] text-xs bg-transparent text-text-primary placeholder:text-text-muted/60 resize-y outline-none border-none p-0 leading-relaxed font-mono focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:outline-none"
+            style={{ outline: "none", border: "none", boxShadow: "none" }}
           />
-          <div className="flex items-center justify-end gap-1.5 border-t border-border-40/50 pt-2 mt-2 select-none shrink-0">
+          <div className="flex items-center justify-end gap-1.5 border-t border-border-60 pt-2.5 mt-2 select-none shrink-0">
             {staged.length >= 3 && (
               <button
                 type="button"
-                className={`px-2 py-1 text-3xs font-medium text-text-secondary hover:text-text-primary hover:bg-surface-3 border border-border-40 rounded transition-all flex items-center gap-1 active:scale-95 cursor-pointer ${scopeAnalyzing || commitScope.isPending ? "opacity-50 cursor-not-allowed" : ""
+                className={`h-7 px-2.5 rounded border text-3xs font-semibold flex items-center gap-1 transition-all bg-surface-2 border-border-40 text-text-secondary hover:text-text-primary hover:bg-surface-3 active:scale-95 cursor-pointer ${scopeAnalyzing || commitScope.isPending ? "opacity-50 cursor-not-allowed" : ""
                   }`}
                 onClick={handleAnalyzeScope}
                 disabled={scopeAnalyzing || commitScope.isPending}
@@ -638,14 +627,14 @@ export default function WorkingTree() {
             )}
             <button
               type="button"
-              className={`px-2 py-1 text-3xs font-medium bg-accent-10 text-accent hover:bg-accent hover:text-accent-fg border border-accent/20 hover:border-accent rounded transition-all flex items-center gap-1 active:scale-95 cursor-pointer ${generateCommit.isPending ? "opacity-50 cursor-not-allowed" : ""
+              className={`h-7 px-2.5 rounded text-3xs font-semibold flex items-center gap-1 transition-all bg-accent text-accent-fg hover:opacity-95 active:scale-[0.99] flex items-center gap-1 active:scale-95 cursor-pointer shadow-sm ${generateCommit.isPending ? "opacity-50 cursor-not-allowed" : ""
                 }`}
               onClick={handleGenerateCommit}
               disabled={generateCommit.isPending}
               title={generateCommit.isPending ? "Generating..." : "Generate commit message (AI)"}
             >
               {generateCommit.isPending ? (
-                <RefreshCw size={11} className="animate-spin" />
+                <RefreshCw size={11} className="animate-spin text-accent-fg" />
               ) : (
                 <Sparkles size={11} />
               )}
@@ -793,7 +782,7 @@ export default function WorkingTree() {
                   ? "No changes to commit"
                   : staged.length === 0
                     ? "Commit all changes"
-                  : "Commit (⌘↵)"
+                    : "Commit (⌘↵)"
             }
           >
             {lintRunning ? (
@@ -1162,11 +1151,10 @@ function DiffReviewModal({ target, files, onChangeTarget, onClose, onRefresh }: 
                     {statusLabel(target.status)}
                   </span>
                 )}
-                <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${
-                  target.stage === "staged"
-                    ? "bg-[#30d158]/10 text-[#30d158]"
-                    : "bg-[#ff9f0a]/10 text-[#ff9f0a]"
-                }`}>
+                <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${target.stage === "staged"
+                  ? "bg-[#30d158]/10 text-[#30d158]"
+                  : "bg-[#ff9f0a]/10 text-[#ff9f0a]"
+                  }`}>
                   {target.stage}
                 </span>
               </div>
@@ -1196,9 +1184,8 @@ function DiffReviewModal({ target, files, onChangeTarget, onClose, onRefresh }: 
             </button>
 
             <button
-              className={`ghost h-7 px-2 text-[11px] rounded border border-transparent ${
-                showFullContext ? "text-accent bg-accent-10 border-accent-20" : "hover:bg-surface-2"
-              }`}
+              className={`ghost h-7 px-2 text-[11px] rounded border border-transparent ${showFullContext ? "text-accent bg-accent-10 border-accent-20" : "hover:bg-surface-2"
+                }`}
               onClick={() => setShowFullContext((show) => !show)}
               title={showFullContext ? "Show changed hunks only" : "Show full file context"}
             >

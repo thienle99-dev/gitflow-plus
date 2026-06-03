@@ -25,6 +25,7 @@ import {
   User,
 } from "lucide-react";
 import { useAICommitExplain, useAICommitReview } from "@/queries/useAI";
+import { AI_REVIEW_MODE_OPTIONS, readLastAIReviewMode, saveLastAIReviewMode, type AIReviewMode } from "@/lib/ai";
 
 export default function CommitDetail() {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -40,6 +41,7 @@ export default function CommitDetail() {
   const [explanation, setExplanation] = useState("");
   const [showReview, setShowReview] = useState(false);
   const [reviewResult, setReviewResult] = useState("");
+  const [reviewMode, setReviewMode] = useState<AIReviewMode>(() => readLastAIReviewMode());
   const aiExplain = useAICommitExplain();
   const aiReview = useAICommitReview();
 
@@ -103,11 +105,19 @@ export default function CommitDetail() {
         repoPath,
         commitHash: selectedCommit,
         commitMessage: commit.message,
+        mode: reviewMode,
       });
       setReviewResult(result);
     } catch {
       // Error is rendered from mutation state
     }
+  };
+
+  const handleReviewModeChange = (mode: AIReviewMode) => {
+    setReviewMode(mode);
+    saveLastAIReviewMode(mode);
+    setReviewResult("");
+    aiReview.reset();
   };
 
   const commit = useMemo(
@@ -205,6 +215,16 @@ export default function CommitDetail() {
                   ? "Hide review"
                   : "Review with AI"}
             </button>
+            <select
+              value={reviewMode}
+              onChange={(event) => handleReviewModeChange(event.target.value as AIReviewMode)}
+              className="h-6 max-w-[132px] rounded-mac border border-accent-30 bg-accent-10 px-1.5 text-2xs font-medium text-accent outline-none hover:bg-accent-20"
+              title="Choose AI review focus"
+            >
+              {AI_REVIEW_MODE_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id}>{option.label}</option>
+              ))}
+            </select>
           </div>
         )}
       </div>

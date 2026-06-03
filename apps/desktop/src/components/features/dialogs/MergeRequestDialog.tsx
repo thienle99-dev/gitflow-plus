@@ -33,6 +33,7 @@ import {
 } from "@/api/gitHost";
 import { useAIMergeRequestExplain, useAIMergeRequestReview } from "@/queries/useAI";
 import { parseDiff, type DiffHunk, type DiffLine } from "@/lib/parse-diff";
+import { AI_REVIEW_MODE_OPTIONS, readLastAIReviewMode, saveLastAIReviewMode, type AIReviewMode } from "@/lib/ai";
 
 interface MergeRequestDialogProps {
   onClose: () => void;
@@ -69,6 +70,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
   const [filesError, setFilesError] = useState<string | null>(null);
   const [aiExplanation, setAiExplanation] = useState("");
   const [aiReviewResult, setAiReviewResult] = useState("");
+  const [reviewMode, setReviewMode] = useState<AIReviewMode>(() => readLastAIReviewMode());
 
   // Local actions
   const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -168,11 +170,19 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
         mergeRequest: selectedMr,
         files: changedFiles,
         repoPath: repoPath ?? undefined,
+        mode: reviewMode,
       });
       setAiReviewResult(review);
     } catch {
       setAiReviewResult("");
     }
+  };
+
+  const handleReviewModeChange = (mode: AIReviewMode) => {
+    setReviewMode(mode);
+    saveLastAIReviewMode(mode);
+    setAiReviewResult("");
+    aiReview.reset();
   };
 
   // Checkout local branch
@@ -744,6 +754,16 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                       )}
                       <span>AI Explain</span>
                     </button>
+                    <select
+                      value={reviewMode}
+                      onChange={(event) => handleReviewModeChange(event.target.value as AIReviewMode)}
+                      className="h-8 max-w-[150px] rounded-mac border border-border-40 bg-surface-2 px-2 text-[11px] font-semibold text-text-secondary outline-none hover:bg-surface-3 focus:border-accent"
+                      title="Choose AI review focus"
+                    >
+                      {AI_REVIEW_MODE_OPTIONS.map((option) => (
+                        <option key={option.id} value={option.id}>{option.label}</option>
+                      ))}
+                    </select>
                     <button
                       onClick={handleReviewMergeRequest}
                       disabled={aiReview.isPending || loadingFiles || changedFiles.length === 0 || !selectedMr}

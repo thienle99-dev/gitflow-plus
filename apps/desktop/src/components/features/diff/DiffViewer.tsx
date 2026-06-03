@@ -19,6 +19,7 @@ import { xml } from "@codemirror/lang-xml";
 import { java } from "@codemirror/lang-java";
 import { cpp } from "@codemirror/lang-cpp";
 import { parseDiff, type DiffHunk, type DiffLine } from "@/lib/parse-diff";
+import { AI_REVIEW_MODE_OPTIONS, readLastAIReviewMode, saveLastAIReviewMode, type AIReviewMode } from "@/lib/ai";
 
 const LANG_MAP: Record<string, ReturnType<typeof javascript>> = {
   js: javascript(),
@@ -96,6 +97,7 @@ export default function DiffViewer({
 
   const [showReview, setShowReview] = useState(false);
   const [reviewResult, setReviewResult] = useState<string>("");
+  const [reviewMode, setReviewMode] = useState<AIReviewMode>(() => readLastAIReviewMode());
   const aiReview = useAIDiffReview();
 
   useEffect(() => {
@@ -114,10 +116,17 @@ export default function DiffViewer({
     if (reviewResult) return;
 
     try {
-      setReviewResult(await aiReview.mutateAsync({ filePath, diff, repoPath: repoPath ?? undefined }));
+      setReviewResult(await aiReview.mutateAsync({ filePath, diff, repoPath: repoPath ?? undefined, mode: reviewMode }));
     } catch {
       // Error is rendered from the mutation state.
     }
+  };
+
+  const handleReviewModeChange = (mode: AIReviewMode) => {
+    setReviewMode(mode);
+    saveLastAIReviewMode(mode);
+    setReviewResult("");
+    aiReview.reset();
   };
   const leftRef = useRef<HTMLDivElement>(null);
   const rightRef = useRef<HTMLDivElement>(null);
@@ -338,10 +347,20 @@ export default function DiffViewer({
           {source !== "commit" && (
             <span className="capitalize">{source} diff</span>
           )}
+          <select
+            value={reviewMode}
+            onChange={(event) => handleReviewModeChange(event.target.value as AIReviewMode)}
+            className="ml-auto h-6 max-w-[136px] rounded border border-border-40 bg-surface-1 px-1.5 text-2xs text-text-secondary outline-none hover:bg-surface-2 focus:border-accent"
+            title="Choose AI review focus"
+          >
+            {AI_REVIEW_MODE_OPTIONS.map((option) => (
+              <option key={option.id} value={option.id}>{option.label}</option>
+            ))}
+          </select>
           <button
             onClick={handleToggleAiReview}
             disabled={aiReview.isPending}
-            className={`ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-surface-2 transition-all text-accent hover:text-accent-hover ${
+            className={`flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-surface-2 transition-all text-accent hover:text-accent-hover ${
               aiReview.isPending ? "opacity-60 cursor-not-allowed" : ""
             }`}
             title="Analyze and explain code changes with AI"

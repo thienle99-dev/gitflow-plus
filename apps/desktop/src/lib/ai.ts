@@ -120,6 +120,7 @@ export const DEFAULT_AI_REVIEW_CHECKLIST: Exclude<AIReviewMode, "all" | "custom"
 ];
 
 const LS_KEY_AI_REVIEW_CHECKLIST = "gitflowAiReviewChecklist";
+const LS_KEY_AI_LAST_REVIEW_MODE = "gitflowLastReviewMode";
 type AIReviewLanguage =
   | "auto"
   | "english"
@@ -219,6 +220,15 @@ export function readAIReviewChecklist(): Exclude<AIReviewMode, "all" | "custom">
   } catch {
     return DEFAULT_AI_REVIEW_CHECKLIST;
   }
+}
+
+export function readLastAIReviewMode(): AIReviewMode {
+  const saved = localStorage.getItem(LS_KEY_AI_LAST_REVIEW_MODE);
+  return AI_REVIEW_MODE_OPTIONS.some((option) => option.id === saved) ? saved as AIReviewMode : "all";
+}
+
+export function saveLastAIReviewMode(mode: AIReviewMode) {
+  localStorage.setItem(LS_KEY_AI_LAST_REVIEW_MODE, mode);
 }
 
 function selectedReviewOptions(mode: AIReviewMode) {

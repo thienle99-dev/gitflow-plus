@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useRepoStore, THEME_CLASSES, type Theme } from "@/stores/repo";
 import { Switch } from "@/components/ui/form";
+import { AI_REVIEW_CHECKLIST_OPTIONS, DEFAULT_AI_REVIEW_CHECKLIST, type AIReviewMode } from "@/lib/ai";
 
 const ONBOARDING_KEY = "gitflowOnboardingComplete";
 
@@ -35,11 +36,16 @@ const LS_KEY_AI_API_KEY = "gitflowAiApiKey";
 const LS_KEY_AI_API_URL = "gitflowAiApiUrl";
 const LS_KEY_AI_MODEL = "gitflowAiModel";
 const LS_KEY_AI_REVIEW_MODEL = "gitflowAiReviewModel";
+const LS_KEY_AI_CUSTOM_RULES = "gitflowAiCustomRules";
+const LS_KEY_AI_REVIEW_LANGUAGE = "gitflowAiReviewLanguage";
+const LS_KEY_AI_REVIEW_CHECKLIST = "gitflowAiReviewChecklist";
 const LS_KEY_GITHUB_TOKEN = "gitflowGithubToken";
 const LS_KEY_GITLAB_TOKEN = "gitflowGitlabToken";
 const LS_KEY_GITLAB_HOST = "gitflowGitlabHost";
 const LS_KEY_AUTO_FETCH = "gitflowAutoFetch";
 const LS_KEY_REOPEN_LAST_REPO = "gitflowReopenLastRepo";
+const LS_KEY_CONFIRM_DANGEROUS = "gitflowConfirmDangerousActions";
+const LS_KEY_DIFF_MODE = "gitflowDefaultDiffViewMode";
 
 export default function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
   const [step, setStep] = useState(0);
@@ -51,6 +57,20 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
   const [aiApiUrl, setAiApiUrl] = useState(() => localStorage.getItem(LS_KEY_AI_API_URL) || "https://api.openai.com/v1");
   const [aiModel, setAiModel] = useState(() => localStorage.getItem(LS_KEY_AI_MODEL) || "claude-sonnet-4-20250514");
   const [aiReviewModel, setAiReviewModel] = useState(() => localStorage.getItem(LS_KEY_AI_REVIEW_MODEL) || localStorage.getItem(LS_KEY_AI_MODEL) || "claude-sonnet-4-20250514");
+  const [customRules, setCustomRules] = useState(() => localStorage.getItem(LS_KEY_AI_CUSTOM_RULES) || "");
+  const [reviewLanguage, setReviewLanguage] = useState(() => localStorage.getItem(LS_KEY_AI_REVIEW_LANGUAGE) || "auto");
+  const [reviewChecklist, setReviewChecklist] = useState<Exclude<AIReviewMode, "all" | "custom">[]>(() => {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(LS_KEY_AI_REVIEW_CHECKLIST) || "null");
+      const valid = new Set(AI_REVIEW_CHECKLIST_OPTIONS.map((option) => option.id));
+      const filtered = Array.isArray(parsed)
+        ? parsed.filter((value): value is Exclude<AIReviewMode, "all" | "custom"> => valid.has(value))
+        : [];
+      return filtered.length > 0 ? filtered : DEFAULT_AI_REVIEW_CHECKLIST;
+    } catch {
+      return DEFAULT_AI_REVIEW_CHECKLIST;
+    }
+  });
   const [showApiKey, setShowApiKey] = useState(false);
 
   // Git host state
@@ -63,6 +83,10 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
   // Preferences
   const [autoFetch, setAutoFetch] = useState(() => localStorage.getItem(LS_KEY_AUTO_FETCH) !== "false");
   const [reopenLastRepo, setReopenLastRepo] = useState(() => localStorage.getItem(LS_KEY_REOPEN_LAST_REPO) === "true");
+  const [confirmDangerous, setConfirmDangerous] = useState(() => localStorage.getItem(LS_KEY_CONFIRM_DANGEROUS) !== "false");
+  const [defaultDiffMode, setDefaultDiffMode] = useState<"split" | "unified">(
+    () => (localStorage.getItem(LS_KEY_DIFF_MODE) as "split" | "unified") || "split",
+  );
 
   useEffect(() => {
     if (!open) {
@@ -79,6 +103,9 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
     localStorage.setItem(LS_KEY_AI_API_URL, aiApiUrl);
     localStorage.setItem(LS_KEY_AI_MODEL, aiModel);
     localStorage.setItem(LS_KEY_AI_REVIEW_MODEL, aiReviewModel);
+    localStorage.setItem(LS_KEY_AI_CUSTOM_RULES, customRules);
+    localStorage.setItem(LS_KEY_AI_REVIEW_LANGUAGE, reviewLanguage);
+    localStorage.setItem(LS_KEY_AI_REVIEW_CHECKLIST, JSON.stringify(reviewChecklist));
     // Git host
     if (githubToken) localStorage.setItem(LS_KEY_GITHUB_TOKEN, githubToken);
     else localStorage.removeItem(LS_KEY_GITHUB_TOKEN);
@@ -88,6 +115,9 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
     // Preferences
     localStorage.setItem(LS_KEY_AUTO_FETCH, String(autoFetch));
     localStorage.setItem(LS_KEY_REOPEN_LAST_REPO, String(reopenLastRepo));
+    localStorage.setItem(LS_KEY_CONFIRM_DANGEROUS, String(confirmDangerous));
+    localStorage.setItem(LS_KEY_DIFF_MODE, defaultDiffMode);
+    window.dispatchEvent(new Event("gitflow-settings-updated"));
     // Mark complete
     localStorage.setItem(ONBOARDING_KEY, "true");
   };
@@ -106,6 +136,7 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
     { label: "Welcome", icon: <Rocket size={14} /> },
     { label: "Appearance", icon: <Palette size={14} /> },
     { label: "AI Assistant", icon: <Sparkles size={14} /> },
+    { label: "AI Preferences", icon: <Sparkles size={14} /> },
     { label: "Git Hosts", icon: <Globe size={14} /> },
     { label: "Preferences", icon: <Check size={14} /> },
   ];
@@ -195,6 +226,16 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
             />
           )}
           {step === 3 && (
+            <AIPreferencesStep
+              customRules={customRules}
+              setCustomRules={setCustomRules}
+              reviewLanguage={reviewLanguage}
+              setReviewLanguage={setReviewLanguage}
+              reviewChecklist={reviewChecklist}
+              setReviewChecklist={setReviewChecklist}
+            />
+          )}
+          {step === 4 && (
             <GitHostStep
               githubToken={githubToken}
               setGithubToken={setGithubToken}
@@ -208,12 +249,16 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
               setShowGitlabToken={setShowGitlabToken}
             />
           )}
-          {step === 4 && (
+          {step === 5 && (
             <PreferencesStep
               autoFetch={autoFetch}
               setAutoFetch={setAutoFetch}
               reopenLastRepo={reopenLastRepo}
               setReopenLastRepo={setReopenLastRepo}
+              confirmDangerous={confirmDangerous}
+              setConfirmDangerous={setConfirmDangerous}
+              defaultDiffMode={defaultDiffMode}
+              setDefaultDiffMode={setDefaultDiffMode}
               aiConfigured={!!aiApiKey}
               githubConfigured={!!githubToken}
               gitlabConfigured={!!gitlabToken}
