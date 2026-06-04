@@ -77,6 +77,7 @@ describe("readCommitMessageDetailLevel", () => {
 describe("buildCommitPrompt", () => {
   it("includes ultra-minimal instruction for ultra-minimal level", () => {
     const settings = {
+      provider: "openai-compatible" as const,
       apiKey: "test",
       model: "claude-sonnet-4-20250514",
       reviewModel: "claude-sonnet-4-20250514",
@@ -93,6 +94,7 @@ describe("buildCommitPrompt", () => {
 
   it("includes minimal instruction for minimal level", () => {
     const settings = {
+      provider: "openai-compatible" as const,
       apiKey: "test",
       model: "claude-sonnet-4-20250514",
       reviewModel: "claude-sonnet-4-20250514",
@@ -109,6 +111,7 @@ describe("buildCommitPrompt", () => {
 
   it("includes medium instruction for medium level", () => {
     const settings = {
+      provider: "openai-compatible" as const,
       apiKey: "test",
       model: "claude-sonnet-4-20250514",
       reviewModel: "claude-sonnet-4-20250514",
@@ -125,6 +128,7 @@ describe("buildCommitPrompt", () => {
 
   it("includes detailed instruction for detailed level", () => {
     const settings = {
+      provider: "openai-compatible" as const,
       apiKey: "test",
       model: "claude-sonnet-4-20250514",
       reviewModel: "claude-sonnet-4-20250514",
@@ -141,6 +145,7 @@ describe("buildCommitPrompt", () => {
 
   it("includes comprehensive instruction for comprehensive level", () => {
     const settings = {
+      provider: "openai-compatible" as const,
       apiKey: "test",
       model: "claude-sonnet-4-20250514",
       reviewModel: "claude-sonnet-4-20250514",

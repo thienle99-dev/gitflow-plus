@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Book, GitBranch, ArrowUp, ArrowDown, Loader2, GraduationCap, AlertTriangle } from "lucide-react";
+import { Book, GitBranch, ArrowUp, ArrowDown, Loader2, GraduationCap, AlertTriangle, Terminal } from "lucide-react";
 import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
 import { useGitBranches, useGitStatus, useGitSyncStatus } from "@/queries/useGitLog";
@@ -119,6 +119,15 @@ export default function BottomBar() {
 
       {/* Right side: Feature Guide + Onboarding + Version */}
       <div className="flex items-center gap-3">
+        <button
+          onClick={() => openDialogState("logs")}
+          className="flex items-center gap-1 text-text-muted hover:text-accent transition-all p-0.5 rounded cursor-pointer mr-0.5"
+          title="App Logs"
+        >
+          <Terminal size={11} />
+          <span className="text-[9px] font-semibold">Logs</span>
+        </button>
+
         <button
           onClick={() => openDialogState("onboarding")}
           className="flex items-center gap-1 text-text-muted hover:text-accent transition-all p-0.5 rounded cursor-pointer mr-0.5"

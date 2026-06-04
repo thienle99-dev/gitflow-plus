@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { showToast } from "@/lib/toast";
 import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
 import {
@@ -22,18 +22,28 @@ import {
   GitTab,
   AppearanceTab,
 } from "./settings";
+import {
+  loadProfiles,
+  loadActiveProfile,
+  getActiveProfileId,
+  setActiveProfileId,
+  saveProfiles,
+  addProfile,
+  duplicateProfile,
+  deleteProfile,
+  updateProfile,
+  renameProfile,
+  createDefaultProfile,
+  DEFAULT_COMMIT_MODEL,
+  DEFAULT_TOKEN_LIMIT,
+  type AIProviderProfile,
+} from "@/lib/ai-profiles";
 
 // Re-export for backward compatibility (OnboardingWizard imports these)
 export { ThemeSkeletonCard, THEME_CARDS, THEME_GROUPS } from "./settings/GeneralTab";
 
-const LS_KEY_API_KEY = "gitflowAiApiKey";
-const LS_KEY_API_URL = "gitflowAiApiUrl";
-const LS_KEY_MODEL = "gitflowAiModel";
-const LS_KEY_REVIEW_MODEL = "gitflowAiReviewModel";
-const LS_KEY_TOKEN_LIMIT = "gitflowAiTokenLimit";
 const LS_KEY_DIFF_MODE = "gitflowDefaultDiffViewMode";
 const LS_KEY_AUTO_FETCH = "gitflowAutoFetch";
-const LS_KEY_FETCHED_MODELS = "gitflowAiFetchedModels";
 const LS_KEY_AI_DETAIL_LEVEL = "gitflowAiDetailLevel";
 const LS_KEY_COMMIT_STYLE = "gitflowCommitMessageStyle";
 const LS_KEY_AI_CUSTOM_RULES = "gitflowAiCustomRules";
@@ -58,6 +68,14 @@ const LS_KEY_GITLAB_HOST = "gitflowGitlabHost";
 const LS_KEY_COMMIT_LINT_ENABLED = "gitflowCommitLintEnabled";
 const LS_KEY_CODE_LINT_ENABLED = "gitflowCodeLintEnabled";
 const LS_KEY_LINT_STRICTNESS = "gitflowLintStrictness";
+
+// Legacy keys kept for reset and hasChanges comparison
+const LS_KEY_API_KEY = "gitflowAiApiKey";
+const LS_KEY_API_URL = "gitflowAiApiUrl";
+const LS_KEY_MODEL = "gitflowAiModel";
+const LS_KEY_REVIEW_MODEL = "gitflowAiReviewModel";
+const LS_KEY_TOKEN_LIMIT = "gitflowAiTokenLimit";
+const LS_KEY_FETCHED_MODELS = "gitflowAiFetchedModels";
 
 const SETTINGS_KEYS = [
   LS_KEY_DIFF_MODE,
@@ -92,6 +110,8 @@ const SETTINGS_KEYS = [
   LS_KEY_COMMIT_LINT_ENABLED,
   LS_KEY_CODE_LINT_ENABLED,
   LS_KEY_LINT_STRICTNESS,
+  "gitflowAiProfiles",
+  "gitflowActiveAiProfileId",
 ];
 
 interface SettingsDialogProps {
@@ -136,13 +156,15 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
   const [codeLintEnabled, setCodeLintEnabled] = useState(true);
   const [lintStrictness, setLintStrictness] = useState<"warning" | "error" | "block_all">("error");
 
-  // AI Tab States
+  // AI Tab States — profile-aware
+  const [profiles, setProfiles] = useState<AIProviderProfile[]>([]);
+  const [activeProfileId, setActiveProfileIdState] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [apiUrl, setApiUrl] = useState("");
   const [showKey, setShowKey] = useState(false);
-  const [commitModel, setCommitModel] = useState("claude-sonnet-4-20250514");
-  const [reviewModel, setReviewModel] = useState("claude-sonnet-4-20250514");
-  const [tokenLimit, setTokenLimit] = useState(4096);
+  const [commitModel, setCommitModel] = useState(DEFAULT_COMMIT_MODEL);
+  const [reviewModel, setReviewModel] = useState(DEFAULT_COMMIT_MODEL);
+  const [tokenLimit, setTokenLimit] = useState(DEFAULT_TOKEN_LIMIT);
   const [fetchedModels, setFetchedModels] = useState<{ id: string; label: string }[]>([]);
   const [fetchingModels, setFetchingModels] = useState(false);
   const [aiDetailLevel, setAiDetailLevel] = useState<"minimal" | "medium" | "detailed">("medium");
@@ -164,9 +186,31 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
 
   const [hasChanges, setHasChanges] = useState(false);
 
+  // Track saved snapshots for dirty detection
+  const savedSnapshotRef = useRef<string>("");
+
+  // ─── Load profiles and fill form from active profile ──────────────────────
+  const fillFormFromProfile = useCallback((profile: AIProviderProfile) => {
+    setApiKey(profile.apiKey);
+    setApiUrl(profile.apiUrl);
+    setCommitModel(profile.commitModel);
+    setReviewModel(profile.reviewModel);
+    setTokenLimit(profile.tokenLimit);
+    setFetchedModels(profile.fetchedModels);
+  }, []);
+
   // Load settings on mount
   useEffect(() => {
     try {
+      // Load profiles (triggers migration if needed)
+      const loadedProfiles = loadProfiles();
+      const loadedActiveId = getActiveProfileId();
+      setProfiles(loadedProfiles);
+      setActiveProfileIdState(loadedActiveId);
+
+      const activeProfile = loadedProfiles.find((p) => p.id === loadedActiveId) || loadedProfiles[0];
+      fillFormFromProfile(activeProfile);
+
       const savedDiffMode = localStorage.getItem(LS_KEY_DIFF_MODE) as "split" | "unified";
       const savedAutoFetch = localStorage.getItem(LS_KEY_AUTO_FETCH);
       const savedFetchInterval = localStorage.getItem(LS_KEY_FETCH_INTERVAL);
@@ -185,12 +229,6 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       const savedDiffLineWrap = localStorage.getItem(LS_KEY_DIFF_LINE_WRAP);
       const savedLargeDiffMode = localStorage.getItem(LS_KEY_LARGE_DIFF_MODE) as "full" | "prompt" | "summary";
       const savedReducedMotion = localStorage.getItem(LS_KEY_REDUCED_MOTION);
-      const savedKey = localStorage.getItem(LS_KEY_API_KEY);
-      const savedApiUrl = localStorage.getItem(LS_KEY_API_URL);
-      const savedModel = localStorage.getItem(LS_KEY_MODEL);
-      const savedReviewModel = localStorage.getItem(LS_KEY_REVIEW_MODEL);
-      const savedLimit = localStorage.getItem(LS_KEY_TOKEN_LIMIT);
-      const savedFetched = localStorage.getItem(LS_KEY_FETCHED_MODELS);
       const savedDetailLevel = localStorage.getItem(LS_KEY_AI_DETAIL_LEVEL) as "minimal" | "medium" | "detailed";
       const savedCommitStyle = localStorage.getItem(LS_KEY_COMMIT_STYLE) as "conventional" | "plain" | "gitmoji" | "jira";
       const savedCustomRules = localStorage.getItem(LS_KEY_AI_CUSTOM_RULES) || "";
@@ -215,17 +253,6 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       if (savedDiffLineWrap !== null) setDiffLineWrap(savedDiffLineWrap === "true");
       if (savedLargeDiffMode) setLargeDiffMode(savedLargeDiffMode);
       if (savedReducedMotion !== null) setReducedMotion(savedReducedMotion === "true");
-      if (savedKey) setApiKey(savedKey);
-      if (savedApiUrl) setApiUrl(savedApiUrl);
-      if (savedModel) setCommitModel(savedModel);
-      if (savedReviewModel) setReviewModel(savedReviewModel);
-      else if (savedModel) setReviewModel(savedModel);
-      if (savedLimit) setTokenLimit(Number(savedLimit));
-      if (savedFetched) {
-        try {
-          setFetchedModels(JSON.parse(savedFetched));
-        } catch {}
-      }
       if (savedDetailLevel) setAiDetailLevel(savedDetailLevel);
       if (savedCommitStyle) setCommitStyle(savedCommitStyle);
       setCustomRules(savedCustomRules);
@@ -251,9 +278,15 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       if (savedGitlabHost) setGitlabHost(savedGitlabHost);
 
       setSelectedTheme(currentTheme);
+
+      // Snapshot for dirty detection (after all state is set, but React batches — use timeout)
+      setTimeout(() => {
+        savedSnapshotRef.current = buildSnapshot();
+      }, 0);
     } catch {
       // localStorage is not available
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTheme]);
 
   // Load detected convention files when repoPath changes
@@ -269,112 +302,121 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
     return () => { cancelled = true; };
   }, [repoPath]);
 
+  // ─── Build a snapshot string for dirty detection ──────────────────────────
+  const buildSnapshot = useCallback(() => {
+    return JSON.stringify({
+      theme,
+      defaultDiffMode,
+      autoFetch,
+      fetchInterval,
+      autoPrune,
+      confirmDangerous,
+      reopenLastRepo,
+      recentRepoLimit,
+      commitLintEnabled,
+      codeLintEnabled,
+      lintStrictness,
+      graphDensity,
+      graphShowHash,
+      graphShowAuthor,
+      graphShowDate,
+      diffContext,
+      diffLineWrap,
+      largeDiffMode,
+      reducedMotion,
+      apiKey,
+      apiUrl,
+      commitModel,
+      reviewModel,
+      tokenLimit,
+      fetchedModels,
+      aiDetailLevel,
+      commitStyle,
+      customRules,
+      reviewLanguage,
+      reviewChecklist,
+      githubToken,
+      gitlabToken,
+      gitlabHost,
+      profiles,
+      activeProfileId,
+    });
+  }, [
+    theme, defaultDiffMode, autoFetch, fetchInterval, autoPrune,
+    confirmDangerous, reopenLastRepo, recentRepoLimit,
+    commitLintEnabled, codeLintEnabled, lintStrictness,
+    graphDensity, graphShowHash, graphShowAuthor, graphShowDate,
+    diffContext, diffLineWrap, largeDiffMode, reducedMotion,
+    apiKey, apiUrl, commitModel, reviewModel, tokenLimit, fetchedModels,
+    aiDetailLevel, commitStyle, customRules, reviewLanguage, reviewChecklist,
+    githubToken, gitlabToken, gitlabHost, profiles, activeProfileId,
+  ]);
+
   // Check for unsaved changes
   useEffect(() => {
-    const storedDiffMode = (localStorage.getItem(LS_KEY_DIFF_MODE) as "split" | "unified") || "split";
-    const storedAutoFetch = localStorage.getItem(LS_KEY_AUTO_FETCH) !== "false";
-    const storedFetchInterval = localStorage.getItem(LS_KEY_FETCH_INTERVAL) || "10";
-    const storedAutoPrune = localStorage.getItem(LS_KEY_AUTO_PRUNE) === "true";
-    const storedConfirmDangerous = localStorage.getItem(LS_KEY_CONFIRM_DANGEROUS) !== "false";
-    const storedReopenLastRepo = localStorage.getItem(LS_KEY_REOPEN_LAST_REPO) === "true";
-    const storedRecentRepoLimit = localStorage.getItem(LS_KEY_RECENT_REPO_LIMIT) || "10";
-    const storedCommitLint = localStorage.getItem(LS_KEY_COMMIT_LINT_ENABLED) !== "false";
-    const storedCodeLint = localStorage.getItem(LS_KEY_CODE_LINT_ENABLED) !== "false";
-    const storedLintStrictness = localStorage.getItem(LS_KEY_LINT_STRICTNESS) || "error";
-    const storedGraphDensity = (localStorage.getItem(LS_KEY_GRAPH_DENSITY) as "comfortable" | "compact") || "comfortable";
-    const storedGraphShowHash = localStorage.getItem(LS_KEY_GRAPH_SHOW_HASH) !== "false";
-    const storedGraphShowAuthor = localStorage.getItem(LS_KEY_GRAPH_SHOW_AUTHOR) !== "false";
-    const storedGraphShowDate = localStorage.getItem(LS_KEY_GRAPH_SHOW_DATE) === "true";
-    const storedDiffContext = localStorage.getItem(LS_KEY_DIFF_CONTEXT) || "3";
-    const storedDiffLineWrap = localStorage.getItem(LS_KEY_DIFF_LINE_WRAP) !== "false";
-    const storedLargeDiffMode = (localStorage.getItem(LS_KEY_LARGE_DIFF_MODE) as "full" | "prompt" | "summary") || "prompt";
-    const storedReducedMotion = localStorage.getItem(LS_KEY_REDUCED_MOTION) === "true";
-    const storedKey = localStorage.getItem(LS_KEY_API_KEY) || "";
-    const storedApiUrl = localStorage.getItem(LS_KEY_API_URL) || "";
-    const storedModel = localStorage.getItem(LS_KEY_MODEL) || "claude-sonnet-4-20250514";
-    const storedReviewModel = localStorage.getItem(LS_KEY_REVIEW_MODEL) || storedModel;
-    const storedLimit = localStorage.getItem(LS_KEY_TOKEN_LIMIT) || "4096";
-    const storedFetched = localStorage.getItem(LS_KEY_FETCHED_MODELS) || "[]";
-    const storedDetailLevel = (localStorage.getItem(LS_KEY_AI_DETAIL_LEVEL) as "minimal" | "medium" | "detailed") || "medium";
-    const storedCommitStyle = (localStorage.getItem(LS_KEY_COMMIT_STYLE) as "conventional" | "plain" | "gitmoji" | "jira") || "conventional";
-    const storedCustomRules = localStorage.getItem(LS_KEY_AI_CUSTOM_RULES) || "";
-    const storedReviewLanguage = localStorage.getItem(LS_KEY_AI_REVIEW_LANGUAGE) || "auto";
-    const storedReviewChecklist = localStorage.getItem(LS_KEY_AI_REVIEW_CHECKLIST) || JSON.stringify(DEFAULT_AI_REVIEW_CHECKLIST);
-    const storedGithubToken = localStorage.getItem(LS_KEY_GITHUB_TOKEN) || "";
-    const storedGitlabToken = localStorage.getItem(LS_KEY_GITLAB_TOKEN) || "";
-    const storedGitlabHost = localStorage.getItem(LS_KEY_GITLAB_HOST) || "";
+    if (!savedSnapshotRef.current) return; // not yet initialized
+    setHasChanges(buildSnapshot() !== savedSnapshotRef.current);
+  }, [buildSnapshot]);
 
-    setHasChanges(
-      theme !== currentTheme ||
-      defaultDiffMode !== storedDiffMode ||
-      autoFetch !== storedAutoFetch ||
-      fetchInterval !== Number(storedFetchInterval) ||
-      autoPrune !== storedAutoPrune ||
-      confirmDangerous !== storedConfirmDangerous ||
-      reopenLastRepo !== storedReopenLastRepo ||
-      recentRepoLimit !== Number(storedRecentRepoLimit) ||
-      commitLintEnabled !== storedCommitLint ||
-      codeLintEnabled !== storedCodeLint ||
-      lintStrictness !== storedLintStrictness ||
-      graphDensity !== storedGraphDensity ||
-      graphShowHash !== storedGraphShowHash ||
-      graphShowAuthor !== storedGraphShowAuthor ||
-      graphShowDate !== storedGraphShowDate ||
-      diffContext !== Number(storedDiffContext) ||
-      diffLineWrap !== storedDiffLineWrap ||
-      largeDiffMode !== storedLargeDiffMode ||
-      reducedMotion !== storedReducedMotion ||
-      apiKey !== storedKey ||
-      apiUrl !== storedApiUrl ||
-      commitModel !== storedModel ||
-      reviewModel !== storedReviewModel ||
-      tokenLimit !== Number(storedLimit) ||
-      JSON.stringify(fetchedModels) !== storedFetched ||
-      aiDetailLevel !== storedDetailLevel ||
-      commitStyle !== storedCommitStyle ||
-      customRules !== storedCustomRules ||
-      reviewLanguage !== storedReviewLanguage ||
-      JSON.stringify(reviewChecklist) !== storedReviewChecklist ||
-      githubToken !== storedGithubToken ||
-      gitlabToken !== storedGitlabToken ||
-      gitlabHost !== storedGitlabHost
-    );
-  }, [
-    theme,
-    currentTheme,
-    defaultDiffMode,
-    autoFetch,
-    fetchInterval,
-    autoPrune,
-    confirmDangerous,
-    reopenLastRepo,
-    recentRepoLimit,
-    commitLintEnabled,
-    codeLintEnabled,
-    lintStrictness,
-    graphDensity,
-    graphShowHash,
-    graphShowAuthor,
-    graphShowDate,
-    diffContext,
-    diffLineWrap,
-    largeDiffMode,
-    reducedMotion,
-    apiKey,
-    apiUrl,
-    commitModel,
-    reviewModel,
-    tokenLimit,
-    fetchedModels,
-    aiDetailLevel,
-    commitStyle,
-    customRules,
-    reviewLanguage,
-    reviewChecklist,
-    githubToken,
-    gitlabToken,
-    gitlabHost,
-  ]);
+  // ─── Profile switching ────────────────────────────────────────────────────
+  const handleSwitchProfile = useCallback((newProfileId: string) => {
+    // Save current form values back into the current profile before switching
+    setProfiles((prev) => {
+      const updated = prev.map((p) =>
+        p.id === activeProfileId
+          ? { ...p, apiKey, apiUrl, commitModel, reviewModel, tokenLimit, fetchedModels, updatedAt: Date.now() }
+          : p,
+      );
+      return updated;
+    });
+
+    setActiveProfileIdState(newProfileId);
+
+    // Load new profile's values into form
+    setProfiles((prev) => {
+      const newProfile = prev.find((p) => p.id === newProfileId);
+      if (newProfile) {
+        setApiKey(newProfile.apiKey);
+        setApiUrl(newProfile.apiUrl);
+        setCommitModel(newProfile.commitModel);
+        setReviewModel(newProfile.reviewModel);
+        setTokenLimit(newProfile.tokenLimit);
+        setFetchedModels(newProfile.fetchedModels);
+      }
+      return prev; // no change to array
+    });
+  }, [activeProfileId, apiKey, apiUrl, commitModel, reviewModel, tokenLimit, fetchedModels]);
+
+  // ─── Profile CRUD ─────────────────────────────────────────────────────────
+  const handleAddProfile = useCallback(() => {
+    const name = `Profile ${profiles.length + 1}`;
+    const { profiles: updated, id } = addProfile(profiles, name);
+    setProfiles(updated);
+    setActiveProfileIdState(id);
+    fillFormFromProfile(updated.find((p) => p.id === id)!);
+  }, [profiles, fillFormFromProfile]);
+
+  const handleDuplicateProfile = useCallback(() => {
+    const { profiles: updated, id } = duplicateProfile(profiles, activeProfileId);
+    setProfiles(updated);
+    setActiveProfileIdState(id);
+    fillFormFromProfile(updated.find((p) => p.id === id)!);
+  }, [profiles, activeProfileId, fillFormFromProfile]);
+
+  const handleDeleteProfile = useCallback(() => {
+    if (profiles.length <= 1) {
+      showToast("Cannot delete the last profile");
+      return;
+    }
+    const { profiles: updated, activeId } = deleteProfile(profiles, activeProfileId, activeProfileId);
+    setProfiles(updated);
+    setActiveProfileIdState(activeId);
+    fillFormFromProfile(updated.find((p) => p.id === activeId)!);
+  }, [profiles, activeProfileId, fillFormFromProfile]);
+
+  const handleRenameProfile = useCallback((newName: string) => {
+    setProfiles((prev) => renameProfile(prev, activeProfileId, newName));
+  }, [activeProfileId]);
 
   const handleFetchModels = async () => {
     if (!apiUrl) {
@@ -439,6 +481,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       }
 
       if (modelsList.length > 0) {
+        // Store fetched models in the active profile's state (per-profile scoping)
         setFetchedModels(modelsList);
         if (!modelsList.some((m) => m.id === commitModel)) {
           setCommitModel(modelsList[0].id);
@@ -468,6 +511,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
     });
   };
 
+  // ─── Save ─────────────────────────────────────────────────────────────────
   const handleSave = () => {
     try {
       setTheme(theme);
@@ -489,17 +533,33 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       localStorage.setItem(LS_KEY_DIFF_LINE_WRAP, String(diffLineWrap));
       localStorage.setItem(LS_KEY_LARGE_DIFF_MODE, largeDiffMode);
       localStorage.setItem(LS_KEY_REDUCED_MOTION, String(reducedMotion));
-      localStorage.setItem(LS_KEY_API_KEY, apiKey);
-      localStorage.setItem(LS_KEY_API_URL, apiUrl);
-      localStorage.setItem(LS_KEY_MODEL, commitModel);
-      localStorage.setItem(LS_KEY_REVIEW_MODEL, reviewModel);
-      localStorage.setItem(LS_KEY_TOKEN_LIMIT, String(tokenLimit));
-      localStorage.setItem(LS_KEY_FETCHED_MODELS, JSON.stringify(fetchedModels));
+
+      // Save global (non-credential) AI preferences
       localStorage.setItem(LS_KEY_AI_DETAIL_LEVEL, aiDetailLevel);
       localStorage.setItem(LS_KEY_COMMIT_STYLE, commitStyle);
       localStorage.setItem(LS_KEY_AI_CUSTOM_RULES, customRules);
       localStorage.setItem(LS_KEY_AI_REVIEW_LANGUAGE, reviewLanguage);
       localStorage.setItem(LS_KEY_AI_REVIEW_CHECKLIST, JSON.stringify(reviewChecklist));
+
+      // Save active profile's credential fields back into the profiles array
+      const updatedProfiles = profiles.map((p) =>
+        p.id === activeProfileId
+          ? { ...p, apiKey, apiUrl, commitModel, reviewModel, tokenLimit, fetchedModels, updatedAt: Date.now() }
+          : p,
+      );
+      saveProfiles(updatedProfiles, activeProfileId);
+      setProfiles(updatedProfiles);
+
+      // Also write to legacy keys so existing call sites that haven't migrated still work
+      const active = updatedProfiles.find((p) => p.id === activeProfileId)!;
+      localStorage.setItem(LS_KEY_API_KEY, active.apiKey);
+      localStorage.setItem(LS_KEY_API_URL, active.apiUrl);
+      localStorage.setItem(LS_KEY_MODEL, active.commitModel);
+      localStorage.setItem(LS_KEY_REVIEW_MODEL, active.reviewModel);
+      localStorage.setItem(LS_KEY_TOKEN_LIMIT, String(active.tokenLimit));
+      localStorage.setItem(LS_KEY_FETCHED_MODELS, JSON.stringify(active.fetchedModels));
+
+      // Save account tokens
       localStorage.setItem(LS_KEY_GITHUB_TOKEN, githubToken);
       localStorage.setItem(LS_KEY_GITLAB_TOKEN, gitlabToken);
       localStorage.setItem(LS_KEY_GITLAB_HOST, gitlabHost);
@@ -507,6 +567,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       clearAICache();
 
       setHasChanges(false);
+      savedSnapshotRef.current = buildSnapshot();
       showToast("Settings saved successfully");
       
       // Instantly dispatch event so UI updates if necessary
@@ -521,8 +582,14 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
   const handleClearAiCredentials = () => {
     setApiKey("");
     setApiUrl("");
-    localStorage.removeItem(LS_KEY_API_KEY);
-    localStorage.removeItem(LS_KEY_API_URL);
+    // Also clear from the active profile in memory
+    setProfiles((prev) =>
+      prev.map((p) =>
+        p.id === activeProfileId
+          ? { ...p, apiKey: "", apiUrl: "", updatedAt: Date.now() }
+          : p,
+      ),
+    );
     showToast("AI credentials cleared");
     window.dispatchEvent(new Event("gitflow-settings-updated"));
   };
@@ -560,12 +627,13 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
     setDiffLineWrap(true);
     setLargeDiffMode("prompt");
     setReducedMotion(false);
-    setApiKey("");
-    setApiUrl("");
-    setCommitModel("claude-sonnet-4-20250514");
-    setReviewModel("claude-sonnet-4-20250514");
-    setTokenLimit(4096);
-    setFetchedModels([]);
+
+    // Reset profiles to a single default
+    const def = createDefaultProfile();
+    setProfiles([def]);
+    setActiveProfileIdState(def.id);
+    fillFormFromProfile(def);
+
     setAiDetailLevel("medium");
     setCommitStyle("conventional");
     setCustomRules("");
@@ -759,6 +827,15 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
 
           {activeTab === "ai" && (
             <AITab
+              // Profile management props
+              profiles={profiles}
+              activeProfileId={activeProfileId}
+              onSwitchProfile={handleSwitchProfile}
+              onAddProfile={handleAddProfile}
+              onDuplicateProfile={handleDuplicateProfile}
+              onDeleteProfile={handleDeleteProfile}
+              onRenameProfile={handleRenameProfile}
+              // Existing credential props (bound to active profile)
               apiKey={apiKey}
               setApiKey={setApiKey}
               apiUrl={apiUrl}

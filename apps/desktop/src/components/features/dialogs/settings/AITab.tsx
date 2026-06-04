@@ -1,12 +1,18 @@
 import {
   ChevronDown,
+  Copy,
   Eye,
   EyeOff,
   FileText,
+  Plus,
   RefreshCw,
+  Trash2,
+  Users,
 } from "lucide-react";
+import { useState } from "react";
 import { AI_REVIEW_CHECKLIST_OPTIONS, DEFAULT_AI_REVIEW_CHECKLIST, type AIReviewMode } from "@/lib/ai";
 import type { ConventionFile } from "@/api/tauri";
+import type { AIProviderProfile } from "@/lib/ai-profiles";
 
 export const AVAILABLE_MODELS = [
   { id: "claude-sonnet-4-20250514", label: "Claude Sonnet 4" },
@@ -41,6 +47,15 @@ export const AI_REVIEW_LANGUAGES = [
 ] as const;
 
 interface AITabProps {
+  // Profile management
+  profiles: AIProviderProfile[];
+  activeProfileId: string;
+  onSwitchProfile: (id: string) => void;
+  onAddProfile: () => void;
+  onDuplicateProfile: () => void;
+  onDeleteProfile: () => void;
+  onRenameProfile: (name: string) => void;
+  // Credential / model props (bound to active profile)
   apiKey: string;
   setApiKey: (v: string) => void;
   apiUrl: string;
@@ -75,6 +90,13 @@ interface AITabProps {
 }
 
 export function AITab({
+  profiles,
+  activeProfileId,
+  onSwitchProfile,
+  onAddProfile,
+  onDuplicateProfile,
+  onDeleteProfile,
+  onRenameProfile,
   apiKey,
   setApiKey,
   apiUrl,
@@ -107,8 +129,101 @@ export function AITab({
   setExpandedConvention,
   repoPath,
 }: AITabProps) {
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+
+  const activeProfile = profiles.find((p) => p.id === activeProfileId);
+
+  const startRename = () => {
+    setNameDraft(activeProfile?.name || "");
+    setEditingName(true);
+  };
+
+  const commitRename = () => {
+    const trimmed = nameDraft.trim();
+    if (trimmed && trimmed !== activeProfile?.name) {
+      onRenameProfile(trimmed);
+    }
+    setEditingName(false);
+  };
+
   return (
     <div className="space-y-4">
+      {/* ── Profile Selector Card ──────────────────────────────────────── */}
+      <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
+        <div className="flex items-center gap-2">
+          <Users size={13} className="text-accent shrink-0" />
+          <label className="text-xs font-semibold text-text-primary">API Profile</label>
+        </div>
+
+        {/* Profile dropdown + actions */}
+        <div className="flex items-center gap-1.5">
+          <div className="relative flex-1">
+            <select
+              value={activeProfileId}
+              onChange={(e) => onSwitchProfile(e.target.value)}
+              className="w-full h-8 pl-2.5 pr-8 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer hover:bg-surface-2 transition-all"
+            >
+              {profiles.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
+              <ChevronDown size={11} strokeWidth={2.5} />
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onAddProfile}
+            className="h-8 w-8 flex items-center justify-center rounded-mac border border-border-60 bg-surface-1 hover:bg-surface-2 transition-all text-text-muted hover:text-accent"
+            title="Add new profile"
+          >
+            <Plus size={13} />
+          </button>
+          <button
+            type="button"
+            onClick={onDuplicateProfile}
+            className="h-8 w-8 flex items-center justify-center rounded-mac border border-border-60 bg-surface-1 hover:bg-surface-2 transition-all text-text-muted hover:text-accent"
+            title="Duplicate active profile"
+          >
+            <Copy size={12} />
+          </button>
+          <button
+            type="button"
+            onClick={onDeleteProfile}
+            disabled={profiles.length <= 1}
+            className="h-8 w-8 flex items-center justify-center rounded-mac border border-border-60 bg-surface-1 hover:bg-surface-2 transition-all text-text-muted hover:text-red-400 disabled:opacity-30 disabled:hover:text-text-muted"
+            title="Delete active profile"
+          >
+            <Trash2 size={12} />
+          </button>
+        </div>
+
+        {/* Profile name (inline rename) */}
+        <div className="flex items-center gap-2">
+          <span className="text-2xs text-text-muted">Name:</span>
+          {editingName ? (
+            <input
+              autoFocus
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              onBlur={commitRename}
+              onKeyDown={(e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") setEditingName(false); }}
+              className="flex-1 h-6 px-2 text-xs bg-surface-1 border border-accent rounded-mac text-text-primary outline-none"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={startRename}
+              className="text-xs text-text-primary font-medium hover:text-accent transition-colors underline-offset-2 hover:underline"
+            >
+              {activeProfile?.name || "Untitled"}
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* AI Provider Configuration Card */}
       <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
         {/* API Key */}

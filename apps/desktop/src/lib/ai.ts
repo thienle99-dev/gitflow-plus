@@ -1,6 +1,7 @@
 import { api, type FileChange, type Branch, type ConventionFile } from "@/api/tauri";
 import type { MergeRequest, MergeRequestFileChange } from "@/api/gitHost";
 import { scanForRisks, type RiskReport } from "./risk-scanner";
+import { loadActiveProfile, type AIProviderProfile } from "./ai-profiles";
 
 const DEFAULT_MODEL = "claude-sonnet-4-20250514";
 
@@ -13,9 +14,9 @@ const aiResponseCache = new Map<string, { text: string; ts: number }>();
 const AI_CACHE_TTL_MS = 10 * 60 * 1000; // 10 min
 const AI_CACHE_MAX = 50;
 
-function cacheKey(prompt: string, model: string): string {
+function cacheKey(prompt: string, model: string, profileId = ""): string {
   let h = 5381;
-  const key = model + "\x00" + prompt;
+  const key = profileId + "\x00" + model + "\x00" + prompt;
   for (let i = 0; i < key.length; i++) {
     h = ((h << 5) + h + key.charCodeAt(i)) & 0xffffffff;
   }
@@ -60,6 +61,7 @@ async function waitForRateSlot(): Promise<void> {
 }
 
 interface AISettings {
+  profileId?: string;
   apiKey: string;
   model: string;
   reviewModel: string;
@@ -790,15 +792,20 @@ export function generateLocalCommitMessage(files: FileChange[], branchName = "")
   return formatLocalCommitMessage(commitStyle, detailLevel, type, scope, description, branchName, files);
 }
 
-function readAISettings(): AISettings {
+export function readAISettings(): AISettings {
+  // Read from active profile first; fall back to legacy keys if no profile exists
+  const profile = loadActiveProfile();
   return {
-    apiKey: localStorage.getItem("gitflowAiApiKey") || "",
-    model: localStorage.getItem("gitflowAiModel") || DEFAULT_MODEL,
-    reviewModel: localStorage.getItem("gitflowAiReviewModel")
+    profileId: profile.id,
+    apiKey: profile.apiKey || localStorage.getItem("gitflowAiApiKey") || "",
+    model: profile.commitModel || localStorage.getItem("gitflowAiModel") || DEFAULT_MODEL,
+    reviewModel: profile.reviewModel
+      || localStorage.getItem("gitflowAiReviewModel")
+      || profile.commitModel
       || localStorage.getItem("gitflowAiModel")
       || DEFAULT_MODEL,
-    customUrl: localStorage.getItem("gitflowAiApiUrl") || "",
-    tokenLimit: Number(localStorage.getItem("gitflowAiTokenLimit") || "4096"),
+    customUrl: profile.apiUrl || localStorage.getItem("gitflowAiApiUrl") || "",
+    tokenLimit: profile.tokenLimit || Number(localStorage.getItem("gitflowAiTokenLimit") || "4096"),
     detailLevel: readCommitMessageDetailLevel(),
     commitStyle: readCommitMessageStyle(),
     customRules: localStorage.getItem("gitflowAiCustomRules") || "",
@@ -1054,8 +1061,8 @@ function gitmojiForType(type: string) {
 }
 
 async function requestAIText(prompt: string, settings: AISettings) {
-  // ── Cache: return cached response for identical (prompt + model) ──
-  const key = cacheKey(prompt, settings.model);
+  // ── Cache: return cached response for identical (prompt + model + profile) ──
+  const key = cacheKey(prompt, settings.model, settings.profileId);
   const cached = cacheGet(key);
   if (cached) return cached;
 

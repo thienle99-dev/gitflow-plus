@@ -2,7 +2,10 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App";
+import { initFileBackedConsoleLogger } from "@/lib/logger";
 import "./index.css";
+
+initFileBackedConsoleLogger();
 
 if (import.meta.env.PROD) {
   window.addEventListener("contextmenu", (event) => {

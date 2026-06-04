@@ -3,6 +3,7 @@ use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::Emitter;
 use tauri::Manager;
+use tauri_plugin_log::{RotationStrategy, Target, TargetKind, TimezoneStrategy};
 
 mod commands;
 mod watcher;
@@ -108,6 +109,22 @@ fn create_menu<R: tauri::Runtime>(app: &tauri::App<R>) -> Result<Menu<R>, tauri:
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .clear_targets()
+                .target(Target::new(TargetKind::LogDir {
+                    file_name: Some("gitflow-desktop.log".to_string()),
+                }))
+                .level(if cfg!(debug_assertions) {
+                    log::LevelFilter::Debug
+                } else {
+                    log::LevelFilter::Info
+                })
+                .max_file_size(5_000_000)
+                .rotation_strategy(RotationStrategy::KeepAll)
+                .timezone_strategy(TimezoneStrategy::UseLocal)
+                .build(),
+        )
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(
             tauri_plugin_window_state::Builder::new()
@@ -120,6 +137,8 @@ pub fn run() {
         ))))
         .manage(commands::op_lock::RepoLocks::new())
         .setup(|app| {
+            log::info!("GitFlow Desktop starting");
+
             let menu = create_menu(app)?;
             app.set_menu(menu)?;
 
@@ -217,6 +236,10 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::repo::open_repo,
             commands::repo::get_repo_info,
+            commands::app_logs::app_log_path,
+            commands::app_logs::app_log_list,
+            commands::app_logs::app_log_export_text,
+            commands::app_logs::app_log_clear,
             commands::app_window::show_main_window,
             commands::app_window::open_settings_window,
             commands::log::git_log,
@@ -292,6 +315,7 @@ pub fn run() {
             commands::health::repo_health_check,
             commands::health::diagnostic_bundle,
             commands::op_lock::repo_lock_status,
+            commands::preflight::preflight_check,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

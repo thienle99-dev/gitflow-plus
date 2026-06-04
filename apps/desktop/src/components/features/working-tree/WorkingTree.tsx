@@ -752,7 +752,18 @@ export default function WorkingTree() {
       <ConfirmDialog
         open={confirmDiscard !== null}
         title="Discard Changes"
-        message={`Discard all changes in ${confirmDiscard}?`}
+        message={`Discard all changes to this file? The file will be reverted to its last committed state.`}
+        impactItems={[
+          {
+            label: "File will be reverted to last committed state",
+            severity: "irreversible",
+            details: confirmDiscard ? [confirmDiscard] : undefined,
+          },
+          {
+            label: "All local modifications (staged and unstaged) will be permanently lost",
+            severity: "irreversible",
+          },
+        ]}
         variant="destructive"
         confirmLabel="Discard"
         onConfirm={() => doDiscard(confirmDiscard!)}
@@ -761,7 +772,24 @@ export default function WorkingTree() {
       <ConfirmDialog
         open={confirmDiscardAll}
         title="Discard All Changes"
-        message="Discard all working tree changes, including untracked files?"
+        message={`Discard all working tree changes across ${changes?.length ?? 0} file(s), including untracked files?`}
+        impactItems={[
+          {
+            label: `${staged.length} staged file(s) will be unstaged and reverted`,
+            severity: "irreversible",
+            details: staged.length > 0 ? staged.map((f) => f.path) : undefined,
+          },
+          {
+            label: `${unstaged.length} unstaged file(s) will be reverted to their committed state`,
+            severity: "irreversible",
+            details: unstaged.length > 0 ? unstaged.filter((f) => f.status !== "untracked").map((f) => f.path) : undefined,
+          },
+          {
+            label: "Untracked files will be permanently deleted",
+            severity: "irreversible",
+            details: unstaged.filter((f) => f.status === "untracked").map((f) => f.path),
+          },
+        ]}
         variant="destructive"
         confirmLabel="Discard All"
         onConfirm={doDiscardAll}
