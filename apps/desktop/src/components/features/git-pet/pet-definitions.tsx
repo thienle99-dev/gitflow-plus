@@ -3,6 +3,7 @@ import type { PetType } from "./pet-types";
 interface PetDefinition {
   viewBox: string;
   faceTransform?: string;
+  usesCustomFace?: boolean;
   body: React.ReactNode;
   face: React.ReactNode;
   mouth: React.ReactNode;
@@ -42,6 +43,7 @@ export function getPetDefinition(petType: PetType): PetDefinition {
 const catPet: PetDefinition = {
   viewBox: "0 0 48 48",
   faceTransform: "translate(8 6)",
+  usesCustomFace: true,
   body: (
     <>
       {/* Ground shadow */}
@@ -82,22 +84,73 @@ const catPet: PetDefinition = {
       <rect x="31" y="26" width="7" height="5" rx="2" fill="#F6A044" stroke="#B85F1C" strokeWidth="1" />
 
       {/* Cheek pixels */}
-      <rect x="13" y="21" width="4" height="2" rx="1" fill="#FFB3B3" opacity="0.55" />
-      <rect x="31" y="21" width="4" height="2" rx="1" fill="#FFB3B3" opacity="0.55" />
+      <rect x="13" y="23" width="4" height="2" rx="1" fill="#FFB3B3" opacity="0.55" />
+      <rect x="31" y="23" width="4" height="2" rx="1" fill="#FFB3B3" opacity="0.55" />
 
       {/* Pixel nose */}
-      <path d="M22 18 H26 L24 21 Z" fill="#D98586" />
+      <path d="M22 21 H26 L24 24 Z" fill="#D98586" />
 
-      {/* Whiskers */}
-      <rect x="6" y="18" width="8" height="1" fill="#B85F1C" />
-      <rect x="7" y="22" width="8" height="1" fill="#B85F1C" />
-      <rect x="34" y="18" width="8" height="1" fill="#B85F1C" />
-      <rect x="33" y="22" width="8" height="1" fill="#B85F1C" />
-
-      {/* Tabby stripes */}
+      {/* Whiskers and forehead markings sit under animated face pixels */}
+      <rect x="7" y="21" width="8" height="1" fill="#B85F1C" />
+      <rect x="8" y="25" width="8" height="1" fill="#B85F1C" />
+      <rect x="33" y="21" width="8" height="1" fill="#B85F1C" />
+      <rect x="32" y="25" width="8" height="1" fill="#B85F1C" />
       <rect x="21" y="9" width="2" height="5" rx="0.5" fill="#B85F1C" />
       <rect x="25" y="9" width="2" height="5" rx="0.5" fill="#B85F1C" />
       <path d="M24 9 H26 V11 H25 V14 H23 V11 H22 V9 Z" fill="#B85F1C" opacity="0.85" />
+
+      {/* Pixel face states */}
+      <g className="face-normal">
+        <rect x="16" y="15" width="5" height="6" rx="1" fill="#2F3035" />
+        <rect x="27" y="15" width="5" height="6" rx="1" fill="#2F3035" />
+        <rect x="18.2" y="16" width="1.6" height="1.6" fill="#FFFFFF" />
+        <rect x="29.2" y="16" width="1.6" height="1.6" fill="#FFFFFF" />
+      </g>
+      <g className="face-blink">
+        <rect x="16" y="18" width="6" height="1.4" rx="0.7" fill="#2F3035" />
+        <rect x="27" y="18" width="6" height="1.4" rx="0.7" fill="#2F3035" />
+      </g>
+      <g className="face-sleep">
+        <path d="M16 18 H18 V17 H20 V18 H22" stroke="#2F3035" strokeWidth="1.2" fill="none" strokeLinecap="square" strokeLinejoin="miter" />
+        <path d="M27 18 H29 V17 H31 V18 H33" stroke="#2F3035" strokeWidth="1.2" fill="none" strokeLinecap="square" strokeLinejoin="miter" />
+      </g>
+      <g className="face-happy">
+        <path d="M16 20 H18 V17 H20 V20 H22" stroke="#2F3035" strokeWidth="1.2" fill="none" strokeLinecap="square" strokeLinejoin="miter" />
+        <path d="M27 20 H29 V17 H31 V20 H33" stroke="#2F3035" strokeWidth="1.2" fill="none" strokeLinecap="square" strokeLinejoin="miter" />
+      </g>
+      <g className="face-star">
+        <path d="M18 14 H21 V17 H24 V20 H21 V23 H18 V20 H15 V17 H18 Z" fill="#FFD75A" />
+        <path d="M29 14 H32 V17 H35 V20 H32 V23 H29 V20 H26 V17 H29 Z" fill="#FFD75A" />
+      </g>
+      <g className="face-worry">
+        <rect x="16" y="15" width="5" height="6" rx="1" fill="#2F3035" />
+        <rect x="27" y="15" width="5" height="6" rx="1" fill="#2F3035" />
+        <rect x="18.2" y="16" width="1.6" height="1.6" fill="#FFFFFF" />
+        <rect x="29.2" y="16" width="1.6" height="1.6" fill="#FFFFFF" />
+        <rect x="16" y="13" width="7" height="1" fill="#2F3035" />
+        <rect x="26" y="13" width="7" height="1" fill="#2F3035" />
+        <path d="M38 13 H40 V16 H39 V18 H37 V16 H36 V14 H38 Z" fill="#86D7F0" />
+      </g>
+      <g className="face-alarmed">
+        <rect x="15" y="14" width="7" height="8" rx="1" fill="#2F3035" />
+        <rect x="27" y="14" width="7" height="8" rx="1" fill="#2F3035" />
+        <rect x="18" y="17" width="2" height="2" fill="#FFFFFF" />
+        <rect x="30" y="17" width="2" height="2" fill="#FFFFFF" />
+      </g>
+
+      <g className="mouth-smile">
+        <path d="M20 26 H22 V27 H26 V26 H28" stroke="#5C351D" strokeWidth="1.4" fill="none" strokeLinecap="square" strokeLinejoin="miter" />
+      </g>
+      <g className="mouth-sleep">
+        <rect x="23" y="26" width="3" height="2" rx="1" fill="#5C351D" />
+      </g>
+      <g className="mouth-open">
+        <rect x="22" y="25" width="5" height="4" rx="1" fill="#5C351D" />
+        <rect x="23" y="27" width="3" height="1.5" fill="#E89CAD" />
+      </g>
+      <g className="mouth-big">
+        <path d="M19 25 H21 V27 H23 V28 H25 V27 H27 V25 H29" stroke="#5C351D" strokeWidth="1.4" fill="none" strokeLinecap="square" strokeLinejoin="miter" />
+      </g>
     </>
   ),
   face: null,

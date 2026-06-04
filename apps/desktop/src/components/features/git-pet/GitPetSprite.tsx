@@ -35,6 +35,7 @@ export default function GitPetSprite({ state, petType = DEFAULT_PET, onAnimation
         {/* Pet-specific body, head, ears, limbs */}
         {pet.body}
 
+        {!pet.usesCustomFace && (
         <g transform={pet.faceTransform}>
           {/* === FACE: Normal open eyes === */}
           <g className="face-normal">
@@ -123,6 +124,7 @@ export default function GitPetSprite({ state, petType = DEFAULT_PET, onAnimation
             <path d="M13 15 Q16 18.5 19 15" fill="#FF8A8A" opacity="0.2" />
           </g>
         </g>
+        )}
 
         {/* Pet-specific accessories (bubble tea, fish, bone, etc.) */}
         {pet.accessories && <g className="pet-accessory">{pet.accessories}</g>}
