@@ -1,14 +1,44 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useGitBranches } from "@/queries/useGitLog";
 import { useMergePreview, useMergeBranch } from "@/queries/useGitMerge";
+import { useAIMergeStrategyAdvice } from "@/queries/useAI";
+import { readAISettings } from "@/lib/ai";
 import { showToast } from "@/lib/toast";
-import { ArrowLeftRight, GitMerge, GitBranch, FileText, Loader2, AlertCircle, ChevronDown } from "lucide-react";
+import {
+  ArrowLeftRight,
+  GitMerge,
+  GitBranch,
+  GitCommit,
+  GitPullRequest,
+  FastForward,
+  FileText,
+  Loader2,
+  AlertCircle,
+  ChevronDown,
+  Sparkles,
+  ChevronRight,
+  Check,
+  Zap,
+} from "lucide-react";
 
 interface MergePreviewDialogProps {
   initialBranch?: string;
   onClose: () => void;
 }
+
+const STRATEGY_META: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
+  "merge": { label: "Merge Commit", icon: <GitMerge size={14} />, color: "text-[#64d2ff]" },
+  "rebase": { label: "Rebase", icon: <GitPullRequest size={14} />, color: "text-[#bf5af2]" },
+  "squash": { label: "Squash Merge", icon: <GitCommit size={14} />, color: "text-[#ff9f0a]" },
+  "fast-forward": { label: "Fast-forward", icon: <FastForward size={14} />, color: "text-[#30d158]" },
+};
+
+const CONFIDENCE_COLOR: Record<string, string> = {
+  high: "bg-[#30d158]/15 text-[#30d158] border-[#30d158]/30",
+  medium: "bg-[#ff9f0a]/15 text-[#ff9f0a] border-[#ff9f0a]/30",
+  low: "bg-[#ff453a]/15 text-[#ff453a] border-[#ff453a]/30",
+};
 
 export default function MergePreviewDialog({ initialBranch, onClose }: MergePreviewDialogProps) {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -25,22 +55,78 @@ export default function MergePreviewDialog({ initialBranch, onClose }: MergePrev
 
   const { data: preview, isLoading, error } = useMergePreview(repoPath, selectedBranch);
   const mergeBranch = useMergeBranch(repoPath);
+  const mergeAdvice = useAIMergeStrategyAdvice(repoPath);
+  const [showAlternatives, setShowAlternatives] = useState(false);
 
-  const handleMerge = async () => {
-    if (!repoPath || !selectedBranch) return;
+  // Check if AI is configured
+  const aiConfigured = useMemo(() => {
     try {
-      await mergeBranch.mutateAsync({ branch: selectedBranch, squash });
-      showToast(squash ? `Squash merged "${selectedBranch}"` : `Merged "${selectedBranch}"`);
+      const settings = readAISettings();
+      return !!(settings.apiKey || settings.customUrl);
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // Auto-fetch AI advice when preview loads
+  useEffect(() => {
+    if (!preview || !repoPath || !currentBranch || !selectedBranch) return;
+    if (preview.incoming_commits.length === 0 && preview.changed_files.length === 0) return;
+    if (!aiConfigured) return;
+    if (mergeAdvice.data) return; // Already have advice
+
+    mergeAdvice.mutate({
+      currentBranch,
+      targetBranch: selectedBranch,
+      ahead: preview.ahead,
+      behind: preview.behind,
+      incomingCommits: preview.incoming_commits,
+      changedFiles: preview.changed_files,
+    });
+  }, [preview, repoPath, currentBranch, selectedBranch, aiConfigured]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleMerge = async (overrideSquash?: boolean, overrideNoFF?: boolean) => {
+    if (!repoPath || !selectedBranch) return;
+    const useSquash = overrideSquash ?? squash;
+    try {
+      await mergeBranch.mutateAsync({ branch: selectedBranch, squash: useSquash, noFF: overrideNoFF });
+      showToast(useSquash ? `Squash merged "${selectedBranch}"` : `Merged "${selectedBranch}"`);
       onClose();
     } catch (e: any) {
       showToast(`Merge failed: ${e?.message ?? e}`, "error");
     }
   };
 
+  const handleApplyRecommended = useCallback(() => {
+    const strategy = mergeAdvice.data?.recommendation?.strategy;
+    if (!strategy) return;
+    switch (strategy) {
+      case "merge":
+        handleMerge(false, true); // no-ff merge commit
+        break;
+      case "squash":
+        handleMerge(true); // squash merge
+        break;
+      case "rebase":
+      case "fast-forward":
+        handleMerge(false); // standard merge (rebase requires checkout + rebase which is separate flow)
+        break;
+    }
+  }, [mergeAdvice.data, squash]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const formatHash = (hash: string) => hash.substring(0, 7);
 
+  const advice = mergeAdvice.data;
+  const rec = advice?.recommendation;
+  const recMeta = rec ? STRATEGY_META[rec.strategy] : null;
+  const isUpToDate = preview && preview.incoming_commits.length === 0 && preview.changed_files.length === 0;
+
+  const primaryButtonLabel = recMeta
+    ? `Apply: ${recMeta.label}`
+    : squash ? "Squash Merge" : "Merge";
+
   return (
-    <div className="w-[560px] max-h-[80vh] flex flex-col bg-surface-0 rounded-mac overflow-hidden">
+    <div className="w-[580px] max-h-[80vh] flex flex-col bg-surface-0 rounded-mac overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-3 px-5 py-4 border-b border-border-40">
         <div className="h-8 w-8 rounded-full bg-accent-10 flex items-center justify-center">
@@ -143,6 +229,101 @@ export default function MergePreviewDialog({ initialBranch, onClose }: MergePrev
               </div>
             </div>
 
+            {/* AI Strategy Advisor */}
+            {aiConfigured && !isUpToDate && (
+              <div className="rounded-mac border border-border-40 overflow-hidden">
+                <div className="flex items-center gap-2 px-3 py-2 bg-surface-2-30">
+                  <Sparkles size={12} className="text-[#ff9f0a]" />
+                  <span className="text-2xs font-semibold text-text-secondary">AI Strategy Advisor</span>
+                  {mergeAdvice.isPending && (
+                    <Loader2 size={10} className="animate-spin text-accent ml-auto" />
+                  )}
+                  {mergeAdvice.isError && (
+                    <span className="text-2xs text-[#ff453a] ml-auto">Failed to get advice</span>
+                  )}
+                </div>
+                {advice && rec && recMeta && (
+                  <div className="px-3 py-2.5 space-y-2">
+                    {/* Recommendation card */}
+                    <div className="flex items-start gap-2.5">
+                      <div className={`shrink-0 mt-0.5 ${recMeta.color}`}>
+                        {recMeta.icon}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-bold text-text-primary">{recMeta.label}</span>
+                          <span className={`text-2xs px-1.5 py-0.5 rounded-full border ${CONFIDENCE_COLOR[rec.confidence] || CONFIDENCE_COLOR.medium}`}>
+                            {rec.confidence}
+                          </span>
+                        </div>
+                        <p className="text-2xs text-text-muted leading-relaxed">{rec.reasoning}</p>
+                        {rec.pros.length > 0 && (
+                          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
+                            {rec.pros.map((pro, i) => (
+                              <span key={i} className="flex items-center gap-1 text-2xs text-[#30d158]">
+                                <Check size={8} />
+                                {pro}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {rec.cons.length > 0 && (
+                          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+                            {rec.cons.map((con, i) => (
+                              <span key={i} className="flex items-center gap-1 text-2xs text-[#ff9f0a]">
+                                <Zap size={8} />
+                                {con}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Alternatives */}
+                    {advice.alternatives.length > 0 && (
+                      <div className="border-t border-border-40 pt-2">
+                        <button
+                          onClick={() => setShowAlternatives((p) => !p)}
+                          className="flex items-center gap-1 text-2xs text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+                        >
+                          <ChevronRight size={10} className={`transition-transform ${showAlternatives ? "rotate-90" : ""}`} />
+                          {advice.alternatives.length} alternative{advice.alternatives.length > 1 ? "s" : ""}
+                        </button>
+                        {showAlternatives && (
+                          <div className="mt-1.5 space-y-1.5">
+                            {advice.alternatives.map((alt, i) => {
+                              const meta = STRATEGY_META[alt.strategy];
+                              if (!meta) return null;
+                              return (
+                                <div key={i} className="flex items-start gap-2 pl-2">
+                                  <span className={`shrink-0 mt-0.5 ${meta.color}`}>{meta.icon}</span>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-2xs font-semibold text-text-primary">{meta.label}</span>
+                                      <span className={`text-2xs px-1 py-0.5 rounded border ${CONFIDENCE_COLOR[alt.confidence] || CONFIDENCE_COLOR.medium}`}>
+                                        {alt.confidence}
+                                      </span>
+                                    </div>
+                                    <p className="text-2xs text-text-muted leading-relaxed">{alt.reasoning}</p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Summary */}
+                    {advice.summary && (
+                      <p className="text-2xs text-text-muted italic pt-1 border-t border-border-40">{advice.summary}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Incoming commits */}
             {preview.incoming_commits.length > 0 && (
               <div>
@@ -193,7 +374,7 @@ export default function MergePreviewDialog({ initialBranch, onClose }: MergePrev
               </div>
             )}
 
-            {preview.incoming_commits.length === 0 && preview.changed_files.length === 0 && (
+            {isUpToDate && (
               <div className="text-center py-6 text-xs text-text-muted">
                 Branch is up to date — nothing to merge
               </div>
@@ -224,18 +405,35 @@ export default function MergePreviewDialog({ initialBranch, onClose }: MergePrev
           >
             Cancel
           </button>
-          <button
-            onClick={handleMerge}
-            disabled={!selectedBranch || mergeBranch.isPending || (preview?.behind === 0 && preview?.ahead === 0)}
-            className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-accent hover:bg-accent-80 rounded-mac transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-          >
-            {mergeBranch.isPending ? (
-              <Loader2 size={12} className="animate-spin" />
-            ) : (
-              <GitMerge size={12} />
-            )}
-            {squash ? "Squash Merge" : "Merge"}
-          </button>
+          {advice?.recommendation ? (
+            <button
+              onClick={handleApplyRecommended}
+              disabled={!selectedBranch || mergeBranch.isPending || isUpToDate}
+              className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-accent hover:bg-accent-80 rounded-mac transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            >
+              {mergeBranch.isPending ? (
+                <Loader2 size={12} className="animate-spin" />
+              ) : recMeta ? (
+                recMeta.icon
+              ) : (
+                <GitMerge size={12} />
+              )}
+              {primaryButtonLabel}
+            </button>
+          ) : (
+            <button
+              onClick={() => handleMerge()}
+              disabled={!selectedBranch || mergeBranch.isPending || isUpToDate}
+              className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-accent hover:bg-accent-80 rounded-mac transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            >
+              {mergeBranch.isPending ? (
+                <Loader2 size={12} className="animate-spin" />
+              ) : (
+                <GitMerge size={12} />
+              )}
+              {squash ? "Squash Merge" : "Merge"}
+            </button>
+          )}
         </div>
       </div>
 
