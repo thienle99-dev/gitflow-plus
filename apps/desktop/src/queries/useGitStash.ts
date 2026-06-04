@@ -14,6 +14,7 @@ export function useStashPush(repoPath: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation<string, Error, { message?: string; includeUntracked?: boolean }>({
+    mutationKey: ["git.stash-push"],
     mutationFn: ({ message, includeUntracked }) =>
       api.stash.push(repoPath!, message, includeUntracked),
     onSuccess: () => {
@@ -26,6 +27,7 @@ export function useStashPop(repoPath: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation<string, Error, { index?: number }>({
+    mutationKey: ["git.stash-pop"],
     mutationFn: ({ index }) => api.stash.pop(repoPath!, index),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
@@ -37,6 +39,7 @@ export function useStashApply(repoPath: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation<string, Error, { index?: number }>({
+    mutationKey: ["git.stash-apply"],
     mutationFn: ({ index }) => api.stash.apply(repoPath!, index),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
@@ -48,6 +51,7 @@ export function useStashDrop(repoPath: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation<string, Error, { index?: number }>({
+    mutationKey: ["git.stash-drop"],
     mutationFn: ({ index }) => api.stash.drop(repoPath!, index),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["git", repoPath] });

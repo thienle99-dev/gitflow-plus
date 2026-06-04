@@ -14,6 +14,7 @@ export function useMergeBranch(repoPath: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation<MergeResult, Error, { branch: string; squash?: boolean; noFF?: boolean }>({
+    mutationKey: ["git.merge"],
     mutationFn: ({ branch, squash, noFF }) =>
       api.merge.start(repoPath!, branch, squash, noFF),
     onSuccess: () => {
@@ -26,6 +27,7 @@ export function useMergeAbort(repoPath: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation<string, Error, void>({
+    mutationKey: ["git.merge-abort"],
     mutationFn: () => api.merge.abort(repoPath!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
@@ -37,6 +39,7 @@ export function useMergeContinue(repoPath: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation<string, Error, { message?: string }>({
+    mutationKey: ["git.merge-continue"],
     mutationFn: ({ message }) => api.merge.continue(repoPath!, message),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["git", repoPath] });

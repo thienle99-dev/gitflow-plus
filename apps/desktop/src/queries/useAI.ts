@@ -17,6 +17,7 @@ import {
 
 export function useGenerateCommitMessage(repoPath: string | null) {
   return useMutation({
+    mutationKey: ["ai.generate-commit"],
     mutationFn: ({ files }: { files: FileChange[] }) => {
       if (!repoPath) throw new Error("No repository selected");
       return generateCommitMessageWithAI(repoPath, files);
@@ -26,6 +27,7 @@ export function useGenerateCommitMessage(repoPath: string | null) {
 
 export function useAIDiffReview() {
   return useMutation({
+    mutationKey: ["ai.diff-review"],
     mutationFn: ({ filePath, diff, repoPath, mode }: { filePath: string; diff: string; repoPath?: string; mode?: AIReviewMode }) =>
       reviewDiffWithAI(filePath, diff, repoPath, mode),
   });
@@ -33,6 +35,7 @@ export function useAIDiffReview() {
 
 export function useAIInlineComments() {
   return useMutation({
+    mutationKey: ["ai.inline-comments"],
     mutationFn: ({ filePath, diff, repoPath, mode }: { filePath: string; diff: string; repoPath?: string; mode?: AIReviewMode }) =>
       generateInlineReviewComments(filePath, diff, repoPath, mode),
   });
@@ -40,6 +43,7 @@ export function useAIInlineComments() {
 
 export function useAICommitReview() {
   return useMutation({
+    mutationKey: ["ai.commit-review"],
     mutationFn: ({
       repoPath,
       commitHash,
@@ -56,6 +60,7 @@ export function useAICommitReview() {
 
 export function useAICommitExplain() {
   return useMutation({
+    mutationKey: ["ai.commit-explain"],
     mutationFn: ({
       repoPath,
       commitHash,
@@ -70,6 +75,7 @@ export function useAICommitExplain() {
 
 export function useAICommitScope() {
   return useMutation({
+    mutationKey: ["ai.commit-scope"],
     mutationFn: ({ repoPath, files }: { repoPath: string; files: FileChange[] }) =>
       analyzeCommitScope(repoPath, files),
   });
@@ -77,6 +83,7 @@ export function useAICommitScope() {
 
 export function useAIMergeRequestExplain() {
   return useMutation({
+    mutationKey: ["ai.mr-explain"],
     mutationFn: ({ mergeRequest, files, repoPath }: { mergeRequest: MergeRequest; files: MergeRequestFileChange[]; repoPath?: string }) =>
       explainMergeRequestWithAI(mergeRequest, files, repoPath),
   });
@@ -84,6 +91,7 @@ export function useAIMergeRequestExplain() {
 
 export function useAIMergeRequestReview() {
   return useMutation({
+    mutationKey: ["ai.mr-review"],
     mutationFn: ({ mergeRequest, files, repoPath, mode }: { mergeRequest: MergeRequest; files: MergeRequestFileChange[]; repoPath?: string; mode?: AIReviewMode }) =>
       reviewMergeRequestWithAI(mergeRequest, files, repoPath, mode),
   });
@@ -91,6 +99,7 @@ export function useAIMergeRequestReview() {
 
 export function useAIConflictExplain() {
   return useMutation({
+    mutationKey: ["ai.conflict-explain"],
     mutationFn: ({
       filePath,
       ours,

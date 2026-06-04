@@ -14,6 +14,7 @@ export function useTagCreate(repoPath: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation<string, Error, { name: string; target?: string; message?: string }>({
+    mutationKey: ["git.tag-create"],
     mutationFn: ({ name, target, message }) =>
       api.tag.create(repoPath!, name, target, message),
     onSuccess: () => {
@@ -26,6 +27,7 @@ export function useTagDelete(repoPath: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation<string, Error, { name: string }>({
+    mutationKey: ["git.tag-delete"],
     mutationFn: ({ name }) => api.tag.delete(repoPath!, name),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
@@ -37,6 +39,7 @@ export function useTagPush(repoPath: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation<string, Error, { name: string; remote?: string }>({
+    mutationKey: ["git.tag-push"],
     mutationFn: ({ name, remote }) => api.tag.push(repoPath!, name, remote),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["git", repoPath] });

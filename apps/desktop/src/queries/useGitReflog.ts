@@ -14,6 +14,7 @@ export function useUndoLast(repoPath: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation<string, Error, void>({
+    mutationKey: ["git.reflog-undo"],
     mutationFn: () => api.reflog.undo(repoPath!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["git", repoPath] });

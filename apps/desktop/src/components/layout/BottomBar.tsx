@@ -1,14 +1,17 @@
-import { useState } from "react";
-import { Book, GitBranch, ArrowUp, ArrowDown, Loader2, GraduationCap, AlertTriangle, Terminal } from "lucide-react";
+import { Book, GitBranch, ArrowUp, ArrowDown, Loader2, GraduationCap, AlertTriangle, Terminal, Activity } from "lucide-react";
 import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
 import { useGitBranches, useGitStatus, useGitSyncStatus } from "@/queries/useGitLog";
 import { useMergeStatus } from "@/queries/useGitMerge";
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
+import { useOperationsStore } from "@/stores/operations";
 
 export default function BottomBar() {
   const repoPath = useRepoStore((s) => s.repoPath);
   const openDialogState = useUIStore((s) => s.openDialog);
+  const opsOpen = useOperationsStore((s) => s.isOpen);
+  const toggleOps = useOperationsStore((s) => s.toggleOpen);
+  const runningOps = useOperationsStore((s) => s.operations.filter((o) => o.status === "running").length);
 
   // Monitor global background fetch/mutation progress
   const isFetching = useIsFetching();
@@ -117,8 +120,22 @@ export default function BottomBar() {
 
       <div className="flex-1" />
 
-      {/* Right side: Feature Guide + Onboarding + Version */}
+      {/* Right side: Operations + Feature Guide + Onboarding + Version */}
       <div className="flex items-center gap-3">
+        <button
+          onClick={toggleOps}
+          className={`flex items-center gap-1 text-text-muted hover:text-accent transition-all p-0.5 rounded cursor-pointer mr-0.5 ${opsOpen ? "text-accent" : ""}`}
+          title="Operation Center"
+        >
+          <Activity size={11} />
+          <span className="text-[9px] font-semibold">Ops</span>
+          {runningOps > 0 && (
+            <span className="min-w-[14px] h-[14px] flex items-center justify-center rounded-full bg-accent text-[8px] font-bold text-white px-1">
+              {runningOps}
+            </span>
+          )}
+        </button>
+
         <button
           onClick={() => openDialogState("logs")}
           className="flex items-center gap-1 text-text-muted hover:text-accent transition-all p-0.5 rounded cursor-pointer mr-0.5"

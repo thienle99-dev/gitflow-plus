@@ -12,6 +12,8 @@ import Sidebar from "@/components/features/sidebar/Sidebar";
 import CommitGraph from "@/components/features/graph/CommitGraph";
 import RightPanel from "@/components/layout/RightPanel";
 import BottomBar from "@/components/layout/BottomBar";
+import OperationCenter from "@/components/layout/OperationCenter";
+import { useOperationObserver } from "@/hooks/useOperationObserver";
 import { SearchDialog, KeyboardShortcutsModal, CherryPickDialog, SettingsDialog, AnalyticsDialog, CreateBranchDialog, MergeRequestDialog, MergePreviewDialog, CloneDialog, FeatureGuideDialog, OnboardingWizard, isOnboardingComplete, BranchCompareDialog, HealthCheckDialog, DiagnosticDialog, CommandPalette } from "@/components/features/dialogs";
 import ErrorBoundary from "@/components/ui/feedback/ErrorBoundary";
 import { AlertOctagon, RefreshCw, Trash2, FolderOpen, GitBranch, Clock } from "lucide-react";
@@ -38,6 +40,9 @@ export default function MainLayout() {
   const sidebarPanelRef = useRef<ImperativePanelHandle>(null);
   const rightPanelRef = useRef<ImperativePanelHandle>(null);
   const [showOnboarding, setShowOnboarding] = useState(() => !isOnboardingComplete());
+
+  // Observe all React Query mutations → operations store
+  useOperationObserver();
 
   // Sync onboarding from activeDialog ("onboarding" opened from BottomBar etc.)
   useEffect(() => {
@@ -474,6 +479,7 @@ function InlineErrorFallback({ name }: { name: string }) {
           </Panel>
         </PanelGroup>
       </div>
+      <OperationCenter />
       <BottomBar />
 
       {/* Dialog overlays */}
