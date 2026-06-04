@@ -162,6 +162,7 @@
 }
 .pet-idle {
   animation: pet-idle-bob 2.5s ease-in-out infinite;
+  will-change: transform;
 }
 
 /* === BLINK — quick squint === */
@@ -180,6 +181,7 @@
 }
 .pet-sleep {
   animation: pet-sleep-breathe 3s ease-in-out infinite;
+  will-change: transform, opacity;
 }
 
 /* === LOADING / RUN — fast bounce === */
@@ -191,6 +193,7 @@
 }
 .pet-loading {
   animation: pet-loading-run 300ms ease-in-out infinite;
+  will-change: transform;
 }
 
 /* === SUCCESS — celebratory hop === */
@@ -463,6 +466,7 @@
 .pet-tail {
   transform-origin: 8px 27px;
   animation: tail-idle-wag 3s ease-in-out infinite;
+  will-change: transform;
 }
 @keyframes tail-idle-wag {
   0%, 100% { transform: rotate(0deg); }
@@ -483,6 +487,7 @@
 .pet-accessory {
   transform-origin: 26px 22px;
   animation: accessory-idle-bob 2.5s ease-in-out infinite;
+  will-change: transform;
 }
 @keyframes accessory-idle-bob {
   0%, 100% { transform: translateY(0); }
@@ -503,10 +508,12 @@
 .pet-ear-left {
   transform-origin: 8px 6px;
   animation: ear-twitch-left 5s ease-in-out infinite;
+  will-change: transform;
 }
 .pet-ear-right {
   transform-origin: 24px 6px;
   animation: ear-twitch-right 5s ease-in-out infinite 0.7s;
+  will-change: transform;
 }
 
 .pet-wave .pet-ear-left {
@@ -529,10 +536,12 @@
 .pet-gills-left {
   transform-origin: 5px 12px;
   animation: gills-flutter-left 3s ease-in-out infinite;
+  will-change: transform;
 }
 .pet-gills-right {
   transform-origin: 27px 12px;
   animation: gills-flutter-right 3s ease-in-out infinite;
+  will-change: transform;
 }
 @keyframes gills-flutter-left {
   0%, 100% { transform: scaleX(1); }

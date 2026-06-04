@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { PetState } from "./usePetState";
 
 const BUBBLE_MESSAGES: Record<PetState, string | null> = {
@@ -16,9 +17,10 @@ interface GitPetBubbleProps {
   state: PetState;
 }
 
-export default function GitPetBubble({ state }: GitPetBubbleProps) {
+const GitPetBubble = memo(function GitPetBubble({ state }: GitPetBubbleProps) {
   const message = BUBBLE_MESSAGES[state];
   if (!message) return null;
 
   return <div className="pet-bubble">{message}</div>;
-}
+});
+export default GitPetBubble;

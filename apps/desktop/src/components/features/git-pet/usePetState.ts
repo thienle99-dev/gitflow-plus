@@ -64,6 +64,7 @@ export function usePetState(): PetState {
   const [timerState, setTimerState] = useState<PetState>("idle");
   const lastActivityRef = useRef(Date.now());
   const blinkTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const blinkInnerRef = useRef<ReturnType<typeof setTimeout>>();
   const sleepTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const resetTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -75,6 +76,7 @@ export function usePetState(): PetState {
   // Blink scheduler: random interval while idle
   const scheduleBlink = useCallback(() => {
     clearTimeout(blinkTimerRef.current);
+    clearTimeout(blinkInnerRef.current);
     const delay = BLINK_MIN_MS + Math.random() * (BLINK_MAX_MS - BLINK_MIN_MS);
     blinkTimerRef.current = setTimeout(() => {
       setTimerState((prev) => {
@@ -82,7 +84,7 @@ export function usePetState(): PetState {
         return prev;
       });
       // blink → back to idle after animation
-      setTimeout(() => {
+      blinkInnerRef.current = setTimeout(() => {
         setTimerState((prev) => (prev === "blink" ? "idle" : prev));
         scheduleBlink();
       }, 400);
@@ -114,7 +116,10 @@ export function usePetState(): PetState {
     if (timerState === "idle") {
       scheduleBlink();
     }
-    return () => clearTimeout(blinkTimerRef.current);
+    return () => {
+      clearTimeout(blinkTimerRef.current);
+      clearTimeout(blinkInnerRef.current);
+    };
   }, [timerState === "idle", scheduleBlink]);
 
   // Track operation completion → success/error/excited
@@ -145,6 +150,7 @@ export function usePetState(): PetState {
   useEffect(() => {
     return () => {
       clearTimeout(blinkTimerRef.current);
+      clearTimeout(blinkInnerRef.current);
       clearTimeout(resetTimerRef.current);
       clearInterval(sleepTimerRef.current);
     };
@@ -164,10 +170,9 @@ export function usePetHover(
   baseState: PetState,
 ): { state: PetState; onHoverStart: () => void; onHoverEnd: () => void } {
   const [hovering, setHovering] = useState(false);
+  const onHoverStart = useCallback(() => setHovering(true), []);
+  const onHoverEnd = useCallback(() => setHovering(false), []);
 
-  return {
-    state: hovering ? pickHigher("waving", baseState) : baseState,
-    onHoverStart: () => setHovering(true),
-    onHoverEnd: () => setHovering(false),
-  };
+  const state = hovering ? pickHigher("waving", baseState) : baseState;
+  return { state, onHoverStart, onHoverEnd };
 }

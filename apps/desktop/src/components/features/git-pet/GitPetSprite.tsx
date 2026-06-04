@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { memo, type CSSProperties } from "react";
 import type { PetState } from "./usePetState";
 import type { PetType } from "./pet-types";
 import { DEFAULT_PET } from "./pet-types";
@@ -37,7 +37,7 @@ function getSpriteSheetSource(
   return spriteSheets.eating ?? spriteSheets.wave ?? spriteSheets.idle;
 }
 
-export default function GitPetSprite({ state, petType = DEFAULT_PET, onAnimationEnd }: GitPetSpriteProps) {
+const GitPetSprite = memo(function GitPetSprite({ state, petType = DEFAULT_PET, onAnimationEnd }: GitPetSpriteProps) {
   const pet = getPetDefinition(petType);
   const spriteSheet = pet.spriteSheets;
   const activeSpriteSheet = spriteSheet ? getSpriteSheetSource(state, spriteSheet) : null;
@@ -164,4 +164,5 @@ export default function GitPetSprite({ state, petType = DEFAULT_PET, onAnimation
       )}
     </div>
   );
-}
+});
+export default GitPetSprite;
