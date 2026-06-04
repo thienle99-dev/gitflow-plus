@@ -42,36 +42,36 @@ const catPet: PetDefinition = {
   body: (
     <>
       {/* Tail */}
-      <path className="pet-tail" d="M8 27 C3 27 1 23 4 19" stroke="#D4876E" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+      <path className="pet-tail" d="M9 27 C4 27 2 23 4 19" stroke="#D4876E" strokeWidth="2.5" fill="none" strokeLinecap="round" />
       {/* Body */}
-      <rect x="7" y="17" width="18" height="10" fill="#E8944A" rx="5" />
+      <ellipse cx="16" cy="24" rx="9" ry="7" fill="#E8944A" />
       {/* Left arm/paw */}
-      <rect x="4" y="19" width="5" height="6" fill="#F4A460" rx="2.5" />
+      <ellipse cx="8" cy="24" rx="2.5" ry="3" fill="#F4A460" />
       {/* Right arm/paw */}
-      <rect x="23" y="19" width="5" height="6" fill="#F4A460" rx="2.5" />
+      <ellipse cx="24" cy="24" rx="2.5" ry="3" fill="#F4A460" />
       {/* Left ear */}
       <g className="pet-ear-left">
-        <rect x="7" y="1" width="5" height="6" fill="#E8944A" rx="1.5" />
-        <rect x="8.5" y="2.5" width="2" height="3" fill="#FFB6C1" rx="0.5" />
+        <path d="M7 6 L9 0 L13 5 Z" fill="#E8944A" />
+        <path d="M8.5 5 L10 1 L12 4 Z" fill="#FFB6C1" />
       </g>
       {/* Right ear */}
       <g className="pet-ear-right">
-        <rect x="20" y="1" width="5" height="6" fill="#E8944A" rx="1.5" />
-        <rect x="21.5" y="2.5" width="2" height="3" fill="#FFB6C1" rx="0.5" />
+        <path d="M25 6 L23 0 L19 5 Z" fill="#E8944A" />
+        <path d="M23.5 5 L22 1 L20 4 Z" fill="#FFB6C1" />
       </g>
       {/* Head */}
-      <rect x="5" y="5" width="22" height="13" fill="#F4A460" rx="6" />
+      <circle cx="16" cy="13" r="10" fill="#F4A460" />
       {/* Cheeks */}
-      <circle cx="8" cy="14" r="2" fill="#FFB6C1" opacity="0.45" />
-      <circle cx="24" cy="14" r="2" fill="#FFB6C1" opacity="0.45" />
+      <ellipse cx="9" cy="14.5" rx="2" ry="1" fill="#FFB6C1" opacity="0.5" />
+      <ellipse cx="23" cy="14.5" rx="2" ry="1" fill="#FFB6C1" opacity="0.5" />
       {/* Nose */}
-      <rect x="15" y="12.5" width="2" height="1.5" fill="#D4876E" rx="0.5" />
+      <polygon points="15 13, 17 13, 16 14.2" fill="#D4876E" />
       {/* Feet */}
-      <rect x="10" y="26" width="4" height="3" fill="#D4876E" rx="1.5" />
-      <rect x="18" y="26" width="4" height="3" fill="#D4876E" rx="1.5" />
+      <ellipse cx="11" cy="30.5" rx="2.5" ry="1.5" fill="#D4876E" />
+      <ellipse cx="21" cy="30.5" rx="2.5" ry="1.5" fill="#D4876E" />
     </>
   ),
-  face: null, // Face is rendered by GitPetSprite
+  face: null,
   mouth: null,
   accessories: (
     <>
@@ -92,31 +92,37 @@ const otterPet: PetDefinition = {
   body: (
     <>
       {/* Tail */}
-      <path className="pet-tail" d="M7 27 C2 27 0 23 3 20" stroke="#8B7355" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+      <path className="pet-tail" d="M10 27 C5 28 2 25 3 20" stroke="#8B7355" strokeWidth="3" fill="none" strokeLinecap="round" />
       {/* Body */}
-      <rect x="7" y="17" width="18" height="10" fill="#A0826D" rx="5" />
+      <ellipse cx="16" cy="24" rx="9" ry="7" fill="#A0826D" />
       {/* Belly */}
-      <rect x="10" y="19" width="12" height="6" fill="#D4B896" rx="3" />
+      <ellipse cx="16" cy="24.5" rx="6" ry="4.5" fill="#D4B896" />
       {/* Left arm/paw */}
-      <rect x="4" y="19" width="5" height="6" fill="#8B7355" rx="2.5" />
+      <ellipse cx="8" cy="24" rx="2" ry="2.5" fill="#8B7355" />
       {/* Right arm/paw */}
-      <rect x="23" y="19" width="5" height="6" fill="#8B7355" rx="2.5" />
+      <ellipse cx="24" cy="24" rx="2" ry="2.5" fill="#8B7355" />
       {/* Left ear */}
-      <rect className="pet-ear-left" x="8" y="2" width="4" height="4" fill="#A0826D" rx="2" />
+      <g className="pet-ear-left">
+        <circle cx="8" cy="4.5" r="3.5" fill="#A0826D" />
+        <circle cx="8" cy="4.5" r="2" fill="#FFB6C1" />
+      </g>
       {/* Right ear */}
-      <rect className="pet-ear-right" x="20" y="2" width="4" height="4" fill="#A0826D" rx="2" />
+      <g className="pet-ear-right">
+        <circle cx="24" cy="4.5" r="3.5" fill="#A0826D" />
+        <circle cx="24" cy="4.5" r="2" fill="#FFB6C1" />
+      </g>
       {/* Head */}
-      <rect x="5" y="5" width="22" height="13" fill="#A0826D" rx="6" />
-      {/* Belly on head */}
-      <rect x="9" y="9" width="14" height="6" fill="#D4B896" rx="3" />
+      <circle cx="16" cy="13" r="10" fill="#A0826D" />
+      {/* Snout/Belly color on face */}
+      <ellipse cx="16" cy="14.5" rx="5" ry="3" fill="#D4B896" />
       {/* Cheeks */}
-      <circle cx="8" cy="14" r="2" fill="#FFB6C1" opacity="0.35" />
-      <circle cx="24" cy="14" r="2" fill="#FFB6C1" opacity="0.35" />
+      <ellipse cx="9" cy="14" rx="1.8" ry="0.9" fill="#FFB6C1" opacity="0.4" />
+      <ellipse cx="23" cy="14" rx="1.8" ry="0.9" fill="#FFB6C1" opacity="0.4" />
       {/* Nose */}
-      <rect x="15" y="12.5" width="2" height="1.5" fill="#5C4033" rx="0.5" />
+      <ellipse cx="16" cy="13" rx="1.5" ry="1" fill="#5C4033" />
       {/* Feet */}
-      <rect x="10" y="26" width="4" height="3" fill="#8B7355" rx="1.5" />
-      <rect x="18" y="26" width="4" height="3" fill="#8B7355" rx="1.5" />
+      <ellipse cx="11" cy="30.5" rx="2.2" ry="1.5" fill="#8B7355" />
+      <ellipse cx="21" cy="30.5" rx="2.2" ry="1.5" fill="#8B7355" />
     </>
   ),
   face: null,
@@ -136,29 +142,33 @@ const dogPet: PetDefinition = {
   body: (
     <>
       {/* Tail */}
-      <path className="pet-tail" d="M8 26 C4 24 2 20 5 17" stroke="#C49A6C" strokeWidth="3" fill="none" strokeLinecap="round" />
+      <path className="pet-tail" d="M10 26 C6 24 4 20 6 17" stroke="#C49A6C" strokeWidth="3" fill="none" strokeLinecap="round" />
       {/* Body */}
-      <rect x="7" y="17" width="18" height="10" fill="#DEB887" rx="5" />
+      <ellipse cx="16" cy="24" rx="9" ry="7" fill="#DEB887" />
       {/* Left arm/paw */}
-      <rect x="4" y="19" width="5" height="6" fill="#C49A6C" rx="2.5" />
+      <ellipse cx="8" cy="24" rx="2.5" ry="3" fill="#C49A6C" />
       {/* Right arm/paw */}
-      <rect x="23" y="19" width="5" height="6" fill="#C49A6C" rx="2.5" />
+      <ellipse cx="24" cy="24" rx="2.5" ry="3" fill="#C49A6C" />
       {/* Left floppy ear */}
-      <rect className="pet-ear-left" x="5" y="5" width="4" height="10" fill="#C49A6C" rx="2" />
+      <g className="pet-ear-left">
+        <path d="M7 5 C5 5 4 10 5 13 C6 15 8 15 8 13 C8 10 9 5 7 5 Z" fill="#C49A6C" />
+      </g>
       {/* Right floppy ear */}
-      <rect className="pet-ear-right" x="23" y="5" width="4" height="10" fill="#C49A6C" rx="2" />
+      <g className="pet-ear-right">
+        <path d="M25 5 C27 5 28 10 27 13 C26 15 24 15 24 13 C24 10 23 5 25 5 Z" fill="#C49A6C" />
+      </g>
       {/* Head */}
-      <rect x="5" y="5" width="22" height="13" fill="#DEB887" rx="6" />
+      <circle cx="16" cy="13" r="10" fill="#DEB887" />
       {/* Snout */}
-      <rect x="11" y="11" width="10" height="5" fill="#F5DEB3" rx="2.5" />
+      <ellipse cx="16" cy="15" rx="4" ry="2.5" fill="#F5DEB3" />
       {/* Cheeks */}
-      <circle cx="8" cy="14" r="2" fill="#FFB6C1" opacity="0.3" />
-      <circle cx="24" cy="14" r="2" fill="#FFB6C1" opacity="0.3" />
+      <ellipse cx="9" cy="15" rx="1.8" ry="0.9" fill="#FFB6C1" opacity="0.35" />
+      <ellipse cx="23" cy="15" rx="1.8" ry="0.9" fill="#FFB6C1" opacity="0.35" />
       {/* Nose */}
-      <rect x="15" y="12" width="2" height="2" fill="#333" rx="1" />
+      <ellipse cx="16" cy="13.8" rx="1.5" ry="1" fill="#333" />
       {/* Feet */}
-      <rect x="10" y="26" width="4" height="3" fill="#C49A6C" rx="1.5" />
-      <rect x="18" y="26" width="4" height="3" fill="#C49A6C" rx="1.5" />
+      <ellipse cx="11" cy="30.5" rx="2.5" ry="1.5" fill="#C49A6C" />
+      <ellipse cx="21" cy="30.5" rx="2.5" ry="1.5" fill="#C49A6C" />
     </>
   ),
   face: null,
@@ -181,39 +191,39 @@ const foxPet: PetDefinition = {
     <>
       {/* Tail */}
       <g className="pet-tail">
-        <path d="M8 27 C3 27 1 23 4 19" stroke="#E8601C" strokeWidth="3" fill="none" strokeLinecap="round" />
-        <path d="M5 20 C3 18 3 16 5 15" stroke="#F5F5DC" strokeWidth="2" fill="none" strokeLinecap="round" />
+        <path d="M10 27 C5 27 2 24 4 19" stroke="#E8601C" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+        <path d="M5 21 C3 19 3 17 5 15" stroke="#F5F5DC" strokeWidth="2.5" fill="none" strokeLinecap="round" />
       </g>
       {/* Body */}
-      <rect x="7" y="17" width="18" height="10" fill="#FF8C42" rx="5" />
+      <ellipse cx="16" cy="24" rx="9" ry="7" fill="#FF8C42" />
       {/* Belly */}
-      <rect x="10" y="19" width="12" height="6" fill="#F5F5DC" rx="3" />
+      <ellipse cx="16" cy="24.5" rx="6" ry="4.5" fill="#F5F5DC" />
       {/* Left arm/paw */}
-      <rect x="4" y="19" width="5" height="6" fill="#E8601C" rx="2.5" />
+      <ellipse cx="8" cy="24" rx="2" ry="2.5" fill="#E8601C" />
       {/* Right arm/paw */}
-      <rect x="23" y="19" width="5" height="6" fill="#E8601C" rx="2.5" />
+      <ellipse cx="24" cy="24" rx="2" ry="2.5" fill="#E8601C" />
       {/* Left pointed ear */}
       <g className="pet-ear-left">
-        <rect x="6" y="0" width="5" height="7" fill="#FF8C42" rx="1.5" />
-        <rect x="7.5" y="1.5" width="2" height="4" fill="#F5F5DC" rx="0.5" />
+        <path d="M6 6 L8 0 L12 5 Z" fill="#FF8C42" />
+        <path d="M7.5 5 L9 1 L11 4 Z" fill="#F5F5DC" />
       </g>
       {/* Right pointed ear */}
       <g className="pet-ear-right">
-        <rect x="21" y="0" width="5" height="7" fill="#FF8C42" rx="1.5" />
-        <rect x="22.5" y="1.5" width="2" height="4" fill="#F5F5DC" rx="0.5" />
+        <path d="M26 6 L24 0 L20 5 Z" fill="#FF8C42" />
+        <path d="M24.5 5 L23 1 L21 4 Z" fill="#F5F5DC" />
       </g>
       {/* Head */}
-      <rect x="5" y="5" width="22" height="13" fill="#FF8C42" rx="6" />
+      <circle cx="16" cy="13" r="10" fill="#FF8C42" />
       {/* White face mask */}
-      <rect x="9" y="10" width="14" height="6" fill="#F5F5DC" rx="3" />
+      <ellipse cx="16" cy="15.5" rx="6" ry="3.5" fill="#F5F5DC" />
       {/* Cheeks */}
-      <circle cx="8" cy="14" r="2" fill="#FFB6C1" opacity="0.3" />
-      <circle cx="24" cy="14" r="2" fill="#FFB6C1" opacity="0.3" />
+      <ellipse cx="9" cy="15" rx="1.8" ry="0.9" fill="#FFB6C1" opacity="0.35" />
+      <ellipse cx="23" cy="15" rx="1.8" ry="0.9" fill="#FFB6C1" opacity="0.35" />
       {/* Nose */}
-      <rect x="15" y="12" width="2" height="1.5" fill="#333" rx="0.5" />
+      <ellipse cx="16" cy="13.5" rx="1.2" ry="0.8" fill="#333" />
       {/* Feet */}
-      <rect x="10" y="26" width="4" height="3" fill="#E8601C" rx="1.5" />
-      <rect x="18" y="26" width="4" height="3" fill="#E8601C" rx="1.5" />
+      <ellipse cx="11" cy="30.5" rx="2.2" ry="1.5" fill="#E8601C" />
+      <ellipse cx="21" cy="30.5" rx="2.2" ry="1.5" fill="#E8601C" />
     </>
   ),
   face: null,
@@ -232,29 +242,33 @@ const penguinPet: PetDefinition = {
   body: (
     <>
       {/* Body */}
-      <rect x="7" y="17" width="18" height="10" fill="#2C3E50" rx="5" />
+      <ellipse cx="16" cy="24" rx="9" ry="7" fill="#2C3E50" />
       {/* Belly */}
-      <rect x="10" y="19" width="12" height="6" fill="#ECF0F1" rx="3" />
+      <ellipse cx="16" cy="24" rx="6" ry="5.5" fill="#ECF0F1" />
       {/* Left flipper */}
-      <rect x="3" y="19" width="5" height="7" fill="#2C3E50" rx="2.5" />
+      <ellipse cx="6" cy="23" rx="2" ry="4" fill="#2C3E50" transform="rotate(15 6 23)" />
       {/* Right flipper */}
-      <rect x="24" y="19" width="5" height="7" fill="#2C3E50" rx="2.5" />
+      <ellipse cx="26" cy="23" rx="2" ry="4" fill="#2C3E50" transform="rotate(-15 26 23)" />
       {/* Left ear tuft */}
-      <rect className="pet-ear-left" x="8" y="2" width="4" height="4" fill="#2C3E50" rx="2" />
+      <g className="pet-ear-left">
+        <ellipse cx="9" cy="4" rx="2.5" ry="2" fill="#2C3E50" />
+      </g>
       {/* Right ear tuft */}
-      <rect className="pet-ear-right" x="20" y="2" width="4" height="4" fill="#2C3E50" rx="2" />
+      <g className="pet-ear-right">
+        <ellipse cx="23" cy="4" rx="2.5" ry="2" fill="#2C3E50" />
+      </g>
       {/* Head */}
-      <rect x="5" y="5" width="22" height="13" fill="#2C3E50" rx="6" />
+      <circle cx="16" cy="13" r="10" fill="#2C3E50" />
       {/* White face */}
-      <rect x="9" y="9" width="14" height="7" fill="#ECF0F1" rx="3.5" />
+      <ellipse cx="16" cy="14" rx="6.5" ry="5" fill="#ECF0F1" />
       {/* Cheeks */}
-      <circle cx="10" cy="14" r="1.5" fill="#FFB6C1" opacity="0.4" />
-      <circle cx="22" cy="14" r="1.5" fill="#FFB6C1" opacity="0.4" />
+      <ellipse cx="11" cy="14.5" rx="1.5" ry="0.8" fill="#FFB6C1" opacity="0.4" />
+      <ellipse cx="21" cy="14.5" rx="1.5" ry="0.8" fill="#FFB6C1" opacity="0.4" />
       {/* Beak */}
-      <rect x="14" y="12" width="4" height="2" fill="#FFB347" rx="1" />
+      <ellipse cx="16" cy="14.5" rx="2" ry="1.2" fill="#FFB347" />
       {/* Feet */}
-      <rect x="10" y="26" width="4" height="3" fill="#FFB347" rx="1.5" />
-      <rect x="18" y="26" width="4" height="3" fill="#FFB347" rx="1.5" />
+      <ellipse cx="11" cy="30.5" rx="2.2" ry="1.5" fill="#FFB347" />
+      <ellipse cx="21" cy="30.5" rx="2.2" ry="1.5" fill="#FFB347" />
     </>
   ),
   face: null,
@@ -274,33 +288,33 @@ const bunnyPet: PetDefinition = {
   body: (
     <>
       {/* Tail (pom) */}
-      <circle className="pet-tail" cx="8" cy="28" r="2.5" fill="#F5F5F5" />
+      <circle className="pet-tail" cx="7" cy="26" r="3.5" fill="#F5F5F5" />
       {/* Body */}
-      <rect x="7" y="19" width="18" height="10" fill="#F5F5F5" rx="5" />
+      <ellipse cx="16" cy="24" rx="9" ry="7" fill="#F5F5F5" />
       {/* Left arm/paw */}
-      <rect x="4" y="21" width="5" height="6" fill="#E8E8E8" rx="2.5" />
+      <ellipse cx="8" cy="24" rx="2.2" ry="2.8" fill="#E8E8E8" />
       {/* Right arm/paw */}
-      <rect x="23" y="21" width="5" height="6" fill="#E8E8E8" rx="2.5" />
+      <ellipse cx="24" cy="24" rx="2.2" ry="2.8" fill="#E8E8E8" />
       {/* Left long ear */}
       <g className="pet-ear-left">
-        <rect x="8" y="0" width="4" height="10" fill="#F5F5F5" rx="2" />
-        <rect x="9" y="1" width="2" height="8" fill="#FFB6C1" rx="1" />
+        <rect x="8" y="0" width="3.5" height="10" fill="#F5F5F5" rx="1.75" />
+        <rect x="9" y="1" width="1.5" height="8" fill="#FFB6C1" rx="0.75" />
       </g>
       {/* Right long ear */}
       <g className="pet-ear-right">
-        <rect x="20" y="0" width="4" height="10" fill="#F5F5F5" rx="2" />
-        <rect x="21" y="1" width="2" height="8" fill="#FFB6C1" rx="1" />
+        <rect x="20.5" y="0" width="3.5" height="10" fill="#F5F5F5" rx="1.75" />
+        <rect x="21.5" y="1" width="1.5" height="8" fill="#FFB6C1" rx="0.75" />
       </g>
       {/* Head */}
-      <rect x="5" y="8" width="22" height="12" fill="#F5F5F5" rx="6" />
+      <circle cx="16" cy="14" r="9.5" fill="#F5F5F5" />
       {/* Cheeks */}
-      <circle cx="8" cy="16" r="2" fill="#FFB6C1" opacity="0.4" />
-      <circle cx="24" cy="16" r="2" fill="#FFB6C1" opacity="0.4" />
+      <ellipse cx="9" cy="15.5" rx="2" ry="1" fill="#FFB6C1" opacity="0.45" />
+      <ellipse cx="23" cy="15.5" rx="2" ry="1" fill="#FFB6C1" opacity="0.45" />
       {/* Nose */}
-      <rect x="15" y="14.5" width="2" height="1.5" fill="#FFB6C1" rx="0.5" />
+      <ellipse cx="16" cy="15" rx="1" ry="0.8" fill="#FFB6C1" />
       {/* Feet */}
-      <rect x="10" y="28" width="4" height="3" fill="#E8E8E8" rx="1.5" />
-      <rect x="18" y="28" width="4" height="3" fill="#E8E8E8" rx="1.5" />
+      <ellipse cx="11" cy="30.5" rx="2.5" ry="1.5" fill="#E8E8E8" />
+      <ellipse cx="21" cy="30.5" rx="2.5" ry="1.5" fill="#E8E8E8" />
     </>
   ),
   face: null,
@@ -320,33 +334,48 @@ const pandaPet: PetDefinition = {
   body: (
     <>
       {/* Tail (tiny pom) */}
-      <circle className="pet-tail" cx="8" cy="28" r="2" fill="#F5F5F5" />
+      <circle className="pet-tail" cx="7" cy="26" r="2.5" fill="#2C2C2C" />
       {/* Body */}
-      <rect x="7" y="17" width="18" height="10" fill="#F5F5F5" rx="5" />
-      {/* Belly band */}
-      <rect x="10" y="20" width="12" height="4" fill="#2C2C2C" rx="2" />
+      <ellipse cx="16" cy="24" rx="9" ry="7" fill="#2C2C2C" />
+      {/* Belly */}
+      <ellipse cx="16" cy="24.5" rx="5.5" ry="5.5" fill="#F5F5F5" />
       {/* Left arm */}
-      <rect x="4" y="19" width="5" height="6" fill="#2C2C2C" rx="2.5" />
+      <path d="M7 21 C5 21 5 28 8 28 C9 28 9 24 9 21 Z" fill="#2C2C2C" />
       {/* Right arm */}
-      <rect x="23" y="19" width="5" height="6" fill="#2C2C2C" rx="2.5" />
+      <path d="M25 21 C27 21 27 28 24 28 C23 28 23 24 23 21 Z" fill="#2C2C2C" />
       {/* Left round ear */}
-      <circle className="pet-ear-left" cx="9" cy="4" r="3.5" fill="#2C2C2C" />
+      <g className="pet-ear-left">
+        <circle cx="7" cy="5.5" r="4" fill="#2C2C2C" />
+      </g>
       {/* Right round ear */}
-      <circle className="pet-ear-right" cx="23" cy="4" r="3.5" fill="#2C2C2C" />
+      <g className="pet-ear-right">
+        <circle cx="25" cy="5.5" r="4" fill="#2C2C2C" />
+      </g>
       {/* Head */}
-      <rect x="5" y="5" width="22" height="13" fill="#F5F5F5" rx="6" />
+      <ellipse cx="16" cy="13" rx="10" ry="8" fill="#F5F5F5" />
       {/* Left eye patch */}
-      <ellipse cx="11" cy="11" rx="3.5" ry="3" fill="#2C2C2C" />
+      <ellipse cx="12" cy="13.5" rx="2.8" ry="2.2" fill="#2C2C2C" transform="rotate(-15 12 13.5)" />
       {/* Right eye patch */}
-      <ellipse cx="21" cy="11" rx="3.5" ry="3" fill="#2C2C2C" />
+      <ellipse cx="20" cy="13.5" rx="2.8" ry="2.2" fill="#2C2C2C" transform="rotate(15 20 13.5)" />
       {/* Cheeks */}
-      <circle cx="8" cy="15" r="2" fill="#FFB6C1" opacity="0.35" />
-      <circle cx="24" cy="15" r="2" fill="#FFB6C1" opacity="0.35" />
+      <ellipse cx="8.5" cy="15.5" rx="1.8" ry="0.9" fill="#FFB6C1" opacity="0.45" />
+      <ellipse cx="23.5" cy="15.5" rx="1.8" ry="0.9" fill="#FFB6C1" opacity="0.45" />
       {/* Nose */}
-      <rect x="15" y="12.5" width="2" height="1.5" fill="#2C2C2C" rx="0.5" />
-      {/* Feet */}
-      <rect x="10" y="26" width="4" height="3" fill="#2C2C2C" rx="1.5" />
-      <rect x="18" y="26" width="4" height="3" fill="#2C2C2C" rx="1.5" />
+      <ellipse cx="16" cy="13.5" rx="1.2" ry="0.8" fill="#2C2C2C" />
+      {/* Feet with Pink Toe Beans */}
+      <g>
+        {/* Left foot */}
+        <circle cx="11" cy="29" r="3.5" fill="#2C2C2C" />
+        <circle cx="9.5" cy="27" r="0.8" fill="#FFB6C1" />
+        <circle cx="11" cy="26.2" r="0.8" fill="#FFB6C1" />
+        <circle cx="12.5" cy="27" r="0.8" fill="#FFB6C1" />
+        
+        {/* Right foot */}
+        <circle cx="21" cy="29" r="3.5" fill="#2C2C2C" />
+        <circle cx="19.5" cy="27" r="0.8" fill="#FFB6C1" />
+        <circle cx="21" cy="26.2" r="0.8" fill="#FFB6C1" />
+        <circle cx="22.5" cy="27" r="0.8" fill="#FFB6C1" />
+      </g>
     </>
   ),
   face: null,
@@ -369,33 +398,33 @@ const koalaPet: PetDefinition = {
   body: (
     <>
       {/* Body */}
-      <rect x="7" y="17" width="18" height="10" fill="#90A4AE" rx="5" />
+      <ellipse cx="16" cy="24" rx="9" ry="7" fill="#90A4AE" />
       {/* Chest patch */}
-      <rect x="11" y="19" width="10" height="6" fill="#ECEFF1" rx="2" />
+      <ellipse cx="16" cy="24.5" rx="6" ry="4.5" fill="#ECEFF1" />
       {/* Left arm */}
-      <rect x="4" y="19" width="5" height="6" fill="#78909C" rx="2.5" />
+      <ellipse cx="8" cy="24" rx="2" ry="2.5" fill="#78909C" />
       {/* Right arm */}
-      <rect x="23" y="19" width="5" height="6" fill="#78909C" rx="2.5" />
+      <ellipse cx="24" cy="24" rx="2" ry="2.5" fill="#78909C" />
       {/* Left large furry ear */}
       <g className="pet-ear-left">
-        <circle cx="8" cy="4" r="5.5" fill="#78909C" />
-        <circle cx="8" cy="4" r="3.5" fill="#ECEFF1" />
+        <circle cx="8" cy="5.5" r="5.5" fill="#78909C" />
+        <circle cx="8" cy="5.5" r="3.5" fill="#ECEFF1" />
       </g>
       {/* Right large furry ear */}
       <g className="pet-ear-right">
-        <circle cx="24" cy="4" r="5.5" fill="#78909C" />
-        <circle cx="24" cy="4" r="3.5" fill="#ECEFF1" />
+        <circle cx="24" cy="5.5" r="5.5" fill="#78909C" />
+        <circle cx="24" cy="5.5" r="3.5" fill="#ECEFF1" />
       </g>
       {/* Head */}
-      <rect x="5" y="5" width="22" height="13" fill="#90A4AE" rx="6" />
-      {/* Large nose */}
-      <ellipse cx="16" cy="12.5" rx="2.5" ry="3.5" fill="#37474F" />
+      <circle cx="16" cy="13" r="10" fill="#90A4AE" />
       {/* Cheeks */}
-      <circle cx="8" cy="14" r="2" fill="#FFB6C1" opacity="0.35" />
-      <circle cx="24" cy="14" r="2" fill="#FFB6C1" opacity="0.35" />
+      <ellipse cx="9" cy="15" rx="1.8" ry="0.9" fill="#FFB6C1" opacity="0.35" />
+      <ellipse cx="23" cy="15" rx="1.8" ry="0.9" fill="#FFB6C1" opacity="0.35" />
+      {/* Large nose */}
+      <ellipse cx="16" cy="13" rx="2.5" ry="3.5" fill="#37474F" />
       {/* Feet */}
-      <rect x="10" y="26" width="4" height="3" fill="#78909C" rx="1.5" />
-      <rect x="18" y="26" width="4" height="3" fill="#78909C" rx="1.5" />
+      <ellipse cx="11" cy="30.5" rx="2.2" ry="1.5" fill="#78909C" />
+      <ellipse cx="21" cy="30.5" rx="2.2" ry="1.5" fill="#78909C" />
     </>
   ),
   face: null,
@@ -415,25 +444,29 @@ const frogPet: PetDefinition = {
   body: (
     <>
       {/* Body */}
-      <rect x="7" y="17" width="18" height="10" fill="#66BB6A" rx="5" />
+      <ellipse cx="16" cy="24" rx="9" ry="7" fill="#66BB6A" />
       {/* Belly */}
-      <ellipse cx="16" cy="22" rx="6" ry="4" fill="#C8E6C9" />
+      <ellipse cx="16" cy="24.5" rx="6" ry="4.5" fill="#C8E6C9" />
       {/* Left arm */}
-      <rect x="4" y="19" width="5" height="6" fill="#4CAF50" rx="2.5" />
+      <ellipse cx="8" cy="24" rx="2" ry="2.5" fill="#4CAF50" />
       {/* Right arm */}
-      <rect x="23" y="19" width="5" height="6" fill="#4CAF50" rx="2.5" />
+      <ellipse cx="24" cy="24" rx="2" ry="2.5" fill="#4CAF50" />
       {/* Left eye bulge */}
-      <circle className="pet-ear-left" cx="9" cy="5" r="4.5" fill="#66BB6A" />
+      <g className="pet-ear-left">
+        <circle cx="9.5" cy="5" r="4.5" fill="#66BB6A" />
+      </g>
       {/* Right eye bulge */}
-      <circle className="pet-ear-right" cx="23" cy="5" r="4.5" fill="#66BB6A" />
+      <g className="pet-ear-right">
+        <circle cx="22.5" cy="5" r="4.5" fill="#66BB6A" />
+      </g>
       {/* Head */}
-      <rect x="5" y="6" width="22" height="12" fill="#66BB6A" rx="6" />
+      <circle cx="16" cy="13" r="9.5" fill="#66BB6A" />
       {/* Cheeks */}
-      <circle cx="8" cy="14" r="2" fill="#FF8A8A" opacity="0.45" />
-      <circle cx="24" cy="14" r="2" fill="#FF8A8A" opacity="0.45" />
+      <ellipse cx="9" cy="14" rx="2" ry="1" fill="#FF8A8A" opacity="0.45" />
+      <ellipse cx="23" cy="14" rx="2" ry="1" fill="#FF8A8A" opacity="0.45" />
       {/* Feet */}
-      <rect x="10" y="26" width="4" height="3" fill="#4CAF50" rx="1.5" />
-      <rect x="18" y="26" width="4" height="3" fill="#4CAF50" rx="1.5" />
+      <ellipse cx="11" cy="30.5" rx="2.2" ry="1.5" fill="#4CAF50" />
+      <ellipse cx="21" cy="30.5" rx="2.2" ry="1.5" fill="#4CAF50" />
     </>
   ),
   face: null,
@@ -454,35 +487,35 @@ const axolotlPet: PetDefinition = {
   body: (
     <>
       {/* Tail */}
-      <path className="pet-tail" d="M8 27 C2 27 0 23 3 20" stroke="#FF8A8A" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+      <path className="pet-tail" d="M10 27 C5 27 2 24 4 21" stroke="#FF8A8A" strokeWidth="3" fill="none" strokeLinecap="round" />
       {/* Body */}
-      <rect x="7" y="17" width="18" height="10" fill="#FFB6C1" rx="5" />
+      <ellipse cx="16" cy="24" rx="9" ry="7" fill="#FFB6C1" />
       {/* Belly */}
-      <ellipse cx="16" cy="22" rx="6" ry="4" fill="#FFE0E9" />
+      <ellipse cx="16" cy="24.5" rx="6" ry="4.5" fill="#FFE0E9" />
       {/* Left arm */}
-      <rect x="4" y="19" width="5" height="6" fill="#FF8A8A" rx="2.5" />
+      <ellipse cx="8" cy="24" rx="2" ry="2.5" fill="#FF8A8A" />
       {/* Right arm */}
-      <rect x="23" y="19" width="5" height="6" fill="#FF8A8A" rx="2.5" />
+      <ellipse cx="24" cy="24" rx="2" ry="2.5" fill="#FF8A8A" />
       {/* Left gills */}
       <g className="pet-gills-left">
-        <path d="M5 8 C2 8 1 9 3 10" stroke="#FF69B4" strokeWidth="2" fill="none" strokeLinecap="round" />
-        <path d="M4 11 C1 11 0 12 2 13" stroke="#FF69B4" strokeWidth="2" fill="none" strokeLinecap="round" />
-        <path d="M5 14 C2 14 1 15 3 16" stroke="#FF69B4" strokeWidth="2" fill="none" strokeLinecap="round" />
+        <path d="M6 7.5 C3 6.5 2 8 4 9.5" stroke="#FF69B4" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+        <path d="M5 10.5 C2 9.5 1 11 3 12.5" stroke="#FF69B4" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+        <path d="M6 13.5 C3 12.5 2 14 4 15.5" stroke="#FF69B4" strokeWidth="2.2" fill="none" strokeLinecap="round" />
       </g>
       {/* Right gills */}
       <g className="pet-gills-right">
-        <path d="M27 8 C30 8 31 9 29 10" stroke="#FF69B4" strokeWidth="2" fill="none" strokeLinecap="round" />
-        <path d="M28 11 C31 11 32 12 30 13" stroke="#FF69B4" strokeWidth="2" fill="none" strokeLinecap="round" />
-        <path d="M27 14 C30 14 31 15 29 16" stroke="#FF69B4" strokeWidth="2" fill="none" strokeLinecap="round" />
+        <path d="M26 7.5 C29 6.5 30 8 28 9.5" stroke="#FF69B4" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+        <path d="M27 10.5 C30 9.5 31 11 29 12.5" stroke="#FF69B4" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+        <path d="M26 13.5 C29 12.5 30 14 28 15.5" stroke="#FF69B4" strokeWidth="2.2" fill="none" strokeLinecap="round" />
       </g>
       {/* Head */}
-      <rect x="5" y="7" width="22" height="11" fill="#FFB6C1" rx="5.5" />
+      <ellipse cx="16" cy="13" rx="10" ry="8" fill="#FFB6C1" />
       {/* Cheeks */}
-      <circle cx="8" cy="13" r="2.5" fill="#FF69B4" opacity="0.4" />
-      <circle cx="24" cy="13" r="2.5" fill="#FF69B4" opacity="0.4" />
+      <ellipse cx="9.5" cy="14" rx="2" ry="1" fill="#FF69B4" opacity="0.45" />
+      <ellipse cx="22.5" cy="14" rx="2" ry="1" fill="#FF69B4" opacity="0.45" />
       {/* Feet */}
-      <rect x="10" y="26" width="4" height="3" fill="#FF8A8A" rx="1.5" />
-      <rect x="18" y="26" width="4" height="3" fill="#FF8A8A" rx="1.5" />
+      <ellipse cx="11" cy="30.5" rx="2.2" ry="1.5" fill="#FF8A8A" />
+      <ellipse cx="21" cy="30.5" rx="2.2" ry="1.5" fill="#FF8A8A" />
     </>
   ),
   face: null,
@@ -501,29 +534,35 @@ const bearPet: PetDefinition = {
   body: (
     <>
       {/* Tail */}
-      <circle className="pet-tail" cx="8" cy="26" r="2" fill="#6D4C41" />
+      <circle className="pet-tail" cx="8" cy="27" r="2.5" fill="#6D4C41" />
       {/* Body */}
-      <rect x="7" y="17" width="18" height="10" fill="#8D6E63" rx="5" />
+      <ellipse cx="16" cy="24" rx="9" ry="7" fill="#8D6E63" />
       {/* Belly */}
-      <ellipse cx="16" cy="22" rx="5" ry="4.5" fill="#D7CCC8" />
+      <ellipse cx="16" cy="24.5" rx="5.5" ry="4.5" fill="#D7CCC8" />
       {/* Left arm */}
-      <rect x="4" y="19" width="5" height="6" fill="#6D4C41" rx="2.5" />
+      <ellipse cx="8" cy="24" rx="2" ry="2.5" fill="#6D4C41" />
       {/* Right arm */}
-      <rect x="23" y="19" width="5" height="6" fill="#6D4C41" rx="2.5" />
+      <ellipse cx="24" cy="24" rx="2" ry="2.5" fill="#6D4C41" />
       {/* Left round ear */}
-      <circle className="pet-ear-left" cx="9" cy="4" r="3" fill="#6D4C41" />
+      <g className="pet-ear-left">
+        <circle cx="8.5" cy="4.5" r="3.5" fill="#6D4C41" />
+      </g>
       {/* Right round ear */}
-      <circle className="pet-ear-right" cx="23" cy="4" r="3" fill="#6D4C41" />
+      <g className="pet-ear-right">
+        <circle cx="23.5" cy="4.5" r="3.5" fill="#6D4C41" />
+      </g>
       {/* Head */}
-      <rect x="5" y="5" width="22" height="13" fill="#8D6E63" rx="6" />
+      <circle cx="16" cy="13" r="10" fill="#8D6E63" />
       {/* Snout */}
-      <rect x="12" y="11.5" width="8" height="4.5" fill="#D7CCC8" rx="2" />
+      <ellipse cx="16" cy="14.5" rx="3.5" ry="2.2" fill="#D7CCC8" />
       {/* Cheeks */}
-      <circle cx="8" cy="14" r="2" fill="#FFB6C1" opacity="0.3" />
-      <circle cx="24" cy="14" r="2" fill="#FFB6C1" opacity="0.3" />
+      <ellipse cx="9" cy="15" rx="1.8" ry="0.9" fill="#FFB6C1" opacity="0.3" />
+      <ellipse cx="23" cy="15" rx="1.8" ry="0.9" fill="#FFB6C1" opacity="0.3" />
+      {/* Nose */}
+      <ellipse cx="16" cy="13.5" rx="1.2" ry="0.8" fill="#333" />
       {/* Feet */}
-      <rect x="10" y="26" width="4" height="3" fill="#6D4C41" rx="1.5" />
-      <rect x="18" y="26" width="4" height="3" fill="#6D4C41" rx="1.5" />
+      <ellipse cx="11" cy="30.5" rx="2.2" ry="1.5" fill="#6D4C41" />
+      <ellipse cx="21" cy="30.5" rx="2.2" ry="1.5" fill="#6D4C41" />
     </>
   ),
   face: null,
