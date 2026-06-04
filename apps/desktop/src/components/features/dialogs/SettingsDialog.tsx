@@ -3,6 +3,7 @@ import { showToast } from "@/lib/toast";
 import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
 import {
   ChevronDown,
+  FileText,
   Gauge,
   GitBranch,
   Link,
@@ -19,11 +20,11 @@ import type { ConventionFile } from "@/api/tauri";
 import { api } from "@/api/tauri";
 import {
   GeneralTab,
-  DisplayTab,
+  AppearanceTab,
+  DiffTab,
   AITab,
   IntegrationsTab,
   GitTab,
-  AppearanceTab,
   PetTab,
 } from "./settings";
 import {
@@ -129,7 +130,7 @@ const SETTINGS_KEYS = [
 
 interface SettingsDialogProps {
   onClose?: () => void;
-  initialTab?: "general" | "appearance" | "pet" | "git" | "accounts" | "ai" | "advanced";
+  initialTab?: "general" | "appearance" | "diff" | "git" | "accounts" | "ai" | "pet" | "advanced";
 }
 
 export default function SettingsDialog({ onClose, initialTab = "general" }: SettingsDialogProps) {
@@ -137,7 +138,9 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
   const setTheme = useRepoStore((s) => s.setTheme);
   const repoPath = useRepoStore((s) => s.repoPath);
 
-  const [activeTab, setActiveTab] = useState<"general" | "appearance" | "pet" | "git" | "accounts" | "ai" | "advanced">(initialTab);
+  const [activeTab, setActiveTab] = useState<"general" | "appearance" | "diff" | "git" | "accounts" | "ai" | "pet" | "advanced">(
+    initialTab === "advanced" ? "diff" : initialTab
+  );
   
   // General Tab States
   const [theme, setSelectedTheme] = useState<typeof currentTheme>(currentTheme);
@@ -735,17 +738,17 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
             </button>
 
             <button
-              onClick={() => setActiveTab("pet")}
+              onClick={() => setActiveTab("diff")}
               className={`w-full px-2.5 py-1.5 text-xs font-medium rounded-mac flex items-center gap-2.5 transition-all ${
-                activeTab === "pet"
+                activeTab === "diff" || activeTab === "advanced"
                   ? "tab-accent-active font-semibold text-text-primary"
                   : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
               }`}
             >
-              <div className="w-5 h-5 rounded-[5px] bg-[#af52de] flex items-center justify-center text-white shrink-0">
-                <PawPrint size={12} strokeWidth={2.2} />
+              <div className="w-5 h-5 rounded-[5px] bg-[#30b0c7] flex items-center justify-center text-white shrink-0">
+                <FileText size={12} strokeWidth={2.2} />
               </div>
-              Git Pet
+              Editor & Diff
             </button>
 
             <button
@@ -763,20 +766,6 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
             </button>
 
             <button
-              onClick={() => setActiveTab("accounts")}
-              className={`w-full px-2.5 py-1.5 text-xs font-medium rounded-mac flex items-center gap-2.5 transition-all ${
-                activeTab === "accounts"
-                  ? "tab-accent-active font-semibold text-text-primary"
-                  : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
-              }`}
-            >
-              <div className="w-5 h-5 rounded-[5px] bg-[#5856d6] flex items-center justify-center text-white shrink-0">
-                <Link size={12} strokeWidth={2.2} />
-              </div>
-              Accounts
-            </button>
-
-            <button
               onClick={() => setActiveTab("ai")}
               className={`w-full px-2.5 py-1.5 text-xs font-medium rounded-mac flex items-center gap-2.5 transition-all ${
                 activeTab === "ai"
@@ -791,17 +780,31 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
             </button>
 
             <button
-              onClick={() => setActiveTab("advanced")}
+              onClick={() => setActiveTab("accounts")}
               className={`w-full px-2.5 py-1.5 text-xs font-medium rounded-mac flex items-center gap-2.5 transition-all ${
-                activeTab === "advanced"
+                activeTab === "accounts"
                   ? "tab-accent-active font-semibold text-text-primary"
                   : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
               }`}
             >
-              <div className="w-5 h-5 rounded-[5px] bg-[#8e8e93] flex items-center justify-center text-white shrink-0">
-                <Gauge size={12} strokeWidth={2.2} />
+              <div className="w-5 h-5 rounded-[5px] bg-[#5856d6] flex items-center justify-center text-white shrink-0">
+                <Link size={12} strokeWidth={2.2} />
               </div>
-              Advanced
+              Accounts
+            </button>
+
+            <button
+              onClick={() => setActiveTab("pet")}
+              className={`w-full px-2.5 py-1.5 text-xs font-medium rounded-mac flex items-center gap-2.5 transition-all ${
+                activeTab === "pet"
+                  ? "tab-accent-active font-semibold text-text-primary"
+                  : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
+              }`}
+            >
+              <div className="w-5 h-5 rounded-[5px] bg-[#af52de] flex items-center justify-center text-white shrink-0">
+                <PawPrint size={12} strokeWidth={2.2} />
+              </div>
+              Git Pet
             </button>
           </div>
         </div>
@@ -827,26 +830,31 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
           <h2 className="text-xs font-semibold text-text-primary">
             {activeTab === "general" && "General Settings"}
             {activeTab === "appearance" && "Appearance & Display"}
-            {activeTab === "pet" && "Git Pet Companion"}
+            {activeTab === "diff" && "Editor & Diff Preferences"}
             {activeTab === "git" && "Git Core Settings"}
             {activeTab === "accounts" && "Accounts & Hosting Integrations"}
             {activeTab === "ai" && "AI Assistant Integration"}
-            {activeTab === "advanced" && "Advanced Preferences"}
+            {activeTab === "pet" && "Git Pet Companion"}
           </h2>
         </div>
 
         {/* Main Settings Form Scroll Area */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {activeTab === "general" && (
-            <GeneralTab />
+            <GeneralTab
+              reopenLastRepo={reopenLastRepo}
+              setReopenLastRepo={setReopenLastRepo}
+              recentRepoLimit={recentRepoLimit}
+              setRecentRepoLimit={setRecentRepoLimit}
+              handleClearAiCredentials={handleClearAiCredentials}
+              handleClearRecentRepos={handleClearRecentRepos}
+            />
           )}
 
           {activeTab === "appearance" && (
-            <DisplayTab
+            <AppearanceTab
               theme={theme}
               setSelectedTheme={setSelectedTheme}
-              defaultDiffMode={defaultDiffMode}
-              setDefaultDiffMode={setDefaultDiffMode}
               graphDensity={graphDensity}
               setGraphDensity={setGraphDensity}
               graphShowHash={graphShowHash}
@@ -855,14 +863,25 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
               setGraphShowAuthor={setGraphShowAuthor}
               graphShowDate={graphShowDate}
               setGraphShowDate={setGraphShowDate}
-              diffContext={diffContext}
-              setDiffContext={setDiffContext}
-              diffLineWrap={diffLineWrap}
-              setDiffLineWrap={setDiffLineWrap}
               dateFormat={dateFormat}
               setDateFormat={setDateFormat}
               customDateFormat={customDateFormat}
               setCustomDateFormat={setCustomDateFormat}
+              reducedMotion={reducedMotion}
+              setReducedMotion={setReducedMotion}
+            />
+          )}
+
+          {(activeTab === "diff" || activeTab === "advanced") && (
+            <DiffTab
+              defaultDiffMode={defaultDiffMode}
+              setDefaultDiffMode={setDefaultDiffMode}
+              diffContext={diffContext}
+              setDiffContext={setDiffContext}
+              diffLineWrap={diffLineWrap}
+              setDiffLineWrap={setDiffLineWrap}
+              largeDiffMode={largeDiffMode}
+              setLargeDiffMode={setLargeDiffMode}
             />
           )}
 
@@ -883,10 +902,6 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
               setAutoPrune={setAutoPrune}
               confirmDangerous={confirmDangerous}
               setConfirmDangerous={setConfirmDangerous}
-              reopenLastRepo={reopenLastRepo}
-              setReopenLastRepo={setReopenLastRepo}
-              recentRepoLimit={recentRepoLimit}
-              setRecentRepoLimit={setRecentRepoLimit}
               commitLintEnabled={commitLintEnabled}
               setCommitLintEnabled={setCommitLintEnabled}
               codeLintEnabled={codeLintEnabled}
@@ -952,19 +967,6 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
               expandedConvention={expandedConvention}
               setExpandedConvention={setExpandedConvention}
               repoPath={repoPath}
-            />
-          )}
-
-          {activeTab === "advanced" && (
-            <AppearanceTab
-              largeDiffMode={largeDiffMode}
-              setLargeDiffMode={setLargeDiffMode}
-              reducedMotion={reducedMotion}
-              setReducedMotion={setReducedMotion}
-              petType={petType}
-              setPetType={setPetType}
-              handleClearAiCredentials={handleClearAiCredentials}
-              handleClearRecentRepos={handleClearRecentRepos}
             />
           )}
           <ConfirmDialog
