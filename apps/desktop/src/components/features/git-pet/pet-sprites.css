@@ -1,0 +1,189 @@
+/* === GIT PET SPRITE ANIMATIONS === */
+/* Uses emoji-based frames until a real sprite sheet is provided. */
+/* When sprite sheet is ready, replace .git-pet-frame content with */
+/* background-image: url('/assets/git-pet-sheet.png');             */
+
+/* === BASE SPRITE === */
+.git-pet-sprite {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* When a real sprite sheet is provided, uncomment and use:
+.git-pet-sprite {
+  width: 48px;
+  height: 48px;
+  background-image: url('/assets/git-pet-sheet.png');
+  background-size: 512px 512px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+*/
+
+/* === IDLE — gentle bob === */
+@keyframes pet-idle-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-1px); }
+}
+.pet-idle {
+  animation: pet-idle-bob 2s ease-in-out infinite;
+}
+.pet-idle::after { content: "🐱"; }
+
+/* === BLINK — quick squint === */
+@keyframes pet-blink-squint {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.3; }
+}
+.pet-blink {
+  animation: pet-blink-squint 200ms steps(1) 2;
+}
+.pet-blink::after { content: "😺"; }
+
+/* === SLEEPING — slow pulse + Zzz === */
+@keyframes pet-sleep-breathe {
+  0%, 100% { transform: translateY(0) scale(1); opacity: 0.7; }
+  50%      { transform: translateY(1px) scale(0.97); opacity: 0.5; }
+}
+.pet-sleep {
+  animation: pet-sleep-breathe 2s ease-in-out infinite;
+}
+.pet-sleep::after { content: "😺"; }
+
+/* === LOADING / RUN — fast bounce === */
+@keyframes pet-loading-run {
+  0%, 100% { transform: translateY(0) translateX(0); }
+  25%      { transform: translateY(-3px) translateX(1px); }
+  50%      { transform: translateY(0) translateX(0); }
+  75%      { transform: translateY(-3px) translateX(-1px); }
+}
+.pet-loading {
+  animation: pet-loading-run 300ms ease-in-out infinite;
+}
+.pet-loading::after { content: "🙀"; }
+
+/* === SUCCESS / JUMP — celebratory hop === */
+@keyframes pet-success-jump {
+  0%   { transform: translateY(0) scale(1); }
+  30%  { transform: translateY(-8px) scale(1.05); }
+  50%  { transform: translateY(-6px) scale(1.02); }
+  70%  { transform: translateY(-2px) scale(1); }
+  100% { transform: translateY(0) scale(1); }
+}
+.pet-success {
+  animation: pet-success-jump 600ms ease-out 2;
+}
+.pet-success::after { content: "😸"; }
+
+/* === ERROR / SHAKE — worried shake === */
+@keyframes pet-error-shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-3px); }
+  40%      { transform: translateX(3px); }
+  60%      { transform: translateX(-3px); }
+  80%      { transform: translateX(3px); }
+}
+.pet-error {
+  animation: pet-error-shake 600ms ease-in-out;
+}
+.pet-error::after { content: "🙀"; }
+
+/* === ALARMED — flash red pulse === */
+@keyframes pet-alarmed-pulse {
+  0%, 100% { filter: brightness(1); transform: scale(1); }
+  50%      { filter: brightness(1.4) sepia(0.5) hue-rotate(-30deg); transform: scale(1.08); }
+}
+.pet-alarmed {
+  animation: pet-alarmed-pulse 500ms ease-in-out 3;
+}
+.pet-alarmed::after { content: "😾"; }
+
+/* === EXCITED — happy wiggle === */
+@keyframes pet-excited-wiggle {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  25%      { transform: rotate(-8deg) scale(1.05); }
+  75%      { transform: rotate(8deg) scale(1.05); }
+}
+.pet-excited {
+  animation: pet-excited-wiggle 300ms ease-in-out 2;
+}
+.pet-excited::after { content: "😻"; }
+
+/* === WAVING — friendly bounce === */
+@keyframes pet-wave-bounce {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50%      { transform: scale(1.1) rotate(5deg); }
+}
+.pet-wave {
+  animation: pet-wave-bounce 400ms ease-in-out 2;
+}
+.pet-wave::after { content: "😸"; }
+
+/* === CONTAINER === */
+.git-pet-container {
+  cursor: pointer;
+  transition: transform 150ms ease;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.git-pet-container:hover  { transform: scale(1.15); }
+.git-pet-container:active { transform: scale(0.92); }
+
+/* === SPEECH BUBBLE === */
+.pet-bubble {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 6px;
+  background: var(--surface-2, #2a2a2e);
+  border: 1px solid var(--border, #3a3a3e);
+  border-radius: 8px 8px 2px 8px;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--text-primary, #e0e0e0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  animation: pet-bubble-in 150ms ease-out;
+  z-index: 200;
+  pointer-events: none;
+}
+@keyframes pet-bubble-in {
+  from { opacity: 0; transform: translateY(4px) scale(0.9); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* === SLEEP ZZZ OVERLAY === */
+.pet-zzz {
+  position: absolute;
+  top: -2px;
+  right: -6px;
+  font-size: 8px;
+  animation: pet-zzz-float 1.5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes pet-zzz-float {
+  0%, 100% { transform: translateY(0); opacity: 0.4; }
+  50%      { transform: translateY(-4px); opacity: 1; }
+}
+
+/* === ACCESSIBILITY === */
+@media (prefers-reduced-motion: reduce) {
+  .git-pet-sprite,
+  .git-pet-container,
+  .pet-bubble,
+  .pet-zzz {
+    animation: none !important;
+    transition: none !important;
+  }
+}

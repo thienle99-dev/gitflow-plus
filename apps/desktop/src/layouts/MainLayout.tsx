@@ -13,6 +13,7 @@ import CommitGraph from "@/components/features/graph/CommitGraph";
 import RightPanel from "@/components/layout/RightPanel";
 import BottomBar from "@/components/layout/BottomBar";
 import OperationCenter from "@/components/layout/OperationCenter";
+import LogCenter from "@/components/layout/LogCenter";
 import { useOperationObserver } from "@/hooks/useOperationObserver";
 import { SearchDialog, KeyboardShortcutsModal, CherryPickDialog, SettingsDialog, AnalyticsDialog, CreateBranchDialog, MergeRequestDialog, MergePreviewDialog, CloneDialog, FeatureGuideDialog, OnboardingWizard, isOnboardingComplete, BranchCompareDialog, HealthCheckDialog, DiagnosticDialog, CommandPalette } from "@/components/features/dialogs";
 import ErrorBoundary from "@/components/ui/feedback/ErrorBoundary";
@@ -362,7 +363,6 @@ export default function MainLayout() {
     "feature-guide": <FeatureGuideDialog open={true} onClose={closeDialog} />,
     "health-check": <HealthCheckDialog onClose={closeDialog} />,
     "diagnostics": <DiagnosticDialog onClose={closeDialog} />,
-    "logs": <DiagnosticDialog initialTab="logs" onClose={closeDialog} />,
   };
 
   const dialogOverlay = overlayDialog ? (
@@ -376,7 +376,7 @@ export default function MainLayout() {
             ? "h-[min(700px,85vh)] w-[min(900px,92vw)]"
           : overlayDialog === "health-check"
             ? "h-[min(600px,80vh)] w-[min(700px,85vw)]"
-          : overlayDialog === "diagnostics" || overlayDialog === "logs"
+          : overlayDialog === "diagnostics"
             ? "h-[min(580px,78vh)] w-[min(900px,90vw)]"
           : "min-w-[480px] max-w-[600px] max-h-[80vh]"
       }`}>
@@ -480,6 +480,7 @@ function InlineErrorFallback({ name }: { name: string }) {
         </PanelGroup>
       </div>
       <OperationCenter />
+      <LogCenter />
       <BottomBar />
 
       {/* Dialog overlays */}

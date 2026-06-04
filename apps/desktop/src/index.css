@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import "./components/features/git-pet/pet-sprites.css";
+
 :root {
   --surface-0: #ffffff;
   --surface-1: #f5f5f7;

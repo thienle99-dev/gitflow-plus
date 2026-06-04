@@ -5,6 +5,8 @@ import { useGitBranches, useGitStatus, useGitSyncStatus } from "@/queries/useGit
 import { useMergeStatus } from "@/queries/useGitMerge";
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import { useOperationsStore } from "@/stores/operations";
+import { useLogsPanelStore } from "@/stores/logs";
+import { GitPet } from "@/components/features/git-pet";
 
 export default function BottomBar() {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -12,6 +14,8 @@ export default function BottomBar() {
   const opsOpen = useOperationsStore((s) => s.isOpen);
   const toggleOps = useOperationsStore((s) => s.toggleOpen);
   const runningOps = useOperationsStore((s) => s.operations.filter((o) => o.status === "running").length);
+  const logsOpen = useLogsPanelStore((s) => s.isOpen);
+  const toggleLogs = useLogsPanelStore((s) => s.toggleOpen);
 
   // Monitor global background fetch/mutation progress
   const isFetching = useIsFetching();
@@ -137,8 +141,8 @@ export default function BottomBar() {
         </button>
 
         <button
-          onClick={() => openDialogState("logs")}
-          className="flex items-center gap-1 text-text-muted hover:text-accent transition-all p-0.5 rounded cursor-pointer mr-0.5"
+          onClick={toggleLogs}
+          className={`flex items-center gap-1 text-text-muted hover:text-accent transition-all p-0.5 rounded cursor-pointer mr-0.5 ${logsOpen ? "text-accent" : ""}`}
           title="App Logs"
         >
           <Terminal size={11} />
@@ -162,6 +166,8 @@ export default function BottomBar() {
           <Book size={11} />
           <span className="text-[9px] font-semibold">Guide</span>
         </button>
+
+        <GitPet />
 
         <span className="text-[9px] font-medium text-text-muted-60 select-all">
           v1.0.2
