@@ -1,7 +1,22 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { useMutationState } from "@tanstack/react-query";
 import { useOperationsStore } from "@/stores/operations";
 import { labelForMutationKey, operationTypeForKey } from "@/lib/operation-labels";
+
+/** Stable select function — avoids recreating on every render */
+function selectMutationState(mutation: any) {
+  const s = mutation.state ?? mutation;
+  return {
+    id: String(mutation.mutationId ?? s.mutationId ?? ""),
+    key: mutation.options?.mutationKey ?? s.mutationKey,
+    status: s.status,
+    submittedAt: s.submittedAt,
+    error: s.error,
+  };
+}
+
+/** Stable filters object */
+const MUTATION_FILTERS = {};
 
 /**
  * Observes all React Query mutations globally and syncs them into the
@@ -15,17 +30,8 @@ export function useOperationObserver() {
   // useMutationState returns state for every mutation in the cache.
   // The `select` receives the raw Mutation object; we read `.state` from it.
   const allStates = useMutationState({
-    filters: {},
-    select: (mutation: any) => {
-      const s = mutation.state ?? mutation;
-      return {
-        id: String(mutation.mutationId ?? s.mutationId ?? ""),
-        key: mutation.options?.mutationKey ?? s.mutationKey,
-        status: s.status,
-        submittedAt: s.submittedAt,
-        error: s.error,
-      };
-    },
+    filters: MUTATION_FILTERS,
+    select: selectMutationState,
   });
 
   useEffect(() => {
