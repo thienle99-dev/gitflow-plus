@@ -205,6 +205,14 @@ export interface LintResponse {
   linters_run: string[];
 }
 
+export interface AppLogEntry {
+  timestamp: string;
+  level: string;
+  target: string;
+  message: string;
+  raw: string;
+}
+
 // Typed invoke wrappers
 export const api = {
   repo: {
@@ -221,6 +229,21 @@ export const api = {
       invoke<void>("show_main_window"),
     openSettings: () =>
       invoke<void>("open_settings_window"),
+  },
+
+  logs: {
+    path: () =>
+      invoke<string>("app_log_path"),
+    list: (maxLines?: number, level?: string, query?: string) =>
+      invoke<AppLogEntry[]>("app_log_list", {
+        maxLines: maxLines ?? null,
+        level: level ?? null,
+        query: query ?? null,
+      }),
+    exportText: () =>
+      invoke<string>("app_log_export_text"),
+    clear: () =>
+      invoke<void>("app_log_clear"),
   },
 
   logStream: (path: string, page?: number, perPage?: number, refName?: string | null) =>
