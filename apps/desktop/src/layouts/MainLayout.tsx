@@ -37,6 +37,7 @@ const DiagnosticDialog = lazy(() => import("@/components/features/dialogs/Diagno
 const CommandPalette = lazy(() => import("@/components/features/dialogs/CommandPalette"));
 const InteractiveRebaseDialog = lazy(() => import("@/components/features/dialogs/InteractiveRebaseDialog"));
 const SquashDialog = lazy(() => import("@/components/features/dialogs/SquashDialog"));
+const CommitSummaryDialog = lazy(() => import("@/components/features/dialogs/CommitSummaryDialog"));
 
 export default function MainLayout() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
@@ -391,6 +392,7 @@ export default function MainLayout() {
         onClose={closeDialog}
       />
     ),
+    "commit-summary": <CommitSummaryDialog onClose={closeDialog} />,
   }), [closeDialog, selectedCommit, mergeTargetBranch, compareBranchTarget, selectedRef, rebaseTargetCommit]);
 
   const dialogOverlay = overlayDialog ? (

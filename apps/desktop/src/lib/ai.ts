@@ -1475,3 +1475,66 @@ function buildFallbackAdvice(
     summary: text.slice(0, 200) || `Recommend ${strategy} for this branch merge.`,
   };
 }
+
+// ── Commit History Summary ───────────────────────────────────────────
+
+export interface CommitSummaryResult {
+  summary: string;
+  stats: {
+    totalCommits: number;
+    authors: string[];
+    dateRange: { from: string; to: string };
+  };
+}
+
+export async function generateCommitSummary(
+  commits: Array<{ hash: string; message: string; date: string; author: string }>,
+  timeRange: string,
+): Promise<CommitSummaryResult> {
+  const settings = readAISettings();
+  if (!hasProvider(settings)) {
+    throw new Error("AI provider not configured");
+  }
+
+  const commitList = commits.map((c, i) =>
+    `${i + 1}. [${c.date.slice(0, 10)}] ${c.message} — ${c.author}`
+  ).join("\n");
+
+  const authors = [...new Set(commits.map((c) => c.author))];
+  const dateRange = {
+    from: commits.length > 0 ? commits[commits.length - 1].date.slice(0, 10) : "",
+    to: commits.length > 0 ? commits[0].date.slice(0, 10) : "",
+  };
+
+  const prompt = `You are a helpful engineering standup assistant. Summarize this git commit history for a standup meeting.
+
+TIME RANGE: ${timeRange}
+COMMITS (${commits.length} total, ${authors.length} contributor${authors.length === 1 ? "" : "s"}):
+${commitList}
+
+TASK: Generate a concise standup summary. Use this exact structure:
+
+## What was done
+Group commits by topic/feature/fix. Each group gets a brief description of what was accomplished. Use bullet points.
+
+## Key changes
+List the 3-5 most important changes with brief explanations of impact.
+
+## Stats
+- Total commits: N
+- Contributors: name1, name2
+- Date range: YYYY-MM-DD to YYYY-MM-DD
+
+Be concise, professional, and actionable. Focus on outcomes, not implementation details. No markdown code blocks.`;
+
+  const raw = cleanAIText(await requestAIText(prompt, settings));
+
+  return {
+    summary: raw,
+    stats: {
+      totalCommits: commits.length,
+      authors,
+      dateRange,
+    },
+  };
+}

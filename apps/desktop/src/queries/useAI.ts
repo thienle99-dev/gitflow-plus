@@ -5,6 +5,7 @@ import {
   type AIReviewMode,
   type ConflictExplanation,
   type MergeStrategyAdvice,
+  type CommitSummaryResult,
   generateCommitMessageWithAI,
   reviewDiffWithAI,
   generateInlineReviewComments,
@@ -17,6 +18,7 @@ import {
   improveCommitMessage,
   addCommitBody,
   adviseMergeStrategy,
+  generateCommitSummary,
 } from "@/lib/ai";
 
 export function useGenerateCommitMessage(repoPath: string | null) {
@@ -160,6 +162,16 @@ export function useAIMergeStrategyAdvice(repoPath: string | null) {
       if (!repoPath) throw new Error("No repository selected");
       return adviseMergeStrategy(repoPath, currentBranch, targetBranch, ahead, behind, incomingCommits, changedFiles);
     },
+  });
+}
+
+export function useAICommitSummary() {
+  return useMutation<CommitSummaryResult, Error, {
+    commits: Array<{ hash: string; message: string; date: string; author: string }>;
+    timeRange: string;
+  }>({
+    mutationKey: ["ai.commit-summary"],
+    mutationFn: ({ commits, timeRange }) => generateCommitSummary(commits, timeRange),
   });
 }
 

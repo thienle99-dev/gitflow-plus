@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Book, GitBranch, ArrowUp, ArrowDown, Loader2, GraduationCap, AlertTriangle, Terminal, Activity, RotateCcw } from "lucide-react";
+import { Book, GitBranch, ArrowUp, ArrowDown, Loader2, GraduationCap, AlertTriangle, Terminal, Activity, RotateCcw, MessageSquareText } from "lucide-react";
 import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
 import { useGitBranches, useGitStatus, useGitSyncStatus } from "@/queries/useGitLog";
@@ -172,7 +172,7 @@ export default function BottomBar() {
 
       <div className="flex-1" />
 
-      {/* Right side: Operations + Feature Guide + Onboarding + Version */}
+      {/* Right side: Operations + Feature Guide + Onboarding */}
       <div className="flex items-center gap-3">
         <button
           onClick={toggleOps}
@@ -207,6 +207,15 @@ export default function BottomBar() {
         </button>
 
         <button
+          onClick={() => openDialogState("commit-summary")}
+          className="flex items-center gap-1 text-text-muted hover:text-accent transition-all p-0.5 rounded cursor-pointer mr-0.5"
+          title="AI Commit Summary"
+        >
+          <MessageSquareText size={11} />
+          <span className="text-[9px] font-semibold">Summary</span>
+        </button>
+
+        <button
           onClick={() => openDialogState("feature-guide")}
           className="flex items-center gap-1 text-text-muted hover:text-text-primary transition-all p-0.5 rounded cursor-pointer mr-0.5"
           title="Feature Guide (⌘⇧H)"
@@ -214,10 +223,6 @@ export default function BottomBar() {
           <Book size={11} />
           <span className="text-[9px] font-semibold">Guide</span>
         </button>
-
-        <span className="text-[9px] font-medium text-text-muted-60 select-all">
-          v1.0.2
-        </span>
       </div>
     </div>
     </>
