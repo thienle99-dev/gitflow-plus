@@ -94,12 +94,11 @@ export function useAppUpdater() {
 
   const relaunch = useCallback(async () => {
     try {
-      // Tauri updater plugin installs the update; the app restart is handled by the OS
-      // or by invoking the Tauri process relaunch command
-      const { invoke } = await import("@tauri-apps/api/core");
-      await invoke("plugin:process|exit", { code: 0 });
-    } catch {
-      // Fallback: the user may need to restart manually
+      const { relaunch: restartApp } = await import("@tauri-apps/plugin-process");
+      await restartApp();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setState((prev) => ({ ...prev, status: "error", error: `Restart failed: ${message}` }));
     }
   }, []);
 
