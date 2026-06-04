@@ -6,7 +6,6 @@ import { useMergeStatus } from "@/queries/useGitMerge";
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import { useOperationsStore } from "@/stores/operations";
 import { useLogsPanelStore } from "@/stores/logs";
-import { GitPet } from "@/components/features/git-pet";
 
 export default function BottomBar() {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -166,8 +165,6 @@ export default function BottomBar() {
           <Book size={11} />
           <span className="text-[9px] font-semibold">Guide</span>
         </button>
-
-        <GitPet />
 
         <span className="text-[9px] font-medium text-text-muted-60 select-all">
           v1.0.2

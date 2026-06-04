@@ -139,6 +139,30 @@
 .git-pet-container:hover  { transform: scale(1.15); }
 .git-pet-container:active { transform: scale(0.92); }
 
+/* === SIDEBAR DOCK === */
+.sidebar-git-pet {
+  position: relative;
+}
+.sidebar-git-pet .git-pet-container {
+  width: 36px;
+  height: 36px;
+  justify-content: center;
+}
+.sidebar-git-pet .git-pet-sprite {
+  width: 32px;
+  height: 32px;
+  font-size: 24px;
+}
+.sidebar-git-pet .pet-bubble {
+  left: 0;
+  right: auto;
+  border-radius: 8px 8px 8px 2px;
+}
+.sidebar-git-pet .pet-zzz {
+  top: -4px;
+  right: 0;
+}
+
 /* === SPEECH BUBBLE === */
 .pet-bubble {
   position: absolute;

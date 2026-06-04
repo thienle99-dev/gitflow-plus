@@ -29,6 +29,7 @@ import {
   ArrowDown,
   Activity,
 } from "lucide-react";
+import { GitPet } from "@/components/features/git-pet";
 
 const LazyActivityHeatmap = lazy(() => import("@/components/features/activity/ActivityHeatmap"));
 
@@ -126,7 +127,8 @@ export default function Sidebar() {
 
   return (
     <>
-    <nav className="h-full overflow-y-auto py-2 sidebar-panel" role="navigation" aria-label="Repository sidebar">
+    <div className="h-full flex flex-col">
+    <nav className="flex-1 overflow-y-auto py-2 sidebar-panel" role="navigation" aria-label="Repository sidebar">
       {/* Repository Selector */}
       <div className="relative px-4 mb-3 flex items-center gap-1.5">
         <button
@@ -506,6 +508,12 @@ export default function Sidebar() {
         />
       )}
     </nav>
+    <div className="shrink-0 border-t border-border-20 bg-surface-1-20 px-4 pb-3 pt-2">
+      <div className="sidebar-git-pet inline-flex rounded-mac bg-surface-2-30 border border-border-30 px-1.5 py-1 shadow-2xs">
+        <GitPet />
+      </div>
+    </div>
+    </div>
 
     <ConfirmDialog
       open={!!confirmDeleteBranch}
