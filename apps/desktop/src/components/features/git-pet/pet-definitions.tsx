@@ -68,12 +68,12 @@ const catPet: PetDefinition = {
 
       {/* Ears behind head */}
       <g className="pet-ear-left">
-        <path d="M11 12 L14 2 L21 12 Z" fill="#F58A2A" stroke="#B85F1C" strokeWidth="1.4" strokeLinejoin="miter" />
-        <path d="M14 10 L16 5 L19 10 Z" fill="#FFB3B3" />
+        <path d="M11 12 L14 4 L21 12 Z" fill="#F58A2A" stroke="#B85F1C" strokeWidth="1.4" strokeLinejoin="miter" />
+        <path d="M15 10 L16.5 7 L18.5 10 Z" fill="#F5A1A0" opacity="0.8" />
       </g>
       <g className="pet-ear-right">
-        <path d="M27 12 L34 2 L37 12 Z" fill="#F58A2A" stroke="#B85F1C" strokeWidth="1.4" strokeLinejoin="miter" />
-        <path d="M30 10 L33 5 L35 10 Z" fill="#FFB3B3" />
+        <path d="M27 12 L34 4 L37 12 Z" fill="#F58A2A" stroke="#B85F1C" strokeWidth="1.4" strokeLinejoin="miter" />
+        <path d="M30.5 10 L32.5 7 L34 10 Z" fill="#F5A1A0" opacity="0.8" />
       </g>
 
       {/* Head with stepped silhouette */}
@@ -84,62 +84,65 @@ const catPet: PetDefinition = {
       <rect x="31" y="26" width="7" height="5" rx="2" fill="#F6A044" stroke="#B85F1C" strokeWidth="1" />
 
       {/* Cheek pixels */}
-      <rect x="13" y="23" width="4" height="2" rx="1" fill="#FFB3B3" opacity="0.55" />
-      <rect x="31" y="23" width="4" height="2" rx="1" fill="#FFB3B3" opacity="0.55" />
+      <rect x="14" y="23" width="3" height="2" rx="1" fill="#FFB3B3" opacity="0.48" />
+      <rect x="31" y="23" width="3" height="2" rx="1" fill="#FFB3B3" opacity="0.48" />
+
+      {/* Soft pixel muzzle */}
+      <path d="M21 22 H27 V24 H29 V27 H27 V28 H21 V27 H19 V24 H21 Z" fill="#FFDCA8" opacity="0.22" />
 
       {/* Pixel nose */}
       <path d="M22 21 H26 L24 24 Z" fill="#D98586" />
 
       {/* Whiskers and forehead markings sit under animated face pixels */}
-      <rect x="7" y="21" width="8" height="1" fill="#B85F1C" />
-      <rect x="8" y="25" width="8" height="1" fill="#B85F1C" />
-      <rect x="33" y="21" width="8" height="1" fill="#B85F1C" />
-      <rect x="32" y="25" width="8" height="1" fill="#B85F1C" />
+      <rect x="3" y="22" width="10" height="1" fill="#B85F1C" opacity="0.62" />
+      <rect x="5" y="25" width="9" height="1" fill="#B85F1C" opacity="0.46" />
+      <rect x="35" y="22" width="10" height="1" fill="#B85F1C" opacity="0.62" />
+      <rect x="34" y="25" width="9" height="1" fill="#B85F1C" opacity="0.46" />
       <rect x="21" y="9" width="2" height="5" rx="0.5" fill="#B85F1C" />
       <rect x="25" y="9" width="2" height="5" rx="0.5" fill="#B85F1C" />
       <path d="M24 9 H26 V11 H25 V14 H23 V11 H22 V9 Z" fill="#B85F1C" opacity="0.85" />
 
       {/* Pixel face states */}
       <g className="face-normal">
-        <rect x="16" y="15" width="5" height="6" rx="1" fill="#2F3035" />
-        <rect x="27" y="15" width="5" height="6" rx="1" fill="#2F3035" />
-        <rect x="18.2" y="16" width="1.6" height="1.6" fill="#FFFFFF" />
-        <rect x="29.2" y="16" width="1.6" height="1.6" fill="#FFFFFF" />
+        <path d="M17 16 H21 V17 H22 V20 H21 V21 H17 V20 H16 V17 H17 Z" fill="#2C3038" />
+        <path d="M27 16 H31 V17 H32 V20 H31 V21 H27 V20 H26 V17 H27 Z" fill="#2C3038" />
+        <rect x="18.5" y="17" width="1.5" height="1.5" fill="#FFFFFF" />
+        <rect x="28.5" y="17" width="1.5" height="1.5" fill="#FFFFFF" />
       </g>
       <g className="face-blink">
-        <rect x="16" y="18" width="6" height="1.4" rx="0.7" fill="#2F3035" />
-        <rect x="27" y="18" width="6" height="1.4" rx="0.7" fill="#2F3035" />
+        <path d="M16 18 H18 V17 H21 V18 H23" stroke="#2F3035" strokeWidth="1.1" fill="none" strokeLinecap="square" strokeLinejoin="miter" />
+        <path d="M26 18 H28 V17 H31 V18 H33" stroke="#2F3035" strokeWidth="1.1" fill="none" strokeLinecap="square" strokeLinejoin="miter" />
       </g>
       <g className="face-sleep">
         <path d="M16 18 H18 V17 H20 V18 H22" stroke="#2F3035" strokeWidth="1.2" fill="none" strokeLinecap="square" strokeLinejoin="miter" />
         <path d="M27 18 H29 V17 H31 V18 H33" stroke="#2F3035" strokeWidth="1.2" fill="none" strokeLinecap="square" strokeLinejoin="miter" />
       </g>
       <g className="face-happy">
-        <path d="M16 20 H18 V17 H20 V20 H22" stroke="#2F3035" strokeWidth="1.2" fill="none" strokeLinecap="square" strokeLinejoin="miter" />
-        <path d="M27 20 H29 V17 H31 V20 H33" stroke="#2F3035" strokeWidth="1.2" fill="none" strokeLinecap="square" strokeLinejoin="miter" />
+        <path d="M17 19 H19 V17 H21 V19 H22" stroke="#2F3035" strokeWidth="1.1" fill="none" strokeLinecap="square" strokeLinejoin="miter" />
+        <path d="M27 19 H29 V17 H31 V19 H32" stroke="#2F3035" strokeWidth="1.1" fill="none" strokeLinecap="square" strokeLinejoin="miter" />
       </g>
       <g className="face-star">
-        <path d="M18 14 H21 V17 H24 V20 H21 V23 H18 V20 H15 V17 H18 Z" fill="#FFD75A" />
-        <path d="M29 14 H32 V17 H35 V20 H32 V23 H29 V20 H26 V17 H29 Z" fill="#FFD75A" />
+        <path d="M18 15 H21 V17 H23 V20 H21 V22 H18 V20 H16 V17 H18 Z" fill="#FFD75A" />
+        <path d="M28 15 H31 V17 H33 V20 H31 V22 H28 V20 H26 V17 H28 Z" fill="#FFD75A" />
       </g>
       <g className="face-worry">
-        <rect x="16" y="15" width="5" height="6" rx="1" fill="#2F3035" />
-        <rect x="27" y="15" width="5" height="6" rx="1" fill="#2F3035" />
-        <rect x="18.2" y="16" width="1.6" height="1.6" fill="#FFFFFF" />
-        <rect x="29.2" y="16" width="1.6" height="1.6" fill="#FFFFFF" />
-        <rect x="16" y="13" width="7" height="1" fill="#2F3035" />
-        <rect x="26" y="13" width="7" height="1" fill="#2F3035" />
+        <path d="M17 16 H21 V17 H22 V20 H21 V21 H17 V20 H16 V17 H17 Z" fill="#2F3035" />
+        <path d="M27 16 H31 V17 H32 V20 H31 V21 H27 V20 H26 V17 H27 Z" fill="#2F3035" />
+        <rect x="18.5" y="17" width="1.5" height="1.5" fill="#FFFFFF" />
+        <rect x="28.5" y="17" width="1.5" height="1.5" fill="#FFFFFF" />
+        <path d="M16 14 H21 V15 H23" stroke="#2F3035" strokeWidth="1" fill="none" strokeLinecap="square" strokeLinejoin="miter" />
+        <path d="M26 15 H28 V14 H33" stroke="#2F3035" strokeWidth="1" fill="none" strokeLinecap="square" strokeLinejoin="miter" />
         <path d="M38 13 H40 V16 H39 V18 H37 V16 H36 V14 H38 Z" fill="#86D7F0" />
       </g>
       <g className="face-alarmed">
-        <rect x="15" y="14" width="7" height="8" rx="1" fill="#2F3035" />
-        <rect x="27" y="14" width="7" height="8" rx="1" fill="#2F3035" />
-        <rect x="18" y="17" width="2" height="2" fill="#FFFFFF" />
-        <rect x="30" y="17" width="2" height="2" fill="#FFFFFF" />
+        <path d="M16 15 H22 V16 H23 V21 H22 V22 H16 V21 H15 V16 H16 Z" fill="#2F3035" />
+        <path d="M27 15 H33 V16 H34 V21 H33 V22 H27 V21 H26 V16 H27 Z" fill="#2F3035" />
+        <rect x="18.5" y="18" width="1.5" height="1.5" fill="#FFFFFF" />
+        <rect x="29.5" y="18" width="1.5" height="1.5" fill="#FFFFFF" />
       </g>
 
       <g className="mouth-smile">
-        <path d="M20 26 H22 V27 H26 V26 H28" stroke="#5C351D" strokeWidth="1.4" fill="none" strokeLinecap="square" strokeLinejoin="miter" />
+        <path d="M21 25 H23 V26 H25 V25 H27" stroke="#5C351D" strokeWidth="1.2" fill="none" strokeLinecap="square" strokeLinejoin="miter" />
       </g>
       <g className="mouth-sleep">
         <rect x="23" y="26" width="3" height="2" rx="1" fill="#5C351D" />
@@ -149,7 +152,7 @@ const catPet: PetDefinition = {
         <rect x="23" y="27" width="3" height="1.5" fill="#E89CAD" />
       </g>
       <g className="mouth-big">
-        <path d="M19 25 H21 V27 H23 V28 H25 V27 H27 V25 H29" stroke="#5C351D" strokeWidth="1.4" fill="none" strokeLinecap="square" strokeLinejoin="miter" />
+        <path d="M20 25 H22 V27 H23 V28 H25 V27 H27 V25 H28" stroke="#5C351D" strokeWidth="1.2" fill="none" strokeLinecap="square" strokeLinejoin="miter" />
       </g>
     </>
   ),
@@ -158,13 +161,13 @@ const catPet: PetDefinition = {
   accessories: (
     <>
       {/* Bubble tea, tucked into paw */}
-      <rect x="30" y="26" width="9" height="13" rx="2" fill="#8FD0E8" stroke="#5CA7C2" strokeWidth="1.2" />
-      <rect x="29" y="24" width="11" height="4" rx="2" fill="#72BBD6" />
-      <rect x="35" y="18" width="3" height="8" rx="1.5" fill="#E86B75" />
-      <rect x="32" y="34" width="3" height="3" rx="1" fill="#5D3518" />
-      <rect x="36" y="33" width="2" height="2" rx="1" fill="#5D3518" />
-      <rect x="35" y="36" width="3" height="3" rx="1" fill="#5D3518" />
-      <rect x="32" y="29" width="3" height="3" rx="1" fill="#5D3518" />
+      <rect x="31.5" y="28" width="7" height="11" rx="1.8" fill="#9BCEDB" stroke="#6EAABD" strokeWidth="1" />
+      <rect x="30.5" y="26" width="9" height="3" rx="1.5" fill="#82BAC8" />
+      <rect x="35.2" y="20" width="2.4" height="6.5" rx="1.2" fill="#CF6F7B" />
+      <rect x="29.5" y="29" width="5.8" height="5.4" rx="2" fill="#F6A044" stroke="#B85F1C" strokeWidth="0.9" />
+      <rect x="33" y="35" width="2.4" height="2.4" rx="0.9" fill="#5D3518" opacity="0.9" />
+      <rect x="36" y="34" width="1.8" height="1.8" rx="0.8" fill="#5D3518" opacity="0.9" />
+      <rect x="35.2" y="37" width="2.4" height="2" rx="0.8" fill="#5D3518" opacity="0.9" />
     </>
   ),
 };
