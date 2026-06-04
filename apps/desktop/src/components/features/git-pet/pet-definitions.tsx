@@ -334,47 +334,51 @@ const pandaPet: PetDefinition = {
   body: (
     <>
       {/* Tail (tiny pom) */}
-      <circle className="pet-tail" cx="7" cy="26" r="2.5" fill="#2C2C2C" />
+      <circle className="pet-tail" cx="7" cy="26" r="2.5" fill="#2C3E50" />
       {/* Body */}
-      <ellipse cx="16" cy="24" rx="9" ry="7" fill="#2C2C2C" />
-      {/* Belly */}
-      <ellipse cx="16" cy="24.5" rx="5.5" ry="5.5" fill="#F5F5F5" />
+      <ellipse cx="16" cy="24" rx="9" ry="7" fill="#2C3E50" />
+      {/* Belly (Fluffy white chest patch) */}
+      <path d="M 11 19 C 10 21 11 22 10.5 24 C 10 26 11 27 12 28.5 C 14 30 18 30 20 28.5 C 21 27 22 26 21.5 24 C 21 22 22 21 21 19 Z" fill="#F5F5F5" />
       {/* Left arm */}
-      <path d="M7 21 C5 21 5 28 8 28 C9 28 9 24 9 21 Z" fill="#2C2C2C" />
+      <path d="M 7 19 C 6 22 6 25 9 26.5 C 10.5 25 10 21 8.5 19 Z" fill="#2C3E50" />
       {/* Right arm */}
-      <path d="M25 21 C27 21 27 28 24 28 C23 28 23 24 23 21 Z" fill="#2C2C2C" />
+      <path d="M 25 19 C 26 22 26 25 23 26.5 C 21.5 25 22 21 23.5 19 Z" fill="#2C3E50" />
       {/* Left round ear */}
       <g className="pet-ear-left">
-        <circle cx="7" cy="5.5" r="4" fill="#2C2C2C" />
+        <circle cx="6.5" cy="8.5" r="4.2" fill="#2C3E50" />
       </g>
       {/* Right round ear */}
       <g className="pet-ear-right">
-        <circle cx="25" cy="5.5" r="4" fill="#2C2C2C" />
+        <circle cx="25.5" cy="8.5" r="4.2" fill="#2C3E50" />
       </g>
       {/* Head */}
-      <ellipse cx="16" cy="13" rx="10" ry="8" fill="#F5F5F5" />
+      <ellipse cx="16" cy="14" rx="10.5" ry="8" fill="#F5F5F5" />
+      {/* Beanie Hat (slouchy to the right) */}
+      <path d="M 7 8.5 C 7 2.5, 23 2, 25 8.5 C 27 5.5, 25 1.5, 20 0.8 C 15 0.2, 9 2.5, 7 8.5 Z" fill="#34495E" />
+      {/* Beanie brim */}
+      <ellipse cx="16" cy="8.5" rx="9" ry="2.2" fill="#ECF0F1" />
       {/* Left eye patch */}
-      <ellipse cx="12" cy="13.5" rx="2.8" ry="2.2" fill="#2C2C2C" transform="rotate(-15 12 13.5)" />
+      <ellipse cx="11.5" cy="12.2" rx="3" ry="2.3" fill="#2C3E50" transform="rotate(-15 11.5 12.2)" />
       {/* Right eye patch */}
-      <ellipse cx="20" cy="13.5" rx="2.8" ry="2.2" fill="#2C2C2C" transform="rotate(15 20 13.5)" />
+      <ellipse cx="20.5" cy="12.2" rx="3" ry="2.3" fill="#2C3E50" transform="rotate(15 20.5 12.2)" />
       {/* Cheeks */}
-      <ellipse cx="8.5" cy="15.5" rx="1.8" ry="0.9" fill="#FFB6C1" opacity="0.45" />
-      <ellipse cx="23.5" cy="15.5" rx="1.8" ry="0.9" fill="#FFB6C1" opacity="0.45" />
+      <ellipse cx="8.5" cy="14.5" rx="1.8" ry="0.9" fill="#FFB6C1" opacity="0.45" />
+      <ellipse cx="23.5" cy="14.5" rx="1.8" ry="0.9" fill="#FFB6C1" opacity="0.45" />
       {/* Nose */}
-      <ellipse cx="16" cy="13.5" rx="1.2" ry="0.8" fill="#2C2C2C" />
+      <ellipse cx="16" cy="14.2" rx="1.2" ry="0.8" fill="#2C3E50" />
       {/* Feet with Pink Toe Beans */}
       <g>
         {/* Left foot */}
-        <circle cx="11" cy="29" r="3.5" fill="#2C2C2C" />
-        <circle cx="9.5" cy="27" r="0.8" fill="#FFB6C1" />
-        <circle cx="11" cy="26.2" r="0.8" fill="#FFB6C1" />
-        <circle cx="12.5" cy="27" r="0.8" fill="#FFB6C1" />
+        <circle cx="11.5" cy="29" r="3.8" fill="#2C3E50" />
+        <circle cx="9.5" cy="26.5" r="0.9" fill="#FFB6C1" />
+        <circle cx="11.5" cy="25.5" r="0.9" fill="#FFB6C1" />
+        <circle cx="13.5" cy="26.5" r="0.9" fill="#FFB6C1" />
         
         {/* Right foot */}
-        <circle cx="21" cy="29" r="3.5" fill="#2C2C2C" />
-        <circle cx="19.5" cy="27" r="0.8" fill="#FFB6C1" />
-        <circle cx="21" cy="26.2" r="0.8" fill="#FFB6C1" />
-        <circle cx="22.5" cy="27" r="0.8" fill="#FFB6C1" />
+        <circle cx="20.5" cy="29" r="3.8" fill="#2C3E50" />
+        <circle cx="18.5" cy="26.5" r="0.9" fill="#FFB6C1" />
+        <circle cx="20.5" cy="25.5" r="0.9" fill="#FFB6C1" />
+        <circle cx="22.5" cy="26.5" r="0.9" fill="#FFB6C1" />
       </g>
     </>
   ),
