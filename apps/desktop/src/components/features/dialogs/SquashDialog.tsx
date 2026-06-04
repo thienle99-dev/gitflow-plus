@@ -20,9 +20,6 @@ export default function SquashDialog({
   onClose,
 }: SquashDialogProps) {
   const repoPath = useRepoStore((s) => s.repoPath);
-  const setRebaseTargetCommit = useUIStore((s) => s.setRebaseTargetCommit);
-  const openDialog = useUIStore((s) => s.openDialog);
-  const setPrefilledRebaseTodos = useUIStore((s) => s.setPrefilledRebaseTodos);
   const [count, setCount] = useState(3);
   const [loading, setLoading] = useState(false);
 
@@ -42,11 +39,13 @@ export default function SquashDialog({
         ...t,
         action: i === 0 ? "pick" : "squash",
       }));
-      // Store prefilled todos and open InteractiveRebaseDialog
-      setPrefilledRebaseTodos(configured);
-      setRebaseTargetCommit(commitHash);
-      onClose();
-      openDialog("interactive-rebase");
+      // Single atomic state update to avoid race between close + open
+      useUIStore.setState({
+        squashNState: { open: false, commitHash: null },
+        prefilledRebaseTodos: configured,
+        rebaseTargetCommit: commitHash,
+        activeDialog: "interactive-rebase",
+      });
     } catch (err: any) {
       showToast(`Failed to fetch commits: ${err.message || err}`, "error");
     } finally {
