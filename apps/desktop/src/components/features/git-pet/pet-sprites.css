@@ -1,13 +1,11 @@
-/* === GIT PET PIXEL ART SPRITE === */
+/* === GIT PET SPRITE === */
 /* Inline SVG character with CSS-driven face state toggling. */
 
 /* === BASE SPRITE === */
 .git-pet-sprite {
-  width: 192px;
-  height: 192px;
+  width: 128px;
+  height: 128px;
   position: relative;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
   user-select: none;
   -webkit-user-select: none;
 }
@@ -141,7 +139,7 @@
   50%      { transform: translateY(-2px); }
 }
 .pet-idle {
-  animation: pet-idle-bob 2.5s steps(2) infinite;
+  animation: pet-idle-bob 2.5s ease-in-out infinite;
 }
 
 /* === BLINK — quick squint === */
@@ -159,7 +157,7 @@
   50%      { transform: translateY(1px) scale(0.97); opacity: 0.6; }
 }
 .pet-sleep {
-  animation: pet-sleep-breathe 3s steps(2) infinite;
+  animation: pet-sleep-breathe 3s ease-in-out infinite;
 }
 
 /* === LOADING / RUN — fast bounce === */
@@ -170,7 +168,7 @@
   75%      { transform: translateY(-2px) translateX(-1px); }
 }
 .pet-loading {
-  animation: pet-loading-run 300ms steps(4) infinite;
+  animation: pet-loading-run 300ms ease-in-out infinite;
 }
 
 /* === SUCCESS — celebratory hop === */
@@ -182,7 +180,7 @@
   100% { transform: translateY(0); }
 }
 .pet-success {
-  animation: pet-success-jump 600ms steps(5) 2;
+  animation: pet-success-jump 600ms ease-out 2;
 }
 
 /* === ERROR — worried shake === */
@@ -194,7 +192,7 @@
   80%      { transform: translateX(2px); }
 }
 .pet-error {
-  animation: pet-error-shake 600ms steps(5);
+  animation: pet-error-shake 600ms ease-in-out;
 }
 
 /* === ALARMED — flash red pulse === */
@@ -203,7 +201,7 @@
   50%      { filter: brightness(1.3) sepia(0.4) hue-rotate(-20deg); transform: scale(1.05); }
 }
 .pet-alarmed {
-  animation: pet-alarmed-pulse 500ms steps(2) 3;
+  animation: pet-alarmed-pulse 500ms ease-in-out 3;
 }
 
 /* === EXCITED — happy wiggle === */
@@ -213,7 +211,7 @@
   75%      { transform: rotate(6deg); }
 }
 .pet-excited {
-  animation: pet-excited-wiggle 300ms steps(4) 2;
+  animation: pet-excited-wiggle 300ms ease-in-out 2;
 }
 
 /* === WAVING — friendly bounce === */
@@ -222,7 +220,7 @@
   50%      { transform: scale(1.05) rotate(4deg); }
 }
 .pet-wave {
-  animation: pet-wave-bounce 400ms steps(2) 2;
+  animation: pet-wave-bounce 400ms ease-in-out 2;
 }
 
 /* === CONTAINER === */
@@ -233,21 +231,21 @@
   display: flex;
   align-items: center;
 }
-.git-pet-container:hover  { transform: scale(1.15); }
-.git-pet-container:active { transform: scale(0.92); }
+.git-pet-container:hover  { transform: scale(1.1); }
+.git-pet-container:active { transform: scale(0.95); }
 
 /* === SIDEBAR DOCK === */
 .sidebar-git-pet {
   position: relative;
 }
 .sidebar-git-pet .git-pet-container {
-  width: 208px;
-  height: 208px;
+  width: 140px;
+  height: 140px;
   justify-content: center;
 }
 .sidebar-git-pet .git-pet-sprite {
-  width: 192px;
-  height: 192px;
+  width: 128px;
+  height: 128px;
 }
 .sidebar-git-pet .pet-bubble {
   left: 0;
@@ -262,7 +260,7 @@
 .sidebar-git-pet .pet-zzz {
   top: -14px;
   right: 16px;
-  font-size: 20px;
+  font-size: 16px;
 }
 
 /* === SPEECH BUBBLE === */
@@ -396,7 +394,7 @@
 /* TAIL: Idle slow wag, Excited fast wag */
 .pet-tail {
   transform-origin: 8px 27px;
-  animation: tail-idle-wag 3s steps(2) infinite;
+  animation: tail-idle-wag 3s ease-in-out infinite;
 }
 @keyframes tail-idle-wag {
   0%, 100% { transform: rotate(0deg); }
@@ -406,7 +404,7 @@
 .pet-excited .pet-tail,
 .pet-success .pet-tail,
 .pet-wave .pet-tail {
-  animation: tail-excited-wag 0.2s steps(2) infinite;
+  animation: tail-excited-wag 0.2s ease-in-out infinite;
 }
 @keyframes tail-excited-wag {
   0%, 100% { transform: rotate(-8deg); }
@@ -416,7 +414,7 @@
 /* ACCESSORY: Idle gentle bob, excited bounce */
 .pet-accessory {
   transform-origin: 26px 22px;
-  animation: accessory-idle-bob 2.5s steps(2) infinite;
+  animation: accessory-idle-bob 2.5s ease-in-out infinite;
 }
 @keyframes accessory-idle-bob {
   0%, 100% { transform: translateY(0); }
@@ -426,7 +424,7 @@
 .pet-excited .pet-accessory,
 .pet-success .pet-accessory,
 .pet-wave .pet-accessory {
-  animation: accessory-excited-bounce 0.4s steps(4) infinite;
+  animation: accessory-excited-bounce 0.4s ease-in-out infinite;
 }
 @keyframes accessory-excited-bounce {
   0%, 100% { transform: translateY(0) scale(1); }
@@ -436,18 +434,18 @@
 /* EARS: Random tiny twitch, fast wiggle on hover */
 .pet-ear-left {
   transform-origin: 8px 6px;
-  animation: ear-twitch-left 5s steps(2) infinite;
+  animation: ear-twitch-left 5s ease-in-out infinite;
 }
 .pet-ear-right {
   transform-origin: 24px 6px;
-  animation: ear-twitch-right 5s steps(2) infinite 0.7s;
+  animation: ear-twitch-right 5s ease-in-out infinite 0.7s;
 }
 
 .pet-wave .pet-ear-left {
-  animation: ear-twitch-left 0.8s steps(2) infinite;
+  animation: ear-twitch-left 0.8s ease-in-out infinite;
 }
 .pet-wave .pet-ear-right {
-  animation: ear-twitch-right 0.8s steps(2) infinite 0.1s;
+  animation: ear-twitch-right 0.8s ease-in-out infinite 0.1s;
 }
 
 @keyframes ear-twitch-left {
@@ -462,11 +460,11 @@
 /* AXOLOTL GILLS: Gentle flutter */
 .pet-gills-left {
   transform-origin: 5px 12px;
-  animation: gills-flutter-left 3s steps(2) infinite;
+  animation: gills-flutter-left 3s ease-in-out infinite;
 }
 .pet-gills-right {
   transform-origin: 27px 12px;
-  animation: gills-flutter-right 3s steps(2) infinite;
+  animation: gills-flutter-right 3s ease-in-out infinite;
 }
 @keyframes gills-flutter-left {
   0%, 100% { transform: scaleX(1); }

@@ -35,78 +35,93 @@ export default function GitPetSprite({ state, petType = DEFAULT_PET, onAnimation
         {/* Pet-specific body, head, ears, limbs */}
         {pet.body}
 
-        {/* === FACE: Normal open eyes === */}
-        <g className="face-normal">
-          <rect x="10" y="10" width="3" height="4" fill="#333" rx="1.5" />
-          <rect x="19" y="10" width="3" height="4" fill="#333" rx="1.5" />
-          <rect x="11" y="10" width="1.5" height="1.5" fill="#fff" rx="0.5" />
-          <rect x="20" y="10" width="1.5" height="1.5" fill="#fff" rx="0.5" />
-        </g>
+        <g transform={pet.faceTransform}>
+          {/* === FACE: Normal open eyes === */}
+          <g className="face-normal">
+            <circle cx="11.5" cy="11" r="2" fill="#333" />
+            <circle cx="20.5" cy="11" r="2" fill="#333" />
+            <circle cx="12.2" cy="10.3" r="0.8" fill="#fff" />
+            <circle cx="21.2" cy="10.3" r="0.8" fill="#fff" />
+          </g>
 
-        {/* === FACE: Blink eyes (horizontal lines) === */}
-        <g className="face-blink">
-          <rect x="10" y="12" width="3" height="1.5" fill="#333" rx="0.75" />
-          <rect x="19" y="12" width="3" height="1.5" fill="#333" rx="0.75" />
-        </g>
+          {/* === FACE: Blink eyes (curved lines) === */}
+          <g className="face-blink">
+            <path d="M9.5 11.5 Q11.5 10 13.5 11.5" stroke="#333" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+            <path d="M18.5 11.5 Q20.5 10 22.5 11.5" stroke="#333" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+          </g>
 
-        {/* === FACE: Sleep eyes (curved closed) === */}
-        <g className="face-sleep">
-          <path d="M10 12.5 Q11.5 11 13 12.5" stroke="#333" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-          <path d="M19 12.5 Q20.5 11 22 12.5" stroke="#333" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-        </g>
+          {/* === FACE: Sleep eyes (curved closed) === */}
+          <g className="face-sleep">
+            <path d="M10 12 Q11.5 10.5 13 12" stroke="#333" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+            <path d="M19 12 Q20.5 10.5 22 12" stroke="#333" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+          </g>
 
-        {/* === FACE: Happy eyes (^_^) === */}
-        <g className="face-happy">
-          <path d="M10 13 Q11.5 9.5 13 13" stroke="#333" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-          <path d="M19 13 Q20.5 9.5 22 13" stroke="#333" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-        </g>
+          {/* === FACE: Happy eyes (^_^) === */}
+          <g className="face-happy">
+            <path d="M10 12.5 Q11.5 9 13 12.5" stroke="#333" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+            <path d="M19 12.5 Q20.5 9 22 12.5" stroke="#333" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+          </g>
 
-        {/* === FACE: Star/sparkle eyes === */}
-        <g className="face-star">
-          <rect x="11" y="9.5" width="1" height="5" fill="#FFD700" />
-          <rect x="9.5" y="11.5" width="4" height="1" fill="#FFD700" />
-          <rect x="20" y="9.5" width="1" height="5" fill="#FFD700" />
-          <rect x="18.5" y="11.5" width="4" height="1" fill="#FFD700" />
-        </g>
+          {/* === FACE: Star/sparkle eyes === */}
+          <g className="face-star">
+            {/* Left star */}
+            <circle cx="11.5" cy="11" r="2" fill="#FFD700" />
+            <circle cx="11.5" cy="11" r="1" fill="#FFF8DC" />
+            {/* Right star */}
+            <circle cx="20.5" cy="11" r="2" fill="#FFD700" />
+            <circle cx="20.5" cy="11" r="1" fill="#FFF8DC" />
+            {/* Sparkle dots */}
+            <circle cx="9" cy="9" r="0.5" fill="#FFD700" opacity="0.7" />
+            <circle cx="14" cy="9" r="0.4" fill="#FFD700" opacity="0.6" />
+            <circle cx="18" cy="9" r="0.4" fill="#FFD700" opacity="0.6" />
+            <circle cx="23" cy="9" r="0.5" fill="#FFD700" opacity="0.7" />
+          </g>
 
-        {/* === FACE: Worry eyes (loading/error) === */}
-        <g className="face-worry">
-          <rect x="10" y="10" width="3" height="4" fill="#333" rx="1.5" />
-          <rect x="19" y="10" width="3" height="4" fill="#333" rx="1.5" />
-          <rect x="11" y="10" width="1.5" height="1.5" fill="#fff" rx="0.5" />
-          <rect x="20" y="10" width="1.5" height="1.5" fill="#fff" rx="0.5" />
-          {/* Sweat drop */}
-          <path d="M25 7 L26.5 10 L23.5 10 Z" fill="#87CEEB" />
-        </g>
+          {/* === FACE: Worry eyes (loading/error) === */}
+          <g className="face-worry">
+            <circle cx="11.5" cy="11" r="2" fill="#333" />
+            <circle cx="20.5" cy="11" r="2" fill="#333" />
+            <circle cx="12.2" cy="10.3" r="0.8" fill="#fff" />
+            <circle cx="21.2" cy="10.3" r="0.8" fill="#fff" />
+            {/* Worry eyebrows */}
+            <path d="M9 8.5 Q11.5 7.5 14 9" stroke="#333" strokeWidth="0.8" fill="none" strokeLinecap="round" />
+            <path d="M18 9 Q20.5 7.5 23 8.5" stroke="#333" strokeWidth="0.8" fill="none" strokeLinecap="round" />
+            {/* Sweat drop */}
+            <path d="M25 6 L26.5 9.5 L23.5 9.5 Z" fill="#87CEEB" opacity="0.8" />
+          </g>
 
-        {/* === FACE: Alarmed eyes (!) === */}
-        <g className="face-alarmed">
-          <rect x="11" y="10" width="1.5" height="3" fill="#333" />
-          <rect x="11" y="14" width="1.5" height="1" fill="#333" />
-          <rect x="20" y="10" width="1.5" height="3" fill="#333" />
-          <rect x="20" y="14" width="1.5" height="1" fill="#333" />
-        </g>
+          {/* === FACE: Alarmed eyes (!) === */}
+          <g className="face-alarmed">
+            <circle cx="11.5" cy="11" r="2.2" fill="#333" />
+            <circle cx="11.5" cy="11" r="1" fill="#fff" />
+            <circle cx="20.5" cy="11" r="2.2" fill="#333" />
+            <circle cx="20.5" cy="11" r="1" fill="#fff" />
+            {/* Tiny pupils */}
+            <circle cx="11.5" cy="11" r="0.6" fill="#333" />
+            <circle cx="20.5" cy="11" r="0.6" fill="#333" />
+          </g>
 
-        {/* === MOUTH: Smile === */}
-        <g className="mouth-smile">
-          <path d="M13 15.5 Q16 18 19 15.5" stroke="#5C4033" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-        </g>
+          {/* === MOUTH: Smile === */}
+          <g className="mouth-smile">
+            <path d="M13 15 Q16 17.5 19 15" stroke="#5C4033" strokeWidth="1" fill="none" strokeLinecap="round" />
+          </g>
 
-        {/* === MOUTH: Sleep (tiny dot) === */}
-        <g className="mouth-sleep">
-          <ellipse cx="16" cy="15.5" rx="1" ry="0.7" fill="#5C4033" />
-        </g>
+          {/* === MOUTH: Sleep (tiny dot) === */}
+          <g className="mouth-sleep">
+            <ellipse cx="16" cy="15" rx="1" ry="0.7" fill="#5C4033" />
+          </g>
 
-        {/* === MOUTH: Open (alarmed/error) === */}
-        <g className="mouth-open">
-          <ellipse cx="16" cy="16" rx="2.5" ry="1.5" fill="#5C4033" />
-          <ellipse cx="16" cy="15.5" rx="2" ry="1" fill="#D4876E" />
-        </g>
+          {/* === MOUTH: Open (alarmed/error) === */}
+          <g className="mouth-open">
+            <ellipse cx="16" cy="15.5" rx="2.5" ry="1.8" fill="#5C4033" />
+            <ellipse cx="16" cy="15" rx="2" ry="1.2" fill="#E89CAD" />
+          </g>
 
-        {/* === MOUTH: Big smile (success/excited) === */}
-        <g className="mouth-big">
-          <path d="M12 15 Q16 20 20 15" stroke="#5C4033" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-          <path d="M13 15.5 Q16 19 19 15.5" fill="#FF8A8A" opacity="0.2" />
+          {/* === MOUTH: Big smile (success/excited) === */}
+          <g className="mouth-big">
+            <path d="M12 14.5 Q16 19.5 20 14.5" stroke="#5C4033" strokeWidth="1" fill="none" strokeLinecap="round" />
+            <path d="M13 15 Q16 18.5 19 15" fill="#FF8A8A" opacity="0.2" />
+          </g>
         </g>
 
         {/* Pet-specific accessories (bubble tea, fish, bone, etc.) */}

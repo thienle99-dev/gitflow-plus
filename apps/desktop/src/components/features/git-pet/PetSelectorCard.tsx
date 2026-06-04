@@ -16,19 +16,19 @@ export function PetSelectorCard({ selected, onSelect }: PetSelectorCardProps) {
       <p className="text-2xs text-text-muted leading-normal">
         Choose your companion that lives in the sidebar.
       </p>
-      <div className="grid grid-cols-1 gap-3 pt-1">
+      <div className="grid grid-cols-3 gap-3 pt-1">
         {PET_TYPES.map((pet) => (
           <button
             key={pet}
             type="button"
             onClick={() => onSelect(pet)}
-            className={`relative flex flex-col items-center gap-2 p-3 rounded-mac border transition-all ${
+            className={`relative flex flex-col items-center gap-1.5 p-2.5 rounded-mac border transition-all ${
               selected === pet
                 ? "border-accent bg-accent/10 ring-1 ring-accent/30"
                 : "border-border-40 hover:border-border hover:bg-surface-2"
             }`}
           >
-            <div className="w-48 h-48 flex items-center justify-center">
+            <div className="w-24 h-24 flex items-center justify-center">
               <GitPetSprite state="idle" petType={pet} />
             </div>
             <span className="text-2xs font-medium text-text-secondary">{PET_LABELS[pet]}</span>
