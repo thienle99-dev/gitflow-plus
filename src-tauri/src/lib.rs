@@ -109,6 +109,7 @@ fn create_menu<R: tauri::Runtime>(app: &tauri::App<R>) -> Result<Menu<R>, tauri:
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_process::init())
         .plugin(
             tauri_plugin_log::Builder::new()
                 .clear_targets()

@@ -5,6 +5,7 @@ import RepoView from "./pages/RepoView";
 import TrayPanelView from "./pages/TrayPanelView";
 import { ErrorProvider } from "./lib/ErrorContext";
 import ErrorBoundary from "./components/ui/feedback/ErrorBoundary";
+import { useAutoUpdateCheck } from "./hooks/useAutoUpdateCheck";
 
 function App() {
   const theme = useRepoStore((s) => s.theme);
@@ -30,6 +31,7 @@ function App() {
   }, [syncThemeFromStorage]);
 
   const isTrayWindow = window.location.search.includes("window=tray");
+  useAutoUpdateCheck(!isTrayWindow);
 
   useEffect(() => {
     document.documentElement.classList.toggle("tray-window", isTrayWindow);

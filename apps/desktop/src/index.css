@@ -614,6 +614,25 @@ body.tray-window #root {
   letter-spacing: 0 !important;
 }
 
+[data-sonner-toast] [data-description] {
+  font-size: 10.5px !important;
+  line-height: 15px !important;
+  color: var(--text-secondary) !important;
+}
+
+[data-sonner-toast] [data-button] {
+  height: 24px !important;
+  padding: 0 9px !important;
+  border-radius: 7px !important;
+  font-size: 10.5px !important;
+  font-weight: 650 !important;
+}
+
+[data-sonner-toast] [data-action] {
+  background: color-mix(in srgb, var(--accent) 86%, white) !important;
+  color: white !important;
+}
+
 [data-sonner-toast].sonner-info {
   background:
     linear-gradient(90deg, color-mix(in srgb, var(--info) 14%, transparent), transparent 42%),
