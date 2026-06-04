@@ -76,6 +76,8 @@ const LS_KEY_GITLAB_HOST = "gitflowGitlabHost";
 const LS_KEY_COMMIT_LINT_ENABLED = "gitflowCommitLintEnabled";
 const LS_KEY_CODE_LINT_ENABLED = "gitflowCodeLintEnabled";
 const LS_KEY_LINT_STRICTNESS = "gitflowLintStrictness";
+const LS_KEY_DATE_FORMAT = "gitflowDateFormat";
+const LS_KEY_CUSTOM_DATE_FORMAT = "gitflowCustomDateFormat";
 
 // Legacy keys kept for reset and hasChanges comparison
 const LS_KEY_API_KEY = "gitflowAiApiKey";
@@ -118,6 +120,8 @@ const SETTINGS_KEYS = [
   LS_KEY_COMMIT_LINT_ENABLED,
   LS_KEY_CODE_LINT_ENABLED,
   LS_KEY_LINT_STRICTNESS,
+  LS_KEY_DATE_FORMAT,
+  LS_KEY_CUSTOM_DATE_FORMAT,
   "gitflowAiProfiles",
   "gitflowActiveAiProfileId",
   LS_KEY_PET_TYPE,
@@ -153,6 +157,8 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
   const [graphShowDate, setGraphShowDate] = useState(false);
   const [diffContext, setDiffContext] = useState(3);
   const [diffLineWrap, setDiffLineWrap] = useState(true);
+  const [dateFormat, setDateFormat] = useState("relative");
+  const [customDateFormat, setCustomDateFormat] = useState("YYYY-MM-DD HH:mm");
 
   // Git Tab States
   const [autoFetch, setAutoFetch] = useState(true);
@@ -267,6 +273,11 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       if (savedReducedMotion !== null) setReducedMotion(savedReducedMotion === "true");
       const savedPetType = localStorage.getItem(LS_KEY_PET_TYPE);
       if (savedPetType) setPetType(savedPetType as PetType);
+
+      const savedDateFormat = localStorage.getItem(LS_KEY_DATE_FORMAT);
+      const savedCustomDateFormat = localStorage.getItem(LS_KEY_CUSTOM_DATE_FORMAT);
+      if (savedDateFormat) setDateFormat(savedDateFormat);
+      if (savedCustomDateFormat) setCustomDateFormat(savedCustomDateFormat);
       if (savedDetailLevel) setAiDetailLevel(savedDetailLevel);
       if (savedCommitStyle) setCommitStyle(savedCommitStyle);
       setCustomRules(savedCustomRules);
@@ -356,6 +367,8 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       gitlabHost,
       profiles,
       activeProfileId,
+      dateFormat,
+      customDateFormat,
     });
   }, [
     theme, defaultDiffMode, autoFetch, fetchInterval, autoPrune,
@@ -366,6 +379,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
     provider, apiKey, apiUrl, commitModel, reviewModel, tokenLimit, fetchedModels,
     aiDetailLevel, commitStyle, customRules, reviewLanguage, reviewChecklist,
     githubToken, gitlabToken, gitlabHost, profiles, activeProfileId,
+    dateFormat, customDateFormat,
   ]);
 
   // Check for unsaved changes
@@ -551,6 +565,8 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       localStorage.setItem(LS_KEY_LARGE_DIFF_MODE, largeDiffMode);
       localStorage.setItem(LS_KEY_REDUCED_MOTION, String(reducedMotion));
       localStorage.setItem(LS_KEY_PET_TYPE, petType);
+      localStorage.setItem(LS_KEY_DATE_FORMAT, dateFormat);
+      localStorage.setItem(LS_KEY_CUSTOM_DATE_FORMAT, customDateFormat);
 
       // Save global (non-credential) AI preferences
       localStorage.setItem(LS_KEY_AI_DETAIL_LEVEL, aiDetailLevel);
@@ -646,6 +662,8 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
     setLargeDiffMode("prompt");
     setReducedMotion(false);
     setPetType(DEFAULT_PET);
+    setDateFormat("relative");
+    setCustomDateFormat("YYYY-MM-DD HH:mm");
 
     // Reset profiles to a single default
     const def = createDefaultProfile();
@@ -841,6 +859,10 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
               setDiffContext={setDiffContext}
               diffLineWrap={diffLineWrap}
               setDiffLineWrap={setDiffLineWrap}
+              dateFormat={dateFormat}
+              setDateFormat={setDateFormat}
+              customDateFormat={customDateFormat}
+              setCustomDateFormat={setCustomDateFormat}
             />
           )}
 

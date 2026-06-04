@@ -6,6 +6,7 @@ import { useGitBranches } from "@/queries/useGitLog";
 import { api } from "@/api/tauri";
 import { Search, X, GitCommit, Calendar, User, FileText, GitBranch, Sparkles, RefreshCw, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/form";
+import { useCommitDateFormatter } from "@/lib/date";
 
 interface SearchDialogProps {
   open: boolean;
@@ -247,9 +248,9 @@ CRITICAL INSTRUCTIONS:
 
   if (!open) return null;
 
+  const formatCommitDate = useCommitDateFormatter();
   const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+    return formatCommitDate(dateStr);
   };
 
   return (

@@ -3,6 +3,7 @@ import { ChevronDown, Download, Check, RefreshCw, Loader2, AlertCircle, ArrowUpC
 import { applyTheme } from "@/stores/repo";
 import { Switch } from "@/components/ui/form";
 import { useAppUpdater } from "@/queries/useAppUpdater";
+import { formatDateString, formatRelativeTime } from "@/lib/date";
 
 export const THEME_CARDS = [
   { id: "system",           label: "Auto (OS Sync)", group: "OS Sync",       colors: { bg: "#1e1e1e", surface: "#2d2d2d", sidebar: "#181818", accent: "#0a84ff", text: "#e0e0e0" } },
@@ -105,6 +106,10 @@ interface DisplayTabProps {
   setDiffContext: (v: number) => void;
   diffLineWrap: boolean;
   setDiffLineWrap: (v: boolean) => void;
+  dateFormat: string;
+  setDateFormat: (v: string) => void;
+  customDateFormat: string;
+  setCustomDateFormat: (v: string) => void;
 }
 
 export function GeneralTab() {
@@ -220,6 +225,10 @@ export function DisplayTab({
   setDiffContext,
   diffLineWrap,
   setDiffLineWrap,
+  dateFormat,
+  setDateFormat,
+  customDateFormat,
+  setCustomDateFormat,
 }: DisplayTabProps) {
   return (
     <div className="space-y-4">
@@ -336,6 +345,63 @@ export function DisplayTab({
               </label>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Date Format Card */}
+      <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
+        <div className="space-y-1">
+          <label className="text-xs font-semibold text-text-primary">Commit Date Format</label>
+          <div className="relative">
+            <select
+              value={dateFormat}
+              onChange={(e) => setDateFormat(e.target.value)}
+              className="w-full h-8 pl-2.5 pr-8 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer hover:bg-surface-2 transition-all"
+            >
+              <option value="relative">Relative Time (e.g. 2 hours ago)</option>
+              <option value="YYYY-MM-DD HH:mm">YYYY-MM-DD HH:mm (e.g. 2026-06-04 17:02)</option>
+              <option value="DD/MM/YYYY HH:mm">DD/MM/YYYY HH:mm (e.g. 04/06/2026 17:02)</option>
+              <option value="MM/DD/YYYY hh:mm A">MM/DD/YYYY hh:mm A (e.g. 06/04/2026 05:02 PM)</option>
+              <option value="MMM DD, YYYY, hh:mm A">MMM DD, YYYY, hh:mm A (e.g. Jun 04, 2026, 05:02 PM)</option>
+              <option value="custom">Custom Format...</option>
+            </select>
+            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
+              <ChevronDown size={11} strokeWidth={2.5} />
+            </div>
+          </div>
+          <p className="text-2xs text-text-muted">
+            Choose how timestamps are rendered in commit lists, details, history, and blame views.
+          </p>
+        </div>
+
+        {dateFormat === "custom" && (
+          <div className="space-y-1 border-t border-border-40 pt-2.5 animate-in fade-in duration-150">
+            <label className="text-xs font-semibold text-text-primary">Custom Format Pattern</label>
+            <input
+              type="text"
+              value={customDateFormat}
+              onChange={(e) => setCustomDateFormat(e.target.value)}
+              placeholder="e.g. YYYY-MM-DD HH:mm:ss"
+              className="w-full h-8 px-2.5 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent hover:bg-surface-2 transition-all"
+            />
+            <p className="text-3xs text-text-muted mt-1 leading-relaxed">
+              Use tokens: <code className="bg-surface-2 px-1 py-0.5 rounded text-text-primary">YYYY</code> (year), <code className="bg-surface-2 px-1 py-0.5 rounded text-text-primary">MM</code> (month), <code className="bg-surface-2 px-1 py-0.5 rounded text-text-primary">DD</code> (day), <code className="bg-surface-2 px-1 py-0.5 rounded text-text-primary">HH</code> (24h hour), <code className="bg-surface-2 px-1 py-0.5 rounded text-text-primary">hh</code> (12h hour), <code className="bg-surface-2 px-1 py-0.5 rounded text-text-primary">mm</code> (minute), <code className="bg-surface-2 px-1 py-0.5 rounded text-text-primary">ss</code> (second), <code className="bg-surface-2 px-1 py-0.5 rounded text-text-primary">A</code> (AM/PM), <code className="bg-surface-2 px-1 py-0.5 rounded text-text-primary">MMM</code> (short month), <code className="bg-surface-2 px-1 py-0.5 rounded text-text-primary">MMMM</code> (long month).
+            </p>
+          </div>
+        )}
+
+        <div className="border-t border-border-40 pt-2.5 flex items-center justify-between text-2xs">
+          <span className="text-text-muted font-medium">Live Preview:</span>
+          <span className="font-mono text-accent font-semibold bg-accent/5 border border-accent/15 px-2.5 py-1 rounded-mac">
+            {(() => {
+              const now = new Date();
+              if (dateFormat === "relative") {
+                return formatRelativeTime(now);
+              }
+              const pattern = dateFormat === "custom" ? customDateFormat : dateFormat;
+              return formatDateString(now, pattern);
+            })()}
+          </span>
         </div>
       </div>
     </div>
