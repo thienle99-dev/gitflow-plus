@@ -162,7 +162,6 @@
 }
 .pet-idle {
   animation: pet-idle-bob 2.5s ease-in-out infinite;
-  will-change: transform;
 }
 
 /* === BLINK — quick squint === */
@@ -181,7 +180,6 @@
 }
 .pet-sleep {
   animation: pet-sleep-breathe 3s ease-in-out infinite;
-  will-change: transform, opacity;
 }
 
 /* === LOADING / RUN — fast bounce === */
@@ -193,7 +191,6 @@
 }
 .pet-loading {
   animation: pet-loading-run 300ms ease-in-out infinite;
-  will-change: transform;
 }
 
 /* === SUCCESS — celebratory hop === */
