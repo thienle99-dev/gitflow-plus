@@ -222,8 +222,18 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
       <ConfirmDialog
         open={dropTarget !== null}
         title="Drop Stash"
-        message={`Are you sure you want to drop stash@{${dropTarget}}? This action cannot be undone.`}
-        confirmLabel="Drop"
+        message={`Permanently delete stash@{${dropTarget}}? The stashed changes will be lost forever.`}
+        impactItems={[
+          {
+            label: "Stashed changes will be permanently deleted",
+            severity: "irreversible",
+          },
+          {
+            label: "This cannot be undone — consider applying the stash first if you need the changes",
+            severity: "warning",
+          },
+        ]}
+        confirmLabel="Drop Stash"
         cancelLabel="Cancel"
         variant="destructive"
         onConfirm={() => { handleDrop(dropTarget ?? undefined); setDropTarget(null); }}

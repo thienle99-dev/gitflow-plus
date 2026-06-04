@@ -417,7 +417,21 @@ export default function CommitDetail() {
     <ConfirmDialog
       open={confirmRevert}
       title="Revert Commit"
-      message={`Revert commit ${selectedCommit?.slice(0, 7)}? This will create a new commit that undoes the changes.`}
+      message={`Create a new commit that undoes the changes from ${selectedCommit?.slice(0, 7)}?`}
+      impactItems={[
+        {
+          label: "A new 'revert' commit will be added to the current branch",
+          severity: "info",
+        },
+        {
+          label: "The original commit is not removed — this is a forward-fix, not a rewrite",
+          severity: "info",
+        },
+        {
+          label: "May cause conflicts if later changes depend on this commit",
+          severity: "warning",
+        },
+      ]}
       confirmLabel="Revert"
       cancelLabel="Cancel"
       variant="destructive"

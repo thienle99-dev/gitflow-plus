@@ -806,9 +806,19 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
           <ConfirmDialog
             open={confirmResetOpen}
             title="Reset Settings"
-            message="Reset GitFlow Desktop settings to defaults?"
+            message="Reset all GitFlow Desktop settings to their factory defaults?"
+            impactItems={[
+              {
+                label: "All custom settings (theme, AI config, git preferences, integrations) will be lost",
+                severity: "irreversible",
+              },
+              {
+                label: "Repository history and recent repos list are preserved",
+                severity: "info",
+              },
+            ]}
             variant="destructive"
-            confirmLabel="Reset"
+            confirmLabel="Reset Settings"
             onConfirm={() => { setConfirmResetOpen(false); doResetSettings(); }}
             onCancel={() => setConfirmResetOpen(false)}
           />

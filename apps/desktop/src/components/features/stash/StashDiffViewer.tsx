@@ -174,8 +174,18 @@ export default function StashDiffViewer({ stash }: StashDiffViewerProps) {
       <ConfirmDialog
         open={showDropConfirm}
         title="Drop Stash"
-        message={`Are you sure you want to drop stash@{${stash.index}}? This action cannot be undone.`}
-        confirmLabel="Drop"
+        message={`Permanently delete stash@{${stash.index}}? The stashed changes will be lost forever.`}
+        impactItems={[
+          {
+            label: "Stashed changes will be permanently deleted",
+            severity: "irreversible",
+          },
+          {
+            label: "This cannot be undone — consider applying the stash first if you need the changes",
+            severity: "warning",
+          },
+        ]}
+        confirmLabel="Drop Stash"
         cancelLabel="Cancel"
         variant="destructive"
         onConfirm={() => { setShowDropConfirm(false); handleAction("drop"); }}

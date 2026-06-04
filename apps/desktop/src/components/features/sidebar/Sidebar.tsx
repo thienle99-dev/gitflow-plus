@@ -510,7 +510,22 @@ export default function Sidebar() {
     <ConfirmDialog
       open={!!confirmDeleteBranch}
       title="Delete Branch"
-      message={`Delete branch "${confirmDeleteBranch}"?`}
+      message={`Are you sure you want to delete the branch "${confirmDeleteBranch}"?`}
+      impactItems={[
+        {
+          label: "The branch reference will be permanently removed",
+          severity: "irreversible",
+          details: confirmDeleteBranch ? [confirmDeleteBranch] : undefined,
+        },
+        {
+          label: "Commits unique to this branch may become unreachable",
+          severity: "warning",
+        },
+        {
+          label: "Remote tracking branch (if any) is not affected",
+          severity: "info",
+        },
+      ]}
       confirmLabel="Delete"
       cancelLabel="Cancel"
       variant="destructive"

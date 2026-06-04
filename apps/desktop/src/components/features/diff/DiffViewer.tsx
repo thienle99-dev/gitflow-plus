@@ -284,8 +284,18 @@ export default function DiffViewer({
     <ConfirmDialog
       open={!!confirmDiscardHunk}
       title="Discard Hunk"
-      message="Discard this hunk from the working tree?"
-      confirmLabel="Discard"
+      message="Discard this hunk from the working tree? The selected code block will be reverted to its committed state."
+      impactItems={[
+        {
+          label: "Lines in this hunk will be reverted to the committed version",
+          severity: "irreversible",
+        },
+        {
+          label: "Other changes in the same file are preserved",
+          severity: "info",
+        },
+      ]}
+      confirmLabel="Discard Hunk"
       variant="destructive"
       onConfirm={() => confirmDiscardHunk && doDiscardHunk(confirmDiscardHunk.hunk, confirmDiscardHunk.index)}
       onCancel={() => setConfirmDiscardHunk(null)}
@@ -293,8 +303,18 @@ export default function DiffViewer({
     <ConfirmDialog
       open={!!confirmDiscardLine}
       title="Discard Line"
-      message="Discard this line from the working tree?"
-      confirmLabel="Discard"
+      message="Discard this line from the working tree? The selected line will be reverted to its committed state."
+      impactItems={[
+        {
+          label: "This line will be reverted to the committed version",
+          severity: "irreversible",
+        },
+        {
+          label: "Other changes in the same file are preserved",
+          severity: "info",
+        },
+      ]}
+      confirmLabel="Discard Line"
       variant="destructive"
       onConfirm={() => confirmDiscardLine && doDiscardLine(confirmDiscardLine.hunk, confirmDiscardLine.lineIndex)}
       onCancel={() => setConfirmDiscardLine(null)}

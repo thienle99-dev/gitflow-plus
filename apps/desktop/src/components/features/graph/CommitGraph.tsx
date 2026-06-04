@@ -405,7 +405,17 @@ export default function CommitGraph() {
     <ConfirmDialog
       open={!!confirmCherryPick}
       title="Cherry-pick Commit"
-      message={`Are you sure you want to cherry-pick commit ${confirmCherryPick?.substring(0, 7)}?`}
+      message={`Apply the changes from commit ${confirmCherryPick?.substring(0, 7)} onto the current branch?`}
+      impactItems={[
+        {
+          label: "A new commit will be created with the same changes on the current branch",
+          severity: "info",
+        },
+        {
+          label: "May cause conflicts if the changes overlap with current work",
+          severity: "warning",
+        },
+      ]}
       confirmLabel="Cherry-pick"
       cancelLabel="Cancel"
       onConfirm={() => doCherryPick(confirmCherryPick!)}
@@ -414,7 +424,21 @@ export default function CommitGraph() {
     <ConfirmDialog
       open={!!confirmRevert}
       title="Revert Commit"
-      message={`Are you sure you want to revert commit ${confirmRevert?.substring(0, 7)}? This will create a new commit that undoes the changes.`}
+      message={`Create a new commit that undoes the changes from ${confirmRevert?.substring(0, 7)}?`}
+      impactItems={[
+        {
+          label: "A new 'revert' commit will be added to the current branch",
+          severity: "info",
+        },
+        {
+          label: "The original commit is not removed — this is a forward-fix, not a rewrite",
+          severity: "info",
+        },
+        {
+          label: "May cause conflicts if later changes depend on this commit",
+          severity: "warning",
+        },
+      ]}
       confirmLabel="Revert"
       cancelLabel="Cancel"
       variant="destructive"

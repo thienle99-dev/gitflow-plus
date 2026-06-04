@@ -22,6 +22,7 @@ import { api, type AppLogEntry, type DiagnosticBundle } from "@/api/tauri";
 
 interface DiagnosticDialogProps {
   onClose: () => void;
+  initialTab?: "bundle" | "logs";
 }
 
 function InfoRow({ label, value, mono }: { label: string; value: string | number | boolean; mono?: boolean }) {
@@ -62,10 +63,10 @@ function formatDiagnosticsForCopy(d: DiagnosticBundle): string {
   ].join("\n");
 }
 
-export default function DiagnosticDialog({ onClose }: DiagnosticDialogProps) {
+export default function DiagnosticDialog({ onClose, initialTab = "bundle" }: DiagnosticDialogProps) {
   const repoPath = useRepoStore((s) => s.repoPath);
   const { data: diag, isLoading, error } = useDiagnostics(repoPath);
-  const [activeTab, setActiveTab] = useState<"bundle" | "logs">("bundle");
+  const [activeTab, setActiveTab] = useState<"bundle" | "logs">(initialTab);
   const [copied, setCopied] = useState(false);
   const [logCopied, setLogCopied] = useState(false);
   const [logEntries, setLogEntries] = useState<AppLogEntry[]>([]);
