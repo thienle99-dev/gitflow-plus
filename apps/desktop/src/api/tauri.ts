@@ -134,6 +134,21 @@ export interface CherryPickResult {
   conflicted_files: string[];
 }
 
+export interface PreflightResult {
+  dirty_worktree: boolean;
+  dirty_file_count: number;
+  has_untracked_files: boolean;
+  untracked_file_count: number;
+  detached_head: boolean;
+  merge_in_progress: boolean;
+  rebase_in_progress: boolean;
+  cherry_pick_in_progress: boolean;
+  has_conflicts: boolean;
+  conflicted_files: string[];
+  current_branch: string | null;
+  warnings: string[];
+}
+
 export interface BlameLine {
   line_number: number;
   commit_hash: string;
@@ -482,5 +497,9 @@ export const api = {
         invoke<HealthReport>("repo_health_check", { path }),
       diagnostics: (path: string) =>
         invoke<DiagnosticBundle>("diagnostic_bundle", { path }),
+    },
+    preflight: {
+      check: (path: string) =>
+        invoke<PreflightResult>("preflight_check", { path }),
     },
   };
