@@ -514,7 +514,7 @@ export default function WorkingTree() {
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [commitMessage, repoPath]);
+  }, [commitMessage, repoPath, handleCommit]);
 
   const ctxItems: ContextMenuItem[] = ctxMenu
     ? [

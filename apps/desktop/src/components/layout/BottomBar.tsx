@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Book, GitBranch, ArrowUp, ArrowDown, Loader2, GraduationCap, AlertTriangle, Terminal, Activity } from "lucide-react";
 import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
@@ -8,29 +9,60 @@ import { useOperationsStore } from "@/stores/operations";
 import { useLogsPanelStore } from "@/stores/logs";
 import { GitPet } from "@/components/features/git-pet";
 
+/** Stable predicate — avoids recreating function on every render */
+const isBackgroundQuery = (query: any) => {
+  const key = query.queryKey;
+  if (Array.isArray(key) && key[0] === "git") {
+    const type = key[2];
+    const ignoredTypes = ["diff", "commit-files", "blame", "stash", "file-history", "search", "compare"];
+    return typeof type === "string" && !ignoredTypes.includes(type);
+  }
+  return false;
+};
+
+/**
+ * Isolated loading indicator — subscribes to useIsFetching / useIsMutating
+ * so the parent BottomBar doesn't re-render on every query state change.
+ */
+const LoadingIndicator = memo(function LoadingIndicator() {
+  const isFetching = useIsFetching({ predicate: isBackgroundQuery });
+  const isMutating = useIsMutating();
+  const isLoading = isFetching > 0 || isMutating > 0;
+
+  return (
+    <div className="flex items-center gap-1.5 border-r border-border-20 pr-3 mr-3 h-4 min-w-[56px]">
+      {isLoading ? (
+        <>
+          <Loader2 size={11} className="animate-spin text-accent shrink-0" />
+          <span className="font-semibold text-text-secondary">
+            {isMutating > 0 ? "Running" : "Syncing"}
+          </span>
+        </>
+      ) : (
+        <>
+          <span className="relative flex h-1.5 w-1.5 shrink-0">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#30d158] opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#30d158]"></span>
+          </span>
+          <span className="font-semibold text-text-secondary">Ready</span>
+        </>
+      )}
+    </div>
+  );
+});
+
+/** Count of running operations — stable selector, returns number (primitive) */
+const selectRunningOpsCount = (s: { operations: Array<{ status: string }> }) =>
+  s.operations.reduce((n, o) => (o.status === "running" ? n + 1 : n), 0);
+
 export default function BottomBar() {
   const repoPath = useRepoStore((s) => s.repoPath);
   const openDialogState = useUIStore((s) => s.openDialog);
   const opsOpen = useOperationsStore((s) => s.isOpen);
   const toggleOps = useOperationsStore((s) => s.toggleOpen);
-  const runningOps = useOperationsStore((s) => s.operations.filter((o) => o.status === "running").length);
+  const runningOps = useOperationsStore(selectRunningOpsCount);
   const logsOpen = useLogsPanelStore((s) => s.isOpen);
   const toggleLogs = useLogsPanelStore((s) => s.toggleOpen);
-
-  // Monitor global background fetch/mutation progress
-  const isFetching = useIsFetching({
-    predicate: (query) => {
-      const key = query.queryKey;
-      if (Array.isArray(key) && key[0] === "git") {
-        const type = key[2];
-        const ignoredTypes = ["diff", "commit-files", "blame", "stash", "file-history", "search", "compare"];
-        return typeof type === "string" && !ignoredTypes.includes(type);
-      }
-      return false;
-    },
-  });
-  const isMutating = useIsMutating();
-  const isLoading = isFetching > 0 || isMutating > 0;
 
   // Fetch Git details only if we have an active repository
   const { data: branches } = useGitBranches(repoPath);
@@ -59,25 +91,8 @@ export default function BottomBar() {
 
     <div className="h-[26px] border-t border-border-60 bg-surface-1-40 backdrop-blur-md flex items-center px-4 text-2xs text-text-muted select-none shrink-0">
 
-      {/* Connection / State Indicator (Pulse Dot / Loader) */}
-      <div className="flex items-center gap-1.5 border-r border-border-20 pr-3 mr-3 h-4 min-w-[56px]">
-        {isLoading ? (
-          <>
-            <Loader2 size={11} className="animate-spin text-accent shrink-0" />
-            <span className="font-semibold text-text-secondary">
-              {isMutating > 0 ? "Running" : "Syncing"}
-            </span>
-          </>
-        ) : (
-          <>
-            <span className="relative flex h-1.5 w-1.5 shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#30d158] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#30d158]"></span>
-            </span>
-            <span className="font-semibold text-text-secondary">Ready</span>
-          </>
-        )}
-      </div>
+      {/* Connection / State Indicator — isolated in its own memoized component */}
+      <LoadingIndicator />
 
       {/* Contextual Git Metrics */}
       {repoPath && (

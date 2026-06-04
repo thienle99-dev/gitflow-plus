@@ -36,28 +36,32 @@ const IDLE_TIMEOUT_MS = 60_000;
 const BLINK_MIN_MS = 3_000;
 const BLINK_MAX_MS = 8_000;
 
+/** Stable predicate — shared across renders to avoid useIsFetching resubscribing */
+const isBackgroundQuery = (query: any) => {
+  const key = query.queryKey;
+  if (Array.isArray(key) && key[0] === "git") {
+    const type = key[2];
+    const ignoredTypes = ["diff", "commit-files", "blame", "stash", "file-history", "search", "compare"];
+    return typeof type === "string" && !ignoredTypes.includes(type);
+  }
+  return false;
+};
+
+/** Stable selector — returns the operation id (primitive) instead of the whole object */
+const selectLastCompletedOrFailedId = (s: { operations: Array<{ id: string; status: string }> }) =>
+  s.operations.find((op) => op.status === "completed" || op.status === "failed")?.id ?? null;
+
 export function usePetState(): PetState {
   const repoPath = useRepoStore((s) => s.repoPath);
-  const isFetching = useIsFetching({
-    predicate: (query) => {
-      const key = query.queryKey;
-      if (Array.isArray(key) && key[0] === "git") {
-        const type = key[2];
-        const ignoredTypes = ["diff", "commit-files", "blame", "stash", "file-history", "search", "compare"];
-        return typeof type === "string" && !ignoredTypes.includes(type);
-      }
-      return false;
-    },
-  });
+  const isFetching = useIsFetching({ predicate: isBackgroundQuery });
   const isMutating = useIsMutating();
   const isLoading = isFetching > 0 || isMutating > 0;
 
   const { data: mergeStatus } = useMergeStatus(repoPath);
   const hasConflicts = !!mergeStatus?.conflicts?.length;
 
-  const lastOperation = useOperationsStore((s) =>
-    s.operations.find((op) => op.status === "completed" || op.status === "failed"),
-  );
+  // Use primitive id selector so Zustand only re-renders when the id actually changes
+  const lastOperationId = useOperationsStore(selectLastCompletedOrFailedId);
   const opsStore = useOperationsStore;
 
   // Internal state driven by timers
@@ -125,16 +129,20 @@ export function usePetState(): PetState {
   // Track operation completion → success/error/excited
   const lastOpIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!lastOperation) return;
-    if (lastOperation.id === lastOpIdRef.current) return;
-    lastOpIdRef.current = lastOperation.id;
+    if (!lastOperationId) return;
+    if (lastOperationId === lastOpIdRef.current) return;
+    lastOpIdRef.current = lastOperationId;
 
-    if (lastOperation.status === "failed") {
+    // Look up the full operation from the store (primitive id change triggers effect)
+    const op = opsStore.getState().operations.find((o) => o.id === lastOperationId);
+    if (!op) return;
+
+    if (op.status === "failed") {
       setTimerState("error");
       clearTimeout(resetTimerRef.current);
       resetTimerRef.current = setTimeout(() => setTimerState("idle"), 1000);
-    } else if (lastOperation.status === "completed") {
-      if (lastOperation.type === "git" && lastOperation.label.toLowerCase().includes("push")) {
+    } else if (op.status === "completed") {
+      if (op.type === "git" && op.label.toLowerCase().includes("push")) {
         setTimerState("excited");
         clearTimeout(resetTimerRef.current);
         resetTimerRef.current = setTimeout(() => setTimerState("idle"), 600);
@@ -144,7 +152,7 @@ export function usePetState(): PetState {
         resetTimerRef.current = setTimeout(() => setTimerState("idle"), 1200);
       }
     }
-  }, [lastOperation]);
+  }, [lastOperationId, opsStore]);
 
   // Cleanup timers
   useEffect(() => {

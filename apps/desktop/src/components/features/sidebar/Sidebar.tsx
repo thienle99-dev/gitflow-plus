@@ -74,8 +74,8 @@ export default function Sidebar() {
     }
   };
 
-  const localBranches = branches?.filter((b) => !b.remote) || [];
-  const remoteBranches = branches?.filter((b) => b.remote) || [];
+  const localBranches = useMemo(() => branches?.filter((b) => !b.remote) || [], [branches]);
+  const remoteBranches = useMemo(() => branches?.filter((b) => b.remote) || [], [branches]);
 
   const [collapsedBranchFolders, setCollapsedBranchFolders] = useState<Set<string>>(new Set());
 
