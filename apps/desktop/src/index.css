@@ -26,6 +26,52 @@
   --heatmap-max: #216e39;
 }
 
+/* macOS 26 Liquid Glass Dark */
+.macos-26 {
+  --surface-0: rgba(22, 22, 26, 0.88);
+  --surface-1: rgba(38, 38, 44, 0.82);
+  --surface-2: rgba(52, 52, 60, 0.78);
+  --surface-3: rgba(68, 68, 78, 0.72);
+  --accent: #1472e6;
+  --accent-fg: #ffffff;
+  --border: rgba(255, 255, 255, 0.10);
+  --text-primary: #f0f0f5;
+  --text-secondary: #a8a8b8;
+  --text-muted: #6b6b7e;
+  --success: #32d74b;
+  --danger: #ff453a;
+  --warning: #ff9f0a;
+  --info: #64d2ff;
+  --heatmap-empty: rgba(38, 38, 44, 0.6);
+  --heatmap-low: #0a3d1a;
+  --heatmap-medium: #0f7a38;
+  --heatmap-high: #27c453;
+  --heatmap-max: #32d74b;
+}
+
+/* macOS 26 Liquid Glass Light */
+.macos-26-light {
+  --surface-0: rgba(255, 255, 255, 0.85);
+  --surface-1: rgba(242, 242, 247, 0.80);
+  --surface-2: rgba(228, 228, 235, 0.75);
+  --surface-3: rgba(210, 210, 220, 0.70);
+  --accent: #007aff;
+  --accent-fg: #ffffff;
+  --border: rgba(0, 0, 0, 0.08);
+  --text-primary: #1d1d1f;
+  --text-secondary: #515154;
+  --text-muted: #86868b;
+  --success: #28a745;
+  --danger: #dc3545;
+  --warning: #ff9500;
+  --info: #007aff;
+  --heatmap-empty: rgba(228, 228, 235, 0.6);
+  --heatmap-low: #9be9a8;
+  --heatmap-medium: #40c463;
+  --heatmap-high: #30a14e;
+  --heatmap-max: #216e39;
+}
+
 .dark {
   --surface-0: #1c1c1e;
   --surface-1: #2c2c2e;
@@ -451,6 +497,14 @@ body.tray-window #root {
   -webkit-backdrop-filter: blur(20px);
 }
 
+/* Enhanced vibrancy for macOS 26 Liquid Glass */
+.macos-26 .vibrancy,
+.macos-26-light .vibrancy {
+  backdrop-filter: blur(40px) saturate(1.8);
+  -webkit-backdrop-filter: blur(40px) saturate(1.8);
+  background-color: color-mix(in srgb, var(--surface-1) 72%, transparent);
+}
+
 /* macOS-style list selection */
 .tree-item {
   cursor: pointer;
@@ -527,16 +581,18 @@ body.tray-window #root {
   background: color-mix(in srgb, var(--surface-1) 78%, transparent) !important;
   color: var(--text-primary) !important;
   border: 1px solid color-mix(in srgb, var(--border) 72%, transparent) !important;
-  border-radius: 12px !important;
+  border-radius: 10px !important;
   box-shadow:
-    0 18px 42px rgba(0, 0, 0, 0.24),
+    0 14px 34px rgba(0, 0, 0, 0.2),
     0 1px 0 color-mix(in srgb, var(--text-primary) 10%, transparent) inset !important;
-  backdrop-filter: blur(18px) saturate(1.35) !important;
-  -webkit-backdrop-filter: blur(18px) saturate(1.35) !important;
+  backdrop-filter: blur(16px) saturate(1.28) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(1.28) !important;
   opacity: 0.96 !important;
   overflow: visible !important;
-  min-height: 54px !important;
-  padding: 14px 18px !important;
+  min-height: 42px !important;
+  width: min(440px, calc(100vw - 32px)) !important;
+  padding: 9px 13px !important;
+  gap: 10px !important;
 }
 
 [data-sonner-toast] [data-icon],
@@ -547,10 +603,14 @@ body.tray-window #root {
 
 [data-sonner-toast] [data-icon] {
   opacity: 0.92 !important;
+  width: 18px !important;
+  height: 18px !important;
 }
 
 [data-sonner-toast] [data-title] {
+  font-size: 11.5px !important;
   font-weight: 650 !important;
+  line-height: 18px !important;
   letter-spacing: 0 !important;
 }
 
@@ -582,9 +642,11 @@ body.tray-window #root {
   background: color-mix(in srgb, var(--surface-2) 82%, transparent) !important;
   color: var(--text-secondary) !important;
   border-color: color-mix(in srgb, var(--border) 72%, transparent) !important;
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
+  width: 24px !important;
+  height: 24px !important;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.16) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
   transition: background 150ms ease, color 150ms ease, transform 150ms ease !important;
 }
 

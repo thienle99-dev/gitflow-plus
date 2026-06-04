@@ -10,6 +10,9 @@ export const THEME_CARDS = [
   { id: "dark",             label: "macOS Dark",   group: "OS Sync",       colors: { bg: "#1c1c1e", surface: "#2c2c2e", sidebar: "#111113", accent: "#0a84ff", text: "#f5f5f7" } },
   { id: "light",            label: "macOS Light",  group: "OS Sync",       colors: { bg: "#ffffff", surface: "#f2f2f7", sidebar: "#e8e8ed", accent: "#007aff", text: "#1d1d1f" } },
   
+  { id: "macos-26",         label: "macOS 26 Dark",  group: "macOS 26 Liquid Glass", colors: { bg: "#16161a", surface: "#26262c", sidebar: "#121216", accent: "#1472e6", text: "#f0f0f5" } },
+  { id: "macos-26-light",   label: "macOS 26 Light", group: "macOS 26 Liquid Glass", colors: { bg: "#ffffff", surface: "#f2f2f7", sidebar: "#e4e4eb", accent: "#007aff", text: "#1d1d1f" } },
+  
   { id: "github-dark",      label: "GitHub Dark",  group: "Developer Classics", colors: { bg: "#0d1117", surface: "#161b22", sidebar: "#010409", accent: "#2f81f7", text: "#c9d1d9" } },
   { id: "nord",             label: "Nord Arctic",  group: "Developer Classics", colors: { bg: "#2e3440", surface: "#3b4252", sidebar: "#242933", accent: "#88c0d0", text: "#d8dee9" } },
   { id: "tokyo-night",      label: "Tokyo Night",  group: "Developer Classics", colors: { bg: "#1a1b26", surface: "#1f2335", sidebar: "#16161e", accent: "#7aa2f7", text: "#a9b1d6" } },
@@ -29,7 +32,7 @@ export const THEME_CARDS = [
   { id: "gruvbox-light-soft",label:"Light Soft",   group: "Gruvbox Light", colors: { bg: "#f2e5bc", surface: "#ebdbb2", sidebar: "#d5c4a1", accent: "#b57614", text: "#3c3836" } },
 ] as const;
 
-export const THEME_GROUPS = ["OS Sync", "Developer Classics", "Highly Personalized", "Gruvbox Dark", "Gruvbox Light"] as const;
+export const THEME_GROUPS = ["OS Sync", "macOS 26 Liquid Glass", "Developer Classics", "Highly Personalized", "Gruvbox Dark", "Gruvbox Light"] as const;
 
 export function ThemeSkeletonCard({ card, selected, onClick }: {
   card: typeof THEME_CARDS[number];

@@ -19,7 +19,9 @@ export type Theme =
   | "one-dark"
   | "catppuccin-mocha"
   | "rose-pine"
-  | "solarized-dark";
+  | "solarized-dark"
+  | "macos-26"
+  | "macos-26-light";
 
 export const THEME_CLASSES: Theme[] = [
   "dark",
@@ -40,10 +42,12 @@ export const THEME_CLASSES: Theme[] = [
   "catppuccin-mocha",
   "rose-pine",
   "solarized-dark",
+  "macos-26",
+  "macos-26-light",
 ];
 
 const isDarkTheme = (theme: Theme): boolean => {
-  if (theme === "light" || theme.startsWith("gruvbox-light")) return false;
+  if (theme === "light" || theme.startsWith("gruvbox-light") || theme === "macos-26-light") return false;
   if (theme === "system") {
     if (typeof window === "undefined") return false;
     return window.matchMedia("(prefers-color-scheme: dark)").matches;

@@ -5,7 +5,7 @@ import { Palette } from "lucide-react";
 interface ThemeOption {
   id: Theme;
   label: string;
-  group: "macOS" | "Gruvbox Dark" | "Gruvbox Light";
+  group: "macOS" | "macOS 26" | "Gruvbox Dark" | "Gruvbox Light";
   colors: { bg: string; accent: string; text: string };
 }
 
@@ -13,6 +13,9 @@ const THEME_OPTIONS: ThemeOption[] = [
   // macOS
   { id: "dark", label: "macOS Dark", group: "macOS", colors: { bg: "#1c1c1e", accent: "#0a84ff", text: "#f5f5f7" } },
   { id: "light", label: "macOS Light", group: "macOS", colors: { bg: "#ffffff", accent: "#007aff", text: "#1d1d1f" } },
+  // macOS 26
+  { id: "macos-26", label: "macOS 26 Dark", group: "macOS 26", colors: { bg: "#16161a", accent: "#1472e6", text: "#f0f0f5" } },
+  { id: "macos-26-light", label: "macOS 26 Light", group: "macOS 26", colors: { bg: "#ffffff", accent: "#007aff", text: "#1d1d1f" } },
   // Gruvbox Dark
   { id: "gruvbox-dark", label: "Dark Medium", group: "Gruvbox Dark", colors: { bg: "#282828", accent: "#d79921", text: "#ebdbb2" } },
   { id: "gruvbox-dark-soft", label: "Dark Soft", group: "Gruvbox Dark", colors: { bg: "#32302f", accent: "#d79921", text: "#ebdbb2" } },
@@ -22,7 +25,7 @@ const THEME_OPTIONS: ThemeOption[] = [
   { id: "gruvbox-light-soft", label: "Light Soft", group: "Gruvbox Light", colors: { bg: "#f2e5bc", accent: "#b57614", text: "#3c3836" } },
 ];
 
-const GROUPS = ["macOS", "Gruvbox Dark", "Gruvbox Light"] as const;
+const GROUPS = ["macOS", "macOS 26", "Gruvbox Dark", "Gruvbox Light"] as const;
 
 export default function ThemePicker() {
   const theme = useRepoStore((s) => s.theme);
