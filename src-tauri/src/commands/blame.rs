@@ -6,6 +6,7 @@ pub struct BlameLine {
     pub line_number: u32,
     pub commit_hash: String,
     pub author: String,
+    pub email: String,
     pub date: String,
     pub content: String,
 }
@@ -33,6 +34,7 @@ pub async fn git_blame(path: &str, file_path: &str) -> Result<Vec<BlameLine>, St
     let mut lines = Vec::new();
     let mut current_hash = String::new();
     let mut current_author = String::new();
+    let mut current_email = String::new();
     let mut current_date = String::new();
     let mut reading_header = true;
 
@@ -44,10 +46,15 @@ pub async fn git_blame(path: &str, file_path: &str) -> Result<Vec<BlameLine>, St
                     line_number: lines.len() as u32 + 1,
                     commit_hash: current_hash.clone(),
                     author: current_author.clone(),
+                    email: current_email.clone(),
                     date: current_date.clone(),
                     content: line[1..].to_string(), // strip leading tab
                 });
                 reading_header = false;
+            } else if line.starts_with("author-mail ") {
+                // Extract email from <user@example.com>
+                let raw = &line[12..];
+                current_email = raw.trim().trim_start_matches('<').trim_end_matches('>').to_string();
             } else if line.starts_with("author ") {
                 current_author = line[6..].to_string();
             } else if line.starts_with("author-time ") {
@@ -69,6 +76,7 @@ pub async fn git_blame(path: &str, file_path: &str) -> Result<Vec<BlameLine>, St
                 line_number: lines.len() as u32 + 1,
                 commit_hash: current_hash.clone(),
                 author: current_author.clone(),
+                email: current_email.clone(),
                 date: current_date.clone(),
                 content: line[1..].to_string(),
             });
@@ -81,6 +89,7 @@ pub async fn git_blame(path: &str, file_path: &str) -> Result<Vec<BlameLine>, St
                 }
             }
             current_author.clear();
+            current_email.clear();
             current_date.clear();
         }
     }

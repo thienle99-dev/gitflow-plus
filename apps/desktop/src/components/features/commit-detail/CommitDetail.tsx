@@ -17,6 +17,7 @@ import {
   List,
   FolderTree,
 } from "lucide-react";
+import { GravatarImg } from "@/components/ui/shared";
 import { useAICommitExplain, useAICommitReview } from "@/queries/useAI";
 import { AI_REVIEW_MODE_OPTIONS, readLastAIReviewMode, saveLastAIReviewMode, type AIReviewMode } from "@/lib/ai";
 import { showToast } from "@/lib/toast";
@@ -210,7 +211,7 @@ export default function CommitDetail() {
           <span className="font-mono">{commit.hash.slice(0, 7)}</span>
         </div>
         <div className="flex items-center gap-1.5 text-2xs text-text-secondary">
-          <User size={10} />
+          <GravatarImg email={commit.email} size={14} />
           <span>{commit.author}</span>
         </div>
         <div className="flex items-center gap-1.5 text-2xs text-text-muted">

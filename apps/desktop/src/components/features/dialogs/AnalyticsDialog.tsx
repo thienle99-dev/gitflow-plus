@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { api, type Commit } from "@/api/tauri";
 import { X, BarChart3, GitCommit, Award, Calendar, CheckCircle, RefreshCw } from "lucide-react";
+import { GravatarImg } from "@/components/ui/shared";
 
 interface AnalyticsDialogProps {
   open: boolean;
@@ -89,8 +90,12 @@ export default function AnalyticsDialog({ open, onClose }: AnalyticsDialogProps)
 
     // 2. Commits by Author
     const authorCounts: Record<string, number> = {};
+    const authorEmailMap: Record<string, string> = {};
     commits.forEach((c) => {
       authorCounts[c.author] = (authorCounts[c.author] || 0) + 1;
+      if (c.email && !authorEmailMap[c.author]) {
+        authorEmailMap[c.author] = c.email;
+      }
     });
     const topAuthors = Object.entries(authorCounts)
       .sort((a, b) => b[1] - a[1])

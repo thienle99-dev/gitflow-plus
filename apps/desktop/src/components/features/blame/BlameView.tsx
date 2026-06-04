@@ -1,6 +1,7 @@
 import { useRepoStore } from "@/stores/repo";
 import { useGitBlame } from "@/queries/useGitBlame";
 import { GitCommit, Loader2 } from "lucide-react";
+import { GravatarImg } from "@/components/ui/shared";
 
 interface BlameViewProps {
   filePath: string | null;
@@ -84,7 +85,10 @@ export default function BlameView({ filePath, onClose }: BlameViewProps) {
                       </span>
                     </td>
                     <td className="px-2 py-[1px] text-2xs text-text-muted truncate" title={line.author}>
-                      {line.author}
+                      <span className="inline-flex items-center gap-1">
+                        <GravatarImg email={line.email} size={12} />
+                        {line.author}
+                      </span>
                     </td>
                     <td className="px-2 py-[1px] text-2xs text-text-muted">
                       {formatShortDate(line.date)}

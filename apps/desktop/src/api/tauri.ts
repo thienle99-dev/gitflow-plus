@@ -138,6 +138,7 @@ export interface BlameLine {
   line_number: number;
   commit_hash: string;
   author: string;
+  email: string;
   date: string;
   content: string;
 }
