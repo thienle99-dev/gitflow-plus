@@ -338,7 +338,7 @@ export default function MainLayout() {
   const dialogComponents: Record<string, React.ReactNode> = {
     search: <SearchDialog open={true} onClose={closeDialog} />,
     settings: <SettingsDialog onClose={closeDialog} />,
-    "ai-settings": <SettingsDialog onClose={closeDialog} />,
+    "ai-settings": <SettingsDialog initialTab="ai" onClose={closeDialog} />,
     "accounts-settings": <SettingsDialog initialTab="accounts" onClose={closeDialog} />,
     "keyboard-shortcuts": <KeyboardShortcutsModal open={true} onClose={closeDialog} />,
     "cherry-pick": (

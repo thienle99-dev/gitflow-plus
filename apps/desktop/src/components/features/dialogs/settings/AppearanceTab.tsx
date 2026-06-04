@@ -1,11 +1,15 @@
 import { ChevronDown, Database, Gauge, Keyboard, ShieldAlert, Trash2 } from "lucide-react";
 import { Switch } from "@/components/ui/form";
+import { PetSelectorCard } from "@/components/features/git-pet/PetSelectorCard";
+import type { PetType } from "@/components/features/git-pet/pet-types";
 
 interface AppearanceTabProps {
   largeDiffMode: "full" | "prompt" | "summary";
   setLargeDiffMode: (v: "full" | "prompt" | "summary") => void;
   reducedMotion: boolean;
   setReducedMotion: (v: boolean) => void;
+  petType: PetType;
+  setPetType: (v: PetType) => void;
   handleClearAiCredentials: () => void;
   handleClearRecentRepos: () => void;
 }
@@ -15,11 +19,16 @@ export function AppearanceTab({
   setLargeDiffMode,
   reducedMotion,
   setReducedMotion,
+  petType,
+  setPetType,
   handleClearAiCredentials,
   handleClearRecentRepos,
 }: AppearanceTabProps) {
   return (
     <div className="space-y-4">
+      {/* Git Pet Selector */}
+      <PetSelectorCard selected={petType} onSelect={setPetType} />
+
       {/* Performance Tuning Card */}
       <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
         <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary mb-1">

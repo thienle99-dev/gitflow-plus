@@ -6,6 +6,8 @@ import {
   Gauge,
   GitBranch,
   Link,
+  Palette,
+  PawPrint,
   RotateCcw,
   Settings,
   Sliders,
@@ -17,10 +19,12 @@ import type { ConventionFile } from "@/api/tauri";
 import { api } from "@/api/tauri";
 import {
   GeneralTab,
+  DisplayTab,
   AITab,
   IntegrationsTab,
   GitTab,
   AppearanceTab,
+  PetTab,
 } from "./settings";
 import {
   loadProfiles,
@@ -40,6 +44,8 @@ import {
   type AIProviderType,
   defaultApiUrlForProvider,
 } from "@/lib/ai-profiles";
+import type { PetType } from "@/components/features/git-pet/pet-types";
+import { LS_KEY_PET_TYPE, DEFAULT_PET } from "@/components/features/git-pet/pet-types";
 
 // Re-export for backward compatibility (OnboardingWizard imports these)
 export { ThemeSkeletonCard, THEME_CARDS, THEME_GROUPS } from "./settings/GeneralTab";
@@ -114,11 +120,12 @@ const SETTINGS_KEYS = [
   LS_KEY_LINT_STRICTNESS,
   "gitflowAiProfiles",
   "gitflowActiveAiProfileId",
+  LS_KEY_PET_TYPE,
 ];
 
 interface SettingsDialogProps {
   onClose?: () => void;
-  initialTab?: "general" | "git" | "accounts" | "ai" | "advanced";
+  initialTab?: "general" | "appearance" | "pet" | "git" | "accounts" | "ai" | "advanced";
 }
 
 export default function SettingsDialog({ onClose, initialTab = "general" }: SettingsDialogProps) {
@@ -126,7 +133,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
   const setTheme = useRepoStore((s) => s.setTheme);
   const repoPath = useRepoStore((s) => s.repoPath);
 
-  const [activeTab, setActiveTab] = useState<"general" | "git" | "accounts" | "ai" | "advanced">(initialTab);
+  const [activeTab, setActiveTab] = useState<"general" | "appearance" | "pet" | "git" | "accounts" | "ai" | "advanced">(initialTab);
   
   // General Tab States
   const [theme, setSelectedTheme] = useState<typeof currentTheme>(currentTheme);
@@ -181,6 +188,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
   // Advanced Tab States
   const [largeDiffMode, setLargeDiffMode] = useState<"full" | "prompt" | "summary">("prompt");
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [petType, setPetType] = useState<PetType>(DEFAULT_PET);
 
   // Accounts Tab States
   const [githubToken, setGithubToken] = useState("");
@@ -257,6 +265,8 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       if (savedDiffLineWrap !== null) setDiffLineWrap(savedDiffLineWrap === "true");
       if (savedLargeDiffMode) setLargeDiffMode(savedLargeDiffMode);
       if (savedReducedMotion !== null) setReducedMotion(savedReducedMotion === "true");
+      const savedPetType = localStorage.getItem(LS_KEY_PET_TYPE);
+      if (savedPetType) setPetType(savedPetType as PetType);
       if (savedDetailLevel) setAiDetailLevel(savedDetailLevel);
       if (savedCommitStyle) setCommitStyle(savedCommitStyle);
       setCustomRules(savedCustomRules);
@@ -328,6 +338,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       diffLineWrap,
       largeDiffMode,
       reducedMotion,
+      petType,
       provider,
       apiKey,
       apiUrl,
@@ -351,7 +362,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
     confirmDangerous, reopenLastRepo, recentRepoLimit,
     commitLintEnabled, codeLintEnabled, lintStrictness,
     graphDensity, graphShowHash, graphShowAuthor, graphShowDate,
-    diffContext, diffLineWrap, largeDiffMode, reducedMotion,
+    diffContext, diffLineWrap, largeDiffMode, reducedMotion, petType,
     provider, apiKey, apiUrl, commitModel, reviewModel, tokenLimit, fetchedModels,
     aiDetailLevel, commitStyle, customRules, reviewLanguage, reviewChecklist,
     githubToken, gitlabToken, gitlabHost, profiles, activeProfileId,
@@ -539,6 +550,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       localStorage.setItem(LS_KEY_DIFF_LINE_WRAP, String(diffLineWrap));
       localStorage.setItem(LS_KEY_LARGE_DIFF_MODE, largeDiffMode);
       localStorage.setItem(LS_KEY_REDUCED_MOTION, String(reducedMotion));
+      localStorage.setItem(LS_KEY_PET_TYPE, petType);
 
       // Save global (non-credential) AI preferences
       localStorage.setItem(LS_KEY_AI_DETAIL_LEVEL, aiDetailLevel);
@@ -633,6 +645,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
     setDiffLineWrap(true);
     setLargeDiffMode("prompt");
     setReducedMotion(false);
+    setPetType(DEFAULT_PET);
 
     // Reset profiles to a single default
     const def = createDefaultProfile();
@@ -687,6 +700,34 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
                 <Sliders size={12} strokeWidth={2.2} />
               </div>
               General
+            </button>
+
+            <button
+              onClick={() => setActiveTab("appearance")}
+              className={`w-full px-2.5 py-1.5 text-xs font-medium rounded-mac flex items-center gap-2.5 transition-all ${
+                activeTab === "appearance"
+                  ? "tab-accent-active font-semibold text-text-primary"
+                  : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
+              }`}
+            >
+              <div className="w-5 h-5 rounded-[5px] bg-[#34c759] flex items-center justify-center text-white shrink-0">
+                <Palette size={12} strokeWidth={2.2} />
+              </div>
+              Appearance
+            </button>
+
+            <button
+              onClick={() => setActiveTab("pet")}
+              className={`w-full px-2.5 py-1.5 text-xs font-medium rounded-mac flex items-center gap-2.5 transition-all ${
+                activeTab === "pet"
+                  ? "tab-accent-active font-semibold text-text-primary"
+                  : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
+              }`}
+            >
+              <div className="w-5 h-5 rounded-[5px] bg-[#af52de] flex items-center justify-center text-white shrink-0">
+                <PawPrint size={12} strokeWidth={2.2} />
+              </div>
+              Git Pet
             </button>
 
             <button
@@ -767,6 +808,8 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
         <div className="px-5 py-3 border-b border-border-60 bg-surface-1-10 shrink-0">
           <h2 className="text-xs font-semibold text-text-primary">
             {activeTab === "general" && "General Settings"}
+            {activeTab === "appearance" && "Appearance & Display"}
+            {activeTab === "pet" && "Git Pet Companion"}
             {activeTab === "git" && "Git Core Settings"}
             {activeTab === "accounts" && "Accounts & Hosting Integrations"}
             {activeTab === "ai" && "AI Assistant Integration"}
@@ -777,7 +820,11 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
         {/* Main Settings Form Scroll Area */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {activeTab === "general" && (
-            <GeneralTab
+            <GeneralTab />
+          )}
+
+          {activeTab === "appearance" && (
+            <DisplayTab
               theme={theme}
               setSelectedTheme={setSelectedTheme}
               defaultDiffMode={defaultDiffMode}
@@ -794,6 +841,13 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
               setDiffContext={setDiffContext}
               diffLineWrap={diffLineWrap}
               setDiffLineWrap={setDiffLineWrap}
+            />
+          )}
+
+          {activeTab === "pet" && (
+            <PetTab
+              petType={petType}
+              setPetType={setPetType}
             />
           )}
 
@@ -885,6 +939,8 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
               setLargeDiffMode={setLargeDiffMode}
               reducedMotion={reducedMotion}
               setReducedMotion={setReducedMotion}
+              petType={petType}
+              setPetType={setPetType}
               handleClearAiCredentials={handleClearAiCredentials}
               handleClearRecentRepos={handleClearRecentRepos}
             />

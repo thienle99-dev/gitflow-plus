@@ -508,8 +508,8 @@ export default function Sidebar() {
         />
       )}
     </nav>
-    <div className="shrink-0 border-t border-border-20 bg-surface-1-20 px-4 pb-3 pt-2">
-      <div className="sidebar-git-pet inline-flex rounded-mac bg-surface-2-30 border border-border-30 px-1.5 py-1 shadow-2xs">
+    <div className="shrink-0 border-t border-border-20 bg-surface-1-20 px-4 pb-5 pt-4">
+      <div className="sidebar-git-pet inline-flex rounded-mac bg-surface-2-30 border border-border-30 px-2.5 py-2 shadow-2xs">
         <GitPet />
       </div>
     </div>

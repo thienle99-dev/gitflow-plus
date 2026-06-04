@@ -3,8 +3,8 @@
 
 /* === BASE SPRITE === */
 .git-pet-sprite {
-  width: 48px;
-  height: 48px;
+  width: 192px;
+  height: 192px;
   position: relative;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
@@ -174,13 +174,13 @@
   position: relative;
 }
 .sidebar-git-pet .git-pet-container {
-  width: 48px;
-  height: 48px;
+  width: 208px;
+  height: 208px;
   justify-content: center;
 }
 .sidebar-git-pet .git-pet-sprite {
-  width: 44px;
-  height: 44px;
+  width: 192px;
+  height: 192px;
 }
 .sidebar-git-pet .pet-bubble {
   left: 0;
@@ -193,8 +193,9 @@
   text-overflow: ellipsis;
 }
 .sidebar-git-pet .pet-zzz {
-  top: -4px;
-  right: 2px;
+  top: -14px;
+  right: 16px;
+  font-size: 20px;
 }
 
 /* === SPEECH BUBBLE === */
@@ -221,18 +222,182 @@
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* === SLEEP ZZZ OVERLAY === */
-.pet-zzz {
+/* === SLEEP ZZZ OVERLAY (DYNAMIC STREAM) === */
+.pet-zzz-container {
   position: absolute;
-  top: -2px;
-  right: -6px;
-  font-size: 8px;
-  animation: pet-zzz-float 1.5s ease-in-out infinite;
+  top: -12px;
+  right: -2px;
+  width: 20px;
+  height: 30px;
   pointer-events: none;
 }
-@keyframes pet-zzz-float {
-  0%, 100% { transform: translateY(0); opacity: 0.4; }
-  50%      { transform: translateY(-4px); opacity: 1; }
+
+.pet-zzz-container span {
+  position: absolute;
+  font-weight: bold;
+  font-family: monospace;
+  color: var(--text-secondary, #a0a0a0);
+  opacity: 0;
+}
+
+.zzz-1 {
+  font-size: 10px;
+  animation: float-zzz 2s infinite 0s;
+}
+.zzz-2 {
+  font-size: 8px;
+  animation: float-zzz 2s infinite 0.6s;
+}
+.zzz-3 {
+  font-size: 6px;
+  animation: float-zzz 2s infinite 1.2s;
+}
+
+@keyframes float-zzz {
+  0% {
+    transform: translate(0, 12px) scale(0.6);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.8;
+  }
+  80% {
+    transform: translate(3px, -4px) scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(6px, -15px) scale(1.2);
+    opacity: 0;
+  }
+}
+
+/* === SUCCESS SPARKLES & STARS === */
+.pet-particles-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.pet-particles-container .star {
+  position: absolute;
+  color: #FFD700;
+  font-size: 10px;
+  opacity: 0;
+}
+
+.star-1 {
+  left: 15%;
+  animation: shoot-star-1 1s ease-out forwards;
+}
+.star-2 {
+  left: 35%;
+  animation: shoot-star-2 1.2s ease-out forwards;
+}
+.star-3 {
+  left: 60%;
+  animation: shoot-star-3 0.8s ease-out forwards;
+}
+.star-4 {
+  left: 80%;
+  animation: shoot-star-4 1.1s ease-out forwards;
+}
+
+@keyframes shoot-star-1 {
+  0% { transform: translateY(8px) scale(0); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: translate(-6px, -20px) scale(1.2) rotate(45deg); opacity: 0; }
+}
+@keyframes shoot-star-2 {
+  0% { transform: translateY(8px) scale(0); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: translate(3px, -28px) scale(1) rotate(-30deg); opacity: 0; }
+}
+@keyframes shoot-star-3 {
+  0% { transform: translateY(8px) scale(0); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: translate(-3px, -24px) scale(1.3) rotate(90deg); opacity: 0; }
+}
+@keyframes shoot-star-4 {
+  0% { transform: translateY(8px) scale(0); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: translate(6px, -22px) scale(0.9) rotate(-15deg); opacity: 0; }
+}
+
+/* === INNER SVG PART ANIMATIONS === */
+
+/* TAIL: Idle slow wag, Excited fast wag */
+.pet-tail {
+  transform-origin: 8px 27px;
+  animation: tail-idle-wag 3s ease-in-out infinite;
+}
+@keyframes tail-idle-wag {
+  0%, 100% { transform: rotate(0deg); }
+  50%      { transform: rotate(-5deg); }
+}
+
+.pet-excited .pet-tail,
+.pet-success .pet-tail {
+  animation: tail-excited-wag 0.2s ease-in-out infinite;
+}
+@keyframes tail-excited-wag {
+  0%, 100% { transform: rotate(-8deg); }
+  50%      { transform: rotate(12deg); }
+}
+
+/* ACCESSORY: Idle gentle bob, excited bounce */
+.pet-accessory {
+  transform-origin: 26px 22px;
+  animation: accessory-idle-bob 2.5s ease-in-out infinite;
+}
+@keyframes accessory-idle-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-0.6px) rotate(1deg); }
+}
+
+.pet-excited .pet-accessory,
+.pet-success .pet-accessory {
+  animation: accessory-excited-bounce 0.4s ease-in-out infinite;
+}
+@keyframes accessory-excited-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-2px) scale(1.04) rotate(4deg); }
+}
+
+/* EARS: Random tiny twitch */
+.pet-ear-left {
+  transform-origin: 8px 6px;
+  animation: ear-twitch-left 5s ease-in-out infinite;
+}
+.pet-ear-right {
+  transform-origin: 24px 6px;
+  animation: ear-twitch-right 5s ease-in-out infinite 0.7s;
+}
+@keyframes ear-twitch-left {
+  0%, 92%, 100% { transform: rotate(0deg); }
+  96%           { transform: rotate(-6deg); }
+}
+@keyframes ear-twitch-right {
+  0%, 92%, 100% { transform: rotate(0deg); }
+  96%           { transform: rotate(6deg); }
+}
+
+/* AXOLOTL GILLS: Gentle flutter */
+.pet-gills-left {
+  transform-origin: 5px 12px;
+  animation: gills-flutter-left 3s ease-in-out infinite;
+}
+.pet-gills-right {
+  transform-origin: 27px 12px;
+  animation: gills-flutter-right 3s ease-in-out infinite;
+}
+@keyframes gills-flutter-left {
+  0%, 100% { transform: scaleX(1); }
+  50%      { transform: scaleX(0.92) skewY(1deg); }
+}
+@keyframes gills-flutter-right {
+  0%, 100% { transform: scaleX(1); }
+  50%      { transform: scaleX(0.92) skewY(-1deg); }
 }
 
 /* === ACCESSIBILITY === */
@@ -240,7 +405,15 @@
   .git-pet-sprite,
   .git-pet-container,
   .pet-bubble,
-  .pet-zzz {
+  .pet-zzz-container,
+  .pet-zzz-container span,
+  .pet-particles-container .star,
+  .pet-tail,
+  .pet-accessory,
+  .pet-ear-left,
+  .pet-ear-right,
+  .pet-gills-left,
+  .pet-gills-right {
     animation: none !important;
     transition: none !important;
   }

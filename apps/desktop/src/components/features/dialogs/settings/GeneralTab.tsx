@@ -13,6 +13,10 @@ export const THEME_CARDS = [
   { id: "nord",             label: "Nord Arctic",  group: "Developer Classics", colors: { bg: "#2e3440", surface: "#3b4252", sidebar: "#242933", accent: "#88c0d0", text: "#d8dee9" } },
   { id: "tokyo-night",      label: "Tokyo Night",  group: "Developer Classics", colors: { bg: "#1a1b26", surface: "#1f2335", sidebar: "#16161e", accent: "#7aa2f7", text: "#a9b1d6" } },
   { id: "dracula",          label: "Dracula",      group: "Developer Classics", colors: { bg: "#282a36", surface: "#343746", sidebar: "#1e1f29", accent: "#ff79c6", text: "#f8f8f2" } },
+  { id: "one-dark",         label: "One Dark Pro",   group: "Developer Classics", colors: { bg: "#282c34", surface: "#21252b", sidebar: "#181a1f", accent: "#61afef", text: "#abb2bf" } },
+  { id: "catppuccin-mocha", label: "Catppuccin Mocha",group: "Developer Classics", colors: { bg: "#1e1e2e", surface: "#181825", sidebar: "#11111b", accent: "#b4befe", text: "#cdd6f4" } },
+  { id: "rose-pine",        label: "Rose Pine",      group: "Developer Classics", colors: { bg: "#191724", surface: "#1f1d2e", sidebar: "#14121d", accent: "#ebbcba", text: "#e0def4" } },
+  { id: "solarized-dark",   label: "Solarized Dark", group: "Developer Classics", colors: { bg: "#002b36", surface: "#073642", sidebar: "#001f27", accent: "#268bd2", text: "#93a1a1" } },
   
   { id: "cyberpunk-green",  label: "Cyberpunk Neon",group: "Highly Personalized",colors: { bg: "#0c0f12", surface: "#161b22", sidebar: "#080a0d", accent: "#39ff14", text: "#e0e6ed" } },
   { id: "monokai-pro",      label: "Monokai Pro",  group: "Highly Personalized",colors: { bg: "#2d2a2e", surface: "#3a373b", sidebar: "#222122", accent: "#ffd866", text: "#fcfcfa" } },
@@ -84,7 +88,7 @@ export function ThemeSkeletonCard({ card, selected, onClick }: {
   );
 }
 
-interface GeneralTabProps {
+interface DisplayTabProps {
   theme: string;
   setSelectedTheme: (theme: any) => void;
   defaultDiffMode: "split" | "unified";
@@ -103,7 +107,103 @@ interface GeneralTabProps {
   setDiffLineWrap: (v: boolean) => void;
 }
 
-export function GeneralTab({
+export function GeneralTab() {
+  const updater = useAppUpdater();
+
+  return (
+    <div className="space-y-4">
+      {/* App Updates Card */}
+      <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <label className="text-xs font-semibold text-text-primary">App Updates</label>
+            <p className="text-2xs text-text-muted">
+              Check for new versions of GitFlow Desktop.
+            </p>
+          </div>
+          <button
+            onClick={updater.checkForUpdates}
+            disabled={updater.status === "checking" || updater.status === "downloading"}
+            className="flex items-center gap-1.5 h-7 px-3 text-xs font-medium rounded-mac border border-border bg-surface-1 text-text-primary hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
+          >
+            {updater.status === "checking" ? (
+              <Loader2 size={12} className="animate-spin" />
+            ) : (
+              <RefreshCw size={12} />
+            )}
+            {updater.status === "checking" ? "Checking…" : "Check for Updates"}
+          </button>
+        </div>
+
+        {/* Status Messages */}
+        {updater.status === "not-available" && (
+          <div className="flex items-center gap-2 p-2 rounded-mac bg-[#30d158]/10 border border-[#30d158]/20 text-2xs text-[#30d158]">
+            <Check size={13} />
+            <span>You're running the latest version.</span>
+          </div>
+        )}
+
+        {updater.status === "error" && (
+          <div className="flex items-center gap-2 p-2 rounded-mac bg-[#ff375f]/10 border border-[#ff375f]/20 text-2xs text-[#ff375f]">
+            <AlertCircle size={13} />
+            <span>{updater.error ?? "Update check failed."}</span>
+          </div>
+        )}
+
+        {updater.status === "available" && updater.updateInfo && (
+          <div className="p-2.5 rounded-mac bg-accent/10 border border-accent/20 space-y-2">
+            <div className="flex items-center gap-2 text-xs text-accent font-semibold">
+              <ArrowUpCircle size={14} />
+              <span>Update available: v{updater.updateInfo.version}</span>
+            </div>
+            {updater.updateInfo.body && (
+              <p className="text-2xs text-text-muted leading-relaxed whitespace-pre-wrap">
+                {updater.updateInfo.body}
+              </p>
+            )}
+            <button
+              onClick={updater.downloadAndInstall}
+              className="flex items-center gap-1.5 h-7 px-3 text-xs font-medium rounded-mac bg-accent text-white hover:opacity-90 transition-all cursor-pointer"
+            >
+              <Download size={12} />
+              Download & Install
+            </button>
+          </div>
+        )}
+
+        {updater.status === "downloading" && (
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 text-2xs text-text-secondary">
+              <Loader2 size={11} className="animate-spin text-accent" />
+              <span>Downloading update… {updater.downloadProgress}%</span>
+            </div>
+            <div className="w-full h-1.5 rounded-full bg-surface-1 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-accent transition-all duration-300"
+                style={{ width: `${updater.downloadProgress}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {updater.status === "ready" && (
+          <div className="flex items-center gap-2 p-2 rounded-mac bg-accent/10 border border-accent/20">
+            <Check size={13} className="text-accent" />
+            <span className="text-2xs text-accent flex-1">Update installed. Restart to apply.</span>
+            <button
+              onClick={updater.relaunch}
+              className="flex items-center gap-1.5 h-7 px-3 text-xs font-medium rounded-mac bg-accent text-white hover:opacity-90 transition-all cursor-pointer"
+            >
+              Restart Now
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function DisplayTab({
   theme,
   setSelectedTheme,
   defaultDiffMode,
@@ -120,9 +220,7 @@ export function GeneralTab({
   setDiffContext,
   diffLineWrap,
   setDiffLineWrap,
-}: GeneralTabProps) {
-  const updater = useAppUpdater();
-
+}: DisplayTabProps) {
   return (
     <div className="space-y-4">
       {/* Color Theme Card */}
@@ -239,94 +337,6 @@ export function GeneralTab({
             ))}
           </div>
         </div>
-      </div>
-
-      {/* App Updates Card */}
-      <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <label className="text-xs font-semibold text-text-primary">App Updates</label>
-            <p className="text-2xs text-text-muted">
-              Check for new versions of GitFlow Desktop.
-            </p>
-          </div>
-          <button
-            onClick={updater.checkForUpdates}
-            disabled={updater.status === "checking" || updater.status === "downloading"}
-            className="flex items-center gap-1.5 h-7 px-3 text-xs font-medium rounded-mac border border-border bg-surface-1 text-text-primary hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
-          >
-            {updater.status === "checking" ? (
-              <Loader2 size={12} className="animate-spin" />
-            ) : (
-              <RefreshCw size={12} />
-            )}
-            {updater.status === "checking" ? "Checking…" : "Check for Updates"}
-          </button>
-        </div>
-
-        {/* Status Messages */}
-        {updater.status === "not-available" && (
-          <div className="flex items-center gap-2 p-2 rounded-mac bg-[#30d158]/10 border border-[#30d158]/20 text-2xs text-[#30d158]">
-            <Check size={13} />
-            <span>You're running the latest version.</span>
-          </div>
-        )}
-
-        {updater.status === "error" && (
-          <div className="flex items-center gap-2 p-2 rounded-mac bg-[#ff375f]/10 border border-[#ff375f]/20 text-2xs text-[#ff375f]">
-            <AlertCircle size={13} />
-            <span>{updater.error ?? "Update check failed."}</span>
-          </div>
-        )}
-
-        {updater.status === "available" && updater.updateInfo && (
-          <div className="p-2.5 rounded-mac bg-accent/10 border border-accent/20 space-y-2">
-            <div className="flex items-center gap-2 text-xs text-accent font-semibold">
-              <ArrowUpCircle size={14} />
-              <span>Update available: v{updater.updateInfo.version}</span>
-            </div>
-            {updater.updateInfo.body && (
-              <p className="text-2xs text-text-muted leading-relaxed whitespace-pre-wrap">
-                {updater.updateInfo.body}
-              </p>
-            )}
-            <button
-              onClick={updater.downloadAndInstall}
-              className="flex items-center gap-1.5 h-7 px-3 text-xs font-medium rounded-mac bg-accent text-white hover:opacity-90 transition-all cursor-pointer"
-            >
-              <Download size={12} />
-              Download & Install
-            </button>
-          </div>
-        )}
-
-        {updater.status === "downloading" && (
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2 text-2xs text-text-secondary">
-              <Loader2 size={11} className="animate-spin text-accent" />
-              <span>Downloading update… {updater.downloadProgress}%</span>
-            </div>
-            <div className="w-full h-1.5 rounded-full bg-surface-1 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-accent transition-all duration-300"
-                style={{ width: `${updater.downloadProgress}%` }}
-              />
-            </div>
-          </div>
-        )}
-
-        {updater.status === "ready" && (
-          <div className="flex items-center gap-2 p-2 rounded-mac bg-accent/10 border border-accent/20">
-            <Check size={13} className="text-accent" />
-            <span className="text-2xs text-accent flex-1">Update installed. Restart to apply.</span>
-            <button
-              onClick={updater.relaunch}
-              className="flex items-center gap-1.5 h-7 px-3 text-xs font-medium rounded-mac bg-accent text-white hover:opacity-90 transition-all cursor-pointer"
-            >
-              Restart Now
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -230,7 +230,7 @@ describe("computeGraphLayout", () => {
     const next = [makeCommit("bbb", ["aaa"])];
     const result = computeGraphLayout(next, prev);
 
-    expect(result.commits[1].y).toBe(14 + ROW_HEIGHT); // ROW_HEIGHT/2 + ROW_HEIGHT
+    expect(result.commits[1].y).toBe(ROW_HEIGHT / 2 + ROW_HEIGHT); // ROW_HEIGHT/2 + ROW_HEIGHT
   });
 
   it("incremental: preserves previous commits unchanged", () => {

@@ -15,7 +15,11 @@ export type Theme =
   | "gruvbox-dark-soft"
   | "gruvbox-dark-hard"
   | "gruvbox-light"
-  | "gruvbox-light-soft";
+  | "gruvbox-light-soft"
+  | "one-dark"
+  | "catppuccin-mocha"
+  | "rose-pine"
+  | "solarized-dark";
 
 export const THEME_CLASSES: Theme[] = [
   "dark",
@@ -32,6 +36,10 @@ export const THEME_CLASSES: Theme[] = [
   "gruvbox-dark-hard",
   "gruvbox-light",
   "gruvbox-light-soft",
+  "one-dark",
+  "catppuccin-mocha",
+  "rose-pine",
+  "solarized-dark",
 ];
 
 const isDarkTheme = (theme: Theme): boolean => {
@@ -40,7 +48,7 @@ const isDarkTheme = (theme: Theme): boolean => {
     if (typeof window === "undefined") return false;
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
   }
-  return true; // "dark", "nord", "tokyo-night", "github-dark", "dracula", "cyberpunk-green", "monokai-pro", "gruvbox-dark*" are dark.
+  return true; // All other themes (dark, nord, tokyo-night, github-dark, dracula, cyberpunk-green, monokai-pro, gruvbox-dark*, one-dark, catppuccin-mocha, rose-pine, solarized-dark) are dark.
 };
 
 function isTheme(value: string | null): value is Theme {

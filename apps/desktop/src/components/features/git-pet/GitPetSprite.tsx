@@ -1,7 +1,11 @@
 import type { PetState } from "./usePetState";
+import type { PetType } from "./pet-types";
+import { DEFAULT_PET } from "./pet-types";
+import { getPetDefinition } from "./pet-definitions";
 
 interface GitPetSpriteProps {
   state: PetState;
+  petType?: PetType;
   onAnimationEnd?: () => void;
 }
 
@@ -17,37 +21,19 @@ const STATE_TO_CLASS: Record<PetState, string> = {
   waving: "pet-wave",
 };
 
-export default function GitPetSprite({ state, onAnimationEnd }: GitPetSpriteProps) {
+export default function GitPetSprite({ state, petType = DEFAULT_PET, onAnimationEnd }: GitPetSpriteProps) {
+  const pet = getPetDefinition(petType);
+
   return (
     <div
       className={`git-pet-sprite ${STATE_TO_CLASS[state]}`}
       onAnimationEnd={onAnimationEnd}
       role="img"
-      aria-label={`Git pet: ${state}`}
+      aria-label={`Git pet (${petType}): ${state}`}
     >
-      <svg viewBox="0 0 32 36" xmlns="http://www.w3.org/2000/svg" shapeRendering="crispEdges">
-        {/* Tail */}
-        <path d="M8 27 C3 27 1 23 4 19" stroke="#D4876E" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-
-        {/* Body */}
-        <rect x="7" y="17" width="18" height="10" fill="#E8944A" rx="5" />
-
-        {/* Left arm/paw */}
-        <rect x="4" y="19" width="5" height="6" fill="#F4A460" rx="2.5" />
-
-        {/* Right arm/paw */}
-        <rect x="23" y="19" width="5" height="6" fill="#F4A460" rx="2.5" />
-
-        {/* Left ear */}
-        <rect x="7" y="1" width="5" height="6" fill="#E8944A" rx="1.5" />
-        <rect x="8.5" y="2.5" width="2" height="3" fill="#FFB6C1" rx="0.5" />
-
-        {/* Right ear */}
-        <rect x="20" y="1" width="5" height="6" fill="#E8944A" rx="1.5" />
-        <rect x="21.5" y="2.5" width="2" height="3" fill="#FFB6C1" rx="0.5" />
-
-        {/* Head */}
-        <rect x="5" y="5" width="22" height="13" fill="#F4A460" rx="6" />
+      <svg viewBox={pet.viewBox} xmlns="http://www.w3.org/2000/svg" shapeRendering="crispEdges">
+        {/* Pet-specific body, head, ears, limbs */}
+        {pet.body}
 
         {/* === FACE: Normal open eyes === */}
         <g className="face-normal">
@@ -101,13 +87,6 @@ export default function GitPetSprite({ state, onAnimationEnd }: GitPetSpriteProp
           <rect x="20" y="14" width="1.5" height="1" fill="#333" />
         </g>
 
-        {/* Cheeks */}
-        <circle cx="8" cy="14" r="2" fill="#FFB6C1" opacity="0.45" />
-        <circle cx="24" cy="14" r="2" fill="#FFB6C1" opacity="0.45" />
-
-        {/* Nose */}
-        <rect x="15" y="12.5" width="2" height="1.5" fill="#D4876E" rx="0.5" />
-
         {/* === MOUTH: Smile === */}
         <g className="mouth-smile">
           <path d="M13 15.5 Q16 18 19 15.5" stroke="#5C4033" strokeWidth="1.2" fill="none" strokeLinecap="round" />
@@ -130,21 +109,8 @@ export default function GitPetSprite({ state, onAnimationEnd }: GitPetSpriteProp
           <path d="M13 15.5 Q16 19 19 15.5" fill="#FF8A8A" opacity="0.2" />
         </g>
 
-        {/* === BUBBLE TEA CUP === */}
-        <rect x="22" y="20" width="8" height="10" fill="#87CEEB" rx="1.5" />
-        {/* Cup lid */}
-        <rect x="21" y="19" width="10" height="2.5" fill="#6BAFE0" rx="1" />
-        {/* Straw */}
-        <rect x="25" y="14" width="1.5" height="7" fill="#FF6347" rx="0.5" />
-        {/* Boba pearls */}
-        <circle cx="24.5" cy="27" r="1.2" fill="#4A2C17" />
-        <circle cx="27" cy="27.5" r="1" fill="#4A2C17" />
-        <circle cx="25.5" cy="25.5" r="0.9" fill="#4A2C17" />
-        <circle cx="28" cy="26" r="0.8" fill="#4A2C17" />
-
-        {/* Feet */}
-        <rect x="10" y="26" width="4" height="3" fill="#D4876E" rx="1.5" />
-        <rect x="18" y="26" width="4" height="3" fill="#D4876E" rx="1.5" />
+        {/* Pet-specific accessories (bubble tea, fish, bone, etc.) */}
+        {pet.accessories && <g className="pet-accessory">{pet.accessories}</g>}
       </svg>
     </div>
   );

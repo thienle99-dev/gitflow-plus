@@ -49,18 +49,18 @@ function App() {
           position="bottom-center"
           toastOptions={{
             style: {
-              background: "var(--color-surface-2, #1e1e2e)",
-              color: "var(--color-text-primary, #cdd6f4)",
-              border: "1px solid var(--color-border, #45475a)",
+              background: "var(--surface-1)",
+              color: "var(--text-primary)",
+              border: "1px solid var(--border)",
               fontSize: "12px",
               borderRadius: "8px",
             },
             classNames: {
               error: "sonner-error",
               success: "sonner-success",
+              info: "sonner-info",
             },
           }}
-          richColors
           closeButton
         />
       </ErrorProvider>

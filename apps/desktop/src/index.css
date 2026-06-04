@@ -301,6 +301,98 @@
   --heatmap-max: #c4f0a0;
 }
 
+/* Catppuccin Mocha Theme */
+.catppuccin-mocha {
+  --surface-0: #1e1e2e;
+  --surface-1: #181825;
+  --surface-2: #313244;
+  --surface-3: #45475a;
+  --accent: #b4befe;
+  --accent-fg: #11111b;
+  --border: #313244;
+  --text-primary: #cdd6f4;
+  --text-secondary: #bac2de;
+  --text-muted: #6c7086;
+  --success: #a6e3a1;
+  --danger: #f38ba8;
+  --warning: #f9e2af;
+  --info: #89b4fa;
+  --heatmap-empty: #313244;
+  --heatmap-low: #2c473f;
+  --heatmap-medium: #3b6e4f;
+  --heatmap-high: #58a675;
+  --heatmap-max: #a6e3a1;
+}
+
+/* One Dark Pro Theme */
+.one-dark {
+  --surface-0: #282c34;
+  --surface-1: #21252b;
+  --surface-2: #2c313c;
+  --surface-3: #3e4451;
+  --accent: #61afef;
+  --accent-fg: #282c34;
+  --border: #181a1f;
+  --text-primary: #abb2bf;
+  --text-secondary: #9da5b4;
+  --text-muted: #5c6370;
+  --success: #98c379;
+  --danger: #e06c75;
+  --warning: #d19a66;
+  --info: #61afef;
+  --heatmap-empty: #2c313c;
+  --heatmap-low: #223c28;
+  --heatmap-medium: #30663f;
+  --heatmap-high: #4f9e61;
+  --heatmap-max: #98c379;
+}
+
+/* Rose Pine Theme */
+.rose-pine {
+  --surface-0: #191724;
+  --surface-1: #1f1d2e;
+  --surface-2: #26233a;
+  --surface-3: #31748f;
+  --accent: #ebbcba;
+  --accent-fg: #191724;
+  --border: #26233a;
+  --text-primary: #e0def4;
+  --text-secondary: #9ccfd8;
+  --text-muted: #908caa;
+  --success: #9ccfd8;
+  --danger: #eb6f92;
+  --warning: #f6c177;
+  --info: #31748f;
+  --heatmap-empty: #26233a;
+  --heatmap-low: #1c323f;
+  --heatmap-medium: #2a586d;
+  --heatmap-high: #3882a1;
+  --heatmap-max: #ebbcba;
+}
+
+/* Solarized Dark Theme */
+.solarized-dark {
+  --surface-0: #002b36;
+  --surface-1: #073642;
+  --surface-2: #586e75;
+  --surface-3: #657b83;
+  --accent: #268bd2;
+  --accent-fg: #fdf6e3;
+  --border: #073642;
+  --text-primary: #93a1a1;
+  --text-secondary: #839496;
+  --text-muted: #586e75;
+  --success: #859900;
+  --danger: #dc322f;
+  --warning: #cb4b16;
+  --info: #268bd2;
+  --heatmap-empty: #073642;
+  --heatmap-low: #0a4d3c;
+  --heatmap-medium: #117a5f;
+  --heatmap-high: #1ab088;
+  --heatmap-max: #859900;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -429,6 +521,43 @@ body.tray-window #root {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 100;
   animation: toast-in 200ms ease-out;
+}
+
+[data-sonner-toast] {
+  background: var(--surface-1) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border) !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18) !important;
+}
+
+[data-sonner-toast] [data-icon],
+[data-sonner-toast] [data-title],
+[data-sonner-toast] [data-description] {
+  color: inherit !important;
+}
+
+[data-sonner-toast].sonner-info {
+  background: var(--surface-1) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--info) !important;
+}
+
+[data-sonner-toast].sonner-success {
+  background: var(--surface-1) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--success) !important;
+}
+
+[data-sonner-toast].sonner-error {
+  background: var(--surface-1) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--danger) !important;
+}
+
+[data-sonner-toast] [data-close-button] {
+  background: var(--surface-2) !important;
+  color: var(--text-secondary) !important;
+  border-color: var(--border) !important;
 }
 
 @keyframes toast-in {
