@@ -38,7 +38,17 @@ const BLINK_MAX_MS = 8_000;
 
 export function usePetState(): PetState {
   const repoPath = useRepoStore((s) => s.repoPath);
-  const isFetching = useIsFetching();
+  const isFetching = useIsFetching({
+    predicate: (query) => {
+      const key = query.queryKey;
+      if (Array.isArray(key) && key[0] === "git") {
+        const type = key[2];
+        const ignoredTypes = ["diff", "commit-files", "blame", "stash", "file-history", "search", "compare"];
+        return typeof type === "string" && !ignoredTypes.includes(type);
+      }
+      return false;
+    },
+  });
   const isMutating = useIsMutating();
   const isLoading = isFetching > 0 || isMutating > 0;
 

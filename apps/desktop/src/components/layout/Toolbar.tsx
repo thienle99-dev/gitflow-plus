@@ -30,7 +30,6 @@ import { RiskSummaryDialog } from "@/components/features/dialogs";
 import { generateRiskSummary } from "@/lib/ai";
 import type { RiskReport } from "@/lib/risk-scanner";
 import { useErrorReporter } from "@/lib/ErrorContext";
-import SettingsDropdown from "@/components/ui/theme/SettingsDropdown";
 
 const COLLAPSE_BREAKPOINT = 900;
 
@@ -449,7 +448,7 @@ export default function Toolbar() {
           )}
         </div>
 
-        {/* Right Side: Integrations (PR & SettingsDropdown) */}
+        {/* Right Side: Integrations */}
         <div className="flex items-center gap-3 shrink-0">
           {/* PR Trigger */}
           <button
@@ -478,14 +477,15 @@ export default function Toolbar() {
 
           <div className="w-[1px] h-3.5 bg-border-60" />
 
-          {/* Settings & Quick Actions */}
-          <SettingsDropdown
-            onOpenSettings={() => openDialog("settings")}
-            onOpenKeyboardShortcuts={() => openDialog("keyboard-shortcuts")}
-            onOpenFeatureGuide={() => openDialog("feature-guide")}
-            onOpenHealthCheck={() => openDialog("health-check")}
-            onOpenDiagnostics={() => openDialog("diagnostics")}
-          />
+          {/* Settings */}
+          <button
+            onClick={() => openDialog("settings")}
+            aria-label="Open Settings"
+            className="ghost h-8 w-8 flex items-center justify-center text-text-muted hover:text-text-primary rounded-mac hover:bg-surface-2 transition-all cursor-pointer"
+            title="Settings (⌘,)"
+          >
+            <Settings size={14} />
+          </button>
         </div>
 
       </div>
