@@ -55,7 +55,7 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://github.com/nicedoc/gitflow-plus/releases/latest/download/latest.json"
+        "https://github.com/thienle99-dev/gitflow-plus/releases/latest/download/latest.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEEzN0Y1MUMzRjA2QjQ1NDcKUldSSFJXdnd3MUYvbzB2em43WkxmemxianRiUUJRSjlMdlBVWWpPQ2p0cis1NEQybGQwNExBQUIK"
     }

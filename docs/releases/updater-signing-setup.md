@@ -26,7 +26,7 @@ Under `plugins.updater.pubkey`, paste the public key from the step above:
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://github.com/nicedoc/gitflow-plus/releases/latest/download/latest.json"
+        "https://github.com/thienle99-dev/gitflow-plus/releases/latest/download/latest.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHJ..."
     }

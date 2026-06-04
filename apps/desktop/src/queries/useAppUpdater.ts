@@ -49,7 +49,10 @@ export function useAppUpdater() {
         setState({ status: "not-available", updateInfo: null, downloadProgress: 0, error: null });
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      let message = err instanceof Error ? err.message : String(err);
+      if (message.includes("Could not fetch a valid release JSON from the remote")) {
+        message = "No update manifest found. No releases have been published yet or the update server is offline.";
+      }
       setState({ status: "error", updateInfo: null, downloadProgress: 0, error: message });
     }
   }, []);
