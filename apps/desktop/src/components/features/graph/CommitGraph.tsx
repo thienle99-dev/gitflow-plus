@@ -14,6 +14,7 @@ import type { GraphRenderIndex } from "./useCanvasRenderer";
 import CommitTooltip from "./CommitTooltip";
 import { showToast } from "@/lib/toast";
 import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
+import { formatCommitDate } from "@/lib/date";
 import { Search, X } from "lucide-react";
 
 const ROW_HEIGHT = 38;
@@ -292,6 +293,21 @@ export default function CommitGraph() {
           icon: <RevertIcon />,
           action: () => revertCommit(ctxMenu.hash),
         },
+        {
+          label: "Squash last N commits...",
+          icon: <RevertIcon />,
+          action: () => {
+            useUIStore.getState().openSquashDialog(ctxMenu.hash);
+          },
+        },
+        {
+          label: "Interactive rebase from here...",
+          icon: <RevertIcon />,
+          action: () => {
+            useUIStore.getState().setRebaseTargetCommit(ctxMenu.hash);
+            useUIStore.getState().openDialog("interactive-rebase");
+          },
+        },
       ]
     : [];
 
@@ -515,7 +531,9 @@ function formatFilterDate(date: string) {
   if (Number.isNaN(parsed.getTime())) {
     return date;
   }
+  const displayed = formatCommitDate(date);
   return [
+    displayed,
     parsed.toLocaleDateString(undefined, {
       month: "short",
       day: "numeric",

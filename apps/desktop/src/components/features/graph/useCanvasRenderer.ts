@@ -2,10 +2,13 @@ import { useEffect, useRef } from "react";
 import type { LayoutState } from "@/lib/graph-layout";
 import { logPerformance } from "@/lib/performance";
 import type { Theme } from "@/stores/repo";
+import { useCommitDateFormatter } from "@/lib/date";
 
 const ROW_HEIGHT = 38;
 const NODE_RADIUS = 4;
 const MAX_GRAPH_COLUMN_WIDTH = 260;
+const MIN_GRAPH_COLUMN_WIDTH = 48;
+const MIN_MESSAGE_COLUMN_WIDTH = 180;
 const BUFFER_ROWS = 10;
 const GRAPH_LEFT_PADDING = 18;
 const BADGE_GAP = 8;
@@ -16,6 +19,7 @@ const COLUMN_GAP = 16;
 const RIGHT_PADDING = 18;
 const AVATAR_SIZE = 22;
 const AVATAR_GAP = 8;
+const GRAPH_TO_AVATAR_GAP = 24;
 
 export interface GraphEdgeSegment {
   id: number;
@@ -264,6 +268,7 @@ export function useCanvasRenderer({
   totalLanes,
   theme,
 }: RenderParams) {
+  const formatCommitDateHook = useCommitDateFormatter();
   // Track which rows are hovered via mouse position
   const hoveredRowRef = useRef<number | null>(null);
 
@@ -292,7 +297,6 @@ export function useCanvasRenderer({
     const startedAt = performance.now();
 
     const dpr = window.devicePixelRatio || 1;
-    const laneWidth = getLaneWidth(totalLanes);
     const scrollContainer = canvas.parentElement?.parentElement;
     const measuredHeight = scrollContainer?.clientHeight || 0;
     const measuredWidth = scrollContainer?.clientWidth || 0;
@@ -307,10 +311,22 @@ export function useCanvasRenderer({
     const visible = layout.commits.slice(startRow, endRow);
     const visibleEdges = getVisibleEdges(graphIndex, startRow, endRow);
     const offsetY = -scrollTop;
+    const columns = getColumns(width);
+    const metadataLeft = columns.hashX;
+    const graphColumnWidth = getGraphColumnWidth(metadataLeft);
+    const laneWidth = getLaneWidth(totalLanes, graphColumnWidth);
     const graphRight = getVisibleGraphRight(visible, visibleEdges, laneWidth);
-    const avatarColumnX = Math.max(84, graphRight + 24);
+    const compactGraphRight = Math.min(graphRight, graphColumnWidth);
+    const graphClipRight = graphColumnWidth + NODE_RADIUS + 8;
+    const maxAvatarColumnX = Math.max(
+      GRAPH_LEFT_PADDING,
+      metadataLeft - MIN_MESSAGE_COLUMN_WIDTH - AVATAR_SIZE - AVATAR_GAP - BADGE_GAP,
+    );
+    const avatarColumnX = Math.min(
+      maxAvatarColumnX,
+      Math.max(84, compactGraphRight + GRAPH_TO_AVATAR_GAP),
+    );
     const messageX = avatarColumnX + AVATAR_SIZE + AVATAR_GAP;
-    const columns = getColumns(width, messageX);
 
     const pixelWidth = Math.ceil(width * dpr);
     const pixelHeight = Math.ceil(height * dpr);
@@ -349,9 +365,14 @@ export function useCanvasRenderer({
 
     // Hover lane highlight
     if (hoveredLane !== null) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, graphClipRight, height);
+      ctx.clip();
       ctx.fillStyle = "rgba(255,255,255,0.035)";
       const laneX = laneXFor(hoveredLane, laneWidth);
       ctx.fillRect(laneX - 6, 0, laneWidth + 3, height);
+      ctx.restore();
     }
 
     // Selection glow effect
@@ -378,6 +399,12 @@ export function useCanvasRenderer({
       ctx.fillStyle = "rgba(10,132,255,0.6)";
       ctx.fillRect(0, cy - ROW_HEIGHT / 2 + 2, 3, ROW_HEIGHT - 4);
     }
+
+    // Edges + nodes are clipped to the graph column so deep trees never cover text columns.
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, graphClipRight, height);
+    ctx.clip();
 
     // Edges
     for (const edge of visibleEdges) {
@@ -421,6 +448,8 @@ export function useCanvasRenderer({
       ctx.lineWidth = isSelected ? 2 : 1;
       ctx.stroke();
     }
+
+    ctx.restore();
 
     // Avatars + Labels + metadata columns
     ctx.font = "12px -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
@@ -505,7 +534,7 @@ export function useCanvasRenderer({
       ctx.font = "11px -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
       ctx.fillStyle = textSecondary;
       ctx.fillText(truncateText(ctx, commit.author || "Unknown", AUTHOR_COLUMN_WIDTH - 8), columns.authorX, cy);
-      ctx.fillText(truncateText(ctx, formatCommitDate(commit.date), DATE_COLUMN_WIDTH - 8), columns.dateX, cy);
+      ctx.fillText(truncateText(ctx, formatCommitDateHook(commit.date), DATE_COLUMN_WIDTH - 8), columns.dateX, cy);
     }
 
     logPerformance("graph_canvas_render", performance.now() - startedAt, {
@@ -515,18 +544,30 @@ export function useCanvasRenderer({
       width,
       height,
     });
-  }, [canvasRef, layout, graphIndex, scrollTop, containerHeight, containerWidth, selectedCommit, hoveredLane, totalLanes, theme]);
+  }, [canvasRef, layout, graphIndex, scrollTop, containerHeight, containerWidth, selectedCommit, hoveredLane, totalLanes, theme, formatCommitDateHook]);
 }
 
-function getColumns(width: number, messageX: number) {
+function getColumns(width: number) {
   const dateX = Math.max(
-    messageX + 360 + HASH_COLUMN_WIDTH + AUTHOR_COLUMN_WIDTH + COLUMN_GAP * 3,
+    HASH_COLUMN_WIDTH + AUTHOR_COLUMN_WIDTH + COLUMN_GAP * 2 + RIGHT_PADDING,
     width - DATE_COLUMN_WIDTH - RIGHT_PADDING,
   );
   const authorX = dateX - AUTHOR_COLUMN_WIDTH - COLUMN_GAP;
   const hashX = authorX - HASH_COLUMN_WIDTH - COLUMN_GAP;
 
   return { hashX, authorX, dateX };
+}
+
+function getGraphColumnWidth(metadataLeft: number) {
+  const availableBeforeText = metadataLeft
+    - MIN_MESSAGE_COLUMN_WIDTH
+    - AVATAR_SIZE
+    - AVATAR_GAP
+    - COLUMN_GAP;
+  return Math.max(
+    MIN_GRAPH_COLUMN_WIDTH,
+    Math.min(MAX_GRAPH_COLUMN_WIDTH, availableBeforeText),
+  );
 }
 
 function laneXFor(lane: number, laneWidth: number) {
@@ -567,10 +608,10 @@ function getVisibleEdges(index: GraphRenderIndex, startRow: number, endRow: numb
   return edges;
 }
 
-function getLaneWidth(totalLanes: number) {
+function getLaneWidth(totalLanes: number, graphColumnWidth: number) {
   if (totalLanes <= 1) return 12;
-  const available = MAX_GRAPH_COLUMN_WIDTH - GRAPH_LEFT_PADDING - 16;
-  return Math.max(5, Math.min(12, available / Math.max(1, totalLanes - 1)));
+  const available = graphColumnWidth - GRAPH_LEFT_PADDING - NODE_RADIUS - 8;
+  return Math.max(2.5, Math.min(12, available / Math.max(1, totalLanes - 1)));
 }
 
 function truncateText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {
@@ -589,19 +630,4 @@ function truncateText(ctx: CanvasRenderingContext2D, text: string, maxWidth: num
   return text.slice(0, lo) + ellipsis;
 }
 
-function formatCommitDate(date: string) {
-  const normalized = date.replace(
-    /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) ([+-]\d{2})(\d{2})$/,
-    "$1T$2$3:$4",
-  );
-  const parsed = new Date(normalized);
-  if (Number.isNaN(parsed.getTime())) {
-    return date.slice(0, 16);
-  }
-  return parsed.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+

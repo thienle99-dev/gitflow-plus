@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useCommitDateFormatter } from "@/lib/date";
 import { useRepoStore } from "@/stores/repo";
 import { useTagList, useTagCreate, useTagDelete, useTagPush } from "@/queries/useGitTag";
 import { showToast } from "@/lib/toast";
@@ -55,9 +56,9 @@ export default function TagPanel({ onClose }: { onClose?: () => void }) {
     }
   };
 
+  const formatCommitDate = useCommitDateFormatter();
   const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+    return formatCommitDate(dateStr);
   };
 
   return (
