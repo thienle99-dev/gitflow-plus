@@ -1209,3 +1209,88 @@ function getTopLevelFolder(path: string) {
 function getFileName(path: string) {
   return path.split("/").pop() || path;
 }
+
+export async function improveCommitMessage(
+  repoPath: string,
+  currentMessage: string,
+  _files: FileChange[],
+): Promise<string> {
+  const settings = readAISettings();
+  if (!hasProvider(settings)) {
+    throw new Error("Configure an AI API key or local model in settings");
+  }
+
+  const branchName = await getCurrentBranchName(repoPath);
+  const diff = await api.diff.staged(repoPath);
+
+  const conventionContext = await getConventionContext(repoPath);
+  const branchContext = branchName ? `\nCurrent Git Branch Name: ${branchName}\n` : "";
+  const customRules = settings.customRules.trim()
+    ? `\nUSER CUSTOM RULES:\n${settings.customRules.trim()}\n`
+    : "";
+
+  const prompt = `You are a commit message expert. The user has written a draft commit message. Improve it for clarity, grammar, and conventional commit format while preserving the original intent.
+
+Rules:
+- Keep the same meaning and scope
+- Improve grammar and clarity
+- Follow conventional commits format if the project uses it
+- Keep the same detail level (don't add information not in the diff)
+- Return ONLY the improved message, no explanation
+- No markdown code blocks
+${branchContext}${customRules}${conventionContext}
+Current message:
+${currentMessage}
+
+Staged diff:
+${diff.slice(0, 6000)}`;
+
+  const result = cleanAIText(await requestAIText(prompt, settings));
+  if (!result) {
+    throw new Error("Empty response from AI");
+  }
+  return result;
+}
+
+export async function addCommitBody(
+  repoPath: string,
+  subject: string,
+  _files: FileChange[],
+): Promise<string> {
+  const settings = readAISettings();
+  if (!hasProvider(settings)) {
+    throw new Error("Configure an AI API key or local model in settings");
+  }
+
+  const branchName = await getCurrentBranchName(repoPath);
+  const diff = await api.diff.staged(repoPath);
+
+  const conventionContext = await getConventionContext(repoPath);
+  const branchContext = branchName ? `\nCurrent Git Branch Name: ${branchName}\n` : "";
+  const customRules = settings.customRules.trim()
+    ? `\nUSER CUSTOM RULES:\n${settings.customRules.trim()}\n`
+    : "";
+
+  const prompt = `You are a commit message expert. Generate a detailed commit body for the following commit subject.
+
+The body should:
+- Explain WHY the change was made, not just WHAT
+- Mention key files/components affected
+- Note any breaking changes or migration steps
+- Use bullet points for multiple changes
+- Be concise but informative (3-8 lines max)
+
+Return the subject line followed by a blank line and the body. No explanation.
+- No markdown code blocks
+${branchContext}${customRules}${conventionContext}
+Subject: ${subject}
+
+Staged diff:
+${diff.slice(0, 6000)}`;
+
+  const result = cleanAIText(await requestAIText(prompt, settings));
+  if (!result) {
+    throw new Error("Empty response from AI");
+  }
+  return result;
+}

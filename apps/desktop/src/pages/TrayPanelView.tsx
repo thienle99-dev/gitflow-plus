@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useGitStatus, useGitBranches, useGitSyncStatus } from "@/queries/useGitLog";
 import { api, type FileChange, type Commit, type StashEntry, type RepoInfo, type LintDiagnostic } from "@/api/tauri";
+import { useCommitDateFormatter } from "@/lib/date";
 import { useQueryClient, useQuery, useQueries } from "@tanstack/react-query";
 import { useGenerateCommitMessage } from "@/queries/useAI";
 import { lintCommitMessage, autoFixCommitMessage, type CommitLintResult } from "@/lib/commit-lint";
@@ -22,27 +23,14 @@ import {
   MessageSquare,
 } from "lucide-react";
 
-function formatTrayCommitDate(date: string) {
-  const normalized = date.replace(
-    /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) ([+-]\d{2})(\d{2})$/,
-    "$1T$2$3:$4",
-  );
-  const parsed = new Date(normalized);
 
-  if (Number.isNaN(parsed.getTime())) {
-    return date.slice(0, 16);
-  }
-  return parsed.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
-}
 
 export default function TrayPanelView() {
   const repoPath = useRepoStore((s) => s.repoPath);
   const recentRepos = useRepoStore((s) => s.recentRepos);
   const openRepo = useRepoStore((s) => s.openRepo);
   const queryClient = useQueryClient();
+  const formatCommitDate = useCommitDateFormatter();
 
   const { data: changes, isLoading: isLoadingStatus } = useGitStatus(repoPath);
   const { data: branches } = useGitBranches(repoPath);
@@ -623,7 +611,7 @@ export default function TrayPanelView() {
                       <div className="flex items-center justify-between text-[8px] w-full">
                         <span className="truncate max-w-[120px] text-text-secondary">{commit.author}</span>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-text-secondary">{formatTrayCommitDate(commit.date)}</span>
+                          <span className="text-text-secondary">{formatCommitDate(commit.date)}</span>
                           <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
                             <button
                               type="button"

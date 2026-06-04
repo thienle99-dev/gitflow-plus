@@ -6,11 +6,13 @@ import UndoButton from "@/components/features/actions/UndoButton";
 import CommitTemplatePicker from "./CommitTemplatePicker";
 import { AlertCircle, ShieldAlert } from "lucide-react";
 import {
+  AlignLeft,
   Check,
   GitCommit,
   Layers,
   RefreshCw,
   Sparkles,
+  Wand2,
   X,
 } from "lucide-react";
 
@@ -38,11 +40,15 @@ export interface CommitBoxProps {
   onCommitGroup: (group: { files: string[]; message: string }) => void;
   onCommitAllSuggested: () => void;
   onUndoComplete: () => void;
+  onImproveMessage: () => void;
+  onAddBody: () => void;
   // AI review state
   aiReviewPending: boolean;
   // Mutations
   generateCommitPending: boolean;
   commitScopePending: boolean;
+  improveMessagePending: boolean;
+  addBodyPending: boolean;
 }
 
 export default function CommitBox({
@@ -68,9 +74,13 @@ export default function CommitBox({
   onCommitGroup,
   onCommitAllSuggested,
   onUndoComplete,
+  onImproveMessage,
+  onAddBody,
   aiReviewPending,
   generateCommitPending,
   commitScopePending,
+  improveMessagePending,
+  addBodyPending,
 }: CommitBoxProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -148,6 +158,38 @@ export default function CommitBox({
                 )}
                 <span>Split Scope</span>
               </button>
+            )}
+            {commitMessage.trim() && staged.length > 0 && (
+              <>
+                <button
+                  type="button"
+                  onClick={onImproveMessage}
+                  disabled={committing || improveMessagePending}
+                  className="h-7 px-2.5 rounded-[5px] border text-3xs font-semibold inline-flex items-center gap-1 transition-all cursor-pointer shadow-2xs bg-surface-2-40 border-border-40 text-text-muted hover:text-text-primary hover:bg-surface-3 active:scale-[0.99] disabled:opacity-45 disabled:cursor-not-allowed"
+                  title={improveMessagePending ? "Improving..." : "Improve commit message with AI"}
+                >
+                  {improveMessagePending ? (
+                    <RefreshCw size={11} className="animate-spin" />
+                  ) : (
+                    <Wand2 size={11} />
+                  )}
+                  <span>Improve</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={onAddBody}
+                  disabled={committing || addBodyPending}
+                  className="h-7 px-2.5 rounded-[5px] border text-3xs font-semibold inline-flex items-center gap-1 transition-all cursor-pointer shadow-2xs bg-surface-2-40 border-border-40 text-text-muted hover:text-text-primary hover:bg-surface-3 active:scale-[0.99] disabled:opacity-45 disabled:cursor-not-allowed"
+                  title={addBodyPending ? "Adding body..." : "Add detailed commit body with AI"}
+                >
+                  {addBodyPending ? (
+                    <RefreshCw size={11} className="animate-spin" />
+                  ) : (
+                    <AlignLeft size={11} />
+                  )}
+                  <span>Add Body</span>
+                </button>
+              </>
             )}
             <button
               type="button"

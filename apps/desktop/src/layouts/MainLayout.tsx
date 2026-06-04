@@ -35,6 +35,8 @@ const BranchCompareDialog = lazy(() => import("@/components/features/dialogs/Bra
 const HealthCheckDialog = lazy(() => import("@/components/features/dialogs/HealthCheckDialog"));
 const DiagnosticDialog = lazy(() => import("@/components/features/dialogs/DiagnosticDialog"));
 const CommandPalette = lazy(() => import("@/components/features/dialogs/CommandPalette"));
+const InteractiveRebaseDialog = lazy(() => import("@/components/features/dialogs/InteractiveRebaseDialog"));
+const SquashDialog = lazy(() => import("@/components/features/dialogs/SquashDialog"));
 
 export default function MainLayout() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
@@ -46,6 +48,8 @@ export default function MainLayout() {
   const selectedCommit = useUIStore((s) => s.selectedCommit);
   const mergeTargetBranch = useUIStore((s) => s.mergeTargetBranch);
   const compareBranchTarget = useUIStore((s) => s.compareBranchTarget);
+  const rebaseTargetCommit = useUIStore((s) => s.rebaseTargetCommit);
+  const squashNState = useUIStore((s) => s.squashNState);
   const repoPath = useRepoStore((s) => s.repoPath);
   const selectedRef = useRepoStore((s) => s.selectedRef);
   const openRepo = useRepoStore((s) => s.openRepo);
@@ -380,15 +384,24 @@ export default function MainLayout() {
     "feature-guide": <FeatureGuideDialog open={true} onClose={closeDialog} />,
     "health-check": <HealthCheckDialog onClose={closeDialog} />,
     "diagnostics": <DiagnosticDialog onClose={closeDialog} />,
-  }), [closeDialog, selectedCommit, mergeTargetBranch, compareBranchTarget, selectedRef]);
+    "interactive-rebase": (
+      <InteractiveRebaseDialog
+        open={true}
+        baseCommit={rebaseTargetCommit || ""}
+        onClose={closeDialog}
+      />
+    ),
+  }), [closeDialog, selectedCommit, mergeTargetBranch, compareBranchTarget, selectedRef, rebaseTargetCommit]);
 
   const dialogOverlay = overlayDialog ? (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className={`bg-surface-0 rounded-mac shadow-xl border border-border overflow-hidden ${
         overlayDialog === "merge-request"
           ? "h-[min(760px,88vh)] w-[min(1180px,92vw)]"
-          : overlayDialog === "settings" || overlayDialog === "ai-settings" || overlayDialog === "accounts-settings"
-            ? "h-[min(680px,88vh)] w-[min(900px,90vw)]"
+          : overlayDialog === "interactive-rebase"
+                ? "h-[min(640px,82vh)] w-[min(580px,92vw)]"
+              : overlayDialog === "settings" || overlayDialog === "ai-settings" || overlayDialog === "accounts-settings"
+                ? "h-[min(680px,88vh)] w-[min(900px,90vw)]"
           : overlayDialog === "branch-compare"
             ? "h-[min(700px,85vh)] w-[min(900px,92vw)]"
           : overlayDialog === "health-check"
@@ -512,6 +525,15 @@ function InlineErrorFallback({ name }: { name: string }) {
       <Suspense>
         <OnboardingWizard open={showOnboarding} onClose={() => setShowOnboarding(false)} />
       </Suspense>
+      {squashNState.open && squashNState.commitHash && (
+        <Suspense fallback={<div className="p-6 text-text-muted text-sm animate-pulse">Loading…</div>}>
+          <SquashDialog
+            open={true}
+            commitHash={squashNState.commitHash}
+            onClose={() => useUIStore.getState().closeSquashDialog()}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

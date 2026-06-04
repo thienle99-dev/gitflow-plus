@@ -8,15 +8,27 @@ interface CommitTooltipProps {
 
 export default function CommitTooltip({ commit, x, y }: CommitTooltipProps) {
   const shortHash = commit.hash.slice(0, 7);
+  const tooltipWidth = 320;
+  const tooltipHeight = 96;
+  const viewportWidth = typeof window === "undefined" ? 0 : window.innerWidth;
+  const viewportHeight = typeof window === "undefined" ? 0 : window.innerHeight;
+  const left = Math.min(
+    Math.max(8, x + 14),
+    Math.max(8, viewportWidth - tooltipWidth - 8),
+  );
+  const preferredTop = y + 16;
+  const top = preferredTop + tooltipHeight > viewportHeight
+    ? Math.max(8, y - tooltipHeight - 16)
+    : preferredTop;
 
-  // Keep tooltip inside viewport
   const style: React.CSSProperties = {
     position: "fixed",
-    left: x + 12,
-    top: y - 8,
+    left,
+    top,
     zIndex: 100,
     pointerEvents: "none",
-    maxWidth: 320,
+    width: tooltipWidth,
+    maxWidth: "calc(100vw - 16px)",
   };
 
   return (

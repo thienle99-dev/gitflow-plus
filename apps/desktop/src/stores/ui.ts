@@ -1,5 +1,11 @@
 import { create } from "zustand";
 
+interface RebaseTodoItem {
+  action: string;
+  commit_hash: string;
+  message: string;
+}
+
 interface UIState {
   sidebarOpen: boolean;
   rightPanelOpen: boolean;
@@ -11,6 +17,9 @@ interface UIState {
   activeDialog: string | null;
   mergeTargetBranch: string | null;
   compareBranchTarget: string | null;
+  rebaseTargetCommit: string | null;
+  prefilledRebaseTodos: RebaseTodoItem[] | null;
+  squashNState: { open: boolean; commitHash: string | null };
   setSidebarOpen: (open: boolean) => void;
   toggleSidebar: () => void;
   setRightPanelOpen: (open: boolean) => void;
@@ -23,6 +32,10 @@ interface UIState {
   closeDialog: () => void;
   setMergeTargetBranch: (branch: string | null) => void;
   setCompareBranchTarget: (branch: string | null) => void;
+  setRebaseTargetCommit: (hash: string | null) => void;
+  setPrefilledRebaseTodos: (todos: RebaseTodoItem[] | null) => void;
+  openSquashDialog: (commitHash: string) => void;
+  closeSquashDialog: () => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -36,6 +49,9 @@ export const useUIStore = create<UIState>((set) => ({
   activeDialog: null,
   mergeTargetBranch: null,
   compareBranchTarget: null,
+  rebaseTargetCommit: null,
+  prefilledRebaseTodos: null,
+  squashNState: { open: false, commitHash: null },
 
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
@@ -55,7 +71,11 @@ export const useUIStore = create<UIState>((set) => ({
   setSelectedStashIndex: (index) => set({ selectedStashIndex: index }),
   setDiffViewMode: (mode) => set({ diffViewMode: mode }),
   openDialog: (name) => set({ activeDialog: name }),
-  closeDialog: () => set({ activeDialog: null, mergeTargetBranch: null, compareBranchTarget: null }),
+  closeDialog: () => set({ activeDialog: null, mergeTargetBranch: null, compareBranchTarget: null, rebaseTargetCommit: null, prefilledRebaseTodos: null }),
   setMergeTargetBranch: (branch) => set({ mergeTargetBranch: branch }),
   setCompareBranchTarget: (branch) => set({ compareBranchTarget: branch }),
+  setRebaseTargetCommit: (hash) => set({ rebaseTargetCommit: hash }),
+  setPrefilledRebaseTodos: (todos) => set({ prefilledRebaseTodos: todos }),
+  openSquashDialog: (commitHash) => set({ squashNState: { open: true, commitHash } }),
+  closeSquashDialog: () => set({ squashNState: { open: false, commitHash: null } }),
 }));

@@ -1,9 +1,10 @@
 import { memo } from "react";
-import { Book, GitBranch, ArrowUp, ArrowDown, Loader2, GraduationCap, AlertTriangle, Terminal, Activity } from "lucide-react";
+import { Book, GitBranch, ArrowUp, ArrowDown, Loader2, GraduationCap, AlertTriangle, Terminal, Activity, RotateCcw } from "lucide-react";
 import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
 import { useGitBranches, useGitStatus, useGitSyncStatus } from "@/queries/useGitLog";
 import { useMergeStatus } from "@/queries/useGitMerge";
+import { useRebaseStatus } from "@/queries/useGitRebase";
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import { useOperationsStore } from "@/stores/operations";
 import { useLogsPanelStore } from "@/stores/logs";
@@ -69,6 +70,7 @@ export default function BottomBar() {
   const { data: status } = useGitStatus(repoPath);
   const { data: syncStatus } = useGitSyncStatus(repoPath);
   const { data: mergeStatus } = useMergeStatus(repoPath);
+  const { data: rebaseStatus } = useRebaseStatus(repoPath);
 
   const currentBranch = branches?.find((b) => b.current)?.name || "";
   const stagedCount = status?.filter((f) => f.staged).length || 0;
@@ -80,6 +82,8 @@ export default function BottomBar() {
 
   const hasConflicts = !!mergeStatus?.conflicts?.length;
   const conflictCount = mergeStatus?.conflicts?.length || 0;
+  const rebaseInProgress = !!rebaseStatus?.[0];
+  const rebaseConflictedFiles = rebaseStatus?.[1] || [];
 
   return (
     <>
@@ -114,6 +118,18 @@ export default function BottomBar() {
             >
               <AlertTriangle size={10} />
               <span>{conflictCount} conflict{conflictCount === 1 ? "" : "s"}</span>
+            </button>
+          )}
+
+          {/* Rebase In-Progress Indicator */}
+          {rebaseInProgress && (
+            <button
+              className="flex items-center gap-1 text-[10px] font-semibold border-l border-border-20 pl-3 h-3 text-[#ff9500] hover:text-[#ffb340] transition-colors cursor-pointer"
+              onClick={() => openDialogState("interactive-rebase")}
+              title={`Rebase in progress — ${rebaseConflictedFiles.length} conflicted files`}
+            >
+              <RotateCcw size={10} />
+              <span>Rebase in progress</span>
             </button>
           )}
 

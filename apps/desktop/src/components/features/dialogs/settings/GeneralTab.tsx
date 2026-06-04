@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronDown, Download, Check, RefreshCw, Loader2, AlertCircle, ArrowUpCircle } from "lucide-react";
+import { ChevronDown, Download, Check, RefreshCw, Loader2, AlertCircle, ArrowUpCircle, Database, Trash2, ShieldAlert } from "lucide-react";
 import { applyTheme } from "@/stores/repo";
 import { Switch } from "@/components/ui/form";
 import { useAppUpdater } from "@/queries/useAppUpdater";
@@ -89,30 +89,23 @@ export function ThemeSkeletonCard({ card, selected, onClick }: {
   );
 }
 
-interface DisplayTabProps {
-  theme: string;
-  setSelectedTheme: (theme: any) => void;
-  defaultDiffMode: "split" | "unified";
-  setDefaultDiffMode: (mode: "split" | "unified") => void;
-  graphDensity: "comfortable" | "compact";
-  setGraphDensity: (density: "comfortable" | "compact") => void;
-  graphShowHash: boolean;
-  setGraphShowHash: (v: boolean) => void;
-  graphShowAuthor: boolean;
-  setGraphShowAuthor: (v: boolean) => void;
-  graphShowDate: boolean;
-  setGraphShowDate: (v: boolean) => void;
-  diffContext: number;
-  setDiffContext: (v: number) => void;
-  diffLineWrap: boolean;
-  setDiffLineWrap: (v: boolean) => void;
-  dateFormat: string;
-  setDateFormat: (v: string) => void;
-  customDateFormat: string;
-  setCustomDateFormat: (v: string) => void;
+interface GeneralTabProps {
+  reopenLastRepo: boolean;
+  setReopenLastRepo: (v: boolean) => void;
+  recentRepoLimit: number;
+  setRecentRepoLimit: (v: number) => void;
+  handleClearAiCredentials: () => void;
+  handleClearRecentRepos: () => void;
 }
 
-export function GeneralTab() {
+export function GeneralTab({
+  reopenLastRepo,
+  setReopenLastRepo,
+  recentRepoLimit,
+  setRecentRepoLimit,
+  handleClearAiCredentials,
+  handleClearRecentRepos,
+}: GeneralTabProps) {
   const updater = useAppUpdater();
 
   return (
@@ -204,15 +197,89 @@ export function GeneralTab() {
           </div>
         )}
       </div>
+
+      {/* Launch Preferences Card */}
+      <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary mb-1">
+          Launch Preferences
+        </div>
+        <Switch
+          checked={reopenLastRepo}
+          onChange={setReopenLastRepo}
+          label="Reopen last repository on launch"
+          description="Automatically load the workspace you were last working on when opening GitFlow."
+        />
+        
+        <div className="border-t border-border-40 pt-3 flex items-center justify-between gap-4">
+          <div className="flex flex-col min-w-0">
+            <span className="text-xs font-semibold text-text-primary">Recent Repositories Limit</span>
+            <span className="text-2xs text-text-muted mt-0.5 leading-normal">Maximum number of entries in the recent workspaces list.</span>
+          </div>
+          <input
+            type="number"
+            min={3}
+            max={30}
+            value={recentRepoLimit}
+            onChange={(e) => setRecentRepoLimit(Number(e.target.value))}
+            className="w-20 h-8 px-2.5 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent hover:bg-surface-2 transition-all shrink-0 text-center"
+          />
+        </div>
+      </div>
+
+      {/* Diagnostics & Maintenance Card */}
+      <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary mb-1">
+          <ShieldAlert size={13} className="text-[#ff9f0a]" />
+          Maintenance & Diagnostics
+        </div>
+        <div className="grid grid-cols-2 gap-2 pt-1">
+          <button
+            type="button"
+            onClick={handleClearAiCredentials}
+            className="h-8 px-2 text-2xs font-semibold border border-border rounded-mac text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors flex items-center justify-center gap-1.5"
+          >
+            <Database size={12} className="text-accent" />
+            Clear AI Credentials
+          </button>
+          <button
+            type="button"
+            onClick={handleClearRecentRepos}
+            className="h-8 px-2 text-2xs font-semibold border border-border rounded-mac text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors flex items-center justify-center gap-1.5"
+          >
+            <Trash2 size={12} className="text-[#ff453a]" />
+            Clear Recent Repositories
+          </button>
+        </div>
+        <p className="text-3xs text-text-muted leading-normal pt-1">
+          Warning: Diagnostic operations apply immediately. Local credentials and recently accessed work lists will be completely reset.
+        </p>
+      </div>
     </div>
   );
 }
 
-export function DisplayTab({
+interface AppearanceTabProps {
+  theme: string;
+  setSelectedTheme: (theme: any) => void;
+  graphDensity: "comfortable" | "compact";
+  setGraphDensity: (density: "comfortable" | "compact") => void;
+  graphShowHash: boolean;
+  setGraphShowHash: (v: boolean) => void;
+  graphShowAuthor: boolean;
+  setGraphShowAuthor: (v: boolean) => void;
+  graphShowDate: boolean;
+  setGraphShowDate: (v: boolean) => void;
+  dateFormat: string;
+  setDateFormat: (v: string) => void;
+  customDateFormat: string;
+  setCustomDateFormat: (v: string) => void;
+  reducedMotion: boolean;
+  setReducedMotion: (v: boolean) => void;
+}
+
+export function AppearanceTab({
   theme,
   setSelectedTheme,
-  defaultDiffMode,
-  setDefaultDiffMode,
   graphDensity,
   setGraphDensity,
   graphShowHash,
@@ -221,15 +288,13 @@ export function DisplayTab({
   setGraphShowAuthor,
   graphShowDate,
   setGraphShowDate,
-  diffContext,
-  setDiffContext,
-  diffLineWrap,
-  setDiffLineWrap,
   dateFormat,
   setDateFormat,
   customDateFormat,
   setCustomDateFormat,
-}: DisplayTabProps) {
+  reducedMotion,
+  setReducedMotion,
+}: AppearanceTabProps) {
   return (
     <div className="space-y-4">
       {/* Color Theme Card */}
@@ -264,39 +329,9 @@ export function DisplayTab({
         </div>
       </div>
 
-      {/* Diff & Graph Preferences Card */}
+      {/* Graph Layout & Accessibility preferences */}
       <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
-        {/* Default Diff Mode Selector */}
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-text-primary">Default Diff View Mode</label>
-          <div className="relative">
-            <select
-              value={defaultDiffMode}
-              onChange={(e) => setDefaultDiffMode(e.target.value as "split" | "unified")}
-              className="w-full h-8 pl-2.5 pr-8 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer hover:bg-surface-2 transition-all"
-            >
-              <option value="split">Split View (Side-by-Side)</option>
-              <option value="unified">Unified View (Combined)</option>
-            </select>
-            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
-              <ChevronDown size={11} strokeWidth={2.5} />
-            </div>
-          </div>
-          <p className="text-2xs text-text-muted">
-            Choose the default presentation style when inspecting file differences.
-          </p>
-        </div>
-
-        <div className="border-t border-border-40 pt-2.5">
-          <Switch
-            checked={diffLineWrap}
-            onChange={setDiffLineWrap}
-            label="Wrap long lines in diff viewer"
-            description="Automatically wrap excessively long source code lines in the diff panel."
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 border-t border-border-40 pt-3">
+        <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <label className="text-xs font-semibold text-text-primary">Commit Graph Density</label>
             <div className="relative">
@@ -313,38 +348,36 @@ export function DisplayTab({
               </div>
             </div>
           </div>
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-text-primary">Diff Context Lines</label>
-            <input
-              type="number"
-              min={0}
-              max={9999}
-              value={diffContext}
-              onChange={(e) => setDiffContext(Number(e.target.value))}
-              className="w-full h-8 px-2.5 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent hover:bg-surface-2 transition-all"
-            />
+          
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-text-primary">Commit List Columns</label>
+            <div className="grid grid-cols-3 gap-2 bg-surface-1-40 rounded-mac p-2 border border-border-40">
+              {[
+                ["Hash", graphShowHash, setGraphShowHash],
+                ["Author", graphShowAuthor, setGraphShowAuthor],
+                ["Date", graphShowDate, setGraphShowDate],
+              ].map(([label, checked, setter]) => (
+                <label key={label as string} className="flex items-center gap-2 text-xs text-text-secondary cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={checked as boolean}
+                    onChange={(e) => (setter as (next: boolean) => void)(e.target.checked)}
+                    className="rounded border-border text-accent focus:ring-accent"
+                  />
+                  {label as string}
+                </label>
+              ))}
+            </div>
           </div>
         </div>
 
-        <div className="space-y-2 border-t border-border-40 pt-3">
-          <label className="text-xs font-semibold text-text-primary">Commit List Columns</label>
-          <div className="grid grid-cols-3 gap-2 bg-surface-1-40 rounded-mac p-2 border border-border-40">
-            {[
-              ["Hash", graphShowHash, setGraphShowHash],
-              ["Author", graphShowAuthor, setGraphShowAuthor],
-              ["Date", graphShowDate, setGraphShowDate],
-            ].map(([label, checked, setter]) => (
-              <label key={label as string} className="flex items-center gap-2 text-xs text-text-secondary cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={checked as boolean}
-                  onChange={(e) => (setter as (next: boolean) => void)(e.target.checked)}
-                  className="rounded border-border text-accent focus:ring-accent"
-                />
-                {label as string}
-              </label>
-            ))}
-          </div>
+        <div className="border-t border-border-40 pt-2.5">
+          <Switch
+            checked={reducedMotion}
+            onChange={setReducedMotion}
+            label="Reduce animations"
+            description="Disable cosmetic transitions and UI animations to speed up navigation response."
+          />
         </div>
       </div>
 

@@ -3,7 +3,7 @@ import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useGitDiff, useGitStatus } from "@/queries/useGitLog";
 import { api, type FileChange, type LintDiagnostic } from "@/api/tauri";
-import { useGenerateCommitMessage, useAICommitScope, useAIDiffReview } from "@/queries/useAI";
+import { useGenerateCommitMessage, useAICommitScope, useAIDiffReview, useImproveCommitMessage, useAddCommitBody } from "@/queries/useAI";
 import { generateLocalCommitMessage, shouldAnalyzeScope, type CommitScopeSuggestion } from "@/lib/ai";
 import { useQueryClient } from "@tanstack/react-query";
 import { showToast } from "@/lib/toast";
@@ -39,6 +39,8 @@ export default function WorkingTree() {
   const generateCommit = useGenerateCommitMessage(repoPath);
   const commitScope = useAICommitScope();
   const aiReview = useAIDiffReview();
+  const improveMessage = useImproveCommitMessage(repoPath);
+  const addBody = useAddCommitBody(repoPath);
   const [commitMessage, setCommitMessage] = useState("");
   const [lintResults, setLintResults] = useState<CommitLintResult[]>([]);
 
@@ -494,6 +496,44 @@ export default function WorkingTree() {
     }
   };
 
+  const handleImproveMessage = async () => {
+    if (improveMessage.isPending || !commitMessage.trim()) return;
+    if (staged.length === 0) {
+      showToast("Stage some files first to improve the message", "info");
+      return;
+    }
+    showToast("Improving commit message...", "info");
+    try {
+      const result = await improveMessage.mutateAsync({
+        currentMessage: commitMessage,
+        files: staged,
+      });
+      setCommitMessage(result);
+      showToast("Commit message improved");
+    } catch (err: any) {
+      showToast(`AI failed: ${err.message || err}`, "error");
+    }
+  };
+
+  const handleAddBody = async () => {
+    if (addBody.isPending || !commitMessage.trim()) return;
+    if (staged.length === 0) {
+      showToast("Stage some files first to add a body", "info");
+      return;
+    }
+    showToast("Generating commit body...", "info");
+    try {
+      const result = await addBody.mutateAsync({
+        subject: commitMessage.split("\n")[0],
+        files: staged,
+      });
+      setCommitMessage(result);
+      showToast("Commit body added");
+    } catch (err: any) {
+      showToast(`AI failed: ${err.message || err}`, "error");
+    }
+  };
+
   // Auto-trigger scope analysis when staged files cross threshold (≥5 files across ≥2 dirs)
   const prevStagedCountRef = useRef(0);
   useEffect(() => {
@@ -675,9 +715,13 @@ export default function WorkingTree() {
         onCommitGroup={handleCommitGroup}
         onCommitAllSuggested={handleCommitAllSuggested}
         onUndoComplete={invalidate}
+        onImproveMessage={handleImproveMessage}
+        onAddBody={handleAddBody}
         aiReviewPending={aiReview.isPending}
         generateCommitPending={generateCommit.isPending}
         commitScopePending={commitScope.isPending}
+        improveMessagePending={improveMessage.isPending}
+        addBodyPending={addBody.isPending}
       />
 
       {reviewTarget && (

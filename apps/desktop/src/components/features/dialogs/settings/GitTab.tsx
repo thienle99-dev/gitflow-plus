@@ -10,10 +10,7 @@ interface GitTabProps {
   setAutoPrune: (v: boolean) => void;
   confirmDangerous: boolean;
   setConfirmDangerous: (v: boolean) => void;
-  reopenLastRepo: boolean;
-  setReopenLastRepo: (v: boolean) => void;
-  recentRepoLimit: number;
-  setRecentRepoLimit: (v: number) => void;
+
   commitLintEnabled: boolean;
   setCommitLintEnabled: (v: boolean) => void;
   codeLintEnabled: boolean;
@@ -31,10 +28,7 @@ export function GitTab({
   setAutoPrune,
   confirmDangerous,
   setConfirmDangerous,
-  reopenLastRepo,
-  setReopenLastRepo,
-  recentRepoLimit,
-  setRecentRepoLimit,
+
   commitLintEnabled,
   setCommitLintEnabled,
   codeLintEnabled,
@@ -97,29 +91,7 @@ export function GitTab({
           />
         </div>
 
-        <div className="border-t border-border-40 pt-2.5">
-          <Switch
-            checked={reopenLastRepo}
-            onChange={setReopenLastRepo}
-            label="Reopen last repository on launch"
-            description="Automatically load the workspace you were last working on when opening GitFlow."
-          />
-        </div>
 
-        <div className="border-t border-border-40 pt-3 flex items-center justify-between gap-4">
-          <div className="flex flex-col min-w-0">
-            <span className="text-xs font-semibold text-text-primary">Recent Repositories Limit</span>
-            <span className="text-2xs text-text-muted mt-0.5 leading-normal">Maximum number of entries in the recent workspaces list.</span>
-          </div>
-          <input
-            type="number"
-            min={3}
-            max={30}
-            value={recentRepoLimit}
-            onChange={(e) => setRecentRepoLimit(Number(e.target.value))}
-            className="w-20 h-8 px-2.5 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent hover:bg-surface-2 transition-all shrink-0 text-center"
-          />
-        </div>
       </div>
 
       {/* Pre-Commit Quality Gates Card */}

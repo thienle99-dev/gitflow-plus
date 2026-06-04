@@ -13,6 +13,8 @@ import {
   analyzeCommitScope,
   explainMergeRequestWithAI,
   reviewMergeRequestWithAI,
+  improveCommitMessage,
+  addCommitBody,
 } from "@/lib/ai";
 
 export function useGenerateCommitMessage(repoPath: string | null) {
@@ -116,5 +118,37 @@ export function useAIConflictExplain() {
       repoPath?: string;
     }): Promise<ConflictExplanation> =>
       explainConflictWithAI(filePath, ours, theirs, contextBefore, contextAfter, repoPath),
+  });
+}
+
+export function useImproveCommitMessage(repoPath: string | null) {
+  return useMutation({
+    mutationKey: ["ai.improve-message"],
+    mutationFn: ({
+      currentMessage,
+      files,
+    }: {
+      currentMessage: string;
+      files: FileChange[];
+    }) => {
+      if (!repoPath) throw new Error("No repository selected");
+      return improveCommitMessage(repoPath, currentMessage, files);
+    },
+  });
+}
+
+export function useAddCommitBody(repoPath: string | null) {
+  return useMutation({
+    mutationKey: ["ai.add-body"],
+    mutationFn: ({
+      subject,
+      files,
+    }: {
+      subject: string;
+      files: FileChange[];
+    }) => {
+      if (!repoPath) throw new Error("No repository selected");
+      return addCommitBody(repoPath, subject, files);
+    },
   });
 }
