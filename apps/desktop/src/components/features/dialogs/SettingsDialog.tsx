@@ -1001,7 +1001,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
           <button
             onClick={handleSave}
             disabled={!hasChanges}
-            className="px-4 py-1 bg-accent text-accent-fg text-xs font-semibold rounded-mac disabled:opacity-40 hover:opacity-90 transition-opacity min-w-[64px]"
+            className="px-4 py-1 bg-accent text-accent-fg text-xs font-semibold rounded-mac disabled:opacity-40 enabled:hover:opacity-90 transition-opacity min-w-[64px] enabled:cursor-pointer"
           >
             Save
           </button>

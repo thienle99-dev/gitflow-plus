@@ -122,7 +122,7 @@ export function GeneralTab({
           <button
             onClick={updater.checkForUpdates}
             disabled={updater.status === "checking" || updater.status === "downloading"}
-            className="flex items-center gap-1.5 h-7 px-3 text-xs font-medium rounded-mac border border-border bg-surface-1 text-text-primary hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
+            className="flex items-center justify-center gap-1.5 h-7 w-[140px] text-xs font-medium rounded-mac border border-border bg-surface-1 text-text-primary enabled:hover:bg-surface-2 enabled:active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all enabled:cursor-pointer shrink-0"
           >
             {updater.status === "checking" ? (
               <Loader2 size={12} className="animate-spin" />
