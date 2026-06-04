@@ -14,9 +14,32 @@
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
+export type AIProviderType = "openai-compatible" | "anthropic" | "ollama" | "llamacpp";
+
+export const AI_PROVIDER_OPTIONS: { id: AIProviderType; label: string; description: string }[] = [
+  { id: "openai-compatible", label: "OpenAI Compatible", description: "OpenAI, Azure, proxies, gateways" },
+  { id: "anthropic", label: "Anthropic (Claude)", description: "Anthropic API for Claude models" },
+  { id: "ollama", label: "Ollama (local)", description: "Local Ollama server (localhost:11434)" },
+  { id: "llamacpp", label: "llama.cpp (local)", description: "Local llama.cpp server (localhost:8080)" },
+];
+
+export function defaultApiUrlForProvider(provider: AIProviderType): string {
+  switch (provider) {
+    case "ollama": return "http://localhost:11434";
+    case "llamacpp": return "http://localhost:8080";
+    case "anthropic": return "https://api.anthropic.com";
+    case "openai-compatible": return "";
+  }
+}
+
+export function providerNeedsApiKey(provider: AIProviderType): boolean {
+  return provider === "openai-compatible" || provider === "anthropic";
+}
+
 export interface AIProviderProfile {
   id: string;
   name: string;
+  provider: AIProviderType;
   apiKey: string;
   apiUrl: string;
   commitModel: string;
@@ -59,6 +82,7 @@ export function createDefaultProfile(overrides?: Partial<AIProviderProfile>): AI
   return {
     id: randomId(),
     name: "Default",
+    provider: "openai-compatible",
     apiKey: "",
     apiUrl: "",
     commitModel: DEFAULT_COMMIT_MODEL,
@@ -122,6 +146,7 @@ export function migrateLegacyToProfiles(): boolean {
   const legacyProfile: AIProviderProfile = {
     id: randomId(),
     name: "Default",
+    provider: "openai-compatible",
     apiKey: localStorage.getItem(LEGACY_KEYS.apiKey) || "",
     apiUrl: localStorage.getItem(LEGACY_KEYS.apiUrl) || "",
     commitModel: localStorage.getItem(LEGACY_KEYS.model) || DEFAULT_COMMIT_MODEL,

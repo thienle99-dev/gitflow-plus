@@ -37,6 +37,8 @@ import {
   DEFAULT_COMMIT_MODEL,
   DEFAULT_TOKEN_LIMIT,
   type AIProviderProfile,
+  type AIProviderType,
+  defaultApiUrlForProvider,
 } from "@/lib/ai-profiles";
 
 // Re-export for backward compatibility (OnboardingWizard imports these)
@@ -159,6 +161,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
   // AI Tab States — profile-aware
   const [profiles, setProfiles] = useState<AIProviderProfile[]>([]);
   const [activeProfileId, setActiveProfileIdState] = useState("");
+  const [provider, setProvider] = useState<AIProviderType>("openai-compatible");
   const [apiKey, setApiKey] = useState("");
   const [apiUrl, setApiUrl] = useState("");
   const [showKey, setShowKey] = useState(false);
@@ -191,6 +194,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
 
   // ─── Load profiles and fill form from active profile ──────────────────────
   const fillFormFromProfile = useCallback((profile: AIProviderProfile) => {
+    setProvider(profile.provider || "openai-compatible");
     setApiKey(profile.apiKey);
     setApiUrl(profile.apiUrl);
     setCommitModel(profile.commitModel);
@@ -324,6 +328,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       diffLineWrap,
       largeDiffMode,
       reducedMotion,
+      provider,
       apiKey,
       apiUrl,
       commitModel,
@@ -347,7 +352,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
     commitLintEnabled, codeLintEnabled, lintStrictness,
     graphDensity, graphShowHash, graphShowAuthor, graphShowDate,
     diffContext, diffLineWrap, largeDiffMode, reducedMotion,
-    apiKey, apiUrl, commitModel, reviewModel, tokenLimit, fetchedModels,
+    provider, apiKey, apiUrl, commitModel, reviewModel, tokenLimit, fetchedModels,
     aiDetailLevel, commitStyle, customRules, reviewLanguage, reviewChecklist,
     githubToken, gitlabToken, gitlabHost, profiles, activeProfileId,
   ]);
@@ -364,7 +369,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
     setProfiles((prev) => {
       const updated = prev.map((p) =>
         p.id === activeProfileId
-          ? { ...p, apiKey, apiUrl, commitModel, reviewModel, tokenLimit, fetchedModels, updatedAt: Date.now() }
+          ? { ...p, provider, apiKey, apiUrl, commitModel, reviewModel, tokenLimit, fetchedModels, updatedAt: Date.now() }
           : p,
       );
       return updated;
@@ -376,6 +381,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
     setProfiles((prev) => {
       const newProfile = prev.find((p) => p.id === newProfileId);
       if (newProfile) {
+        setProvider(newProfile.provider || "openai-compatible");
         setApiKey(newProfile.apiKey);
         setApiUrl(newProfile.apiUrl);
         setCommitModel(newProfile.commitModel);
@@ -385,7 +391,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       }
       return prev; // no change to array
     });
-  }, [activeProfileId, apiKey, apiUrl, commitModel, reviewModel, tokenLimit, fetchedModels]);
+  }, [activeProfileId, provider, apiKey, apiUrl, commitModel, reviewModel, tokenLimit, fetchedModels]);
 
   // ─── Profile CRUD ─────────────────────────────────────────────────────────
   const handleAddProfile = useCallback(() => {
@@ -544,7 +550,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       // Save active profile's credential fields back into the profiles array
       const updatedProfiles = profiles.map((p) =>
         p.id === activeProfileId
-          ? { ...p, apiKey, apiUrl, commitModel, reviewModel, tokenLimit, fetchedModels, updatedAt: Date.now() }
+          ? { ...p, provider, apiKey, apiUrl, commitModel, reviewModel, tokenLimit, fetchedModels, updatedAt: Date.now() }
           : p,
       );
       saveProfiles(updatedProfiles, activeProfileId);
@@ -835,6 +841,9 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
               onDuplicateProfile={handleDuplicateProfile}
               onDeleteProfile={handleDeleteProfile}
               onRenameProfile={handleRenameProfile}
+              // Provider type (bound to active profile)
+              provider={provider}
+              setProvider={setProvider}
               // Existing credential props (bound to active profile)
               apiKey={apiKey}
               setApiKey={setApiKey}

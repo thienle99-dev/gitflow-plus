@@ -1,7 +1,7 @@
 import { api, type FileChange, type Branch, type ConventionFile } from "@/api/tauri";
 import type { MergeRequest, MergeRequestFileChange } from "@/api/gitHost";
 import { scanForRisks, type RiskReport } from "./risk-scanner";
-import { loadActiveProfile, type AIProviderProfile } from "./ai-profiles";
+import { loadActiveProfile, type AIProviderProfile, type AIProviderType } from "./ai-profiles";
 
 const DEFAULT_MODEL = "claude-sonnet-4-20250514";
 
@@ -62,6 +62,7 @@ async function waitForRateSlot(): Promise<void> {
 
 interface AISettings {
   profileId?: string;
+  provider: AIProviderType;
   apiKey: string;
   model: string;
   reviewModel: string;
@@ -797,6 +798,7 @@ export function readAISettings(): AISettings {
   const profile = loadActiveProfile();
   return {
     profileId: profile.id,
+    provider: profile.provider || "openai-compatible",
     apiKey: profile.apiKey || localStorage.getItem("gitflowAiApiKey") || "",
     model: profile.commitModel || localStorage.getItem("gitflowAiModel") || DEFAULT_MODEL,
     reviewModel: profile.reviewModel
@@ -908,11 +910,8 @@ function buildReviewLanguageInstruction(language: AIReviewLanguage) {
 }
 
 function hasProvider(settings: AISettings) {
-  return !!settings.apiKey
-    || settings.model === "ollama"
-    || settings.model === "llama.cpp"
-    || settings.reviewModel === "ollama"
-    || settings.reviewModel === "llama.cpp";
+  if (settings.provider === "ollama" || settings.provider === "llamacpp") return true;
+  return !!settings.apiKey;
 }
 
 function withReviewModel(settings: AISettings): AISettings {
@@ -1071,7 +1070,7 @@ async function requestAIText(prompt: string, settings: AISettings) {
 
   let result: string;
 
-  if (settings.model.startsWith("claude-")) {
+  if (settings.provider === "anthropic") {
     let endpoint = settings.customUrl.trim() || "https://api.anthropic.com/v1/messages";
     if (settings.customUrl && !endpoint.endsWith("/messages")) {
       endpoint = endpoint.replace(/\/+$/, "") + "/messages";
@@ -1094,13 +1093,14 @@ async function requestAIText(prompt: string, settings: AISettings) {
     assertSuccess(res.status);
     result = parseAnthropicResponse(res.body);
   } else {
+    // OpenAI-compatible, Ollama, llama.cpp all use the same /chat/completions protocol
+    const defaultEndpoints: Record<string, string> = {
+      "ollama": "http://localhost:11434/v1/chat/completions",
+      "llamacpp": "http://localhost:8080/v1/chat/completions",
+    };
     let endpoint = settings.customUrl.trim();
     if (!endpoint) {
-      endpoint = settings.model === "ollama"
-        ? "http://localhost:11434/v1/chat/completions"
-        : settings.model === "llama.cpp"
-          ? "http://localhost:8080/v1/chat/completions"
-          : "https://api.openai.com/v1/chat/completions";
+      endpoint = defaultEndpoints[settings.provider] || "https://api.openai.com/v1/chat/completions";
     }
     if (settings.customUrl && !endpoint.endsWith("/chat/completions") && !endpoint.endsWith("/completions")) {
       endpoint = endpoint.replace(/\/+$/, "") + "/chat/completions";
@@ -1116,7 +1116,7 @@ async function requestAIText(prompt: string, settings: AISettings) {
       "POST",
       headers,
       JSON.stringify({
-        model: settings.model === "ollama" ? "llama3" : settings.model === "llama.cpp" ? "local-model" : settings.model,
+        model: settings.model,
         messages: [{ role: "user", content: prompt }],
         max_tokens: settings.tokenLimit,
         stream: false,

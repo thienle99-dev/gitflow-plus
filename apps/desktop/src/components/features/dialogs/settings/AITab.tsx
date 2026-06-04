@@ -12,7 +12,13 @@ import {
 import { useState } from "react";
 import { AI_REVIEW_CHECKLIST_OPTIONS, DEFAULT_AI_REVIEW_CHECKLIST, type AIReviewMode } from "@/lib/ai";
 import type { ConventionFile } from "@/api/tauri";
-import type { AIProviderProfile } from "@/lib/ai-profiles";
+import {
+  AI_PROVIDER_OPTIONS,
+  defaultApiUrlForProvider,
+  providerNeedsApiKey,
+  type AIProviderProfile,
+  type AIProviderType,
+} from "@/lib/ai-profiles";
 
 export const AVAILABLE_MODELS = [
   { id: "claude-sonnet-4-20250514", label: "Claude Sonnet 4" },
@@ -55,6 +61,9 @@ interface AITabProps {
   onDuplicateProfile: () => void;
   onDeleteProfile: () => void;
   onRenameProfile: (name: string) => void;
+  // Provider type (bound to active profile)
+  provider: AIProviderType;
+  setProvider: (v: AIProviderType) => void;
   // Credential / model props (bound to active profile)
   apiKey: string;
   setApiKey: (v: string) => void;
@@ -97,6 +106,8 @@ export function AITab({
   onDuplicateProfile,
   onDeleteProfile,
   onRenameProfile,
+  provider,
+  setProvider,
   apiKey,
   setApiKey,
   apiUrl,
@@ -133,6 +144,7 @@ export function AITab({
   const [nameDraft, setNameDraft] = useState("");
 
   const activeProfile = profiles.find((p) => p.id === activeProfileId);
+  const needsApiKey = providerNeedsApiKey(provider);
 
   const startRename = () => {
     setNameDraft(activeProfile?.name || "");
@@ -145,6 +157,12 @@ export function AITab({
       onRenameProfile(trimmed);
     }
     setEditingName(false);
+  };
+
+  const handleProviderChange = (newProvider: AIProviderType) => {
+    setProvider(newProvider);
+    // Auto-set API URL to the default for the selected provider
+    setApiUrl(defaultApiUrlForProvider(newProvider));
   };
 
   return (
@@ -224,32 +242,58 @@ export function AITab({
         </div>
       </div>
 
+      {/* ── Provider Type Dropdown ──────────────────────────────────────── */}
+      <div className="space-y-1">
+        <label className="text-xs font-semibold text-text-primary">Provider Type</label>
+        <div className="relative">
+          <select
+            value={provider}
+            onChange={(e) => handleProviderChange(e.target.value as AIProviderType)}
+            className="w-full h-8 pl-2.5 pr-8 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer hover:bg-surface-2 transition-all"
+          >
+            {AI_PROVIDER_OPTIONS.map((opt) => (
+              <option key={opt.id} value={opt.id}>
+                {opt.label} — {opt.description}
+              </option>
+            ))}
+          </select>
+          <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
+            <ChevronDown size={11} strokeWidth={2.5} />
+          </div>
+        </div>
+        <p className="text-2xs text-text-muted">
+          Select your AI provider type first, then configure the API key and endpoint below.
+        </p>
+      </div>
+
       {/* AI Provider Configuration Card */}
       <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
-        {/* API Key */}
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-text-primary">API Key</label>
-          <div className="relative">
-            <input
-              type={showKey ? "text" : "password"}
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="sk-..."
-              className="w-full h-8 pr-7 pl-2.5 text-xs bg-surface-1 border border-border rounded-mac text-text-primary placeholder:text-text-muted outline-none focus:border-accent transition-colors"
-            />
-            <button
-              type="button"
-              onClick={() => setShowKey(!showKey)}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 ghost p-1 text-text-muted hover:text-text-primary"
-              title={showKey ? "Hide key" : "Show key"}
-            >
-              {showKey ? <EyeOff size={12} /> : <Eye size={12} />}
-            </button>
+        {/* API Key — only shown when the provider needs one */}
+        {needsApiKey && (
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-text-primary">API Key</label>
+            <div className="relative">
+              <input
+                type={showKey ? "text" : "password"}
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="sk-..."
+                className="w-full h-8 pr-7 pl-2.5 text-xs bg-surface-1 border border-border rounded-mac text-text-primary placeholder:text-text-muted outline-none focus:border-accent transition-colors"
+              />
+              <button
+                type="button"
+                onClick={() => setShowKey(!showKey)}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 ghost p-1 text-text-muted hover:text-text-primary"
+                title={showKey ? "Hide key" : "Show key"}
+              >
+                {showKey ? <EyeOff size={12} /> : <Eye size={12} />}
+              </button>
+            </div>
+            <p className="text-2xs text-text-muted">
+              {apiKey ? maskKey(apiKey) : "Provide an API key to enable AI-powered Commit Message suggestions."}
+            </p>
           </div>
-          <p className="text-2xs text-text-muted">
-            {apiKey ? maskKey(apiKey) : "Provide an API key to enable AI-powered Commit Message suggestions."}
-          </p>
-        </div>
+        )}
 
         {/* Custom API URL */}
         <div className="space-y-1 border-t border-border-40 pt-3">
@@ -259,7 +303,12 @@ export function AITab({
               type="text"
               value={apiUrl}
               onChange={(e) => setApiUrl(e.target.value)}
-              placeholder="https://api.openai.com/v1 or local gateway address"
+              placeholder={
+                provider === "ollama" ? "http://localhost:11434"
+                : provider === "llamacpp" ? "http://localhost:8080"
+                : provider === "anthropic" ? "https://api.anthropic.com"
+                : "https://api.openai.com/v1 or local gateway address"
+              }
               className="flex-1 h-8 px-2.5 text-xs bg-surface-1 border border-border rounded-mac text-text-primary placeholder:text-text-muted outline-none focus:border-accent transition-colors"
             />
             <button
@@ -273,7 +322,11 @@ export function AITab({
             </button>
           </div>
           <p className="text-2xs text-text-muted">
-            Override default provider endpoints (e.g. for proxies, self-hosted gateways, Ollama). Leave blank for default endpoints.
+            {provider === "ollama"
+              ? "Default: http://localhost:11434. Override if your Ollama server runs on a different address."
+              : provider === "llamacpp"
+                ? "Default: http://localhost:8080. Override if your llama.cpp server runs on a different address."
+                : "Override default provider endpoints (e.g. for proxies, self-hosted gateways). Leave blank for default."}
           </p>
         </div>
 
