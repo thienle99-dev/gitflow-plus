@@ -49,11 +49,8 @@ function App() {
           position="bottom-center"
           toastOptions={{
             style: {
-              background: "var(--surface-1)",
               color: "var(--text-primary)",
-              border: "1px solid var(--border)",
               fontSize: "12px",
-              borderRadius: "8px",
             },
             classNames: {
               error: "sonner-error",

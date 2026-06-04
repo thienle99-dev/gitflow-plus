@@ -524,10 +524,19 @@ body.tray-window #root {
 }
 
 [data-sonner-toast] {
-  background: var(--surface-1) !important;
+  background: color-mix(in srgb, var(--surface-1) 78%, transparent) !important;
   color: var(--text-primary) !important;
-  border-color: var(--border) !important;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18) !important;
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent) !important;
+  border-radius: 12px !important;
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.24),
+    0 1px 0 color-mix(in srgb, var(--text-primary) 10%, transparent) inset !important;
+  backdrop-filter: blur(18px) saturate(1.35) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.35) !important;
+  opacity: 0.96 !important;
+  overflow: visible !important;
+  min-height: 54px !important;
+  padding: 14px 18px !important;
 }
 
 [data-sonner-toast] [data-icon],
@@ -536,28 +545,53 @@ body.tray-window #root {
   color: inherit !important;
 }
 
+[data-sonner-toast] [data-icon] {
+  opacity: 0.92 !important;
+}
+
+[data-sonner-toast] [data-title] {
+  font-weight: 650 !important;
+  letter-spacing: 0 !important;
+}
+
 [data-sonner-toast].sonner-info {
-  background: var(--surface-1) !important;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--info) 14%, transparent), transparent 42%),
+    color-mix(in srgb, var(--surface-1) 80%, transparent) !important;
   color: var(--text-primary) !important;
-  border-color: var(--info) !important;
+  border-color: color-mix(in srgb, var(--info) 78%, var(--border)) !important;
 }
 
 [data-sonner-toast].sonner-success {
-  background: var(--surface-1) !important;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--success) 14%, transparent), transparent 42%),
+    color-mix(in srgb, var(--surface-1) 80%, transparent) !important;
   color: var(--text-primary) !important;
-  border-color: var(--success) !important;
+  border-color: color-mix(in srgb, var(--success) 72%, var(--border)) !important;
 }
 
 [data-sonner-toast].sonner-error {
-  background: var(--surface-1) !important;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--danger) 14%, transparent), transparent 42%),
+    color-mix(in srgb, var(--surface-1) 80%, transparent) !important;
   color: var(--text-primary) !important;
-  border-color: var(--danger) !important;
+  border-color: color-mix(in srgb, var(--danger) 76%, var(--border)) !important;
 }
 
 [data-sonner-toast] [data-close-button] {
-  background: var(--surface-2) !important;
+  background: color-mix(in srgb, var(--surface-2) 82%, transparent) !important;
   color: var(--text-secondary) !important;
-  border-color: var(--border) !important;
+  border-color: color-mix(in srgb, var(--border) 72%, transparent) !important;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  transition: background 150ms ease, color 150ms ease, transform 150ms ease !important;
+}
+
+[data-sonner-toast] [data-close-button]:hover {
+  background: color-mix(in srgb, var(--surface-3) 90%, transparent) !important;
+  color: var(--text-primary) !important;
+  transform: scale(1.04) !important;
 }
 
 @keyframes toast-in {

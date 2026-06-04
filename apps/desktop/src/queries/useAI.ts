@@ -4,6 +4,7 @@ import type { MergeRequest, MergeRequestFileChange } from "@/api/gitHost";
 import {
   type AIReviewMode,
   type ConflictExplanation,
+  type MergeStrategyAdvice,
   generateCommitMessageWithAI,
   reviewDiffWithAI,
   generateInlineReviewComments,
@@ -15,6 +16,7 @@ import {
   reviewMergeRequestWithAI,
   improveCommitMessage,
   addCommitBody,
+  adviseMergeStrategy,
 } from "@/lib/ai";
 
 export function useGenerateCommitMessage(repoPath: string | null) {
@@ -133,6 +135,30 @@ export function useImproveCommitMessage(repoPath: string | null) {
     }) => {
       if (!repoPath) throw new Error("No repository selected");
       return improveCommitMessage(repoPath, currentMessage, files);
+    },
+  });
+}
+
+export function useAIMergeStrategyAdvice(repoPath: string | null) {
+  return useMutation<MergeStrategyAdvice, Error, {
+    currentBranch: string;
+    targetBranch: string;
+    ahead: number;
+    behind: number;
+    incomingCommits: Array<{ hash: string; message: string; author: string }>;
+    changedFiles: Array<{ path: string; status: string; additions: number; deletions: number }>;
+  }>({
+    mutationKey: ["ai.merge-strategy-advice"],
+    mutationFn: ({
+      currentBranch,
+      targetBranch,
+      ahead,
+      behind,
+      incomingCommits,
+      changedFiles,
+    }) => {
+      if (!repoPath) throw new Error("No repository selected");
+      return adviseMergeStrategy(repoPath, currentBranch, targetBranch, ahead, behind, incomingCommits, changedFiles);
     },
   });
 }

@@ -1294,3 +1294,184 @@ ${diff.slice(0, 6000)}`;
   }
   return result;
 }
+
+// ── AI Merge Strategy Advisor ──────────────────────────────────────────────
+
+export interface MergeStrategyRecommendation {
+  strategy: "merge" | "rebase" | "squash" | "fast-forward";
+  confidence: "high" | "medium" | "low";
+  reasoning: string;
+  pros: string[];
+  cons: string[];
+}
+
+export interface MergeStrategyAdvice {
+  recommendation: MergeStrategyRecommendation;
+  alternatives: MergeStrategyRecommendation[];
+  summary: string;
+}
+
+const MERGE_STRATEGY_SCHEMAS: Record<string, string> = {
+  "merge": "git merge --no-ff (creates a merge commit preserving branch topology)",
+  "rebase": "git rebase + git merge --ff-only (replays commits on top of target for linear history)",
+  "squash": "git merge --squash (combines all commits into one on target branch)",
+  "fast-forward": "git merge --ff-only (moves branch pointer forward, no new commit)",
+};
+
+export async function adviseMergeStrategy(
+  repoPath: string,
+  currentBranch: string,
+  targetBranch: string,
+  ahead: number,
+  behind: number,
+  incomingCommits: Array<{ hash: string; message: string; author: string }>,
+  changedFiles: Array<{ path: string; status: string; additions: number; deletions: number }>,
+): Promise<MergeStrategyAdvice> {
+  const settings = readAISettings();
+  if (!hasProvider(settings)) {
+    throw new Error("Configure an AI API key or local model in settings");
+  }
+
+  const commitSummary = incomingCommits
+    .slice(0, 30)
+    .map((c) => `  ${c.hash.slice(0, 7)} ${c.message} (${c.author})`)
+    .join("\n");
+
+  const fileSummary = changedFiles
+    .slice(0, 40)
+    .map((f) => `  [${f.status}] ${f.path} +${f.additions}/-${f.deletions}`)
+    .join("\n");
+
+  const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
+  const conventionContext = await getConventionContext(repoPath);
+
+  const prompt = `You are a Git merge strategy advisor. Analyze the branch comparison data and recommend the best merge strategy.
+
+## Available Strategies
+
+${Object.entries(MERGE_STRATEGY_SCHEMAS).map(([k, v]) => `- **${k}**: ${v}`).join("\n")}
+
+## Branch Comparison Data
+
+- Current branch: ${currentBranch}
+- Target branch: ${targetBranch}
+- Commits ahead (in ${targetBranch} but not ${currentBranch}): ${behind}
+- Commits behind (in ${currentBranch} but not ${targetBranch}): ${ahead}
+- Incoming commits (${behind} total):
+${commitSummary || "  (none)"}
+- Changed files (${changedFiles.length} total):
+${fileSummary || "  (none)"}
+
+## INSTRUCTIONS
+
+1. Analyze the data and recommend the SINGLE best strategy.
+2. Provide a confidence level: high (clear winner), medium (reasonable choice), or low (trade-offs involved).
+3. Explain your reasoning in 2-3 sentences.
+4. List 2-3 pros and 1-2 cons of the recommended strategy.
+5. Provide 2-3 alternative strategies with their own reasoning (1 sentence each), pros (1-2 each), and cons (1 each).
+6. Write a brief summary of your recommendation (1-2 sentences).
+
+## RESPONSE FORMAT
+
+Return EXACTLY this JSON structure — no markdown, no explanation outside the JSON:
+
+{
+  "recommendation": {
+    "strategy": "merge|rebase|squash|fast-forward",
+    "confidence": "high|medium|low",
+    "reasoning": "...",
+    "pros": ["...", "..."],
+    "cons": ["...", "..."]
+  },
+  "alternatives": [
+    {
+      "strategy": "...",
+      "confidence": "...",
+      "reasoning": "...",
+      "pros": ["..."],
+      "cons": ["..."]
+    }
+  ],
+  "summary": "..."
+}
+
+${languageInstruction}${conventionContext}`;
+
+  const raw = await requestAIText(prompt, settings);
+
+  // Try to parse JSON response
+  const parsed = parseMergeStrategyAdvice(raw);
+  if (parsed) return parsed;
+
+  // Fallback: construct from free-text response
+  return buildFallbackAdvice(raw, behind, ahead, incomingCommits.length, changedFiles.length);
+}
+
+function parseMergeStrategyAdvice(raw: string): MergeStrategyAdvice | null {
+  try {
+    // Strip markdown code fences if present
+    let text = raw.trim();
+    if (text.startsWith("```")) {
+      text = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
+    }
+    // Find JSON object in the response
+    const jsonStart = text.indexOf("{");
+    const jsonEnd = text.lastIndexOf("}");
+    if (jsonStart === -1 || jsonEnd === -1 || jsonEnd <= jsonStart) return null;
+    const json = text.slice(jsonStart, jsonEnd + 1);
+    const data = JSON.parse(json);
+
+    if (!data.recommendation?.strategy) return null;
+
+    const validStrategies = ["merge", "rebase", "squash", "fast-forward"];
+    if (!validStrategies.includes(data.recommendation.strategy)) return null;
+
+    return {
+      recommendation: {
+        strategy: data.recommendation.strategy,
+        confidence: data.recommendation.confidence || "medium",
+        reasoning: data.recommendation.reasoning || "",
+        pros: Array.isArray(data.recommendation.pros) ? data.recommendation.pros : [],
+        cons: Array.isArray(data.recommendation.cons) ? data.recommendation.cons : [],
+      },
+      alternatives: (Array.isArray(data.alternatives) ? data.alternatives : [])
+        .filter((a: any) => validStrategies.includes(a?.strategy))
+        .map((a: any) => ({
+          strategy: a.strategy,
+          confidence: a.confidence || "medium",
+          reasoning: a.reasoning || "",
+          pros: Array.isArray(a.pros) ? a.pros : [],
+          cons: Array.isArray(a.cons) ? a.cons : [],
+        })),
+      summary: data.summary || "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+function buildFallbackAdvice(
+  raw: string,
+  behind: number,
+  ahead: number,
+  commitCount: number,
+  fileCount: number,
+): MergeStrategyAdvice {
+  const text = cleanAIText(raw);
+  const strategy: MergeStrategyRecommendation["strategy"] =
+    ahead === 0 && behind > 0 ? "fast-forward" :
+    commitCount > 10 ? "squash" :
+    "merge";
+
+  return {
+    recommendation: {
+      strategy,
+      confidence: "low",
+      reasoning: text.slice(0, 500) || `Based on ${behind} incoming commits and ${ahead} divergent commits.`,
+      pros: [],
+      cons: [],
+    },
+    alternatives: [],
+    summary: text.slice(0, 200) || `Recommend ${strategy} for this branch merge.`,
+  };
+}
