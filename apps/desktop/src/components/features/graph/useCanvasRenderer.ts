@@ -237,6 +237,21 @@ function loadAvatar(email: string): HTMLImageElement | null {
 /*  Hook                                                              */
 /* ------------------------------------------------------------------ */
 
+/** Cached CSS custom property values — avoids getComputedStyle on every frame */
+let _cachedTheme: string | null = null;
+let _cachedSurface0 = "#1c1c1e";
+let _cachedTextPrimary = "#e5e5e5";
+let _cachedTextSecondary = "#a1a1a6";
+
+function readThemeColors(themeKey: string) {
+  if (_cachedTheme === themeKey) return;
+  _cachedTheme = themeKey;
+  const styles = getComputedStyle(document.body);
+  _cachedSurface0 = styles.getPropertyValue("--surface-0").trim() || "#1c1c1e";
+  _cachedTextPrimary = styles.getPropertyValue("--text-primary").trim() || "#e5e5e5";
+  _cachedTextSecondary = styles.getPropertyValue("--text-secondary").trim() || "#a1a1a6";
+}
+
 export function useCanvasRenderer({
   canvasRef,
   layout,
@@ -311,10 +326,11 @@ export function useCanvasRenderer({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const styles = getComputedStyle(document.body);
-    const surface0 = styles.getPropertyValue("--surface-0").trim() || "#1c1c1e";
-    const textPrimary = styles.getPropertyValue("--text-primary").trim() || "#e5e5e5";
-    const textSecondary = styles.getPropertyValue("--text-secondary").trim() || "#a1a1a6";
+    // Read CSS variables only when theme changes (cached in module-level vars)
+    readThemeColors(theme ?? "dark");
+    const surface0 = _cachedSurface0;
+    const textPrimary = _cachedTextPrimary;
+    const textSecondary = _cachedTextSecondary;
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, width, height);
