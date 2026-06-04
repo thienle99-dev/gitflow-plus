@@ -22,7 +22,7 @@ export function PetSelectorCard({ selected, onSelect }: PetSelectorCardProps) {
             key={pet}
             type="button"
             onClick={() => onSelect(pet)}
-            className={`relative flex flex-col items-center gap-1.5 p-2.5 rounded-mac border transition-all ${
+            className={`relative flex flex-col items-center gap-2.5 p-2.5 rounded-mac border transition-all ${
               selected === pet
                 ? "border-accent bg-accent/10 ring-1 ring-accent/30"
                 : "border-border-40 hover:border-border hover:bg-surface-2"
@@ -31,7 +31,7 @@ export function PetSelectorCard({ selected, onSelect }: PetSelectorCardProps) {
             <div className="w-24 h-24 flex items-center justify-center">
               <GitPetSprite state="idle" petType={pet} />
             </div>
-            <span className="text-2xs font-medium text-text-secondary">{PET_LABELS[pet]}</span>
+            <span className="text-2xs font-medium leading-none text-text-secondary">{PET_LABELS[pet]}</span>
             {selected === pet && (
               <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-accent rounded-full flex items-center justify-center">
                 <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
