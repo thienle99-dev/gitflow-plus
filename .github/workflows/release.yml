@@ -35,13 +35,23 @@ jobs:
         with:
           node-version: '20'
           cache: 'pnpm'
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            apps/desktop/pnpm-lock.yaml
 
       - name: Install frontend dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          key: ${{ matrix.target }}
+          cache-on-failure: true
 
       - name: Install system dependencies (Ubuntu)
         if: runner.os == 'Linux'
