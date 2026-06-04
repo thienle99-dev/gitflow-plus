@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { PetState } from "./usePetState";
 import type { PetType } from "./pet-types";
 import { DEFAULT_PET } from "./pet-types";
@@ -21,8 +22,24 @@ const STATE_TO_CLASS: Record<PetState, string> = {
   waving: "pet-wave",
 };
 
+function getSpriteSheetSource(
+  state: PetState,
+  spriteSheets: NonNullable<ReturnType<typeof getPetDefinition>["spriteSheets"]>
+) {
+  if (state === "idle" || state === "blink" || state === "sleeping") {
+    return spriteSheets.idle;
+  }
+
+  if (state === "waving" || state === "success" || state === "excited") {
+    return spriteSheets.wave ?? spriteSheets.idle;
+  }
+
+  return spriteSheets.eating ?? spriteSheets.wave ?? spriteSheets.idle;
+}
+
 export default function GitPetSprite({ state, petType = DEFAULT_PET, onAnimationEnd }: GitPetSpriteProps) {
   const pet = getPetDefinition(petType);
+  const spriteSheet = pet.spriteSheets;
 
   return (
     <div
@@ -31,6 +48,18 @@ export default function GitPetSprite({ state, petType = DEFAULT_PET, onAnimation
       role="img"
       aria-label={`Git pet (${petType}): ${state}`}
     >
+      {spriteSheet ? (
+        <div
+          className="git-pet-sprite-sheet"
+          style={{
+            "--pet-sheet-url": `url(${getSpriteSheetSource(state, spriteSheet)})`,
+            "--pet-frame-width": `${spriteSheet.frameWidth}px`,
+            "--pet-frame-height": `${spriteSheet.frameHeight}px`,
+            "--pet-frame-count": spriteSheet.frames,
+            "--pet-sheet-end": `-${spriteSheet.frameWidth * spriteSheet.frames}px`,
+          } as CSSProperties}
+        />
+      ) : (
       <svg viewBox={pet.viewBox} xmlns="http://www.w3.org/2000/svg" shapeRendering="crispEdges">
         {/* Pet-specific body, head, ears, limbs */}
         {pet.body}
@@ -129,6 +158,7 @@ export default function GitPetSprite({ state, petType = DEFAULT_PET, onAnimation
         {/* Pet-specific accessories (bubble tea, fish, bone, etc.) */}
         {pet.accessories && <g className="pet-accessory">{pet.accessories}</g>}
       </svg>
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
-export type PetType = "cat" | "otter" | "dog" | "fox" | "penguin" | "bunny" | "panda" | "koala" | "frog" | "axolotl" | "bear";
+export type PetType = "cat" | "otter" | "dog" | "fox" | "penguin" | "bunny" | "panda" | "koala" | "frog" | "axolotl" | "bear" | "piderman";
 
-export const PET_TYPES: PetType[] = ["cat", "otter", "dog", "fox", "penguin", "bunny", "panda", "koala", "frog", "axolotl", "bear"];
+export const PET_TYPES: PetType[] = ["cat", "otter", "dog", "fox", "penguin", "bunny", "panda", "koala", "frog", "axolotl", "bear", "piderman"];
 
 export const PET_LABELS: Record<PetType, string> = {
   cat: "Cat",
@@ -14,6 +14,7 @@ export const PET_LABELS: Record<PetType, string> = {
   frog: "Frog",
   axolotl: "Axolotl",
   bear: "Bear",
+  piderman: "Piderman",
 };
 
 export const DEFAULT_PET: PetType = "cat";
