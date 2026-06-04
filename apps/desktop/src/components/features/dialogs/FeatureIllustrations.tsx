@@ -1303,3 +1303,80 @@ export function UndoOperationsFeatureIllustration() {
     </svg>
   );
 }
+
+export function SquashLastNFeatureIllustration() {
+  return (
+    <svg viewBox="0 0 280 120" fill="none" xmlns="http://www.w3.org/2000/svg" className={cls}>
+      {/* 4 commits being squashed into 1 */}
+      {[0, 1, 2, 3].map((i) => {
+        const y = 12 + i * 18;
+        const isOldest = i === 3;
+        return (
+          <g key={i}>
+            <rect x="12" y={y} width="110" height="14" rx="3"
+              fill={isOldest ? colors.green : colors.orange} opacity="0.08"
+              stroke={isOldest ? colors.green : colors.orange} strokeWidth="0.5" strokeOpacity="0.3" />
+            <circle cx="24" cy={y + 7} r="4" fill={isOldest ? colors.green : colors.orange} />
+            <text x="34" y={y + 10} fontSize="6.5" fill={colors.secondary} fontFamily="monospace">
+              {isOldest ? "pick" : "squash"}
+            </text>
+            <text x="68" y={y + 10} fontSize="6" fill={colors.muted} fontFamily="monospace">
+              {["feat: add login", "fix: typo", "chore: cleanup", "feat: init"][i]}
+            </text>
+          </g>
+        );
+      })}
+      {/* Arrow */}
+      <path d="M140 40 L160 40" stroke={colors.primary} strokeWidth="1.5" markerEnd="url(#arrowHead)" />
+      <defs>
+        <marker id="arrowHead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <polygon points="0,0 10,5 0,10" fill={colors.primary} />
+        </marker>
+      </defs>
+      {/* Result */}
+      <rect x="170" y="28" width="110" height="24" rx="4" fill={colors.green} opacity="0.1" stroke={colors.green} strokeWidth="0.8" />
+      <circle cx="182" cy="40" r="5" fill={colors.green} />
+      <text x="192" y="36" fontSize="7" fill={colors.secondary} fontWeight="600">feat: add login</text>
+      <text x="192" y="46" fontSize="5.5" fill={colors.muted}>3 commits squashed</text>
+    </svg>
+  );
+}
+
+export function ImproveCommitMessageFeatureIllustration() {
+  return (
+    <svg viewBox="0 0 280 120" fill="none" xmlns="http://www.w3.org/2000/svg" className={cls}>
+      {/* Before: draft message */}
+      <text x="12" y="16" fontSize="7" fill={colors.muted} fontWeight="600">DRAFT</text>
+      <rect x="12" y="22" width="120" height="28" rx="4" fill={colors.surface} stroke={colors.border} strokeWidth="0.5" />
+      <text x="18" y="34" fontSize="6.5" fill={colors.muted} fontFamily="monospace">fix stuff in auth</text>
+      <text x="18" y="44" fontSize="5.5" fill={colors.red}>⚠ missing scope, unclear</text>
+      {/* Wand icon */}
+      <text x="142" y="38" fontSize="16">✨</text>
+      {/* After: improved message */}
+      <text x="165" y="16" fontSize="7" fill={colors.green} fontWeight="600">IMPROVED</text>
+      <rect x="165" y="22" width="110" height="28" rx="4" fill={colors.green} opacity="0.06" stroke={colors.green} strokeWidth="0.5" />
+      <text x="171" y="34" fontSize="6.5" fill={colors.secondary} fontFamily="monospace">fix(auth): validate token</text>
+      <text x="171" y="44" fontSize="5.5" fill={colors.green}>✓ conventional, clear scope</text>
+      {/* Arrow */}
+      <path d="M138 36 L160 36" stroke={colors.primary} strokeWidth="1" strokeDasharray="3 2" />
+    </svg>
+  );
+}
+
+export function AddCommitBodyFeatureIllustration() {
+  return (
+    <svg viewBox="0 0 280 120" fill="none" xmlns="http://www.w3.org/2000/svg" className={cls}>
+      {/* Subject line */}
+      <text x="12" y="16" fontSize="7" fill={colors.muted} fontWeight="600">SUBJECT</text>
+      <rect x="12" y="22" width="260" height="14" rx="3" fill={colors.surface} stroke={colors.border} strokeWidth="0.5" />
+      <text x="18" y="32" fontSize="6.5" fill={colors.secondary} fontFamily="monospace">feat(auth): add OAuth2 login flow</text>
+      {/* Separator */}
+      <line x1="12" y1="42" x2="272" y2="42" stroke={colors.border} strokeWidth="0.3" strokeDasharray="4 2" />
+      {/* Generated body */}
+      <text x="12" y="54" fontSize="7" fill={colors.purple} fontWeight="600">GENERATED BODY</text>
+      {["• Implements OAuth2 authorization code flow", "• Adds redirect URI validation", "• Integrates with Google & GitHub providers", "• Breaking: removes legacy password auth"].map((line, i) => (
+        <text key={i} x="18" y={66 + i * 10} fontSize="5.5" fill={colors.muted} fontFamily="monospace">{line}</text>
+      ))}
+    </svg>
+  );
+}

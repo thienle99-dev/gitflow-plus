@@ -33,6 +33,8 @@ import {
   Workflow,
   Columns,
   Globe,
+  Wand2,
+  AlignLeft,
 } from "lucide-react";
 import {
   CommitGraphIllustration,
@@ -84,6 +86,9 @@ import {
   DarkLightThemesFeatureIllustration,
   RecentRepositoriesFeatureIllustration,
   UndoOperationsFeatureIllustration,
+  SquashLastNFeatureIllustration,
+  ImproveCommitMessageFeatureIllustration,
+  AddCommitBodyFeatureIllustration,
 } from "./FeatureIllustrations";
 
 interface FeatureGuideDialogProps {
@@ -500,6 +505,44 @@ const sections: FeatureSection[] = [
           ],
         },
       },
+      {
+        name: "Improve Commit Message",
+        description: "Use AI to refine your draft commit message for clarity, grammar, and conventional commit format.",
+        icon: <Wand2 size={13} />,
+        illustration: <ImproveCommitMessageFeatureIllustration />,
+        details: {
+          steps: [
+            "Write a draft commit message in the textarea.",
+            "Stage the files you want to commit.",
+            "Click the 'Improve' button in the commit toolbar.",
+            "AI refines your message while preserving the original intent.",
+          ],
+          tips: [
+            "The AI keeps the same meaning and scope — it only improves wording and format.",
+            "Works best with conventional commit style (e.g., 'feat:', 'fix:').",
+            "You can still edit the improved message before committing.",
+          ],
+        },
+      },
+      {
+        name: "Add Commit Body",
+        description: "Automatically generate a detailed commit body explaining the 'why' behind your changes.",
+        icon: <AlignLeft size={13} />,
+        illustration: <AddCommitBodyFeatureIllustration />,
+        details: {
+          steps: [
+            "Write a subject line in the commit message textarea.",
+            "Stage the files you want to commit.",
+            "Click the 'Add Body' button in the commit toolbar.",
+            "AI generates a detailed body with bullet points explaining the changes.",
+          ],
+          tips: [
+            "The body explains WHY the changes were made, not just WHAT changed.",
+            "Includes context about key files, breaking changes, and architectural decisions.",
+            "The subject line is preserved — only the body is generated.",
+          ],
+        },
+      },
     ],
   },
   {
@@ -562,6 +605,26 @@ const sections: FeatureSection[] = [
             "Interactive rebase rewrites history — avoid on shared branches.",
             "Squash combines the selected commit with the one above it.",
             "Edit pauses the rebase at that commit for amending.",
+          ],
+        },
+      },
+      {
+        name: "Squash Last N Commits",
+        description: "Quickly squash the last N commits into one using a simple picker dialog.",
+        icon: <Merge size={13} />,
+        illustration: <SquashLastNFeatureIllustration />,
+        details: {
+          steps: [
+            "Right-click the most recent commit in the graph.",
+            "Select 'Squash last N commits...' from the context menu.",
+            "Choose how many commits to squash (2–10) in the picker dialog.",
+            "The interactive rebase editor opens with the oldest commit as 'pick' and the rest as 'squash'.",
+            "Review and edit the combined message, then start the rebase.",
+          ],
+          tips: [
+            "The oldest commit's message is kept as the base — newer messages are folded into it.",
+            "You can still reorder or change actions in the rebase editor before starting.",
+            "Only use on local commits that haven't been pushed to a shared remote.",
           ],
         },
       },
