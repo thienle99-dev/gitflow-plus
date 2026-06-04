@@ -34,13 +34,38 @@
   display: none;
 }
 
-/* idle & waving: normal eyes + smile */
-.pet-idle .face-normal,
-.pet-wave .face-normal { display: block; }
-.pet-idle .mouth-smile,
-.pet-wave .mouth-smile { display: block; }
+/* idle: normal eyes (with auto double-blink) + smile */
+.pet-idle .face-normal {
+  display: block;
+  animation: eye-blink-normal 5s steps(1) infinite;
+}
+.pet-idle .face-blink {
+  display: block;
+  animation: eye-blink-closed 5s steps(1) infinite;
+}
+.pet-idle .mouth-smile {
+  display: block;
+}
 
-/* blink: squint eyes + smile */
+/* waving / talking: normal eyes (with auto double-blink) + mouth mấp máy */
+.pet-wave .face-normal {
+  display: block;
+  animation: eye-blink-normal 5s steps(1) infinite;
+}
+.pet-wave .face-blink {
+  display: block;
+  animation: eye-blink-closed 5s steps(1) infinite;
+}
+.pet-wave .mouth-smile {
+  display: block;
+  animation: mouth-talking 0.4s steps(1) infinite;
+}
+.pet-wave .mouth-open {
+  display: block;
+  animation: mouth-talking-open 0.4s steps(1) infinite;
+}
+
+/* blink state from machine (squint eyes + smile) */
 .pet-blink .face-blink { display: block; }
 .pet-blink .mouth-smile { display: block; }
 
@@ -52,9 +77,16 @@
 .pet-loading .face-worry { display: block; }
 .pet-loading .mouth-smile { display: block; }
 
-/* success: star eyes + big smile */
+/* success: star eyes + big smile (cheering mouth) */
 .pet-success .face-star { display: block; }
-.pet-success .mouth-big { display: block; }
+.pet-success .mouth-big {
+  display: block;
+  animation: mouth-cheering 0.25s steps(1) infinite;
+}
+.pet-success .mouth-open {
+  display: block;
+  animation: mouth-cheering-open 0.25s steps(1) infinite;
+}
 
 /* error: worry eyes + open mouth */
 .pet-error .face-worry { display: block; }
@@ -64,9 +96,44 @@
 .pet-alarmed .face-alarmed { display: block; }
 .pet-alarmed .mouth-open { display: block; }
 
-/* excited: happy ^_^ eyes + big smile */
+/* excited: happy ^_^ eyes + big smile (cheering mouth) */
 .pet-excited .face-happy { display: block; }
-.pet-excited .mouth-big { display: block; }
+.pet-excited .mouth-big {
+  display: block;
+  animation: mouth-cheering 0.25s steps(1) infinite;
+}
+.pet-excited .mouth-open {
+  display: block;
+  animation: mouth-cheering-open 0.25s steps(1) infinite;
+}
+
+/* === AUTO-BLINKING & TALKING KEYFRAMES === */
+@keyframes eye-blink-normal {
+  0%, 90%, 94%, 98%, 100% { opacity: 1; }
+  92%, 96%                { opacity: 0; }
+}
+@keyframes eye-blink-closed {
+  0%, 90%, 94%, 98%, 100% { opacity: 0; }
+  92%, 96%                { opacity: 1; }
+}
+
+@keyframes mouth-talking {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0; }
+}
+@keyframes mouth-talking-open {
+  0%, 100% { opacity: 0; }
+  50%      { opacity: 1; }
+}
+
+@keyframes mouth-cheering {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0; }
+}
+@keyframes mouth-cheering-open {
+  0%, 100% { opacity: 0; }
+  50%      { opacity: 1; }
+}
 
 /* === IDLE — gentle bob === */
 @keyframes pet-idle-bob {
@@ -74,7 +141,7 @@
   50%      { transform: translateY(-2px); }
 }
 .pet-idle {
-  animation: pet-idle-bob 2.5s ease-in-out infinite;
+  animation: pet-idle-bob 2.5s steps(2) infinite;
 }
 
 /* === BLINK — quick squint === */
@@ -92,70 +159,70 @@
   50%      { transform: translateY(1px) scale(0.97); opacity: 0.6; }
 }
 .pet-sleep {
-  animation: pet-sleep-breathe 3s ease-in-out infinite;
+  animation: pet-sleep-breathe 3s steps(2) infinite;
 }
 
 /* === LOADING / RUN — fast bounce === */
 @keyframes pet-loading-run {
   0%, 100% { transform: translateY(0) translateX(0); }
-  25%      { transform: translateY(-3px) translateX(1px); }
+  25%      { transform: translateY(-2px) translateX(1px); }
   50%      { transform: translateY(0) translateX(0); }
-  75%      { transform: translateY(-3px) translateX(-1px); }
+  75%      { transform: translateY(-2px) translateX(-1px); }
 }
 .pet-loading {
-  animation: pet-loading-run 300ms ease-in-out infinite;
+  animation: pet-loading-run 300ms steps(4) infinite;
 }
 
 /* === SUCCESS — celebratory hop === */
 @keyframes pet-success-jump {
-  0%   { transform: translateY(0) scale(1); }
-  30%  { transform: translateY(-8px) scale(1.05); }
-  50%  { transform: translateY(-6px) scale(1.02); }
-  70%  { transform: translateY(-2px) scale(1); }
-  100% { transform: translateY(0) scale(1); }
+  0%   { transform: translateY(0); }
+  30%  { transform: translateY(-6px); }
+  50%  { transform: translateY(-4px); }
+  70%  { transform: translateY(-1px); }
+  100% { transform: translateY(0); }
 }
 .pet-success {
-  animation: pet-success-jump 600ms ease-out 2;
+  animation: pet-success-jump 600ms steps(5) 2;
 }
 
 /* === ERROR — worried shake === */
 @keyframes pet-error-shake {
   0%, 100% { transform: translateX(0); }
-  20%      { transform: translateX(-3px); }
-  40%      { transform: translateX(3px); }
-  60%      { transform: translateX(-3px); }
-  80%      { transform: translateX(3px); }
+  20%      { transform: translateX(-2px); }
+  40%      { transform: translateX(2px); }
+  60%      { transform: translateX(-2px); }
+  80%      { transform: translateX(2px); }
 }
 .pet-error {
-  animation: pet-error-shake 600ms ease-in-out;
+  animation: pet-error-shake 600ms steps(5);
 }
 
 /* === ALARMED — flash red pulse === */
 @keyframes pet-alarmed-pulse {
   0%, 100% { filter: brightness(1); transform: scale(1); }
-  50%      { filter: brightness(1.4) sepia(0.5) hue-rotate(-30deg); transform: scale(1.08); }
+  50%      { filter: brightness(1.3) sepia(0.4) hue-rotate(-20deg); transform: scale(1.05); }
 }
 .pet-alarmed {
-  animation: pet-alarmed-pulse 500ms ease-in-out 3;
+  animation: pet-alarmed-pulse 500ms steps(2) 3;
 }
 
 /* === EXCITED — happy wiggle === */
 @keyframes pet-excited-wiggle {
-  0%, 100% { transform: rotate(0deg) scale(1); }
-  25%      { transform: rotate(-8deg) scale(1.05); }
-  75%      { transform: rotate(8deg) scale(1.05); }
+  0%, 100% { transform: rotate(0deg); }
+  25%      { transform: rotate(-6deg); }
+  75%      { transform: rotate(6deg); }
 }
 .pet-excited {
-  animation: pet-excited-wiggle 300ms ease-in-out 2;
+  animation: pet-excited-wiggle 300ms steps(4) 2;
 }
 
 /* === WAVING — friendly bounce === */
 @keyframes pet-wave-bounce {
   0%, 100% { transform: scale(1) rotate(0deg); }
-  50%      { transform: scale(1.1) rotate(5deg); }
+  50%      { transform: scale(1.05) rotate(4deg); }
 }
 .pet-wave {
-  animation: pet-wave-bounce 400ms ease-in-out 2;
+  animation: pet-wave-bounce 400ms steps(2) 2;
 }
 
 /* === CONTAINER === */
@@ -329,7 +396,7 @@
 /* TAIL: Idle slow wag, Excited fast wag */
 .pet-tail {
   transform-origin: 8px 27px;
-  animation: tail-idle-wag 3s ease-in-out infinite;
+  animation: tail-idle-wag 3s steps(2) infinite;
 }
 @keyframes tail-idle-wag {
   0%, 100% { transform: rotate(0deg); }
@@ -337,8 +404,9 @@
 }
 
 .pet-excited .pet-tail,
-.pet-success .pet-tail {
-  animation: tail-excited-wag 0.2s ease-in-out infinite;
+.pet-success .pet-tail,
+.pet-wave .pet-tail {
+  animation: tail-excited-wag 0.2s steps(2) infinite;
 }
 @keyframes tail-excited-wag {
   0%, 100% { transform: rotate(-8deg); }
@@ -348,31 +416,40 @@
 /* ACCESSORY: Idle gentle bob, excited bounce */
 .pet-accessory {
   transform-origin: 26px 22px;
-  animation: accessory-idle-bob 2.5s ease-in-out infinite;
+  animation: accessory-idle-bob 2.5s steps(2) infinite;
 }
 @keyframes accessory-idle-bob {
   0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-0.6px) rotate(1deg); }
+  50%      { transform: translateY(-1px) rotate(1deg); }
 }
 
 .pet-excited .pet-accessory,
-.pet-success .pet-accessory {
-  animation: accessory-excited-bounce 0.4s ease-in-out infinite;
+.pet-success .pet-accessory,
+.pet-wave .pet-accessory {
+  animation: accessory-excited-bounce 0.4s steps(4) infinite;
 }
 @keyframes accessory-excited-bounce {
   0%, 100% { transform: translateY(0) scale(1); }
   50%      { transform: translateY(-2px) scale(1.04) rotate(4deg); }
 }
 
-/* EARS: Random tiny twitch */
+/* EARS: Random tiny twitch, fast wiggle on hover */
 .pet-ear-left {
   transform-origin: 8px 6px;
-  animation: ear-twitch-left 5s ease-in-out infinite;
+  animation: ear-twitch-left 5s steps(2) infinite;
 }
 .pet-ear-right {
   transform-origin: 24px 6px;
-  animation: ear-twitch-right 5s ease-in-out infinite 0.7s;
+  animation: ear-twitch-right 5s steps(2) infinite 0.7s;
 }
+
+.pet-wave .pet-ear-left {
+  animation: ear-twitch-left 0.8s steps(2) infinite;
+}
+.pet-wave .pet-ear-right {
+  animation: ear-twitch-right 0.8s steps(2) infinite 0.1s;
+}
+
 @keyframes ear-twitch-left {
   0%, 92%, 100% { transform: rotate(0deg); }
   96%           { transform: rotate(-6deg); }
@@ -385,11 +462,11 @@
 /* AXOLOTL GILLS: Gentle flutter */
 .pet-gills-left {
   transform-origin: 5px 12px;
-  animation: gills-flutter-left 3s ease-in-out infinite;
+  animation: gills-flutter-left 3s steps(2) infinite;
 }
 .pet-gills-right {
   transform-origin: 27px 12px;
-  animation: gills-flutter-right 3s ease-in-out infinite;
+  animation: gills-flutter-right 3s steps(2) infinite;
 }
 @keyframes gills-flutter-left {
   0%, 100% { transform: scaleX(1); }
