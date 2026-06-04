@@ -77,6 +77,16 @@ cd apps/desktop
 pnpm build        # type-check (tsc) + Vite build → dist/
 ```
 
+### macOS Gatekeeper
+
+If macOS says `"GitFlow Desktop" is damaged and can't be opened` for a manually downloaded or unsigned build, remove the quarantine flag:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/GitFlow Desktop.app"
+```
+
+This is only a workaround for local/manual builds. Public macOS releases should be Apple code-signed and notarized.
+
 ## Testing
 
 ```bash

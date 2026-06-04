@@ -20,6 +20,7 @@ export default function KeyboardShortcutsModal({ open, onClose }: KeyboardShortc
       { label: "Commit staged changes", keys: "Cmd+Enter" },
     ]},
     { category: "Dialogs & UI", items: [
+      { label: "Command palette", keys: "Cmd+K" },
       { label: "Open settings", keys: "Cmd+," },
       { label: "Close dialog", keys: "Esc" },
       { label: "Open keyboard reference", keys: "Cmd+?" },

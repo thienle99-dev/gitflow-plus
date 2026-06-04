@@ -2,8 +2,11 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { api } from "@/api/tauri";
 import { showToast } from "@/lib/toast";
-import { Check, Combine, ArrowLeft, Sparkles, RefreshCw, X, ChevronDown, ChevronRight } from "lucide-react";
+import { Check, Combine, ArrowLeft, Sparkles, RefreshCw, X, ChevronDown, ChevronRight, Lightbulb, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAIConflictExplain } from "@/queries/useAI";
+import type { ConflictExplanation } from "@/lib/ai";
+import AIMarkdown from "@/components/ui/feedback/AIMarkdown";
 
 interface ConflictResolverProps {
   filePath: string;
@@ -109,6 +112,12 @@ export default function ConflictResolver({ filePath, onComplete, onCancel }: Con
   const [rawContent, setRawContent] = useState("");
   const [resolving, setResolving] = useState(false);
   const [loadingAi, setLoadingAi] = useState(false);
+
+  // AI Conflict Explanation state
+  const [explanations, setExplanations] = useState<Record<number, ConflictExplanation>>({});
+  const [explainingBlocks, setExplainingBlocks] = useState<Set<number>>(new Set());
+  const [expandedExplanations, setExpandedExplanations] = useState<Set<number>>(new Set());
+  const conflictExplain = useAIConflictExplain();
 
   // Fetch conflicted file content
   useEffect(() => {
@@ -413,6 +422,84 @@ CRITICAL INSTRUCTIONS:
     }
   };
 
+  // Get context lines (surrounding non-conflict segments) for a specific block
+  const getContextForBlock = useCallback(
+    (blockId: number): { before: string[]; after: string[] } => {
+      let before: string[] = [];
+      let after: string[] = [];
+      let foundBlock = false;
+
+      for (const seg of segments) {
+        if (seg.type === "context") {
+          if (!foundBlock) {
+            before = seg.lines;
+          } else {
+            after = seg.lines;
+            break;
+          }
+        } else if (seg.type === "conflict" && seg.block.id === blockId) {
+          foundBlock = true;
+        }
+      }
+
+      return { before, after };
+    },
+    [segments],
+  );
+
+  const handleExplainConflict = useCallback(
+    async (blockId: number) => {
+      const block = conflictBlocks.find((b) => b.id === blockId);
+      if (!block || !repoPath) return;
+
+      // Toggle off if already expanded
+      if (expandedExplanations.has(blockId) && explanations[blockId]) {
+        setExpandedExplanations((prev) => {
+          const next = new Set(prev);
+          next.delete(blockId);
+          return next;
+        });
+        return;
+      }
+
+      // Show if already loaded
+      if (explanations[blockId]) {
+        setExpandedExplanations((prev) => new Set(prev).add(blockId));
+        return;
+      }
+
+      setExplainingBlocks((prev) => new Set(prev).add(blockId));
+      setExpandedExplanations((prev) => new Set(prev).add(blockId));
+
+      try {
+        const { before, after } = getContextForBlock(blockId);
+        const result = await conflictExplain.mutateAsync({
+          filePath,
+          ours: block.ours,
+          theirs: block.theirs,
+          contextBefore: before,
+          contextAfter: after,
+          repoPath,
+        });
+        setExplanations((prev) => ({ ...prev, [blockId]: result }));
+      } catch (e: any) {
+        showToast(`AI Explain failed: ${e.message || e}`, "error");
+        setExpandedExplanations((prev) => {
+          const next = new Set(prev);
+          next.delete(blockId);
+          return next;
+        });
+      } finally {
+        setExplainingBlocks((prev) => {
+          const next = new Set(prev);
+          next.delete(blockId);
+          return next;
+        });
+      }
+    },
+    [conflictBlocks, repoPath, filePath, explanations, expandedExplanations, getContextForBlock, conflictExplain],
+  );
+
   const handleComplete = async () => {
     if (!repoPath) return;
     setResolving(true);
@@ -566,6 +653,24 @@ CRITICAL INSTRUCTIONS:
                     <Combine size={9} />
                     <span>Both</span>
                   </button>
+                  <div className="w-px h-3 bg-border-40 mx-0.5" />
+                  <button
+                    className={`conflict-block-btn flex items-center gap-0.5 px-1.5 py-0.5 rounded text-3xs font-medium transition-all ${
+                      expandedExplanations.has(block.id)
+                        ? "bg-[#ff9f0a]/15 text-[#ff9f0a] border border-[#ff9f0a]/30"
+                        : "text-text-muted hover:text-[#ff9f0a] hover:bg-[#ff9f0a]/10 border border-transparent"
+                    }`}
+                    onClick={() => handleExplainConflict(block.id)}
+                    disabled={explainingBlocks.has(block.id)}
+                    title="AI Explain: why does this conflict exist?"
+                  >
+                    {explainingBlocks.has(block.id) ? (
+                      <Loader2 size={9} className="animate-spin" />
+                    ) : (
+                      <Lightbulb size={9} />
+                    )}
+                    <span>{explainingBlocks.has(block.id) ? "Analyzing..." : "Explain"}</span>
+                  </button>
                 </div>
               </div>
 
@@ -652,6 +757,62 @@ CRITICAL INSTRUCTIONS:
                   </div>
                 </div>
               )}
+
+              {/* AI Conflict Explanation Panel */}
+              {expandedExplanations.has(block.id) && (
+                <div className="conflict-explanation-panel">
+                  {explainingBlocks.has(block.id) ? (
+                    <div className="flex items-center gap-2 px-4 py-3 text-3xs text-text-muted">
+                      <Loader2 size={12} className="animate-spin text-[#ff9f0a]" />
+                      <span>AI is analyzing why this conflict occurred...</span>
+                    </div>
+                  ) : explanations[block.id] ? (
+                    <div className="px-4 py-3 space-y-3 border-t border-[#ff9f0a]/20 bg-[#ff9f0a]/5">
+                      <div className="flex items-center gap-1.5">
+                        <Lightbulb size={11} className="text-[#ff9f0a]" />
+                        <span className="text-3xs font-bold text-[#ff9f0a] uppercase tracking-wider">Why This Conflict</span>
+                      </div>
+
+                      {/* Why conflict */}
+                      <div className="space-y-1">
+                        <div className="text-3xs font-semibold text-text-secondary uppercase tracking-wider">Cause</div>
+                        <div className="text-2xs text-text-primary leading-relaxed">
+                          <AIMarkdown content={explanations[block.id].whyConflict} />
+                        </div>
+                      </div>
+
+                      {/* What ours changed */}
+                      <div className="flex gap-3">
+                        <div className="flex-1 space-y-1 bg-[#30d158]/5 rounded px-2.5 py-2 border border-[#30d158]/15">
+                          <div className="text-3xs font-semibold text-[#30d158] uppercase tracking-wider">Ours Changed</div>
+                          <div className="text-2xs text-text-primary leading-relaxed">
+                            <AIMarkdown content={explanations[block.id].oursChanged} />
+                          </div>
+                        </div>
+
+                        {/* What theirs changed */}
+                        <div className="flex-1 space-y-1 bg-[#ff9f0a]/5 rounded px-2.5 py-2 border border-[#ff9f0a]/15">
+                          <div className="text-3xs font-semibold text-[#ff9f0a] uppercase tracking-wider">Theirs Changed</div>
+                          <div className="text-2xs text-text-primary leading-relaxed">
+                            <AIMarkdown content={explanations[block.id].theirsChanged} />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Recommendation */}
+                      {explanations[block.id].recommendation && (
+                        <div className="space-y-1 bg-accent/5 rounded px-2.5 py-2 border border-accent/15">
+                          <div className="text-3xs font-semibold text-accent uppercase tracking-wider">💡 Recommendation</div>
+                          <div className="text-2xs text-text-primary leading-relaxed">
+                            <AIMarkdown content={explanations[block.id].recommendation} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+              )}
+
             </div>
           );
         })}

@@ -3,10 +3,12 @@ import type { FileChange } from "@/api/tauri";
 import type { MergeRequest, MergeRequestFileChange } from "@/api/gitHost";
 import {
   type AIReviewMode,
+  type ConflictExplanation,
   generateCommitMessageWithAI,
   reviewDiffWithAI,
   generateInlineReviewComments,
   explainCommitWithAI,
+  explainConflictWithAI,
   reviewCommitWithAI,
   analyzeCommitScope,
   explainMergeRequestWithAI,
@@ -84,5 +86,26 @@ export function useAIMergeRequestReview() {
   return useMutation({
     mutationFn: ({ mergeRequest, files, repoPath, mode }: { mergeRequest: MergeRequest; files: MergeRequestFileChange[]; repoPath?: string; mode?: AIReviewMode }) =>
       reviewMergeRequestWithAI(mergeRequest, files, repoPath, mode),
+  });
+}
+
+export function useAIConflictExplain() {
+  return useMutation({
+    mutationFn: ({
+      filePath,
+      ours,
+      theirs,
+      contextBefore,
+      contextAfter,
+      repoPath,
+    }: {
+      filePath: string;
+      ours: string[];
+      theirs: string[];
+      contextBefore: string[];
+      contextAfter: string[];
+      repoPath?: string;
+    }): Promise<ConflictExplanation> =>
+      explainConflictWithAI(filePath, ours, theirs, contextBefore, contextAfter, repoPath),
   });
 }

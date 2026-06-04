@@ -12,7 +12,7 @@ import Sidebar from "@/components/features/sidebar/Sidebar";
 import CommitGraph from "@/components/features/graph/CommitGraph";
 import RightPanel from "@/components/layout/RightPanel";
 import BottomBar from "@/components/layout/BottomBar";
-import { SearchDialog, KeyboardShortcutsModal, CherryPickDialog, SettingsDialog, AnalyticsDialog, CreateBranchDialog, MergeRequestDialog, MergePreviewDialog, CloneDialog, FeatureGuideDialog, OnboardingWizard, isOnboardingComplete, BranchCompareDialog, HealthCheckDialog, DiagnosticDialog } from "@/components/features/dialogs";
+import { SearchDialog, KeyboardShortcutsModal, CherryPickDialog, SettingsDialog, AnalyticsDialog, CreateBranchDialog, MergeRequestDialog, MergePreviewDialog, CloneDialog, FeatureGuideDialog, OnboardingWizard, isOnboardingComplete, BranchCompareDialog, HealthCheckDialog, DiagnosticDialog, CommandPalette } from "@/components/features/dialogs";
 import ErrorBoundary from "@/components/ui/feedback/ErrorBoundary";
 import { AlertOctagon, RefreshCw, Trash2, FolderOpen, GitBranch, Clock } from "lucide-react";
 
@@ -278,6 +278,10 @@ export default function MainLayout() {
         e.preventDefault();
         openDialogState("keyboard-shortcuts");
       }
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        openDialogState("command-palette");
+      }
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === "h" || e.key === "H")) {
         e.preventDefault();
         openDialogState("feature-guide");
@@ -320,7 +324,7 @@ export default function MainLayout() {
     }
   }, [rightPanelOpen]);
 
-  const overlayDialog = activeDialog && activeDialog !== "stash" && activeDialog !== "tag"
+  const overlayDialog = activeDialog && activeDialog !== "stash" && activeDialog !== "tag" && activeDialog !== "command-palette"
     ? activeDialog
     : null;
 
@@ -473,6 +477,7 @@ function InlineErrorFallback({ name }: { name: string }) {
 
       {/* Dialog overlays */}
       {dialogOverlay}
+      {activeDialog === "command-palette" && <CommandPalette open={true} onClose={closeDialog} />}
       <OnboardingWizard open={showOnboarding} onClose={() => setShowOnboarding(false)} />
     </div>
   );

@@ -233,7 +233,7 @@
 - [ ] **AI Release Notes** — gom commits/tags thành changelog theo Conventional Commits hoặc custom format
 - [x] **AI Risk Summary** — phân tích diff trước merge/push: local pattern scanner (sensitive files, migration, config/env, auth, destructive diffs) + optional AI deep analysis; RiskSummaryDialog wired into push flow
 - [ ] **AI Test Suggestion** — đề xuất test cần chạy/thêm dựa trên staged diff hoặc branch diff
-- [ ] **AI Conflict Explanation** — ngoài resolve conflict, giải thích vì sao conflict xảy ra và bên nào thay đổi gì
+- [x] **AI Conflict Explanation** — ngoài resolve conflict, giải thích vì sao conflict xảy ra và bên nào thay đổi gì
 - [ ] **AI Commit Splitter** — đề xuất tách staged changes thành nhiều commits logic, có thể stage theo nhóm file/hunk
 - [ ] **AI Sensitive Data Scan** — cảnh báo secrets/API keys/token/private certs trước commit/push
 - [ ] **AI Git Command Assistant** — user mô tả ý định bằng tự nhiên, app đề xuất Git action an toàn kèm preview trước khi chạy

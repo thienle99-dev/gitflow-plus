@@ -343,6 +343,92 @@ When listing findings, start each finding with exactly one matching tag from the
 If the selected categories have no concrete findings, say so clearly and list any residual checks to run.`;
 }
 
+export interface ConflictExplanation {
+  /** Why this conflict occurred */
+  whyConflict: string;
+  /** What "ours" (current branch) changed */
+  oursChanged: string;
+  /** What "theirs" (incoming branch) changed */
+  theirsChanged: string;
+  /** AI recommendation on resolution */
+  recommendation: string;
+}
+
+/**
+ * Explain a merge conflict block — why it happened, what each side changed, and recommendation.
+ */
+export async function explainConflictWithAI(
+  filePath: string,
+  ours: string[],
+  theirs: string[],
+  contextBefore: string[],
+  contextAfter: string[],
+  repoPath?: string,
+): Promise<ConflictExplanation> {
+  const settings = readAISettings();
+  if (!hasProvider(settings)) {
+    throw new Error("Configure an AI API key or local model in settings");
+  }
+
+  const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
+  const conventionInstruction = repoPath ? await getConventionContext(repoPath) : "";
+
+  const oursCode = ours.length > 0 ? ours.join("\n") : "(no changes — this side deleted the lines)";
+  const theirsCode = theirs.length > 0 ? theirs.join("\n") : "(no changes — this side deleted the lines)";
+  const ctxBefore = contextBefore.length > 0 ? contextBefore.slice(-8).join("\n") : "";
+  const ctxAfter = contextAfter.length > 0 ? contextAfter.slice(0, 8).join("\n") : "";
+
+  const prompt = `You are a senior software engineer explaining a Git merge conflict to a developer.
+
+FILE: "${filePath}"
+
+${ctxBefore ? `--- Surrounding context (before conflict):\n${ctxBefore}\n` : ""}
+--- OURS (current branch):
+${oursCode}
+
+--- THEIRS (incoming branch):
+${theirsCode}
+${ctxAfter ? `\n--- Surrounding context (after conflict):\n${ctxAfter}` : ""}
+
+TASK: Explain this conflict block. Return a JSON object with these exact fields:
+- "whyConflict": 2-3 sentences explaining WHY this conflict happened. What did each branch change differently in the same area? Be specific about the code.
+- "oursChanged": 1-2 sentences explaining what the current branch (ours) did in this code region. Be specific.
+- "theirsChanged": 1-2 sentences explaining what the incoming branch (theirs) did in this code region. Be specific.
+- "recommendation": 1-2 sentences recommending how to resolve this conflict — accept ours, accept theirs, combine both, or a custom merge approach. Explain WHY.
+
+Be concise and technical. Reference actual code identifiers from the conflict.
+Return ONLY the JSON object. No markdown code fences, no wrapping, no explanation.
+${languageInstruction}${conventionInstruction}`;
+
+  const raw = cleanAIText(await requestAIText(prompt, withReviewModel(settings)));
+  if (!raw) throw new Error("Empty response from AI");
+
+  // Parse JSON — handle markdown fences and fallback
+  let jsonStr = raw.trim();
+  const fenceMatch = jsonStr.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
+  if (fenceMatch) jsonStr = fenceMatch[1].trim();
+  const objMatch = jsonStr.match(/\{[\s\S]*\}/);
+  if (objMatch) jsonStr = objMatch[0];
+
+  try {
+    const parsed = JSON.parse(jsonStr);
+    return {
+      whyConflict: String(parsed.whyConflict || "Unable to determine cause."),
+      oursChanged: String(parsed.oursChanged || "No description available."),
+      theirsChanged: String(parsed.theirsChanged || "No description available."),
+      recommendation: String(parsed.recommendation || "Review both sides and choose manually."),
+    };
+  } catch {
+    // Fallback: return raw text as the explanation
+    return {
+      whyConflict: raw.slice(0, 500),
+      oursChanged: "",
+      theirsChanged: "",
+      recommendation: "",
+    };
+  }
+}
+
 export async function explainCommitWithAI(
   repoPath: string,
   commitHash: string,
