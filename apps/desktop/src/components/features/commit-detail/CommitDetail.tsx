@@ -24,6 +24,7 @@ import { showToast } from "@/lib/toast";
 import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
 import AIMarkdown from "@/components/ui/feedback/AIMarkdown";
 import { StatusBadge, fileIcon, statusLabel, statusColor } from "@/components/ui/shared";
+import { useCommitDateFormatter } from "@/lib/date";
 
 export default function CommitDetail() {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -180,22 +181,9 @@ export default function CommitDetail() {
     );
   }
 
+  const formatCommitDate = useCommitDateFormatter();
   const formatDate = (date: string) => {
-    const normalized = date.replace(
-      /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) ([+-]\d{2})(\d{2})$/,
-      "$1T$2$3:$4",
-    );
-    const d = new Date(normalized);
-    if (Number.isNaN(d.getTime())) {
-      return date;
-    }
-    return d.toLocaleString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return formatCommitDate(date);
   };
 
   return (

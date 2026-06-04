@@ -2,6 +2,7 @@ import { useRepoStore } from "@/stores/repo";
 import { useGitBlame } from "@/queries/useGitBlame";
 import { GitCommit, Loader2 } from "lucide-react";
 import { GravatarImg } from "@/components/ui/shared";
+import { useCommitDateFormatter } from "@/lib/date";
 
 interface BlameViewProps {
   filePath: string | null;
@@ -11,6 +12,7 @@ interface BlameViewProps {
 export default function BlameView({ filePath, onClose }: BlameViewProps) {
   const repoPath = useRepoStore((s) => s.repoPath);
   const { data: blameLines, isLoading, error } = useGitBlame(repoPath, filePath);
+  const formatCommitDate = useCommitDateFormatter();
 
   if (!filePath) {
     return (
@@ -91,7 +93,7 @@ export default function BlameView({ filePath, onClose }: BlameViewProps) {
                       </span>
                     </td>
                     <td className="px-2 py-[1px] text-2xs text-text-muted">
-                      {formatShortDate(line.date)}
+                      {formatCommitDate(line.date)}
                     </td>
                     <td className="px-2 py-[1px] text-text-primary whitespace-pre">
                       {line.content}
@@ -120,9 +122,4 @@ function colorFromHash(hash: string): string {
   return palette[sum % palette.length];
 }
 
-function formatShortDate(dateStr: string): string {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
+
