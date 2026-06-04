@@ -79,3 +79,19 @@ To rotate the signing key:
 | "Signature verification failed" | Public key mismatch | Ensure `pubkey` in `tauri.conf.json` matches the private key used in CI |
 | No `latest.json` in release | Missing signing env vars | Check that `TAURI_SIGNING_PRIVATE_KEY` is set in GitHub Secrets |
 | Updater works in release but not dev | Expected behavior | The updater only functions from packaged builds, not `tauri dev` |
+| `failed to decode secret key: incorrect updater private key password: Missing comment in secret key` | `TAURI_SIGNING_PRIVATE_KEY` is not a valid updater private key string/file content, is the public key by mistake, has quotes/extra text, or was copied with the wrong format | Replace the GitHub secret with the exact `Private:` value printed by `tauri signer generate`, or the entire generated key file content if using `-w`. Do not include labels like `Private:` or Markdown backticks. Also verify the public key in `tauri.conf.json` comes from the same keypair |
+| `failed to decode secret key: incorrect updater private key password: Wrong password for that key` | Password secret does not match the private key, or a pasted/generated password contains hidden characters | Re-enter `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. If the key was generated with an empty password, leave the secret empty or remove it |
+
+## CI Signing Key Checklist
+
+When a GitHub Actions release fails after bundling the updater archive, verify these values:
+
+1. `TAURI_SIGNING_PRIVATE_KEY` must be the private key, not the public key.
+2. If you generated keys without `-w`, use the exact value printed under `Private:`.
+3. If you generated keys with `-w ~/.tauri/gitflow-desktop.key`, use either:
+   - the path locally, or
+   - the entire file content as the GitHub secret.
+4. `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` must match the password used during generation. If you pressed enter for an empty password, keep this secret empty or remove it.
+5. `plugins.updater.pubkey` in `src-tauri/tauri.conf.json` must be the `Public:` value from the same keypair.
+
+If the private key was ever pasted into chat, logs, or a public place, generate a new keypair and update both GitHub Secrets and `plugins.updater.pubkey`.
