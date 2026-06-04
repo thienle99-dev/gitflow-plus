@@ -1363,6 +1363,69 @@ export function ImproveCommitMessageFeatureIllustration() {
   );
 }
 
+export function MergeStrategyAdvisorFeatureIllustration() {
+  return (
+    <svg viewBox="0 0 280 120" fill="none" xmlns="http://www.w3.org/2000/svg" className={cls}>
+      {/* Sparkle icon */}
+      <circle cx="20" cy="16" r="10" fill={colors.purple} opacity="0.15" />
+      <path d="M20 9 L21.5 13 L26 14.5 L21.5 16 L20 20 L18.5 16 L14 14.5 L18.5 13 Z" fill={colors.purple} />
+      <text x="34" y="19" fontSize="7" fill={colors.purple} fontWeight="700">AI RECOMMENDS</text>
+
+      {/* Strategy cards */}
+      {[
+        { label: "Merge", x: 12, color: colors.blue, recommended: false },
+        { label: "Rebase", x: 100, color: colors.purple, recommended: false },
+        { label: "Squash", x: 188, color: colors.orange, recommended: true },
+      ].map((card, i) => (
+        <g key={i}>
+          <rect
+            x={card.x}
+            y={30}
+            width={80}
+            height={36}
+            rx={4}
+            fill={card.recommended ? card.color + "15" : colors.surface}
+            stroke={card.recommended ? card.color : colors.border}
+            strokeWidth={card.recommended ? "1.5" : "0.5"}
+          />
+          {card.recommended && (
+            <rect x={card.x + 56} y={33} width={20} height={10} rx={3} fill={colors.green} />
+          )}
+          {card.recommended && (
+            <text x={card.x + 60} y={41} fontSize="5" fill="white" fontWeight="600">REC</text>
+          )}
+          <text
+            x={card.x + 40}
+            y={51}
+            fontSize="6.5"
+            fill={card.recommended ? card.color : colors.muted}
+            fontWeight={card.recommended ? "700" : "500"}
+            textAnchor="middle"
+          >
+            {card.label}
+          </text>
+        </g>
+      ))}
+
+      {/* Arrow from recommended card */}
+      <path d="M228 66 L228 80" stroke={colors.green} strokeWidth="1" />
+      <path d="M224 77 L228 82 L232 77" fill={colors.green} />
+
+      {/* Confidence badge */}
+      <rect x="195" y="84" width="66" height="14" rx="7" fill={colors.green} opacity="0.15" stroke={colors.green} strokeWidth="0.5" />
+      <text x="228" y="93.5" fontSize="5.5" fill={colors.green} fontWeight="600" textAnchor="middle">High confidence</text>
+
+      {/* Pros */}
+      <circle cx="16" cy="87" r="3" fill={colors.green} opacity="0.2" />
+      <text x="14" y="89" fontSize="5" fill={colors.green}>✓</text>
+      <text x="22" y="89" fontSize="5" fill={colors.muted}>Clean history</text>
+      <circle cx="16" cy="100" r="3" fill={colors.green} opacity="0.2" />
+      <text x="14" y="102" fontSize="5" fill={colors.green}>✓</text>
+      <text x="22" y="102" fontSize="5" fill={colors.muted}>Single commit</text>
+    </svg>
+  );
+}
+
 export function AddCommitBodyFeatureIllustration() {
   return (
     <svg viewBox="0 0 280 120" fill="none" xmlns="http://www.w3.org/2000/svg" className={cls}>

@@ -89,6 +89,7 @@ import {
   SquashLastNFeatureIllustration,
   ImproveCommitMessageFeatureIllustration,
   AddCommitBodyFeatureIllustration,
+  MergeStrategyAdvisorFeatureIllustration,
 } from "./FeatureIllustrations";
 
 interface FeatureGuideDialogProps {
@@ -540,6 +541,26 @@ const sections: FeatureSection[] = [
             "The body explains WHY the changes were made, not just WHAT changed.",
             "Includes context about key files, breaking changes, and architectural decisions.",
             "The subject line is preserved — only the body is generated.",
+          ],
+        },
+      },
+      {
+        name: "AI Merge Strategy Advisor",
+        description: "AI analyzes branch state and recommends the best merge strategy — merge commit, rebase, squash, or fast-forward.",
+        icon: <Wand2 size={13} />,
+        illustration: <MergeStrategyAdvisorFeatureIllustration />,
+        details: {
+          steps: [
+            "Right-click a branch and select 'Merge into current branch'.",
+            "The Merge Preview dialog loads with branch comparison data.",
+            "AI automatically analyzes the branch state and recommends a strategy.",
+            "Review the recommendation, reasoning, pros/cons, and alternatives.",
+            "Click 'Apply: [Strategy]' to execute the recommended merge strategy.",
+          ],
+          tips: [
+            "The advisor considers commit count, file overlap, and branch divergence.",
+            "Alternative strategies are shown so you can make an informed decision.",
+            "If AI is not configured, the advisor section is hidden — manual merge still works.",
           ],
         },
       },
