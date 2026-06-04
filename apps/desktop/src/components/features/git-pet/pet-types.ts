@@ -1,6 +1,24 @@
-export type PetType = "cat" | "otter" | "dog" | "fox" | "penguin" | "bunny" | "panda" | "koala" | "frog" | "axolotl" | "bear" | "piderman";
+export type PetType =
+  | "cat"
+  | "otter"
+  | "dog"
+  | "fox"
+  | "penguin"
+  | "bunny"
+  | "panda"
+  | "koala"
+  | "frog"
+  | "axolotl"
+  | "bear"
+  | "piderman"
+  | "goldenRetriever"
+  | "mushroom";
 
-export const PET_TYPES: PetType[] = ["cat", "otter", "dog", "fox", "penguin", "bunny", "panda", "koala", "frog", "axolotl", "bear", "piderman"];
+export const PET_TYPES: PetType[] = [
+  "panda",
+  "goldenRetriever",
+  "mushroom",
+];
 
 export const PET_LABELS: Record<PetType, string> = {
   cat: "Cat",
@@ -15,8 +33,10 @@ export const PET_LABELS: Record<PetType, string> = {
   axolotl: "Axolotl",
   bear: "Bear",
   piderman: "Piderman",
+  goldenRetriever: "Golden Retriever",
+  mushroom: "Mushroom",
 };
 
-export const DEFAULT_PET: PetType = "cat";
+export const DEFAULT_PET: PetType = "panda";
 
 export const LS_KEY_PET_TYPE = "gitflowPetType";

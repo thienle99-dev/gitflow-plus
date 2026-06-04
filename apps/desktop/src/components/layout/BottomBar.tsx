@@ -6,6 +6,7 @@ import { useMergeStatus } from "@/queries/useGitMerge";
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import { useOperationsStore } from "@/stores/operations";
 import { useLogsPanelStore } from "@/stores/logs";
+import { GitPet } from "@/components/features/git-pet";
 
 export default function BottomBar() {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -49,6 +50,13 @@ export default function BottomBar() {
   const conflictCount = mergeStatus?.conflicts?.length || 0;
 
   return (
+    <>
+    {repoPath && (
+      <div className="footer-git-pet">
+        <GitPet />
+      </div>
+    )}
+
     <div className="h-[26px] border-t border-border-60 bg-surface-1-40 backdrop-blur-md flex items-center px-4 text-2xs text-text-muted select-none shrink-0">
 
       {/* Connection / State Indicator (Pulse Dot / Loader) */}
@@ -181,5 +189,6 @@ export default function BottomBar() {
         </span>
       </div>
     </div>
+    </>
   );
 }

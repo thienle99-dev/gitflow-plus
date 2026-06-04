@@ -25,10 +25,10 @@
   background-image: var(--pet-sheet-url);
   background-repeat: no-repeat;
   background-position: 0 0;
-  background-size: auto var(--pet-frame-height);
+  background-size: auto var(--pet-sheet-height, var(--pet-frame-height));
   image-rendering: pixelated;
   image-rendering: crisp-edges;
-  transform: scale(2);
+  transform: scale(var(--pet-frame-scale, 2));
   transform-origin: center;
   animation: pet-sprite-sheet-play 900ms steps(var(--pet-frame-count)) infinite;
 }
@@ -283,6 +283,52 @@
   top: -14px;
   right: 16px;
   font-size: 16px;
+}
+
+/* === FOOTER DOCK === */
+.footer-git-pet {
+  position: fixed;
+  left: 32px;
+  bottom: 28px;
+  z-index: 80;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 76px;
+  height: 76px;
+  pointer-events: auto;
+}
+
+.footer-git-pet .git-pet-container {
+  width: 76px;
+  height: 76px;
+  justify-content: center;
+}
+
+.footer-git-pet .git-pet-sprite {
+  width: 72px;
+  height: 72px;
+}
+
+.footer-git-pet .git-pet-sprite-sheet {
+  transform: scale(calc(var(--pet-frame-scale, 2) * 0.58));
+}
+
+.footer-git-pet .pet-bubble {
+  left: 0;
+  right: auto;
+  bottom: 100%;
+  margin-bottom: 4px;
+  border-radius: 8px 8px 8px 2px;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.footer-git-pet .pet-zzz {
+  top: -10px;
+  right: 8px;
+  font-size: 12px;
 }
 
 /* === SPEECH BUBBLE === */

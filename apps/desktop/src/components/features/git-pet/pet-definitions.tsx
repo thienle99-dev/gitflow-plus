@@ -5,17 +5,23 @@ interface PetDefinition {
   faceTransform?: string;
   usesCustomFace?: boolean;
   spriteSheets?: {
-    idle: string;
-    wave?: string;
-    eating?: string;
+    idle: PetSpriteSheet;
+    wave?: PetSpriteSheet;
+    eating?: PetSpriteSheet;
     frameWidth: number;
     frameHeight: number;
-    frames: number;
+    sheetHeight?: number;
+    scale?: number;
   };
   body: React.ReactNode;
   face: React.ReactNode;
   mouth: React.ReactNode;
   accessories: React.ReactNode;
+}
+
+interface PetSpriteSheet {
+  src: string;
+  frames: number;
 }
 
 export function getPetDefinition(petType: PetType): PetDefinition {
@@ -34,6 +40,10 @@ export function getPetDefinition(petType: PetType): PetDefinition {
       return bunnyPet;
     case "panda":
       return pandaPet;
+    case "goldenRetriever":
+      return goldenRetrieverPet;
+    case "mushroom":
+      return mushroomPet;
     case "koala":
       return koalaPet;
     case "frog":
@@ -606,12 +616,11 @@ const pandaPet: PetDefinition = {
   faceTransform: "translate(8 6)",
   usesCustomFace: true,
   spriteSheets: {
-    idle: "/pets/panda/PandaWave.png",
-    wave: "/pets/panda/PandaWave.png",
-    eating: "/pets/panda/PandaEating.png",
+    idle: { src: "/pets/panda/PandaWave.png", frames: 12 },
+    wave: { src: "/pets/panda/PandaWave.png", frames: 12 },
+    eating: { src: "/pets/panda/PandaEating.png", frames: 12 },
     frameWidth: 64,
     frameHeight: 64,
-    frames: 12,
   },
   body: (
     <>
@@ -705,6 +714,43 @@ const pandaPet: PetDefinition = {
       <path d="M38 30 H40 V32 H41 V34 H40 V35 H38 Z" fill="#81C784" stroke="#66BB6A" strokeWidth="0.5" strokeLinejoin="miter" />
     </>
   ),
+};
+
+/* ─── GOLDEN RETRIEVER ─── External pixel spritesheet ─── */
+const goldenRetrieverPet: PetDefinition = {
+  viewBox: "0 0 64 64",
+  usesCustomFace: true,
+  spriteSheets: {
+    idle: { src: "/pets/golden-retriever/golden-retriever.png", frames: 32 },
+    wave: { src: "/pets/golden-retriever/golden-retriever.png", frames: 32 },
+    eating: { src: "/pets/golden-retriever/golden-retriever.png", frames: 32 },
+    frameWidth: 32,
+    frameHeight: 32,
+    sheetHeight: 64,
+    scale: 3.4,
+  },
+  body: null,
+  face: null,
+  mouth: null,
+  accessories: null,
+};
+
+/* ─── MUSHROOM ─── External pixel spritesheet ─── */
+const mushroomPet: PetDefinition = {
+  viewBox: "0 0 48 48",
+  usesCustomFace: true,
+  spriteSheets: {
+    idle: { src: "/pets/mushroom/mushroom-idle.png", frames: 9 },
+    wave: { src: "/pets/mushroom/mushroom-walk.png", frames: 4 },
+    eating: { src: "/pets/mushroom/mushroom-walk.png", frames: 4 },
+    frameWidth: 48,
+    frameHeight: 48,
+    scale: 2.5,
+  },
+  body: null,
+  face: null,
+  mouth: null,
+  accessories: null,
 };
 
 /* ─── KOALA ─── Soft grey with big fluffy ears ─── */

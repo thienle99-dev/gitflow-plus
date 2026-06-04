@@ -40,6 +40,7 @@ function getSpriteSheetSource(
 export default function GitPetSprite({ state, petType = DEFAULT_PET, onAnimationEnd }: GitPetSpriteProps) {
   const pet = getPetDefinition(petType);
   const spriteSheet = pet.spriteSheets;
+  const activeSpriteSheet = spriteSheet ? getSpriteSheetSource(state, spriteSheet) : null;
 
   return (
     <div
@@ -52,11 +53,13 @@ export default function GitPetSprite({ state, petType = DEFAULT_PET, onAnimation
         <div
           className="git-pet-sprite-sheet"
           style={{
-            "--pet-sheet-url": `url(${getSpriteSheetSource(state, spriteSheet)})`,
+            "--pet-sheet-url": `url(${activeSpriteSheet?.src})`,
             "--pet-frame-width": `${spriteSheet.frameWidth}px`,
             "--pet-frame-height": `${spriteSheet.frameHeight}px`,
-            "--pet-frame-count": spriteSheet.frames,
-            "--pet-sheet-end": `-${spriteSheet.frameWidth * spriteSheet.frames}px`,
+            "--pet-sheet-height": `${spriteSheet.sheetHeight ?? spriteSheet.frameHeight}px`,
+            "--pet-frame-count": activeSpriteSheet?.frames,
+            "--pet-sheet-end": `-${spriteSheet.frameWidth * (activeSpriteSheet?.frames ?? 1)}px`,
+            "--pet-frame-scale": spriteSheet.scale ?? 2,
           } as CSSProperties}
         />
       ) : (
