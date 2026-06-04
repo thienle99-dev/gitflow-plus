@@ -27,4 +27,15 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-react": ["react", "react-dom"],
+          "vendor-query": ["@tanstack/react-query"],
+          "vendor-ui": ["lucide-react", "react-resizable-panels"],
+        },
+      },
+    },
+  },
 }));

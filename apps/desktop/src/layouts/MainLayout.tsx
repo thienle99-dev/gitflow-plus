@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef, useState } from "react";
+import { useEffect, useCallback, useRef, useState, lazy, Suspense, useMemo } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Commit, FileChange, Branch, RepoInfo, SyncStatus } from "@/api/tauri";
@@ -15,9 +15,26 @@ import BottomBar from "@/components/layout/BottomBar";
 import OperationCenter from "@/components/layout/OperationCenter";
 import LogCenter from "@/components/layout/LogCenter";
 import { useOperationObserver } from "@/hooks/useOperationObserver";
-import { SearchDialog, KeyboardShortcutsModal, CherryPickDialog, SettingsDialog, AnalyticsDialog, CreateBranchDialog, MergeRequestDialog, MergePreviewDialog, CloneDialog, FeatureGuideDialog, OnboardingWizard, isOnboardingComplete, BranchCompareDialog, HealthCheckDialog, DiagnosticDialog, CommandPalette } from "@/components/features/dialogs";
+import { isOnboardingComplete } from "@/components/features/dialogs";
 import ErrorBoundary from "@/components/ui/feedback/ErrorBoundary";
 import { AlertOctagon, RefreshCw, Trash2, FolderOpen, GitBranch, Clock } from "lucide-react";
+
+/* Lazy-loaded dialog components — only downloaded when opened */
+const SearchDialog = lazy(() => import("@/components/features/dialogs/SearchDialog"));
+const KeyboardShortcutsModal = lazy(() => import("@/components/features/dialogs/KeyboardShortcutsModal"));
+const CherryPickDialog = lazy(() => import("@/components/features/dialogs/CherryPickDialog"));
+const SettingsDialog = lazy(() => import("@/components/features/dialogs/SettingsDialog"));
+const AnalyticsDialog = lazy(() => import("@/components/features/dialogs/AnalyticsDialog"));
+const CreateBranchDialog = lazy(() => import("@/components/features/dialogs/CreateBranchDialog"));
+const MergeRequestDialog = lazy(() => import("@/components/features/dialogs/MergeRequestDialog"));
+const MergePreviewDialog = lazy(() => import("@/components/features/dialogs/MergePreviewDialog"));
+const CloneDialog = lazy(() => import("@/components/features/dialogs/CloneDialog"));
+const FeatureGuideDialog = lazy(() => import("@/components/features/dialogs/FeatureGuideDialog"));
+const OnboardingWizard = lazy(() => import("@/components/features/dialogs/OnboardingWizard"));
+const BranchCompareDialog = lazy(() => import("@/components/features/dialogs/BranchCompareDialog"));
+const HealthCheckDialog = lazy(() => import("@/components/features/dialogs/HealthCheckDialog"));
+const DiagnosticDialog = lazy(() => import("@/components/features/dialogs/DiagnosticDialog"));
+const CommandPalette = lazy(() => import("@/components/features/dialogs/CommandPalette"));
 
 export default function MainLayout() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
@@ -334,8 +351,8 @@ export default function MainLayout() {
     ? activeDialog
     : null;
 
-  // Dialog overlay components
-  const dialogComponents: Record<string, React.ReactNode> = {
+  // Dialog overlay components — memoized so only the active dialog re-renders
+  const dialogComponents = useMemo<Record<string, React.ReactNode>>(() => ({
     search: <SearchDialog open={true} onClose={closeDialog} />,
     settings: <SettingsDialog onClose={closeDialog} />,
     "ai-settings": <SettingsDialog initialTab="ai" onClose={closeDialog} />,
@@ -363,7 +380,7 @@ export default function MainLayout() {
     "feature-guide": <FeatureGuideDialog open={true} onClose={closeDialog} />,
     "health-check": <HealthCheckDialog onClose={closeDialog} />,
     "diagnostics": <DiagnosticDialog onClose={closeDialog} />,
-  };
+  }), [closeDialog, selectedCommit, mergeTargetBranch, compareBranchTarget, selectedRef]);
 
   const dialogOverlay = overlayDialog ? (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -380,12 +397,14 @@ export default function MainLayout() {
             ? "h-[min(580px,78vh)] w-[min(900px,90vw)]"
           : "min-w-[480px] max-w-[600px] max-h-[80vh]"
       }`}>
-        {dialogComponents[overlayDialog] || (
-          <div className="p-4 text-text-muted text-sm">
-            Unknown dialog: {overlayDialog}
-            <button className="ghost text-xs ml-4" onClick={closeDialog}>Close</button>
-          </div>
-        )}
+        <Suspense fallback={<div className="p-6 text-text-muted text-sm animate-pulse">Loading…</div>}>
+          {dialogComponents[overlayDialog] || (
+            <div className="p-4 text-text-muted text-sm">
+              Unknown dialog: {overlayDialog}
+              <button className="ghost text-xs ml-4" onClick={closeDialog}>Close</button>
+            </div>
+          )}
+        </Suspense>
       </div>
     </div>
   ) : null;
@@ -485,8 +504,14 @@ function InlineErrorFallback({ name }: { name: string }) {
 
       {/* Dialog overlays */}
       {dialogOverlay}
-      {activeDialog === "command-palette" && <CommandPalette open={true} onClose={closeDialog} />}
-      <OnboardingWizard open={showOnboarding} onClose={() => setShowOnboarding(false)} />
+      {activeDialog === "command-palette" && (
+        <Suspense>
+          <CommandPalette open={true} onClose={closeDialog} />
+        </Suspense>
+      )}
+      <Suspense>
+        <OnboardingWizard open={showOnboarding} onClose={() => setShowOnboarding(false)} />
+      </Suspense>
     </div>
   );
 }
