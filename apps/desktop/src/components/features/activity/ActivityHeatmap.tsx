@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useCallback } from "react";
+import { useLayoutEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useActivity } from "@/queries/useActivity";
 import { useRepoStore } from "@/stores/repo";
 
@@ -103,6 +103,7 @@ export default function ActivityHeatmap() {
     text: string;
   } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const grid = useMemo(() => {
     if (!activity) return null;
@@ -143,6 +144,12 @@ export default function ActivityHeatmap() {
   const gridWidth = DAY_LABEL_WIDTH + WEEKS_TO_SHOW * (CELL_SIZE + CELL_GAP);
   const gridHeight = MONTH_LABEL_HEIGHT + 7 * (CELL_SIZE + CELL_GAP);
 
+  useLayoutEffect(() => {
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
+    scrollEl.scrollLeft = scrollEl.scrollWidth - scrollEl.clientWidth;
+  }, [repoPath, gridWidth]);
+
   return (
     <div className="px-4 py-2 select-none">
       {/* Summary */}
@@ -153,7 +160,7 @@ export default function ActivityHeatmap() {
       </div>
 
       {/* Heatmap */}
-      <div className="relative overflow-x-auto scrollbar-thin">
+      <div ref={scrollRef} className="relative overflow-x-auto scrollbar-thin">
         <svg
           ref={svgRef}
           width={gridWidth}
