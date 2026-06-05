@@ -146,30 +146,101 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
   );
   const [settingsSearch, setSettingsSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const contentScrollRef = useRef<HTMLDivElement>(null);
 
-  // Search index: maps tab IDs to searchable keywords
-  const TAB_SEARCH_INDEX: Record<string, { label: string; keywords: string[] }> = {
-    general: { label: "General", keywords: ["general", "startup", "repository", "recent", "last repo", "open"] },
-    appearance: { label: "Appearance", keywords: ["appearance", "theme", "display", "density", "graph", "date", "format", "motion", "animation", "color"] },
-    diff: { label: "Editor & Diff", keywords: ["editor", "diff", "split", "unified", "context", "wrap", "line wrap", "large diff", "mode"] },
-    git: { label: "Git Core", keywords: ["git", "fetch", "auto", "prune", "confirm", "dangerous", "lint", "commit", "code", "strictness"] },
-    ai: { label: "AI Assistant", keywords: ["ai", "artificial intelligence", "model", "api", "key", "token", "provider", "openai", "anthropic", "ollama", "profile", "review", "commit", "style", "conventional", "gitmoji", "jira", "convention", "rules", "language"] },
-    accounts: { label: "Accounts", keywords: ["accounts", "github", "gitlab", "token", "integration", "hosting", "oauth"] },
-    pet: { label: "Git Pet", keywords: ["pet", "companion", "mascot", "animal", "panda", "mushroom", "golden retriever"] },
+  // ── Comprehensive Search Index ──────────────────────────────────────────
+  // Each entry: { tab, sectionId, label, keywords }
+  // sectionId targets an `id=` on the card in the tab content for scroll-to
+  interface SearchIndexItem {
+    tab: string;
+    sectionId: string;
+    label: string;
+    keywords: string[];
+  }
+  const SETTINGS_SEARCH_INDEX: SearchIndexItem[] = [
+    // General
+    { tab: "general", sectionId: "general-updates", label: "App Updates", keywords: ["update", "version", "upgrade", "download", "install", "restart"] },
+    { tab: "general", sectionId: "general-launch", label: "Launch Preferences", keywords: ["launch", "startup", "reopen", "last repo", "recent", "repository limit"] },
+    { tab: "general", sectionId: "general-diagnostics", label: "Maintenance & Diagnostics", keywords: ["maintenance", "diagnostics", "clear", "credentials", "reset", "cache"] },
+    // Appearance
+    { tab: "appearance", sectionId: "appearance-theme", label: "Color Theme", keywords: ["theme", "color", "dark", "light", "macos", "github", "nord", "tokyo", "dracula", "catppuccin", "gruvbox", "rose pine", "solarized", "cyberpunk", "monokai"] },
+    { tab: "appearance", sectionId: "appearance-graph", label: "Commit Graph & Columns", keywords: ["graph", "density", "compact", "comfortable", "hash", "author", "date", "columns", "animation", "motion", "reduce"] },
+    { tab: "appearance", sectionId: "appearance-date", label: "Commit Date Format", keywords: ["date", "format", "timestamp", "relative", "custom", "pattern", "time"] },
+    // Diff
+    { tab: "diff", sectionId: "diff-editor", label: "Diff & Editor Preferences", keywords: ["diff", "split", "unified", "view", "mode", "wrap", "line wrap", "context", "lines", "large", "handling"] },
+    { tab: "diff", sectionId: "diff-shortcuts", label: "System Shortcuts", keywords: ["shortcut", "keyboard", "hotkey", "keybinding", "cmd", "ctrl", "sidebar", "commit"] },
+    // Git
+    { tab: "git", sectionId: "gitflow-config", label: "GitFlow Configuration", keywords: ["gitflow", "branch", "main", "develop", "feature", "release", "hotfix", "prefix", "tag"] },
+    { tab: "git", sectionId: "git-autofetch", label: "Background Auto-Fetch", keywords: ["fetch", "auto", "background", "sync", "interval", "refresh", "upstream"] },
+    { tab: "git", sectionId: "git-operations", label: "Operations & Safety", keywords: ["prune", "delete", "remote", "confirm", "dangerous", "destructive", "force push", "discard"] },
+    { tab: "git", sectionId: "git-lint", label: "Pre-Commit Quality Gates", keywords: ["lint", "linting", "commit", "message", "code", "quality", "strictness", "error", "warning", "block", "eslint", "biome", "ruff", "clippy"] },
+    // AI
+    { tab: "ai", sectionId: "ai-profile", label: "API Profile", keywords: ["profile", "add", "duplicate", "delete", "rename"] },
+    { tab: "ai", sectionId: "ai-provider", label: "Provider Type", keywords: ["provider", "openai", "anthropic", "ollama", "llama", "type"] },
+    { tab: "ai", sectionId: "ai-config", label: "API Key & Endpoint", keywords: ["api", "key", "endpoint", "url", "credential", "secret", "token", "fetch models"] },
+    { tab: "ai", sectionId: "ai-models", label: "AI Models", keywords: ["model", "gpt", "claude", "sonnet", "haiku", "opus", "commit", "review", "generate"] },
+    { tab: "ai", sectionId: "ai-tokens", label: "Token Response Limit", keywords: ["token", "limit", "response", "max", "context window"] },
+    { tab: "ai", sectionId: "ai-commit-style", label: "Commit Message Style", keywords: ["commit", "style", "conventional", "plain", "gitmoji", "jira", "message"] },
+    { tab: "ai", sectionId: "ai-detail", label: "Commit Message Detail", keywords: ["detail", "level", "minimal", "medium", "detailed", "comprehensive", "subject", "body"] },
+    { tab: "ai", sectionId: "ai-language", label: "AI Review Language", keywords: ["language", "review", "english", "vietnamese", "japanese", "korean", "chinese", "spanish", "french", "german"] },
+    { tab: "ai", sectionId: "ai-checklist", label: "Custom Review Checklist", keywords: ["checklist", "review", "custom", "bugs", "security", "performance", "testing"] },
+    { tab: "ai", sectionId: "ai-rules", label: "Custom Guidelines / Rules", keywords: ["rules", "guidelines", "custom", "prompt", "instructions"] },
+    { tab: "ai", sectionId: "ai-conventions", label: "Detected Convention Files", keywords: ["convention", "cursorrules", "claude", "agents", "rules file", "auto inject"] },
+    // Accounts
+    { tab: "accounts", sectionId: "accounts-github", label: "GitHub Integration", keywords: ["github", "pat", "token", "pull request", "branch"] },
+    { tab: "accounts", sectionId: "accounts-gitlab", label: "GitLab Integration", keywords: ["gitlab", "pat", "token", "self-hosted", "host", "instance"] },
+    // Pet
+    { tab: "pet", sectionId: "pet-toggle", label: "Show Git Pet", keywords: ["pet", "show", "enable", "display", "companion", "mascot"] },
+    { tab: "pet", sectionId: "pet-selector", label: "Pet Selection", keywords: ["pet", "select", "panda", "mushroom", "golden retriever", "animal", "type", "choose"] },
+  ];
+
+  // Tab-level labels for the sidebar
+  const TAB_LABELS: Record<string, string> = {
+    general: "General",
+    appearance: "Appearance",
+    diff: "Editor & Diff",
+    git: "Git Core",
+    ai: "AI Assistant",
+    accounts: "Accounts",
+    pet: "Git Pet",
   };
 
-  // Filter tabs based on search
-  const filteredTabs = settingsSearch.trim()
-    ? (Object.entries(TAB_SEARCH_INDEX) as [string, { label: string; keywords: string[] }][]).filter(
-        ([, tab]) => {
-          const q = settingsSearch.toLowerCase();
-          return (
-            tab.label.toLowerCase().includes(q) ||
-            tab.keywords.some((kw) => kw.includes(q))
-          );
-        },
-      ).map(([id]) => id as typeof activeTab)
-    : null; // null = show all tabs
+  // ── Search Logic ────────────────────────────────────────────────────────
+  const searchResults: { tab: string; sectionId: string; label: string; tabLabel: string }[] | null = settingsSearch.trim()
+    ? (() => {
+        const q = settingsSearch.toLowerCase();
+        return SETTINGS_SEARCH_INDEX
+          .filter(
+            (item) =>
+              item.label.toLowerCase().includes(q) ||
+              item.keywords.some((kw) => kw.includes(q)),
+          )
+          .map((item) => ({
+            tab: item.tab,
+            sectionId: item.sectionId,
+            label: item.label,
+            tabLabel: TAB_LABELS[item.tab] || item.tab,
+          }));
+      })()
+    : null;
+
+  // Navigate to a search result: switch tab + scroll to section
+  const navigateToResult = useCallback((result: { tab: string; sectionId: string; label: string; tabLabel: string }) => {
+    setActiveTab(result.tab as typeof activeTab);
+    setSettingsSearch("");
+    // Scroll to section after a short delay to allow tab content to render
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        const el = document.getElementById(result.sectionId);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+          // Brief highlight flash
+          el.classList.add("ring-2", "ring-accent/40", "rounded-mac");
+          setTimeout(() => el.classList.remove("ring-2", "ring-accent/40", "rounded-mac"), 1500);
+        }
+      }, 50);
+    });
+  }, []);
 
   // General Tab States
   const [theme, setSelectedTheme] = useState<typeof currentTheme>(currentTheme);
@@ -180,6 +251,18 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       const storedTheme = readStoredTheme();
       applyTheme(storedTheme);
     };
+  }, []);
+
+  // Cmd+F / Ctrl+F to focus search
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "f") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
   }, []);
 
   const [defaultDiffMode, setDefaultDiffMode] = useState<"split" | "unified">("split");
@@ -742,106 +825,112 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
             <span>Settings</span>
           </div>
 
-          {/* Navigation vertical list */}
-          <div className="space-y-0.5">
-            <button
-              onClick={() => setActiveTab("general")}
-              className={`w-full px-2.5 py-1.5 text-xs font-medium rounded-mac flex items-center gap-2.5 transition-all ${
-                activeTab === "general"
-                  ? "tab-accent-active font-semibold text-text-primary"
-                  : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
-              }`}
-            >
-              <div className="w-5 h-5 rounded-[5px] bg-[#007aff] flex items-center justify-center text-white shrink-0">
-                <Sliders size={12} strokeWidth={2.2} />
-              </div>
-              General
-            </button>
-
-            <button
-              onClick={() => setActiveTab("appearance")}
-              className={`w-full px-2.5 py-1.5 text-xs font-medium rounded-mac flex items-center gap-2.5 transition-all ${
-                activeTab === "appearance"
-                  ? "tab-accent-active font-semibold text-text-primary"
-                  : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
-              }`}
-            >
-              <div className="w-5 h-5 rounded-[5px] bg-[#34c759] flex items-center justify-center text-white shrink-0">
-                <Palette size={12} strokeWidth={2.2} />
-              </div>
-              Appearance
-            </button>
-
-            <button
-              onClick={() => setActiveTab("diff")}
-              className={`w-full px-2.5 py-1.5 text-xs font-medium rounded-mac flex items-center gap-2.5 transition-all ${
-                activeTab === "diff" || activeTab === "advanced"
-                  ? "tab-accent-active font-semibold text-text-primary"
-                  : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
-              }`}
-            >
-              <div className="w-5 h-5 rounded-[5px] bg-[#30b0c7] flex items-center justify-center text-white shrink-0">
-                <FileText size={12} strokeWidth={2.2} />
-              </div>
-              Editor & Diff
-            </button>
-
-            <button
-              onClick={() => setActiveTab("git")}
-              className={`w-full px-2.5 py-1.5 text-xs font-medium rounded-mac flex items-center gap-2.5 transition-all ${
-                activeTab === "git"
-                  ? "tab-accent-active font-semibold text-text-primary"
-                  : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
-              }`}
-            >
-              <div className="w-5 h-5 rounded-[5px] bg-[#ff2d55] flex items-center justify-center text-white shrink-0">
-                <GitBranch size={12} strokeWidth={2.2} />
-              </div>
-              Git Core
-            </button>
-
-            <button
-              onClick={() => setActiveTab("ai")}
-              className={`w-full px-2.5 py-1.5 text-xs font-medium rounded-mac flex items-center gap-2.5 transition-all ${
-                activeTab === "ai"
-                  ? "tab-accent-active font-semibold text-text-primary"
-                  : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
-              }`}
-            >
-              <div className="w-5 h-5 rounded-[5px] bg-[#ff9500] flex items-center justify-center text-white shrink-0">
-                <Sparkles size={12} strokeWidth={2.2} />
-              </div>
-              AI Assistant
-            </button>
-
-            <button
-              onClick={() => setActiveTab("accounts")}
-              className={`w-full px-2.5 py-1.5 text-xs font-medium rounded-mac flex items-center gap-2.5 transition-all ${
-                activeTab === "accounts"
-                  ? "tab-accent-active font-semibold text-text-primary"
-                  : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
-              }`}
-            >
-              <div className="w-5 h-5 rounded-[5px] bg-[#5856d6] flex items-center justify-center text-white shrink-0">
-                <Link size={12} strokeWidth={2.2} />
-              </div>
-              Accounts
-            </button>
-
-            <button
-              onClick={() => setActiveTab("pet")}
-              className={`w-full px-2.5 py-1.5 text-xs font-medium rounded-mac flex items-center gap-2.5 transition-all ${
-                activeTab === "pet"
-                  ? "tab-accent-active font-semibold text-text-primary"
-                  : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
-              }`}
-            >
-              <div className="w-5 h-5 rounded-[5px] bg-[#af52de] flex items-center justify-center text-white shrink-0">
-                <PawPrint size={12} strokeWidth={2.2} />
-              </div>
-              Git Pet
-            </button>
+          {/* Search Input */}
+          <div className="relative px-1">
+            <Search size={11} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={settingsSearch}
+              onChange={(e) => setSettingsSearch(e.target.value)}
+              placeholder="Search settings..."
+              className="w-full h-7 pl-7 pr-6 text-2xs bg-surface-2 border border-border-40 rounded-mac text-text-primary placeholder:text-text-muted focus:border-accent-60 focus:ring-1 focus:ring-accent-15 outline-none transition-all"
+            />
+            {settingsSearch && (
+              <button
+                type="button"
+                onClick={() => { setSettingsSearch(""); searchInputRef.current?.focus(); }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary cursor-pointer"
+              >
+                <X size={10} />
+              </button>
+            )}
           </div>
+
+          {/* Search Results Panel (when searching) */}
+          {searchResults ? (
+            <div className="space-y-0.5 overflow-y-auto max-h-[calc(100vh-200px)]">
+              {searchResults.length > 0 ? (
+                // Group results by tab
+                (() => {
+                  const grouped = searchResults.reduce<Record<string, { tab: string; sectionId: string; label: string; tabLabel: string }[]>>((acc, r) => {
+                    (acc[r.tab] ||= []).push(r);
+                    return acc;
+                  }, {});
+                  const icons: Record<string, { icon: typeof Sliders; color: string }> = {
+                    general: { icon: Sliders, color: "#007aff" },
+                    appearance: { icon: Palette, color: "#34c759" },
+                    diff: { icon: FileText, color: "#30b0c7" },
+                    git: { icon: GitBranch, color: "#ff2d55" },
+                    ai: { icon: Sparkles, color: "#ff9500" },
+                    accounts: { icon: Link, color: "#5856d6" },
+                    pet: { icon: PawPrint, color: "#af52de" },
+                  };
+                  return Object.entries(grouped).map(([tabId, items]) => {
+                    const { icon: TabIcon, color } = icons[tabId] || { icon: Sliders, color: "#888" };
+                    return (
+                      <div key={tabId} className="mb-2">
+                        <div className="px-2.5 py-1 text-2xs font-semibold text-text-muted uppercase tracking-wider flex items-center gap-1.5">
+                          <div className="w-3.5 h-3.5 rounded-[3px] flex items-center justify-center text-white shrink-0" style={{ backgroundColor: color }}>
+                            <TabIcon size={8} strokeWidth={2.5} />
+                          </div>
+                          {TAB_LABELS[tabId] || tabId}
+                        </div>
+                        {items.map((result) => (
+                          <button
+                            key={result.sectionId}
+                            type="button"
+                            onClick={() => navigateToResult(result)}
+                            className="w-full px-2.5 py-1.5 text-xs font-medium rounded-mac text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-all text-left flex items-center gap-2"
+                          >
+                            <Search size={10} className="text-text-muted shrink-0" />
+                            <span className="truncate">{result.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  });
+                })()
+              ) : (
+                <div className="px-2.5 py-3 text-2xs text-text-muted text-center">
+                  No matching settings
+                </div>
+              )}
+            </div>
+          ) : (
+          /* Navigation vertical list (no search active) */
+          <div className="space-y-0.5">
+            {["general", "appearance", "diff", "git", "ai", "accounts", "pet"].map((tabId) => {
+              const icons: Record<string, { icon: typeof Sliders; color: string }> = {
+                general: { icon: Sliders, color: "#007aff" },
+                appearance: { icon: Palette, color: "#34c759" },
+                diff: { icon: FileText, color: "#30b0c7" },
+                git: { icon: GitBranch, color: "#ff2d55" },
+                ai: { icon: Sparkles, color: "#ff9500" },
+                accounts: { icon: Link, color: "#5856d6" },
+                pet: { icon: PawPrint, color: "#af52de" },
+              };
+              const { icon: TabIcon, color } = icons[tabId] || { icon: Sliders, color: "#888" };
+              const isActive = activeTab === tabId || (tabId === "diff" && activeTab === "advanced");
+              return (
+                <button
+                  key={tabId}
+                  onClick={() => setActiveTab(tabId as typeof activeTab)}
+                  className={`w-full px-2.5 py-1.5 text-xs font-medium rounded-mac flex items-center gap-2.5 transition-all ${
+                    isActive
+                      ? "tab-accent-active font-semibold text-text-primary"
+                      : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
+                  }`}
+                >
+                  <div className="w-5 h-5 rounded-[5px] flex items-center justify-center text-white shrink-0" style={{ backgroundColor: color }}>
+                    <TabIcon size={12} strokeWidth={2.2} />
+                  </div>
+                  {TAB_LABELS[tabId] || tabId}
+                </button>
+              );
+            })}
+          </div>
+          )}
         </div>
 
         {/* Sidebar Footer (Troubleshooting actions) */}
