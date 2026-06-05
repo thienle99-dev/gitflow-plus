@@ -10,6 +10,7 @@ import ContextMenu from "@/components/ui/overlay/ContextMenu";
 import { showToast } from "@/lib/toast";
 import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { usePreflightGate } from "@/hooks/usePreflightGate";
 import {
   ChevronRight,
   GitBranch,
@@ -52,6 +53,10 @@ export default function Sidebar() {
   const [repoSearchQuery, setRepoSearchQuery] = useState("");
   const [branchCtxMenu, setBranchCtxMenu] = useState<{ branch: string; x: number; y: number } | null>(null);
   const [confirmDeleteBranch, setConfirmDeleteBranch] = useState<string | null>(null);
+
+  // Preflight gates for risky operations
+  const checkoutGate = usePreflightGate("checkout branch");
+  const deleteBranchGate = usePreflightGate("delete branch");
 
   const openRepo = useRepoStore((s) => s.openRepo);
   const closeRepo = useRepoStore((s) => s.closeRepo);
@@ -100,6 +105,8 @@ export default function Sidebar() {
   }, [remoteBranches]);
 
   const handleCheckout = async (name: string) => {
+    const ok = await checkoutGate.runPreflight();
+    if (!ok) return;
     try {
       await api.branches.checkout(repoPath, name);
       selectRef(name);
@@ -112,6 +119,8 @@ export default function Sidebar() {
     const branch = confirmDeleteBranch;
     setConfirmDeleteBranch(null);
     if (!branch || !repoPath) return;
+    const ok = await deleteBranchGate.runPreflight();
+    if (!ok) return;
     try {
       await api.branches.delete(repoPath, branch);
       showToast(`Branch "${branch}" deleted`);
@@ -509,6 +518,8 @@ export default function Sidebar() {
     </nav>
     </div>
 
+    {checkoutGate.preflightDialog}
+    {deleteBranchGate.preflightDialog}
     <ConfirmDialog
       open={!!confirmDeleteBranch}
       title="Delete Branch"

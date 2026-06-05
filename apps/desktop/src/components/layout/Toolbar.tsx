@@ -7,6 +7,7 @@ import { useMergeStatus } from "@/queries/useGitMerge";
 import { useUndoLast } from "@/queries/useGitReflog";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { usePreflightGate } from "@/hooks/usePreflightGate";
 import {
   GitPullRequest,
   GitBranchPlus,
@@ -52,6 +53,11 @@ export default function Toolbar() {
   const undoLast = useUndoLast(repoPath);
   const { reportError } = useErrorReporter();
   const [loading, setLoading] = useState<string | null>(null);
+
+  // Preflight gates for risky operations
+  const pushGate = usePreflightGate("push");
+  const pullGate = usePreflightGate("pull");
+  const mergeGate = usePreflightGate("merge");
   const [showBranchDialog, setShowBranchDialog] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -122,6 +128,8 @@ export default function Toolbar() {
   };
 
   const handlePush = async () => {
+    const ok = await pushGate.runPreflight();
+    if (!ok) return;
     setRiskDialog({ open: true, report: null, loading: true });
     try {
       const staged = (changes || []).filter((c) => c.staged);
@@ -256,7 +264,10 @@ export default function Toolbar() {
           <div className="flex items-center bg-surface-2-40 border border-border-40 rounded-mac p-0.5 shadow-2xs" role="group" aria-label="Sync actions">
             <button
               className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all disabled:opacity-40 cursor-pointer"
-              onClick={() => doAction("pull", () => api.remote.pull(repoPath!))}
+              onClick={async () => {
+                const ok = await pullGate.runPreflight();
+                if (ok) doAction("pull", () => api.remote.pull(repoPath!));
+              }}
               disabled={!!loading}
               aria-label={`Pull remote changes${syncStatus?.behind ? ` (${syncStatus.behind} behind)` : ""}`}
               title="Pull remote changes"
@@ -356,7 +367,14 @@ export default function Toolbar() {
                 ? "text-[#ff9f0a] bg-[#ff9f0a]/10 hover:bg-[#ff9f0a]/20"
                 : "text-text-secondary hover:text-text-primary"
                 }`}
-              onClick={() => openDialog("merge")}
+              onClick={async () => {
+                if (inMerge) {
+                  openDialog("merge");
+                } else {
+                  const ok = await mergeGate.runPreflight();
+                  if (ok) openDialog("merge");
+                }
+              }}
               aria-label={inMerge ? "Merge in progress — click to resolve conflicts" : "Merge branches"}
               title={inMerge ? "Merge in progress — click to resolve conflicts" : "Merge branches"}
             >
@@ -504,6 +522,9 @@ export default function Toolbar() {
         onProceed={proceedPush}
         onCancel={cancelPush}
       />
+      {pushGate.preflightDialog}
+      {pullGate.preflightDialog}
+      {mergeGate.preflightDialog}
     </>
   );
 }

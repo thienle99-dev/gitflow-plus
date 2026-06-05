@@ -74,7 +74,7 @@
 - [x] Commit message textarea
 - [x] Commit button (Cmd+Enter shortcut)
 - [x] Amend toggle
-- [ ] Interactive staging — stage/unstage per hunk hoặc per line (`git add -p` equivalent)
+- [x] Interactive staging — stage/unstage per hunk hoặc per line (`git add -p` equivalent) — implemented via `apply_diff_hunk` backend + hunk/line action widgets in DiffViewer
 
 ### Step 9: Diff Viewer
 - [x] `components/diff/DiffViewer.tsx` — wrapper component
@@ -120,14 +120,14 @@
 - [x] Performance logging — measure open repo, render graph, status refresh (đo trước khi optimize)
 - [x] Operation lock/queue — tránh chạy đồng thời pull/push/fetch/merge/rebase/cherry-pick trên cùng repo
 - [ ] Long-running operation progress + cancel affordance khi git command hỗ trợ
-- [ ] Pre-flight safety checks — dirty worktree, untracked files, detached HEAD, conflict/rebase/merge-in-progress
-- [ ] Confirm destructive actions — discard/reset/delete branch/drop stash cần confirm rõ impact
+- [x] Pre-flight safety checks — dirty worktree, untracked files, detached HEAD, conflict/rebase/merge-in-progress (`preflight_check` backend + `usePreflightGate` hook wired into push/pull/merge/checkout/delete/cherry-pick/revert)
+- [x] Confirm destructive actions — discard/reset/delete branch/drop stash cần confirm rõ impact (ConfirmDialog with impactItems used across WorkingTree, Sidebar, CommitGraph, StashPanel, DiffViewer)
 - [ ] Release gates — build app, run tests, smoke test real repo, verify packaged app launch
 
 ### UX Improvements
-- [ ] Command palette (Cmd+K) — quick actions, branch/commit search, recent repos
+- [x] Command palette (Cmd+K) — quick actions, branch/commit search, recent repos (`CommandPalette.tsx`)
 - [ ] Operation center — show running git/AI tasks, progress, cancel, recent results
-- [ ] Smart pre-flight dialogs — summarize risk before merge/rebase/cherry-pick/push/discard
+- [x] Smart pre-flight dialogs — summarize risk before merge/rebase/cherry-pick/push/discard (`usePreflightGate` + ConfirmDialog with impactItems)
 - [ ] Improved interactive staging UX — applied state, patch failure explanation, undo last hunk action
 - [ ] AI result actions — apply/copy/regenerate/change tone/change language
 - [ ] PR/MR review summary strip — CI, approvals, conflicts, changed files, branch direction

@@ -15,6 +15,7 @@ import CommitTooltip from "./CommitTooltip";
 import { showToast } from "@/lib/toast";
 import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
 import { formatCommitDate } from "@/lib/date";
+import { usePreflightGate } from "@/hooks/usePreflightGate";
 import { Search, X } from "lucide-react";
 
 const ROW_HEIGHT = 38;
@@ -47,6 +48,10 @@ export default function CommitGraph() {
   const [confirmCherryPick, setConfirmCherryPick] = useState<string | null>(null);
   const [confirmRevert, setConfirmRevert] = useState<string | null>(null);
   const [filterScope, setFilterScope] = useState<CommitFilterScope>("all");
+
+  // Preflight gates for risky operations
+  const cherryPickGate = usePreflightGate("cherry-pick");
+  const revertGate = usePreflightGate("revert");
   const [filterQuery, setFilterQuery] = useState("");
 
   // Graph layout + render index computed off the main thread via Web Worker
@@ -191,8 +196,10 @@ export default function CommitGraph() {
     }
   };
 
-  const cherryPickCommit = (hash: string) => {
+  const cherryPickCommit = async (hash: string) => {
     if (!repoPath) return;
+    const ok = await cherryPickGate.runPreflight();
+    if (!ok) return;
     setConfirmCherryPick(hash);
   };
 
@@ -212,8 +219,10 @@ export default function CommitGraph() {
     }
   };
 
-  const revertCommit = (hash: string) => {
+  const revertCommit = async (hash: string) => {
     if (!repoPath) return;
+    const ok = await revertGate.runPreflight();
+    if (!ok) return;
     setConfirmRevert(hash);
   };
 
@@ -437,6 +446,8 @@ export default function CommitGraph() {
       onConfirm={() => doCherryPick(confirmCherryPick!)}
       onCancel={() => setConfirmCherryPick(null)}
     />
+    {cherryPickGate.preflightDialog}
+    {revertGate.preflightDialog}
     <ConfirmDialog
       open={!!confirmRevert}
       title="Revert Commit"
