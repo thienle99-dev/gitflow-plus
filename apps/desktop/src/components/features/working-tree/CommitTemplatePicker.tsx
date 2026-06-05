@@ -108,10 +108,10 @@ export default function CommitTemplatePicker({ onSelect }: CommitTemplatePickerP
       <button
         type="button"
         onClick={() => { setOpen((v) => !v); setEditing(null); setAdding(false); }}
-        className="h-7 px-2 rounded-mac border border-transparent text-3xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer bg-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40"
+        className="h-6 px-1.5 rounded-mac border border-transparent text-[10px] font-semibold inline-flex items-center gap-1 transition-all cursor-pointer bg-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40"
         title="Commit message templates"
       >
-        <FileText size={11} />
+        <FileText size={10} />
         <span>Templates</span>
       </button>
 

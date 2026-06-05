@@ -505,6 +505,24 @@ body.tray-window #root {
   background-color: color-mix(in srgb, var(--surface-1) 72%, transparent);
 }
 
+/* Glass surface cards for dialogs */
+.macos-26 .glass-surface,
+.macos-26-light .glass-surface {
+  background: color-mix(in srgb, var(--surface-1) 68%, transparent);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+/* Auto-apply glass effect to all card surfaces when macOS 26 is active */
+.macos-26 .bg-surface-1-30,
+.macos-26-light .bg-surface-1-30,
+.macos-26 .bg-surface-2-30,
+.macos-26-light .bg-surface-2-30 {
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+}
+
 /* macOS-style list selection */
 .tree-item {
   cursor: pointer;

@@ -50,7 +50,7 @@ export default function UndoButton({ expanded: controlledExpanded, compact = fal
       <button
         onClick={() => setOpen(!open)}
         disabled={!repoPath}
-        className={`${compact ? "h-7 px-2 text-3xs" : "h-8 px-3.5 text-2xs"} flex items-center gap-1.5 font-semibold text-text-muted hover:text-text-primary bg-transparent border border-transparent hover:border-border-40 hover:bg-surface-2 rounded-mac disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-transparent transition-all cursor-pointer`}
+        className={`${compact ? "h-6 px-1.5 text-[10px]" : "h-8 px-3.5 text-2xs"} flex items-center gap-1 font-semibold text-text-muted hover:text-text-primary bg-transparent border border-transparent hover:border-border-40 hover:bg-surface-2 rounded-mac disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:border-transparent transition-all cursor-pointer`}
         title="Undo last commit"
       >
         <Undo2 size={compact ? 10 : 11} className="text-text-muted" />

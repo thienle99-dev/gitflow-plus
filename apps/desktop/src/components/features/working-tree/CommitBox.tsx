@@ -120,9 +120,9 @@ export default function CommitBox({
   const hasAnyChanges = staged.length > 0 || unstaged.length > 0;
   const hasCommitMessage = commitMessage.trim().length > 0;
   const mutedButtonClass =
-    "h-7 px-2 rounded-mac border border-transparent text-3xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer bg-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40 active:scale-[0.99] disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-transparent";
+    "h-6 px-1.5 rounded-mac border border-transparent text-[10px] font-semibold inline-flex items-center gap-1 transition-all cursor-pointer bg-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40 active:scale-[0.99] disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-transparent";
   const statusButtonBase =
-    "h-7 px-2 rounded-mac border text-3xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer active:scale-[0.99] disabled:opacity-35 disabled:cursor-not-allowed";
+    "h-6 px-1.5 rounded-mac border text-[10px] font-semibold inline-flex items-center gap-1 transition-all cursor-pointer active:scale-[0.99] disabled:opacity-35 disabled:cursor-not-allowed";
 
   return (
     <div className="px-3 py-3 border-t border-border-60 bg-surface-1-10 space-y-2.5 shrink-0">
@@ -135,91 +135,8 @@ export default function CommitBox({
           className="w-full min-h-[96px] max-h-[240px] text-xs bg-transparent text-text-primary placeholder:text-text-muted-60 resize-y outline-none border-none p-0 leading-relaxed font-mono focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:outline-none"
           style={{ outline: "none", border: "none", boxShadow: "none" }}
         />
-        <div className="flex items-center justify-between gap-2 border-t border-border-60 pt-2.5 mt-2 select-none shrink-0 flex-wrap">
-          <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-            <div className="flex items-center gap-0.5 rounded-mac border border-border-30 bg-surface-1-50 p-0.5">
-            <button
-              type="button"
-              onClick={onAIReview}
-              disabled={committing || aiReviewPending || !hasAnyChanges}
-              className={`${statusButtonBase} bg-accent-10 border-accent-25 text-accent hover:bg-accent-15 hover:border-accent-40 disabled:bg-transparent disabled:border-transparent disabled:text-text-muted ${aiReviewPending ? "opacity-70" : ""}`}
-              title="Run AI review with custom checklist"
-            >
-              {aiReviewPending ? (
-                <RefreshCw size={11} className="animate-spin text-accent" />
-              ) : (
-                <Sparkles size={11} className="text-accent" />
-              )}
-              <span>AI Review</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={onGuardrail}
-              disabled={committing || guardrailPending || !hasAnyChanges}
-              className={`${statusButtonBase} ${guardrailResult?.verdict === "needs-attention"
-                ? "bg-[#ff453a]/10 border-[#ff453a]/30 text-[#ff453a]"
-                : guardrailResult?.verdict === "warning"
-                  ? "bg-[#ff9f0a]/10 border-[#ff9f0a]/30 text-[#ff9f0a]"
-                : guardrailResult?.verdict === "ready"
-                    ? "bg-[#30d158]/10 border-[#30d158]/30 text-[#30d158]"
-                    : "bg-transparent border-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40"
-                } disabled:bg-transparent disabled:border-transparent disabled:text-text-muted ${guardrailPending ? "opacity-70" : ""}`}
-              title="Run AI pre-commit safety check"
-            >
-              {guardrailPending ? (
-                <RefreshCw size={11} className="animate-spin" />
-              ) : (
-                <ShieldCheck size={11} />
-              )}
-              <span>Guardrail</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={onReadiness}
-              disabled={committing || readinessPending || !hasAnyChanges}
-              className={`${statusButtonBase} ${readinessResult?.verdict === "ready"
-                ? "bg-[#30d158]/10 border-[#30d158]/30 text-[#30d158]"
-                : readinessResult?.verdict === "not-ready"
-                  ? "bg-[#ff453a]/10 border-[#ff453a]/30 text-[#ff453a]"
-                  : readinessResult?.verdict === "needs-work"
-                    ? "bg-[#ff9f0a]/10 border-[#ff9f0a]/30 text-[#ff9f0a]"
-                    : "bg-transparent border-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40"
-                } disabled:bg-transparent disabled:border-transparent disabled:text-text-muted ${readinessPending ? "opacity-70" : ""}`}
-              title="Check if your staging area is ready to commit"
-            >
-              {readinessPending ? (
-                <RefreshCw size={11} className="animate-spin" />
-              ) : (
-                <ClipboardCheck size={11} />
-              )}
-              <span>Ready?</span>
-            </button>
-            </div>
-
-            <div className="flex items-center gap-0.5 rounded-mac border border-border-30 bg-surface-1-50 p-0.5">
-            <UndoButton compact onUndoComplete={onUndoComplete} />
-
-            <button
-              type="button"
-              onClick={() => setAmend(!amend)}
-              className={`${statusButtonBase} ${amend
-                ? "bg-[#ff9f0a]/10 border-[#ff9f0a]/30 text-[#ff9f0a]"
-                : "bg-transparent border-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40"
-                }`}
-              title="Amend last commit"
-            >
-              <GitCommit size={11} className={amend ? "text-[#ff9f0a]" : "text-text-muted"} />
-              <span>Amend</span>
-            </button>
-            <CommitTemplatePicker
-              onSelect={(msg) => setCommitMessage(msg)}
-            />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-end gap-1.5 flex-wrap ml-auto">
+        <div className="border-t border-border-60 pt-2.5 mt-2 select-none shrink-0 space-y-2">
+          <div className="flex items-center justify-end gap-1.5 flex-wrap">
             {staged.length >= 3 && (
               <button
                 type="button"
@@ -310,6 +227,91 @@ export default function CommitBox({
               )}
               <span>{committing ? "Committing..." : lintRunning ? "Linting..." : unstaged.length > 0 ? "Commit All" : "Commit"}</span>
             </button>
+          </div>
+
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-1 flex-wrap min-w-0">
+              <div className="flex items-center gap-0.5 rounded-mac border border-border-20 bg-surface-1-35 p-0.5">
+                <button
+                  type="button"
+                  onClick={onAIReview}
+                  disabled={committing || aiReviewPending || !hasAnyChanges}
+                  className={`${statusButtonBase} bg-accent-10 border-accent-25 text-accent hover:bg-accent-15 hover:border-accent-40 disabled:bg-transparent disabled:border-transparent disabled:text-text-muted ${aiReviewPending ? "opacity-70" : ""}`}
+                  title="Run AI review with custom checklist"
+                >
+                  {aiReviewPending ? (
+                    <RefreshCw size={10} className="animate-spin text-accent" />
+                  ) : (
+                    <Sparkles size={10} className="text-accent" />
+                  )}
+                  <span>AI Review</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onGuardrail}
+                  disabled={committing || guardrailPending || !hasAnyChanges}
+                  className={`${statusButtonBase} ${guardrailResult?.verdict === "needs-attention"
+                    ? "bg-[#ff453a]/10 border-[#ff453a]/30 text-[#ff453a]"
+                    : guardrailResult?.verdict === "warning"
+                      ? "bg-[#ff9f0a]/10 border-[#ff9f0a]/30 text-[#ff9f0a]"
+                      : guardrailResult?.verdict === "ready"
+                        ? "bg-[#30d158]/10 border-[#30d158]/30 text-[#30d158]"
+                        : "bg-transparent border-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40"
+                    } disabled:bg-transparent disabled:border-transparent disabled:text-text-muted ${guardrailPending ? "opacity-70" : ""}`}
+                  title="Run AI pre-commit safety check"
+                >
+                  {guardrailPending ? (
+                    <RefreshCw size={10} className="animate-spin" />
+                  ) : (
+                    <ShieldCheck size={10} />
+                  )}
+                  <span>Guardrail</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onReadiness}
+                  disabled={committing || readinessPending || !hasAnyChanges}
+                  className={`${statusButtonBase} ${readinessResult?.verdict === "ready"
+                    ? "bg-[#30d158]/10 border-[#30d158]/30 text-[#30d158]"
+                    : readinessResult?.verdict === "not-ready"
+                      ? "bg-[#ff453a]/10 border-[#ff453a]/30 text-[#ff453a]"
+                      : readinessResult?.verdict === "needs-work"
+                        ? "bg-[#ff9f0a]/10 border-[#ff9f0a]/30 text-[#ff9f0a]"
+                        : "bg-transparent border-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40"
+                    } disabled:bg-transparent disabled:border-transparent disabled:text-text-muted ${readinessPending ? "opacity-70" : ""}`}
+                  title="Check if your staging area is ready to commit"
+                >
+                  {readinessPending ? (
+                    <RefreshCw size={10} className="animate-spin" />
+                  ) : (
+                    <ClipboardCheck size={10} />
+                  )}
+                  <span>Ready?</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-0.5 rounded-mac border border-border-20 bg-surface-1-35 p-0.5">
+                <UndoButton compact onUndoComplete={onUndoComplete} />
+
+                <button
+                  type="button"
+                  onClick={() => setAmend(!amend)}
+                  className={`${statusButtonBase} ${amend
+                    ? "bg-[#ff9f0a]/10 border-[#ff9f0a]/30 text-[#ff9f0a]"
+                    : "bg-transparent border-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40"
+                    }`}
+                  title="Amend last commit"
+                >
+                  <GitCommit size={10} className={amend ? "text-[#ff9f0a]" : "text-text-muted"} />
+                  <span>Amend</span>
+                </button>
+                <CommitTemplatePicker
+                  onSelect={(msg) => setCommitMessage(msg)}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
