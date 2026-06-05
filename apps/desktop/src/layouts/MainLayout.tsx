@@ -405,7 +405,7 @@ export default function MainLayout() {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className={`bg-surface-0 rounded-mac shadow-xl border border-border overflow-hidden ${
         overlayDialog === "merge-request"
-          ? "h-[min(760px,88vh)] w-[min(1180px,92vw)]"
+          ? "h-[min(920px,92vh)] w-[min(1600px,96vw)]"
           : overlayDialog === "interactive-rebase"
                 ? "h-[min(640px,82vh)] w-[min(580px,92vw)]"
               : overlayDialog === "settings" || overlayDialog === "ai-settings" || overlayDialog === "accounts-settings"

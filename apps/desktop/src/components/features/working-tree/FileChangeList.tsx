@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, memo } from "react";
 import { type FileChange } from "@/api/tauri";
 import { StatusBadge, fileIcon } from "@/components/ui/shared";
 import {
@@ -231,93 +231,105 @@ interface ChangeRowProps {
   hideFolder?: boolean;
 }
 
-function ChangeRow({ file, checked, selected, multiSelected, onSelect, onToggle, onAIInlineReview, onMenu, onMultiClick, hideFolder }: ChangeRowProps) {
-  const fileName = getFileName(file.path);
-  const folder = getFolder(file.path);
+const ChangeRow = memo(
+  function ChangeRow({ file, checked, selected, multiSelected, onSelect, onToggle, onAIInlineReview, onMenu, onMultiClick, hideFolder }: ChangeRowProps) {
+    const fileName = getFileName(file.path);
+    const folder = getFolder(file.path);
 
-  return (
-    <div
-      className={`tree-item group w-full grid grid-cols-[14px_16px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-1 text-left ${multiSelected ? "ring-1 ring-accent bg-accent-5" : selected ? "selected" : ""
-        }`}
-      onClick={(e) => {
-        if (onMultiClick && (e.shiftKey || e.metaKey || e.ctrlKey)) {
-          onMultiClick(e);
-        } else {
-          onSelect();
-        }
-      }}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        onMenu(e.clientX, e.clientY);
-      }}
-      title={file.path}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onSelect();
-        }
-      }}
-    >
-      <span
-        className={`h-3.5 w-3.5 rounded-[4px] border flex items-center justify-center transition-all cursor-pointer ${checked
-          ? selected
-            ? "bg-accent-fg border-accent-fg text-accent"
-            : "bg-accent border-accent text-accent-fg"
-          : selected
-            ? "border-accent-fg-40 hover:border-accent-fg hover:bg-accent-fg-10 text-transparent"
-            : "border-border hover:border-text-secondary hover:bg-surface-2 text-transparent"
+    return (
+      <div
+        className={`tree-item group w-full grid grid-cols-[14px_16px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-1 text-left ${multiSelected ? "ring-1 ring-accent bg-accent-5" : selected ? "selected" : ""
           }`}
         onClick={(e) => {
-          e.stopPropagation();
-          onToggle();
+          if (onMultiClick && (e.shiftKey || e.metaKey || e.ctrlKey)) {
+            onMultiClick(e);
+          } else {
+            onSelect();
+          }
         }}
-        onMouseDown={(e) => e.stopPropagation()}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          onMenu(e.clientX, e.clientY);
+        }}
+        title={file.path}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onSelect();
+          }
+        }}
       >
-        {checked && <Check size={9} strokeWidth={3.5} />}
-      </span>
-      <span title={checked ? "Unstage (⌘U)" : "Stage (⌘S)"}
-        className="h-4 w-4 flex items-center justify-center shrink-0">
-        {fileIcon(file.path, file.status)}
-      </span>
-      <span className="min-w-0 flex flex-col justify-center">
-        <span className={`block text-xs font-medium text-current truncate leading-4 ${file.status === "deleted" ? "line-through opacity-60" : ""}`}>
-          {fileName}
+        <span
+          className={`h-3.5 w-3.5 rounded-[4px] border flex items-center justify-center transition-all cursor-pointer ${checked
+            ? selected
+              ? "bg-accent-fg border-accent-fg text-accent"
+              : "bg-accent border-accent text-accent-fg"
+            : selected
+              ? "border-accent-fg-40 hover:border-accent-fg hover:bg-accent-fg-10 text-transparent"
+              : "border-border hover:border-text-secondary hover:bg-surface-2 text-transparent"
+            }`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle();
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          {checked && <Check size={9} strokeWidth={3.5} />}
         </span>
-        {!hideFolder && folder && (
-          <span className={`block text-[10px] truncate leading-3 ${selected ? "text-accent-fg opacity-75" : "text-text-muted"}`}>
-            {folder}
+        <span title={checked ? "Unstage (⌘U)" : "Stage (⌘S)"}
+          className="h-4 w-4 flex items-center justify-center shrink-0">
+          {fileIcon(file.path, file.status)}
+        </span>
+        <span className="min-w-0 flex flex-col justify-center">
+          <span className={`block text-xs font-medium text-current truncate leading-4 ${file.status === "deleted" ? "line-through opacity-60" : ""}`}>
+            {fileName}
           </span>
-        )}
-      </span>
-      <span className="flex items-center justify-end gap-1.5 min-w-[48px]">
-        <StatusBadge status={file.status} selected={selected} />
-        <span
-          className={`h-5 w-5 flex items-center justify-center rounded transition-all cursor-pointer opacity-0 group-hover:opacity-100 ${selected ? "hover:bg-accent-fg-20 text-accent-fg" : "text-text-muted hover:bg-surface-2"
-            }`}
-          onClick={(e) => {
-            e.stopPropagation();
-            onAIInlineReview();
-          }}
-          title="AI Inline Review"
-        >
-          <MessageSquare size={12} className="text-current" />
+          {!hideFolder && folder && (
+            <span className={`block text-[10px] truncate leading-3 ${selected ? "text-accent-fg opacity-75" : "text-text-muted"}`}>
+              {folder}
+            </span>
+          )}
         </span>
-        <span
-          className={`h-5 w-5 flex items-center justify-center rounded transition-all cursor-pointer opacity-0 group-hover:opacity-100 ${selected ? "hover:bg-accent-fg-20 text-accent-fg" : "text-text-muted hover:bg-surface-2"
-            }`}
-          onClick={(e) => {
-            e.stopPropagation();
-            onMenu(e.clientX, e.clientY);
-          }}
-        >
-          <MoreHorizontal size={13} className="text-current" />
+        <span className="flex items-center justify-end gap-1.5 min-w-[48px]">
+          <StatusBadge status={file.status} selected={selected} />
+          <span
+            className={`h-5 w-5 flex items-center justify-center rounded transition-all cursor-pointer opacity-0 group-hover:opacity-100 ${selected ? "hover:bg-accent-fg-20 text-accent-fg" : "text-text-muted hover:bg-surface-2"
+              }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAIInlineReview();
+            }}
+            title="AI Inline Review"
+          >
+            <MessageSquare size={12} className="text-current" />
+          </span>
+          <span
+            className={`h-5 w-5 flex items-center justify-center rounded transition-all cursor-pointer opacity-0 group-hover:opacity-100 ${selected ? "hover:bg-accent-fg-20 text-accent-fg" : "text-text-muted hover:bg-surface-2"
+              }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onMenu(e.clientX, e.clientY);
+            }}
+          >
+            <MoreHorizontal size={13} className="text-current" />
+          </span>
         </span>
-      </span>
-    </div>
-  );
-}
+      </div>
+    );
+  },
+  (prev, next) => {
+    return (
+      prev.file.path === next.file.path &&
+      prev.file.status === next.file.status &&
+      prev.checked === next.checked &&
+      prev.selected === next.selected &&
+      prev.multiSelected === next.multiSelected &&
+      prev.hideFolder === next.hideFolder
+    );
+  }
+);
 
 // ─── ChangeSection ─────────────────────────────────────────────────────────────
 
@@ -385,20 +397,25 @@ function ChangeSection({
 
   return (
     <div className={`border-b border-border-60 min-h-0 flex flex-col ${grow && open ? "flex-1" : "shrink-0"} ${!grow && open ? "max-h-[42%]" : ""}`}>
-      <div className="h-9 px-3 flex items-center gap-2 bg-surface-1-55 shrink-0">
-        <button
-          className="ghost p-0.5 text-text-muted hover:text-text-primary transition-colors"
-          onClick={onToggleOpen}
+      <div 
+        className="h-9 px-3 flex items-center gap-2 bg-surface-1-55 shrink-0 cursor-pointer select-none hover:bg-surface-2-30 transition-colors"
+        onClick={onToggleOpen}
+      >
+        <span
+          className="p-0.5 text-text-muted hover:text-text-primary transition-colors shrink-0"
           title={open ? "Collapse" : "Expand"}
         >
           <ChevronDown size={13} className={`transition-transform duration-150 ${open ? "" : "-rotate-90"}`} />
-        </button>
+        </span>
         <button
-          className={`h-3.5 w-3.5 rounded-[4px] border flex items-center justify-center transition-all ${checked
+          className={`h-3.5 w-3.5 rounded-[4px] border flex items-center justify-center transition-all shrink-0 ${checked
             ? "bg-accent border-accent text-accent-fg"
             : "border-border text-transparent hover:border-text-secondary hover:bg-surface-2"
             }`}
-          onClick={onToggleAll}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleAll();
+          }}
           title={checked ? "Unstage all (⌘U)" : "Stage all (⌘⇧A)"}
           disabled={files.length === 0}
         >
@@ -408,8 +425,14 @@ function ChangeSection({
           {title} <span className="text-text-muted font-medium">({files.length})</span>
         </div>
         {files.length > 0 && (
-          <button className="text-2xs font-semibold text-text-muted hover:text-accent transition-colors" onClick={onToggleAll}
-            title={checked ? "Unstage all (⌘U)" : "Stage all (⌘⇧A)"}>
+          <button 
+            className="text-2xs font-semibold text-text-muted hover:text-accent transition-colors shrink-0" 
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleAll();
+            }}
+            title={checked ? "Unstage all (⌘U)" : "Stage all (⌘⇧A)"}
+          >
             {checked ? "Unstage all" : "Stage all"}
           </button>
         )}

@@ -25,6 +25,8 @@ import {
   GitMerge,
   RotateCcw,
   ChevronDown,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import {
   fetchMergeRequests,
@@ -42,6 +44,7 @@ import {
 import { useAIMergeRequestExplain, useAIMergeRequestReview } from "@/queries/useAI";
 import { parseDiff, type DiffHunk, type DiffLine } from "@/lib/parse-diff";
 import { AI_REVIEW_MODE_OPTIONS, readLastAIReviewMode, saveLastAIReviewMode, type AIReviewMode } from "@/lib/ai";
+import LazyDiffViewer from "@/components/features/diff/LazyDiffViewer";
 
 interface MergeRequestDialogProps {
   onClose: () => void;
@@ -65,6 +68,8 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
   // States
   const [mrs, setMrs] = useState<MergeRequest[]>([]);
   const [selectedMr, setSelectedMr] = useState<MergeRequest | null>(null);
+  const [isMaximized, setIsMaximized] = useState(false);
+  const [activeTab, setActiveTab] = useState<"overview" | "files" | "ai">("overview");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filterState, setFilterState] = useState<"open" | "merged" | "closed">("open");
@@ -349,19 +354,6 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
   // Hunk count for the selected file
   const hunkCount = parsedHunks.length;
 
-  const getDiffLineClass = (line: string) => {
-    if (line.startsWith("+") && !line.startsWith("+++")) {
-      return "bg-[#30d158]/10 text-[#7ee787]";
-    }
-    if (line.startsWith("-") && !line.startsWith("---")) {
-      return "bg-[#ff453a]/10 text-[#ff9b95]";
-    }
-    if (line.startsWith("@@")) {
-      return "bg-accent-10 text-accent";
-    }
-    return "text-text-secondary";
-  };
-
   // Render text with clickable backtick-wrapped file paths
   const renderTextWithFileLinks = (text: string) => {
     const parts = text.split(/(`[^`]+\.[a-zA-Z0-9]+`)/g);
@@ -379,7 +371,10 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
               const match = changedFiles.find(
                 (f) => f.path === filePath || f.path.endsWith(`/${filePath}`) || f.path.split("/").pop() === filePath
               );
-              if (match) setSelectedChangedFile(match);
+              if (match) {
+                setSelectedChangedFile(match);
+                setActiveTab("files");
+              }
             }}
             title={`Jump to ${filePath}`}
           >
@@ -394,7 +389,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
   const renderAIText = (text: string) => {
     return text.split("\n").map((line, index) => {
       const trimmed = line.trim();
-      const categoryMatch = trimmed.match(/^\s*(?:#{1,6}\s*)?(?:[-*]\s*)?(?:\*\*)?\[(BUG|SECURITY|PERF|STYLE|BEST-PRACTICE|LINTER|TEST|A11Y|UX)\](?:\*\*)?\s*(.*)$/i);
+      const categoryMatch = trimmed.match(/^\s*(?:#{1,6}\s*)?(?:[-*]\s*)?(?:\*\*)?\[(BUG|SECURITY|PERF|STYLE|BEST-PRACTICE|LINTER|TEST|A11Y|UX|REFACTOR)\](?:\*\*)?\s*[:\-]?\s*(.*)$/i);
       const isFinding =
         /severity|risk|bug|security|regression|request changes|blocking/i.test(trimmed);
       const isPositive =
@@ -422,7 +417,9 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                         ? "border-[#30d158]/35 bg-[#30d158]/10 text-[#30d158]"
                         : category === "A11Y"
                           ? "border-[#ff9f0a]/35 bg-[#ff9f0a]/10 text-[#ff9f0a]"
-                          : "border-[#ff2d55]/35 bg-[#ff2d55]/10 text-[#ff2d55]";
+                          : category === "UX"
+                            ? "border-[#ff2d55]/35 bg-[#ff2d55]/10 text-[#ff2d55]"
+                            : "border-[#5e5ce6]/35 bg-[#5e5ce6]/10 text-[#5e5ce6]"; // REFACTOR / default
         return (
           <div key={index} className={`rounded-mac border-l-2 px-2.5 py-1.5 ${colors}`}>
             <span className="mr-2 inline-flex rounded bg-current/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
@@ -545,7 +542,15 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
   }, [filteredMrs]);
 
   return (
-    <div ref={containerRef} tabIndex={-1} className="flex h-full w-full flex-row bg-surface-0 overflow-hidden select-none outline-none">
+    <div
+      ref={containerRef}
+      tabIndex={-1}
+      className={`bg-surface-0 select-none outline-none overflow-hidden ${
+        isMaximized
+          ? "fixed inset-0 z-50 flex w-screen h-screen flex-row"
+          : "flex h-full w-full flex-row"
+      }`}
+    >
       {/* Sidebar - MR List */}
       <div className="w-[35%] min-w-[240px] max-w-[360px] shrink-0 border-r border-border-60 bg-surface-1 flex flex-col h-full">
         {/* Header */}
@@ -606,7 +611,6 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
               <AlertCircle size={16} />
               <span className="text-3xs font-semibold">No remote detected</span>
             </div>
-
           ) : error ? (
             <div className="h-full flex flex-col items-center justify-center p-4 text-center space-y-2 text-text-muted">
               <AlertCircle size={18} className="text-[#ff453a]" />
@@ -627,7 +631,6 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                 </button>
               </div>
             </div>
-
           ) : filteredMrs.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center p-4 text-center text-text-muted space-y-1">
               <GitPullRequest size={16} className="opacity-40" />
@@ -674,15 +677,15 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                   </div>
 
                   <div className="flex items-center justify-between mt-0.5 gap-1">
-                  <div className="flex items-center gap-1 text-[10px] text-text-muted font-mono min-w-0 flex-1 overflow-hidden">
-                    <span className="truncate bg-[#30d158]/10 text-[#30d158] px-1 py-0.5 rounded-[3px] border border-[#30d158]/15 max-w-[45%]">
-                      {mr.sourceBranch}
-                    </span>
-                    <ArrowRight size={8} className="shrink-0 text-accent" />
-                    <span className="truncate bg-[#0a84ff]/10 text-[#0a84ff] px-1 py-0.5 rounded-[3px] border border-[#0a84ff]/15 max-w-[45%]">
-                      {mr.targetBranch}
-                    </span>
-                  </div>
+                    <div className="flex items-center gap-1 text-[10px] text-text-muted font-mono min-w-0 flex-1 overflow-hidden">
+                      <span className="truncate bg-[#30d158]/10 text-[#30d158] px-1 py-0.5 rounded-[3px] border border-[#30d158]/15 max-w-[45%]">
+                        {mr.sourceBranch}
+                      </span>
+                      <ArrowRight size={8} className="shrink-0 text-accent" />
+                      <span className="truncate bg-[#0a84ff]/10 text-[#0a84ff] px-1 py-0.5 rounded-[3px] border border-[#0a84ff]/15 max-w-[45%]">
+                        {mr.targetBranch}
+                      </span>
+                    </div>
 
                     {/* Pipeline Status Dot */}
                     {mr.pipelineStatus && (
@@ -719,243 +722,333 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
               </span>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-mac hover:bg-surface-3 text-text-muted hover:text-text-primary transition-all cursor-pointer"
-          >
-            <X size={13} />
-          </button>
+          <div className="flex items-center gap-1.5">
+            {selectedMr && (
+              <button
+                onClick={() => setIsMaximized((prev) => !prev)}
+                className="p-1 rounded-mac hover:bg-surface-3 text-text-muted hover:text-text-primary transition-all cursor-pointer"
+                title={isMaximized ? "Restore window size" : "Maximize to full screen"}
+              >
+                {isMaximized ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-1 rounded-mac hover:bg-surface-3 text-text-muted hover:text-text-primary transition-all cursor-pointer"
+            >
+              <X size={13} />
+            </button>
+          </div>
         </div>
 
+        {/* Tab Selection */}
+        {selectedMr && (
+          <div className="flex items-center border-b border-border-60 bg-surface-1-20 px-4 py-1.5 gap-2 shrink-0">
+            <button
+              onClick={() => setActiveTab("overview")}
+              className={`px-3 py-1 text-2xs font-bold rounded transition-colors cursor-pointer ${
+                activeTab === "overview"
+                  ? "bg-accent-10 text-accent font-bold"
+                  : "text-text-muted hover:text-text-primary"
+              }`}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveTab("files")}
+              className={`px-3 py-1 text-2xs font-bold rounded transition-colors flex items-center gap-1.5 cursor-pointer ${
+                activeTab === "files"
+                  ? "bg-accent-10 text-accent font-bold"
+                  : "text-text-muted hover:text-text-primary"
+              }`}
+            >
+              Files Changed {changedFiles.length > 0 && `(${changedFiles.length})`}
+            </button>
+            <button
+              onClick={() => setActiveTab("ai")}
+              className={`px-3 py-1 text-2xs font-bold rounded transition-colors flex items-center gap-1.5 cursor-pointer ${
+                activeTab === "ai"
+                  ? "bg-accent-10 text-accent font-bold"
+                  : "text-text-muted hover:text-text-primary"
+              }`}
+            >
+              <Sparkles size={10} className="text-accent" />
+              <span>AI Assistant</span>
+            </button>
+          </div>
+        )}
+
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4">
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           {selectedMr ? (
-            <>
-              {/* Title & Status Badge */}
-              <div className="space-y-2">
-                <div className="flex items-start gap-2.5 min-w-0">
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase shrink-0 ${
-                      selectedMr.state === "open"
-                        ? "bg-[#30d158]/15 text-[#30d158] border border-[#30d158]/20"
-                        : selectedMr.state === "merged"
-                        ? "bg-[#bf5af2]/15 text-[#bf5af2] border border-[#bf5af2]/20"
-                        : "bg-[#ff453a]/15 text-[#ff453a] border border-[#ff453a]/20"
-                    }`}
-                  >
-                    {selectedMr.state}
-                  </span>
-                  <h3 className="text-base font-semibold text-text-primary leading-snug min-w-0 break-words">
-                    {selectedMr.title}
-                  </h3>
-                </div>
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              {/* Tab: Overview */}
+              {activeTab === "overview" && (
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  {/* Title & Status Badge */}
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2.5 min-w-0">
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase shrink-0 ${
+                          selectedMr.state === "open"
+                            ? "bg-[#30d158]/15 text-[#30d158] border border-[#30d158]/20"
+                            : selectedMr.state === "merged"
+                            ? "bg-[#bf5af2]/15 text-[#bf5af2] border border-[#bf5af2]/20"
+                            : "bg-[#ff453a]/15 text-[#ff453a] border border-[#ff453a]/20"
+                        }`}
+                      >
+                        {selectedMr.state}
+                      </span>
+                      <h3 className="text-base font-semibold text-text-primary leading-snug min-w-0 break-words">
+                        {selectedMr.title}
+                      </h3>
+                    </div>
 
-                <div className="flex items-center gap-2 text-2xs text-text-muted">
-                  {selectedMr.authorAvatar ? (
-                    <img
-                      src={selectedMr.authorAvatar}
-                      alt={selectedMr.author}
-                      className="w-4 h-4 rounded-full border border-border-40 shrink-0"
-                    />
-                  ) : (
-                    <div className="w-4 h-4 rounded-full bg-surface-3 text-text-primary flex items-center justify-center text-[8px] font-bold uppercase border border-border-40 shrink-0">
-                      {selectedMr.author.slice(0, 2)}
+                    <div className="flex items-center gap-2 text-2xs text-text-muted">
+                      {selectedMr.authorAvatar ? (
+                        <img
+                          src={selectedMr.authorAvatar}
+                          alt={selectedMr.author}
+                          className="w-4 h-4 rounded-full border border-border-40 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-4 h-4 rounded-full bg-surface-3 text-text-primary flex items-center justify-center text-[8px] font-bold uppercase border border-border-40 shrink-0">
+                          {selectedMr.author.slice(0, 2)}
+                        </div>
+                      )}
+                      <span>
+                        Created by <strong className="text-text-secondary">{selectedMr.author}</strong>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Branch Connection Card */}
+                  <div className="flex flex-row items-center justify-between gap-3 p-3 bg-surface-1-40 border border-border-40 rounded-mac">
+                    <div className="min-w-0 flex items-center gap-2 text-xs flex-1 overflow-hidden">
+                      <GitBranch size={13} className="text-accent shrink-0" />
+                      <span className="min-w-0 max-w-[50%] truncate font-mono font-semibold bg-[#30d158]/10 text-[#30d158] px-1.5 py-0.5 rounded-[4px] border border-[#30d158]/20">
+                        {selectedMr.sourceBranch}
+                      </span>
+                      <ArrowRight size={12} className="text-accent shrink-0" />
+                      <span className="min-w-0 max-w-[35%] truncate font-mono font-semibold bg-[#0a84ff]/10 text-[#0a84ff] px-1.5 py-0.5 rounded-[4px] border border-[#0a84ff]/20">
+                        {selectedMr.targetBranch}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={handleCheckoutBranch}
+                      disabled={checkoutLoading}
+                      className="h-7 px-3 bg-accent text-accent-fg text-2xs font-bold rounded-mac hover:opacity-95 transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50 shrink-0 cursor-pointer"
+                    >
+                      {checkoutLoading ? (
+                        <Loader2 size={10} className="animate-spin" />
+                      ) : (
+                        <GitBranch size={10} />
+                      )}
+                      <span>Checkout Branch</span>
+                    </button>
+                  </div>
+
+                  {/* Success/Error Alerts */}
+                  {checkoutSuccess && (
+                    <div className="p-3 bg-[#30d158]/10 border border-[#30d158]/20 rounded-mac text-[#30d158] text-2xs font-medium flex items-center gap-2">
+                      <CheckCircle2 size={12} className="shrink-0" />
+                      <span>{checkoutSuccess}</span>
                     </div>
                   )}
-                  <span>
-                    Created by <strong className="text-text-secondary">{selectedMr.author}</strong>
-                  </span>
-                </div>
-              </div>
-
-              {/* Branch Connection Card */}
-              <div className="flex flex-row items-center justify-between gap-3 p-3 bg-surface-1-40 border border-border-40 rounded-mac">
-                <div className="min-w-0 flex items-center gap-2 text-xs flex-1 overflow-hidden">
-                  <GitBranch size={13} className="text-accent shrink-0" />
-                  <span className="min-w-0 max-w-[50%] truncate font-mono font-semibold bg-[#30d158]/10 text-[#30d158] px-1.5 py-0.5 rounded-[4px] border border-[#30d158]/20">
-                    {selectedMr.sourceBranch}
-                  </span>
-                  <ArrowRight size={12} className="text-accent shrink-0" />
-                  <span className="min-w-0 max-w-[35%] truncate font-mono font-semibold bg-[#0a84ff]/10 text-[#0a84ff] px-1.5 py-0.5 rounded-[4px] border border-[#0a84ff]/20">
-                    {selectedMr.targetBranch}
-                  </span>
-                </div>
-
-                <button
-                  onClick={handleCheckoutBranch}
-                  disabled={checkoutLoading}
-                  className="h-7 px-3 bg-accent text-accent-fg text-2xs font-bold rounded-mac hover:opacity-95 transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50 shrink-0 cursor-pointer"
-                >
-                  {checkoutLoading ? (
-                    <Loader2 size={10} className="animate-spin" />
-                  ) : (
-                    <GitBranch size={10} />
+                  {checkoutError && (
+                    <div className="p-3 bg-[#ff453a]/10 border border-[#ff453a]/20 rounded-mac text-[#ff453a] text-2xs font-medium flex items-center gap-2">
+                      <XCircle size={12} className="shrink-0" />
+                      <span>{checkoutError}</span>
+                    </div>
                   )}
-                  <span>Checkout Branch</span>
-                </button>
-              </div>
 
-              {/* Success/Error Alerts */}
-              {checkoutSuccess && (
-                <div className="p-3 bg-[#30d158]/10 border border-[#30d158]/20 rounded-mac text-[#30d158] text-2xs font-medium flex items-center gap-2 animate-in fade-in duration-200">
-                  <CheckCircle2 size={12} className="shrink-0" />
-                  <span>{checkoutSuccess}</span>
+                  {/* Description */}
+                  {selectedMr.description && (
+                    <div className="space-y-1.5">
+                      <h4 className="text-2xs font-bold text-accent uppercase tracking-wider flex items-center gap-1.5">
+                        <MessageSquareText size={10} className="text-accent" />
+                        Description
+                      </h4>
+                      <div className="text-2xs text-text-secondary leading-relaxed bg-surface-1-20 border border-border-40 rounded-mac p-3 font-normal break-words whitespace-pre-line">
+                        {selectedMr.description}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Checks & Pipelines Section */}
+                  <div className="space-y-2 border-t border-border-60 pt-3">
+                    <h4 className="text-2xs font-bold text-[#0a84ff] uppercase tracking-wider flex items-center gap-1.5">
+                      <CheckCircle2 size={10} className="text-[#0a84ff]" />
+                      CI/CD Status
+                    </h4>
+                    
+                    {/* GitLab Pipeline Info */}
+                    {remoteInfo?.provider === "gitlab" && (
+                      <div className="flex items-center gap-2 p-2.5 bg-surface-1-20 border border-border-40 rounded-mac">
+                        {selectedMr.pipelineStatus === "success" ? (
+                          <CheckCircle2 size={14} className="text-[#30d158]" />
+                        ) : selectedMr.pipelineStatus === "failed" ? (
+                          <XCircle size={14} className="text-[#ff453a]" />
+                        ) : selectedMr.pipelineStatus === "running" ? (
+                          <Loader2 size={14} className="text-[#0a84ff] animate-spin" />
+                        ) : (
+                          <Clock size={14} className="text-text-muted" />
+                        )}
+                        <span className="text-2xs text-text-secondary">
+                          Pipeline state:{" "}
+                          <strong className="text-text-primary capitalize">
+                            {selectedMr.pipelineStatus || "unknown"}
+                          </strong>
+                        </span>
+                      </div>
+                    )}
+
+                    {/* GitHub Checks Info */}
+                    {remoteInfo?.provider === "github" && (
+                      <div className="space-y-1.5">
+                        {loadingChecks ? (
+                          <div className="flex items-center gap-2 text-text-muted p-2">
+                            <Loader2 size={10} className="animate-spin text-accent" />
+                            <span className="text-[10px]">Loading check runs...</span>
+                          </div>
+                        ) : checkRuns.length === 0 ? (
+                          <div className="text-[10px] text-text-muted italic px-1">
+                            No check runs reported for this commit.
+                          </div>
+                        ) : (
+                          <div className="space-y-1 border border-border-40 rounded-mac p-1 bg-surface-1-20">
+                            {checkRuns.map((run) => (
+                              <div
+                                key={run.name}
+                                className={`flex items-center justify-between p-1.5 hover:bg-surface-2 rounded transition-colors text-3xs border-l-2 ${
+                                  run.conclusion === "success"
+                                    ? "border-l-[#30d158]"
+                                    : run.conclusion === "failure"
+                                    ? "border-l-[#ff453a]"
+                                    : "border-l-[#0a84ff]"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 truncate">
+                                  {run.conclusion === "success" ? (
+                                    <CheckCircle2 size={11} className="text-[#30d158]" />
+                                  ) : run.conclusion === "failure" ? (
+                                    <XCircle size={11} className="text-[#ff453a]" />
+                                  ) : (
+                                    <Loader2 size={11} className="text-[#0a84ff] animate-spin" />
+                                  )}
+                                  <span className="text-text-primary font-medium truncate">
+                                    {run.name}
+                                  </span>
+                                </div>
+                                <a
+                                  href={run.htmlUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-accent hover:underline flex items-center gap-0.5 font-bold"
+                                >
+                                  <span>Details</span>
+                                  <ExternalLink size={8} />
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
-              {checkoutError && (
-                <div className="p-3 bg-[#ff453a]/10 border border-[#ff453a]/20 rounded-mac text-[#ff453a] text-2xs font-medium flex items-center gap-2 animate-in fade-in duration-200">
-                  <XCircle size={12} className="shrink-0" />
-                  <span>{checkoutError}</span>
-                </div>
-              )}
 
-              {/* Changed Files */}
-              <div className="space-y-2 border-t border-border-60 pt-3">
-                <div className="flex flex-row items-center justify-between gap-2">
-                  <h4 className="text-2xs font-bold text-[#ff9f0a] uppercase tracking-wider flex items-center gap-1.5">
-                    <FileText size={10} className="text-[#ff9f0a]" />
-                    Changed Files {changedFiles.length > 0 ? `(${changedFiles.length})` : ""}
-                  </h4>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <button
-                      onClick={handleExplainMergeRequest}
-                      disabled={aiExplain.isPending || loadingFiles || !selectedMr}
-                      className={`h-8 px-3 rounded-mac border text-[11px] font-bold transition-colors flex items-center gap-1.5 disabled:opacity-45 ${
-                        aiExplanation && !aiReviewResult
-                          ? "border-accent-30 bg-accent-10 text-accent"
-                          : "border-border-40 bg-surface-2 text-text-primary hover:bg-surface-3"
-                      }`}
-                      title="Explain this merge request with AI"
-                    >
-                      {aiExplain.isPending ? (
-                        <Loader2 size={11} className="animate-spin text-accent" />
+              {/* Tab: Files Changed */}
+              {activeTab === "files" && (
+                <div className="flex-1 flex flex-row min-h-0 overflow-hidden divide-x divide-border-60">
+                  {/* Left explorer panel */}
+                  <div className="w-[30%] min-w-[220px] max-w-[320px] flex flex-col h-full bg-surface-1-10 shrink-0">
+                    <div className="flex items-center justify-between px-3 py-2 border-b border-border-60 bg-surface-1-20 text-3xs font-semibold text-text-muted uppercase">
+                      <span>Changed Files ({changedFiles.length})</span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-1.5 space-y-1">
+                      {loadingFiles ? (
+                        <div className="flex items-center gap-2 p-3 text-2xs text-text-muted">
+                          <Loader2 size={12} className="animate-spin text-accent" />
+                          <span>Loading changed files...</span>
+                        </div>
+                      ) : filesError ? (
+                        <div className="p-3 text-2xs text-[#ff453a]">{filesError}</div>
+                      ) : changedFiles.length === 0 ? (
+                        <div className="p-3 text-2xs text-text-muted">No files changed.</div>
                       ) : (
-                        <Sparkles size={11} className="text-accent" />
-                      )}
-                      <span>AI Explain</span>
-                    </button>
-                    <select
-                      value={reviewMode}
-                      onChange={(event) => handleReviewModeChange(event.target.value as AIReviewMode)}
-                      className="h-8 max-w-[150px] rounded-mac border border-border-40 bg-surface-2 px-2 text-[11px] font-semibold text-text-secondary outline-none hover:bg-surface-3 focus:border-accent"
-                      title="Choose AI review focus"
-                    >
-                      {AI_REVIEW_MODE_OPTIONS.map((option) => (
-                        <option key={option.id} value={option.id}>{option.label}</option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={handleReviewMergeRequest}
-                      disabled={aiReview.isPending || loadingFiles || changedFiles.length === 0 || !selectedMr}
-                      className={`h-8 px-3 rounded-mac border text-[11px] font-bold transition-colors flex items-center gap-1.5 disabled:opacity-45 ${
-                        aiReviewResult
-                          ? "border-accent-40 bg-accent text-accent-fg"
-                          : "border-accent-30 bg-accent-10 text-accent hover:bg-accent-20"
-                      }`}
-                      title="Review this merge request with AI"
-                    >
-                      {aiReview.isPending ? (
-                        <Loader2 size={11} className="animate-spin" />
-                      ) : (
-                        <MessageSquareText size={11} />
-                      )}
-                      <span>AI Review</span>
-                    </button>
-                  </div>
-                </div>
+                        changedFiles.map((file) => {
+                          const isFileSelected =
+                            selectedChangedFile?.path === file.path &&
+                            selectedChangedFile?.oldPath === file.oldPath &&
+                            selectedChangedFile?.status === file.status;
+                          const fileHasFindings = findingsByFile.has(file.path) ||
+                            findingsByFile.has(file.path.split("/").pop() || "");
 
-                {loadingFiles ? (
-                  <div className="flex items-center gap-2 rounded-mac border border-border-40 bg-surface-1-20 p-3 text-2xs text-text-muted">
-                    <Loader2 size={12} className="animate-spin text-accent" />
-                    <span>Loading changed files...</span>
-                  </div>
-                ) : filesError ? (
-                  <div className="rounded-mac border border-[#ff453a]/20 bg-[#ff453a]/10 p-3 text-2xs text-[#ff453a]">
-                    {filesError}
-                  </div>
-                ) : changedFiles.length === 0 ? (
-                  <div className="rounded-mac border border-border-40 bg-surface-1-20 p-3 text-2xs text-text-muted">
-                    No changed files returned by the provider.
-                  </div>
-                ) : (
-                  <div className="rounded-mac border border-border-40 bg-surface-1-20 min-w-0">
-                    <div className="max-h-[190px] overflow-y-auto">
-                      {changedFiles.map((file) => {
-                        const isFileSelected =
-                          selectedChangedFile?.path === file.path &&
-                          selectedChangedFile?.oldPath === file.oldPath &&
-                          selectedChangedFile?.status === file.status;
-                        const fileHasFindings = findingsByFile.has(file.path) ||
-                          findingsByFile.has(file.path.split("/").pop() || "");
-
-                        return (
-                          <button
-                            key={`${file.status}:${file.path}:${file.oldPath || ""}`}
-                            onClick={() => setSelectedChangedFile(file)}
-                            className={`flex w-full items-center justify-between gap-2 border-b border-border-40 px-3 py-2 text-left last:border-b-0 transition-colors ${
-                              isFileSelected
-                                ? "bg-accent-10"
-                                : "hover:bg-surface-2-70"
-                            } ${fileHasFindings ? "border-l-2 border-l-[#ff9f0a]" : ""}`}
-                            title={file.oldPath ? `${file.oldPath} -> ${file.path}` : file.path}
-                          >
-                            <div className="min-w-0 flex items-center gap-2">
-                              <div className="relative shrink-0">
-                                <FileText
-                                  size={11}
-                                  className={`${
-                                    file.status === "added"
-                                      ? "text-[#30d158]"
-                                      : file.status === "deleted"
-                                      ? "text-[#ff453a]"
-                                      : file.status === "renamed"
-                                      ? "text-[#64d2ff]"
-                                      : isFileSelected
-                                      ? "text-accent"
-                                      : "text-[#ff9f0a]"
-                                  }`}
-                                />
-                                {fileHasFindings && (
-                                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#ff9f0a] border border-surface-1" />
-                                )}
-                              </div>
-                              <div className="min-w-0">
-                                <div className="truncate text-2xs font-semibold text-text-primary">
-                                  {file.path.split("/").pop() || file.path}
+                          return (
+                            <button
+                              key={`${file.status}:${file.path}:${file.oldPath || ""}`}
+                              onClick={() => setSelectedChangedFile(file)}
+                              className={`flex w-full items-center justify-between gap-2 border-b border-border-40 px-2.5 py-1.5 rounded-mac text-left last:border-b-0 transition-colors cursor-pointer ${
+                                isFileSelected
+                                  ? "bg-accent-10 border-accent-30"
+                                  : "hover:bg-surface-2-70 border-transparent"
+                              } ${fileHasFindings ? "border-l-2 border-l-[#ff9f0a]" : ""}`}
+                              title={file.oldPath ? `${file.oldPath} -> ${file.path}` : file.path}
+                            >
+                              <div className="min-w-0 flex items-center gap-1.5">
+                                <div className="relative shrink-0">
+                                  <FileText
+                                    size={11}
+                                    className={`${
+                                      file.status === "added"
+                                        ? "text-[#30d158]"
+                                        : file.status === "deleted"
+                                        ? "text-[#ff453a]"
+                                        : file.status === "renamed"
+                                        ? "text-[#64d2ff]"
+                                        : "text-[#ff9f0a]"
+                                    }`}
+                                  />
+                                  {fileHasFindings && (
+                                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#ff9f0a] border border-surface-1" />
+                                  )}
                                 </div>
-                                <div className="truncate text-[10px] text-text-muted">
-                                  {file.oldPath ? `${file.oldPath} -> ${file.path}` : file.path}
+                                <div className="min-w-0">
+                                  <div className="truncate text-3xs font-semibold text-text-primary">
+                                    {file.path.split("/").pop() || file.path}
+                                  </div>
+                                  <div className="truncate text-[9px] text-text-muted">
+                                    {file.path}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                            <div className="flex shrink-0 items-center gap-2">
-                              {(file.additions !== undefined || file.deletions !== undefined) && (
-                                <span className="font-mono text-[10px] text-text-muted">
-                                  <span className="text-[#30d158]">+{file.additions ?? 0}</span>
-                                  <span className="mx-0.5">/</span>
-                                  <span className="text-[#ff453a]">-{file.deletions ?? 0}</span>
-                                </span>
-                              )}
-                              <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase ${
-                                file.status === "added"
-                                  ? "bg-[#30d158]/10 text-[#30d158]"
-                                  : file.status === "deleted"
-                                    ? "bg-[#ff453a]/10 text-[#ff453a]"
-                                    : file.status === "renamed"
-                                      ? "bg-[#64d2ff]/10 text-[#64d2ff]"
+                              <div className="flex shrink-0 items-center gap-1.5">
+                                <span className={`rounded px-1 py-0.5 text-[8px] font-bold uppercase ${
+                                  file.status === "added"
+                                    ? "bg-[#30d158]/10 text-[#30d158]"
+                                    : file.status === "deleted"
+                                      ? "bg-[#ff453a]/10 text-[#ff453a]"
                                       : "bg-[#ff9f0a]/10 text-[#ff9f0a]"
-                              }`}>
-                                {file.status}
-                              </span>
-                            </div>
-                          </button>
-                        );
-                      })}
+                                }`}>
+                                  {file.status.slice(0, 3)}
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })
+                      )}
                     </div>
+                  </div>
 
-                    {selectedChangedFile && (
-                      <div className="border-t border-border-40 bg-surface-0-60">
-                        <div className="flex items-center justify-between gap-2 border-b border-border-40 px-2.5 py-2">
+                  {/* Right diff pane */}
+                  <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#0b0c0f]">
+                    {selectedChangedFile ? (
+                      <div className="flex-1 flex flex-col h-full overflow-hidden">
+                        {/* Diff Header */}
+                        <div className="flex items-center justify-between gap-2 border-b border-border-40 px-3 py-2 bg-surface-2-40 shrink-0">
                           <div className="min-w-0 flex items-center gap-2">
                             <span className="shrink-0 rounded bg-surface-3 px-1.5 py-0.5 text-[9px] font-bold text-text-muted uppercase font-mono">
                               {(selectedChangedFile.path.split(".").pop() || "txt").slice(0, 5)}
@@ -974,17 +1067,24 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                               </div>
                             </div>
                           </div>
-                          <div className="flex shrink-0 items-center gap-1">
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            {(selectedChangedFile.additions !== undefined || selectedChangedFile.deletions !== undefined) && (
+                              <span className="font-mono text-[10px] text-text-muted mr-2">
+                                <span className="text-[#30d158]">+{selectedChangedFile.additions ?? 0}</span>
+                                <span className="mx-0.5">/</span>
+                                <span className="text-[#ff453a]">-{selectedChangedFile.deletions ?? 0}</span>
+                              </span>
+                            )}
                             <button
                               onClick={() => selectAdjacentChangedFile(-1)}
-                              className="h-6 px-2 rounded border border-border-40 bg-surface-2 text-[10px] font-bold text-text-secondary hover:bg-surface-3 hover:text-text-primary"
+                              className="h-6 px-2.5 rounded border border-border-40 bg-surface-2 text-[10px] font-bold text-text-secondary hover:bg-surface-3 hover:text-text-primary cursor-pointer"
                               title="Previous file (k)"
                             >
                               Prev
                             </button>
                             <button
                               onClick={() => selectAdjacentChangedFile(1)}
-                              className="h-6 px-2 rounded border border-border-40 bg-surface-2 text-[10px] font-bold text-text-secondary hover:bg-surface-3 hover:text-text-primary"
+                              className="h-6 px-2.5 rounded border border-border-40 bg-surface-2 text-[10px] font-bold text-text-secondary hover:bg-surface-3 hover:text-text-primary cursor-pointer"
                               title="Next file (j)"
                             >
                               Next
@@ -992,248 +1092,220 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                           </div>
                         </div>
 
-                        {/* AI Findings Banner for this file */}
+                        {/* AI Findings for this file */}
                         {selectedFileFindings.length > 0 && (
-                          <div className="border-b border-border-40 px-2.5 py-2 bg-[#ff9f0a]/5">
+                          <div className="border-b border-border-40 px-3 py-2 bg-[#ff9f0a]/5 shrink-0 max-h-[100px] overflow-y-auto">
                             <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#ff9f0a]">
                               <AlertTriangle size={10} />
                               <span>{selectedFileFindings.length} AI finding{selectedFileFindings.length > 1 ? "s" : ""} in this file</span>
                             </div>
                             <div className="mt-1 space-y-1">
-                              {selectedFileFindings.map((finding, i) => (
-                                <div key={i} className="flex items-start gap-1.5 text-[10px] text-text-secondary">
-                                  <span className={`shrink-0 mt-0.5 w-1.5 h-1.5 rounded-full ${
-                                    finding.severity === "high" ? "bg-[#ff453a]" :
-                                    finding.severity === "medium" ? "bg-[#ff9f0a]" :
-                                    finding.severity === "low" ? "bg-[#0a84ff]" :
-                                    "bg-text-muted"
-                                  }`} />
-                                  <span className="leading-snug">{finding.line.replace(/^[-*]\s*/, "").slice(0, 160)}</span>
-                                </div>
-                              ))}
+                              {selectedFileFindings.map((finding, i) => {
+                                const cleanLine = finding.line.replace(/^[-*]\s*/, "");
+                                const categoryMatch = cleanLine.match(/^\[(BUG|SECURITY|PERF|STYLE|BEST-PRACTICE|LINTER|TEST|A11Y|UX|REFACTOR)\]\s*(.*)$/i);
+                                
+                                if (categoryMatch) {
+                                  const category = categoryMatch[1].toUpperCase();
+                                  const restOfText = categoryMatch[2];
+                                  
+                                  const badgeColors =
+                                    category === "BUG"
+                                      ? "bg-[#ff375f]/10 text-[#ff375f] border-[#ff375f]/25"
+                                      : category === "SECURITY"
+                                        ? "bg-[#ff6b35]/10 text-[#ff6b35] border-[#ff6b35]/25"
+                                        : category === "PERF"
+                                          ? "bg-[#ffcc00]/10 text-[#ffcc00] border-[#ffcc00]/25"
+                                          : category === "STYLE"
+                                            ? "bg-[#0a84ff]/10 text-[#0a84ff] border-[#0a84ff]/25"
+                                            : category === "BEST-PRACTICE"
+                                              ? "bg-[#bf5af2]/10 text-[#bf5af2] border-[#bf5af2]/25"
+                                              : category === "LINTER"
+                                                ? "bg-[#64d2ff]/10 text-[#64d2ff] border-[#64d2ff]/25"
+                                                : category === "TEST"
+                                                  ? "bg-[#30d158]/10 text-[#30d158] border-[#30d158]/25"
+                                                  : category === "A11Y"
+                                                    ? "bg-[#ff9f0a]/10 text-[#ff9f0a] border-[#ff9f0a]/25"
+                                                    : category === "UX"
+                                                      ? "bg-[#ff2d55]/10 text-[#ff2d55] border-[#ff2d55]/25"
+                                                      : "bg-[#5e5ce6]/10 text-[#5e5ce6] border-[#5e5ce6]/25";
+
+                                  return (
+                                    <div key={i} className="flex items-start gap-1.5 text-[10px] text-text-secondary py-0.5">
+                                      <span className={`shrink-0 mt-1 w-1.5 h-1.5 rounded-full ${
+                                        finding.severity === "high" ? "bg-[#ff453a]" :
+                                        finding.severity === "medium" ? "bg-[#ff9f0a]" :
+                                        finding.severity === "low" ? "bg-[#0a84ff]" :
+                                        "bg-text-muted"
+                                      }`} />
+                                      <div className="leading-relaxed flex-1">
+                                        <span className={`mr-1.5 inline-flex rounded border px-1 py-[1px] text-[8px] font-bold uppercase tracking-wider ${badgeColors}`}>
+                                          {category === "BEST-PRACTICE" ? "Best Practice" : category === "A11Y" ? "A11y" : category}
+                                        </span>
+                                        <span>{renderTextWithFileLinks(restOfText)}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+
+                                return (
+                                  <div key={i} className="flex items-start gap-1.5 text-[10px] text-text-secondary py-0.5">
+                                    <span className={`shrink-0 mt-1 w-1.5 h-1.5 rounded-full ${
+                                      finding.severity === "high" ? "bg-[#ff453a]" :
+                                      finding.severity === "medium" ? "bg-[#ff9f0a]" :
+                                      finding.severity === "low" ? "bg-[#0a84ff]" :
+                                      "bg-text-muted"
+                                    }`} />
+                                    <span className="leading-relaxed flex-1">{renderTextWithFileLinks(cleanLine)}</span>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
                         )}
 
-                        {selectedChangedFile.patch ? (
-                          <div className="max-h-[320px] overflow-auto bg-[#0b0c0f] py-2 font-mono text-[11px] leading-5">
-                            {parsedHunks.length > 0 ? (
-                              parsedHunks.map((hunk, hunkIdx) => (
-                                <div key={hunkIdx}>
-                                  {/* Hunk header separator */}
-                                  <div className="flex items-center gap-2 bg-surface-2-30 border-y border-border-30 px-3 py-1 text-[10px] text-text-muted">
-                                    <span className="font-mono text-accent">{hunk.header.match(/@@ .+ @@/)?.[0] || hunk.header}</span>
-                                  </div>
-                                  {/* Hunk lines with line numbers */}
-                                  {hunk.lines.filter(l => l.type !== "header").map((dLine, lineIdx) => (
-                                    <div
-                                      key={`${hunkIdx}:${lineIdx}`}
-                                      className={`flex ${
-                                        dLine.type === "add"
-                                          ? "bg-[#30d158]/10"
-                                          : dLine.type === "delete"
-                                          ? "bg-[#ff453a]/10"
-                                          : ""
-                                      }`}
-                                    >
-                                      {/* Old line number */}
-                                      <span className="w-10 shrink-0 text-right pr-2 text-text-muted-40 select-none border-r border-border-20">
-                                        {dLine.oldLineNumber ?? ""}
-                                      </span>
-                                      {/* New line number */}
-                                      <span className="w-10 shrink-0 text-right pr-2 text-text-muted-40 select-none border-r border-border-20">
-                                        {dLine.newLineNumber ?? ""}
-                                      </span>
-                                      {/* Diff type indicator */}
-                                      <span className={`w-5 shrink-0 text-center select-none ${
-                                        dLine.type === "add" ? "text-[#30d158]" : dLine.type === "delete" ? "text-[#ff453a]" : "text-text-muted-30"
-                                      }`}>
-                                        {dLine.type === "add" ? "+" : dLine.type === "delete" ? "-" : " "}
-                                      </span>
-                                      {/* Content */}
-                                      <span className={`flex-1 whitespace-pre ${
-                                        dLine.type === "add" ? "text-[#7ee787]" : dLine.type === "delete" ? "text-[#ff9b95]" : "text-text-secondary"
-                                      }`}>
-                                        {dLine.content.slice(1) || " "}
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              ))
-                            ) : (
-                              // Fallback to raw rendering if parseDiff fails
-                              selectedChangedFile.patch.split("\n").map((line, index) => (
-                                <div
-                                  key={`${selectedChangedFile.path}:${index}`}
-                                  className={`whitespace-pre px-3 ${getDiffLineClass(line)}`}
-                                >
-                                  {line || " "}
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        ) : (
-                          <div className="p-3 text-2xs leading-relaxed text-text-muted">
-                            No patch content returned by the provider. The file may be binary,
-                            too large, or unavailable in the API response.
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {aiExplain.error && (
-                  <div className="rounded-mac border border-[#ff453a]/20 bg-[#ff453a]/10 p-3 text-2xs text-[#ff453a]">
-                    {aiExplain.error.message || "Failed to explain merge request"}
-                  </div>
-                )}
-                {aiReview.error && (
-                  <div className="rounded-mac border border-[#ff453a]/20 bg-[#ff453a]/10 p-3 text-2xs text-[#ff453a]">
-                    {aiReview.error.message || "Failed to review merge request"}
-                  </div>
-                )}
-                {aiPanelKind && (
-                  <div className="overflow-hidden rounded-mac border border-accent-30 bg-surface-1 select-text">
-                    <div className="flex items-center justify-between gap-2 border-b border-border-40 bg-surface-2-70 px-3 py-2">
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-7 w-7 items-center justify-center rounded-mac bg-accent-10 text-accent">
-                          {aiPanelKind === "review" ? (
-                            <MessageSquareText size={14} />
+                        {/* Diff Content */}
+                        <div className="flex-1 min-h-0 bg-surface-0">
+                          {selectedChangedFile.patch ? (
+                            <LazyDiffViewer
+                              diff={selectedChangedFile.patch}
+                              filePath={selectedChangedFile.path}
+                              source="commit"
+                            />
                           ) : (
-                            <Sparkles size={14} />
+                            <div className="p-4 text-2xs text-text-muted">
+                              No patch content returned by the provider. The file may be binary or too large.
+                            </div>
                           )}
                         </div>
-                        <div>
-                          <div className="text-xs font-bold text-text-primary">
-                            {aiPanelKind === "review" ? "AI Review Report" : "AI Explanation"}
-                          </div>
-                          <div className="text-[10px] text-text-muted">
-                            {aiPanelKind === "review"
-                              ? "Findings, risks, tests, and recommendation"
-                              : "Summary, motivation, and important changes"}
-                          </div>
-                        </div>
                       </div>
-                      <div
-                        className={`flex items-center gap-1 rounded px-2 py-1 text-[10px] font-bold ${
-                          aiPanelKind === "review"
-                            ? "bg-[#ff9f0a]/10 text-[#ff9f0a]"
-                            : "bg-[#30d158]/10 text-[#30d158]"
-                        }`}
-                      >
-                        {aiPanelKind === "review" ? (
-                          <AlertTriangle size={11} />
-                        ) : (
-                          <Check size={11} />
-                        )}
-                        <span>{aiPanelKind === "review" ? "Review" : "Explain"}</span>
+                    ) : (
+                      <div className="flex-1 flex flex-col items-center justify-center text-text-muted p-4 space-y-2">
+                        <FileText size={24} className="opacity-40" />
+                        <span className="text-2xs font-semibold">Select a file from the explorer to view diff</span>
                       </div>
-                    </div>
-                    <div className="max-h-[280px] space-y-1.5 overflow-y-auto p-3 text-2xs leading-relaxed">
-                      {renderAIText(aiPanelKind === "review" ? aiReviewResult : aiExplanation)}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Description */}
-              {selectedMr.description && (
-                <div className="space-y-1.5 border-t border-border-60 pt-3">
-                  <h4 className="text-2xs font-bold text-accent uppercase tracking-wider flex items-center gap-1.5">
-                    <MessageSquareText size={10} className="text-accent" />
-                    Description
-                  </h4>
-                  <div className="text-2xs text-text-secondary leading-relaxed bg-surface-1-20 border border-border-40 rounded-mac p-3 max-h-[120px] overflow-y-auto font-normal break-words whitespace-pre-line">
-                    {selectedMr.description}
+                    )}
                   </div>
                 </div>
               )}
 
-              {/* Checks & Pipelines Section */}
-              <div className="space-y-2 border-t border-border-60 pt-3">
-                <h4 className="text-2xs font-bold text-[#0a84ff] uppercase tracking-wider flex items-center gap-1.5">
-                  <CheckCircle2 size={10} className="text-[#0a84ff]" />
-                  CI/CD Status
-                </h4>
-                
-                {/* GitLab Pipeline Info */}
-                {remoteInfo?.provider === "gitlab" && (
-                  <div className="flex items-center gap-2 p-2.5 bg-surface-1-20 border border-border-40 rounded-mac">
-                    {selectedMr.pipelineStatus === "success" ? (
-                      <CheckCircle2 size={14} className="text-[#30d158]" />
-                    ) : selectedMr.pipelineStatus === "failed" ? (
-                      <XCircle size={14} className="text-[#ff453a]" />
-                    ) : selectedMr.pipelineStatus === "running" ? (
-                      <Loader2 size={14} className="text-[#0a84ff] animate-spin" />
-                    ) : (
-                      <Clock size={14} className="text-text-muted" />
-                    )}
-                    <span className="text-2xs text-text-secondary">
-                      Pipeline state:{" "}
-                      <strong className="text-text-primary capitalize">
-                        {selectedMr.pipelineStatus || "unknown"}
-                      </strong>
-                    </span>
-                  </div>
-                )}
-
-                {/* GitHub Checks Info */}
-                {remoteInfo?.provider === "github" && (
-                  <div className="space-y-1.5">
-                    {loadingChecks ? (
-                      <div className="flex items-center gap-2 text-text-muted p-2">
-                        <Loader2 size={10} className="animate-spin text-accent" />
-                        <span className="text-[10px]">Loading check runs...</span>
-                      </div>
-                    ) : checkRuns.length === 0 ? (
-                      <div className="text-[10px] text-text-muted italic px-1">
-                        No check runs reported for this commit.
-                      </div>
-                    ) : (
-                      <div className="space-y-1 max-h-[140px] overflow-y-auto border border-border-40 rounded-mac p-1">
-                        {checkRuns.map((run) => (
-                          <div
-                            key={run.name}
-                            className={`flex items-center justify-between p-1.5 hover:bg-surface-2 rounded transition-colors text-3xs border-l-2 ${
-                              run.conclusion === "success"
-                                ? "border-l-[#30d158]"
-                                : run.conclusion === "failure"
-                                ? "border-l-[#ff453a]"
-                                : "border-l-[#0a84ff]"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2 truncate">
-                              {run.conclusion === "success" ? (
-                                <CheckCircle2 size={11} className="text-[#30d158]" />
-                              ) : run.conclusion === "failure" ? (
-                                <XCircle size={11} className="text-[#ff453a]" />
-                              ) : (
-                                <Loader2 size={11} className="text-[#0a84ff] animate-spin" />
-                              )}
-                              <span className="text-text-primary font-medium truncate">
-                                {run.name}
-                              </span>
-                            </div>
-                            <a
-                              href={run.htmlUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-accent hover:underline flex items-center gap-0.5 font-bold"
-                            >
-                              <span>Details</span>
-                              <ExternalLink size={8} />
-                            </a>
-                          </div>
+              {/* Tab: AI Assistant */}
+              {activeTab === "ai" && (
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  <div className="flex flex-row items-center justify-between gap-3 p-3 bg-surface-1-40 border border-border-40 rounded-mac">
+                    <div className="text-2xs text-text-secondary">
+                      Ask AI to explain or perform a security and quality review of this Merge Request.
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <button
+                        onClick={handleExplainMergeRequest}
+                        disabled={aiExplain.isPending || loadingFiles || !selectedMr}
+                        className={`h-8 px-3.5 rounded-mac border text-[11px] font-bold transition-colors flex items-center gap-1.5 disabled:opacity-45 cursor-pointer ${
+                          aiExplanation && !aiReviewResult
+                            ? "border-accent-30 bg-accent-10 text-accent"
+                            : "border-border-40 bg-surface-2 text-text-primary hover:bg-surface-3"
+                        }`}
+                        title="Explain this merge request with AI"
+                      >
+                        {aiExplain.isPending ? (
+                          <Loader2 size={11} className="animate-spin text-accent" />
+                        ) : (
+                          <Sparkles size={11} className="text-accent" />
+                        )}
+                        <span>AI Explain</span>
+                      </button>
+                      <select
+                        value={reviewMode}
+                        onChange={(event) => handleReviewModeChange(event.target.value as AIReviewMode)}
+                        className="h-8 max-w-[150px] rounded-mac border border-border-40 bg-surface-2 px-2 text-[11px] font-semibold text-text-secondary outline-none hover:bg-surface-3 focus:border-accent cursor-pointer"
+                        title="Choose AI review focus"
+                      >
+                        {AI_REVIEW_MODE_OPTIONS.map((option) => (
+                          <option key={option.id} value={option.id}>{option.label}</option>
                         ))}
-                      </div>
-                    )}
+                      </select>
+                      <button
+                        onClick={handleReviewMergeRequest}
+                        disabled={aiReview.isPending || loadingFiles || changedFiles.length === 0 || !selectedMr}
+                        className={`h-8 px-3.5 rounded-mac border text-[11px] font-bold transition-colors flex items-center gap-1.5 disabled:opacity-45 cursor-pointer ${
+                          aiReviewResult
+                            ? "border-accent-40 bg-accent text-accent-fg"
+                            : "border-accent-30 bg-accent-10 text-accent hover:bg-accent-20"
+                        }`}
+                        title="Review this merge request with AI"
+                      >
+                        {aiReview.isPending ? (
+                          <Loader2 size={11} className="animate-spin" />
+                        ) : (
+                          <MessageSquareText size={11} />
+                        )}
+                        <span>AI Review</span>
+                      </button>
+                    </div>
                   </div>
-                )}
-              </div>
-            </>
+
+                  {aiExplain.error && (
+                    <div className="rounded-mac border border-[#ff453a]/25 bg-[#ff453a]/10 p-3 text-2xs text-[#ff453a]">
+                      {aiExplain.error.message || "Failed to explain merge request"}
+                    </div>
+                  )}
+                  {aiReview.error && (
+                    <div className="rounded-mac border border-[#ff453a]/25 bg-[#ff453a]/10 p-3 text-2xs text-[#ff453a]">
+                      {aiReview.error.message || "Failed to review merge request"}
+                    </div>
+                  )}
+
+                  {aiPanelKind ? (
+                    <div className="overflow-hidden rounded-mac border border-accent-30 bg-surface-1 select-text">
+                      <div className="flex items-center justify-between gap-2 border-b border-border-40 bg-surface-2-70 px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-mac bg-accent-10 text-accent">
+                            {aiPanelKind === "review" ? (
+                              <MessageSquareText size={14} />
+                            ) : (
+                              <Sparkles size={14} />
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-text-primary">
+                              {aiPanelKind === "review" ? "AI Review Report" : "AI Explanation"}
+                            </div>
+                            <div className="text-[10px] text-text-muted">
+                              {aiPanelKind === "review"
+                                ? "Findings, risks, tests, and recommendation"
+                                : "Summary, motivation, and important changes"}
+                            </div>
+                          </div>
+                        </div>
+                        <div
+                          className={`flex items-center gap-1 rounded px-2 py-1 text-[10px] font-bold ${
+                            aiPanelKind === "review"
+                              ? "bg-[#ff9f0a]/10 text-[#ff9f0a]"
+                              : "bg-[#30d158]/10 text-[#30d158]"
+                          }`}
+                        >
+                          {aiPanelKind === "review" ? (
+                            <AlertTriangle size={11} />
+                          ) : (
+                            <Check size={11} />
+                          )}
+                          <span>{aiPanelKind === "review" ? "Review" : "Explain"}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5 p-3.5 text-2xs leading-relaxed max-h-[480px] overflow-y-auto">
+                        {renderAIText(aiPanelKind === "review" ? aiReviewResult : aiExplanation)}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-text-muted p-12 space-y-2 text-center">
+                      <Sparkles size={24} className="opacity-30 text-accent animate-pulse" />
+                      <span className="text-2xs font-semibold">Click AI Explain or AI Review above to generate a report</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center text-center text-text-muted p-4 space-y-2">
+            <div className="flex-1 flex flex-col items-center justify-center text-center text-text-muted p-4 space-y-2">
               <GitPullRequest size={24} className="opacity-40" />
               <span className="text-xs font-semibold">Select a Merge Request to view details</span>
             </div>
@@ -1269,7 +1341,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                 <button
                   onClick={handleApproveMR}
                   disabled={!!mrActionLoading}
-                  className="h-8 px-3.5 bg-green-600 hover:bg-green-500 text-white text-xs font-semibold rounded-mac border border-green-500/30 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs disabled:opacity-50"
+                  className="h-8 px-3.5 bg-green-600 hover:bg-green-500 text-white text-xs font-semibold rounded-mac border border-green-500/30 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
                   title="Approve this merge request"
                 >
                   {mrActionLoading === "approve" ? (
@@ -1288,7 +1360,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                     <button
                       onClick={() => handleMergeMR("merge")}
                       disabled={!!mrActionLoading}
-                      className="h-8 pl-3.5 pr-2 bg-accent hover:opacity-95 text-accent-fg text-xs font-semibold rounded-l-mac border border-accent-30 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs disabled:opacity-50"
+                      className="h-8 pl-3.5 pr-2 bg-accent hover:opacity-95 text-accent-fg text-xs font-semibold rounded-l-mac border border-accent-30 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
                       title="Merge this request"
                     >
                       {mrActionLoading === "merge" ? (
@@ -1301,7 +1373,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                     <button
                       onClick={() => setShowMergeMethodPicker((p) => !p)}
                       disabled={!!mrActionLoading}
-                      className="h-8 px-1.5 bg-accent hover:opacity-95 text-accent-fg text-xs font-semibold rounded-r-mac border border-accent-30 border-l-0 transition-all flex items-center cursor-pointer shadow-2xs disabled:opacity-50"
+                      className="h-8 px-1.5 bg-accent hover:opacity-95 text-accent-fg text-xs font-semibold rounded-r-mac border border-accent-30 border-l-0 transition-all flex items-center cursor-pointer shadow-2xs"
                     >
                       <ChevronDown size={11} />
                     </button>
@@ -1312,7 +1384,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                         <button
                           key={method}
                           onClick={() => handleMergeMR(method)}
-                          className="w-full text-left px-3 py-1.5 text-xs text-text-primary hover:bg-surface-3 transition-colors capitalize"
+                          className="w-full text-left px-3 py-1.5 text-xs text-text-primary hover:bg-surface-3 transition-colors capitalize cursor-pointer"
                         >
                           {method === "merge" ? "Create merge commit" : method === "squash" ? "Squash and merge" : "Rebase and merge"}
                         </button>
@@ -1327,7 +1399,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                 <button
                   onClick={handleCloseMR}
                   disabled={!!mrActionLoading}
-                  className="h-8 px-3.5 bg-surface-2 hover:bg-surface-3 text-text-secondary text-xs font-semibold rounded-mac border border-border-40 hover:border-border transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs disabled:opacity-50"
+                  className="h-8 px-3.5 bg-surface-2 hover:bg-surface-3 text-text-secondary text-xs font-semibold rounded-mac border border-border-40 hover:border-border transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
                   title="Close this merge request"
                 >
                   {mrActionLoading === "close" ? (
@@ -1344,7 +1416,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                 <button
                   onClick={handleReopenMR}
                   disabled={!!mrActionLoading}
-                  className="h-8 px-3.5 bg-surface-2 hover:bg-surface-3 text-text-secondary text-xs font-semibold rounded-mac border border-border-40 hover:border-border transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs disabled:opacity-50"
+                  className="h-8 px-3.5 bg-surface-2 hover:bg-surface-3 text-text-secondary text-xs font-semibold rounded-mac border border-border-40 hover:border-border transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
                   title="Reopen this merge request"
                 >
                   {mrActionLoading === "reopen" ? (

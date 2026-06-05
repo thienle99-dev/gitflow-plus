@@ -147,56 +147,95 @@ export default function WorkingTree() {
 
   const handleStage = async (filePath: string) => {
     try {
+      const queryKey = ["git", repoPath, "status"];
+      const previousChanges = queryClient.getQueryData<FileChange[]>(queryKey);
+      if (previousChanges) {
+        const nextChanges = previousChanges.map((c) =>
+          c.path === filePath ? { ...c, staged: true } : c
+        );
+        queryClient.setQueryData(queryKey, nextChanges);
+      }
+
       await api.commit.stage(repoPath!, filePath);
       if (selectedFile === filePath) {
         selectFile(filePath, "staged");
       }
-      invalidate();
     } catch (e: any) {
       showToast(`Error: ${e}`, "error");
+      queryClient.invalidateQueries({ queryKey: ["git", repoPath, "status"] });
     }
   };
 
   const handleUnstage = async (filePath: string) => {
     try {
+      const queryKey = ["git", repoPath, "status"];
+      const previousChanges = queryClient.getQueryData<FileChange[]>(queryKey);
+      if (previousChanges) {
+        const nextChanges = previousChanges.map((c) =>
+          c.path === filePath ? { ...c, staged: false } : c
+        );
+        queryClient.setQueryData(queryKey, nextChanges);
+      }
+
       await api.commit.unstage(repoPath!, filePath);
       if (selectedFile === filePath) {
         selectFile(filePath, "unstaged");
       }
-      invalidate();
     } catch (e: any) {
       showToast(`Error: ${e}`, "error");
+      queryClient.invalidateQueries({ queryKey: ["git", repoPath, "status"] });
     }
   };
 
   const handleStageAll = async () => {
     try {
+      const queryKey = ["git", repoPath, "status"];
+      const previousChanges = queryClient.getQueryData<FileChange[]>(queryKey);
+      if (previousChanges) {
+        const nextChanges = previousChanges.map((c) => ({ ...c, staged: true }));
+        queryClient.setQueryData(queryKey, nextChanges);
+      }
+
       await api.commit.stageAll(repoPath!);
-      invalidate();
     } catch (e: any) {
       showToast(`Error: ${e}`, "error");
+      queryClient.invalidateQueries({ queryKey: ["git", repoPath, "status"] });
     }
   };
 
   const handleUnstageAll = async () => {
     try {
+      const queryKey = ["git", repoPath, "status"];
+      const previousChanges = queryClient.getQueryData<FileChange[]>(queryKey);
+      if (previousChanges) {
+        const nextChanges = previousChanges.map((c) => ({ ...c, staged: false }));
+        queryClient.setQueryData(queryKey, nextChanges);
+      }
+
       await api.commit.unstageAll(repoPath!);
-      invalidate();
     } catch (e: any) {
       showToast(`Error: ${e}`, "error");
+      queryClient.invalidateQueries({ queryKey: ["git", repoPath, "status"] });
     }
   };
 
   const doDiscard = async (filePath: string) => {
     setConfirmDiscard(null);
     try {
+      const queryKey = ["git", repoPath, "status"];
+      const previousChanges = queryClient.getQueryData<FileChange[]>(queryKey);
+      if (previousChanges) {
+        const nextChanges = previousChanges.filter((c) => c.path !== filePath);
+        queryClient.setQueryData(queryKey, nextChanges);
+      }
+
       await api.commit.discard(repoPath!, filePath);
       if (selectedFile === filePath) {
         selectFile(null);
       }
-      invalidate();
     } catch (e: any) {
       showToast(`Error: ${e}`, "error");
+      queryClient.invalidateQueries({ queryKey: ["git", repoPath, "status"] });
     }
   };
 
@@ -243,26 +282,46 @@ export default function WorkingTree() {
   const handleBatchStage = async () => {
     if (selectedFiles.size === 0) return;
     try {
-      for (const path of selectedFiles) {
+      const queryKey = ["git", repoPath, "status"];
+      const previousChanges = queryClient.getQueryData<FileChange[]>(queryKey);
+      if (previousChanges) {
+        const nextChanges = previousChanges.map((c) =>
+          selectedFiles.has(c.path) ? { ...c, staged: true } : c
+        );
+        queryClient.setQueryData(queryKey, nextChanges);
+      }
+
+      const filesToStage = Array.from(selectedFiles);
+      setSelectedFiles(new Set());
+      for (const path of filesToStage) {
         await api.commit.stage(repoPath!, path);
       }
-      setSelectedFiles(new Set());
-      invalidate();
     } catch (e: any) {
       showToast(`Error: ${e}`, "error");
+      queryClient.invalidateQueries({ queryKey: ["git", repoPath, "status"] });
     }
   };
 
   const handleBatchUnstage = async () => {
     if (selectedFiles.size === 0) return;
     try {
-      for (const path of selectedFiles) {
+      const queryKey = ["git", repoPath, "status"];
+      const previousChanges = queryClient.getQueryData<FileChange[]>(queryKey);
+      if (previousChanges) {
+        const nextChanges = previousChanges.map((c) =>
+          selectedFiles.has(c.path) ? { ...c, staged: false } : c
+        );
+        queryClient.setQueryData(queryKey, nextChanges);
+      }
+
+      const filesToUnstage = Array.from(selectedFiles);
+      setSelectedFiles(new Set());
+      for (const path of filesToUnstage) {
         await api.commit.unstage(repoPath!, path);
       }
-      setSelectedFiles(new Set());
-      invalidate();
     } catch (e: any) {
       showToast(`Error: ${e}`, "error");
+      queryClient.invalidateQueries({ queryKey: ["git", repoPath, "status"] });
     }
   };
 
@@ -1013,6 +1072,16 @@ function DiffReviewModal({ target, files, onChangeTarget, onClose, onRefresh }: 
   const setDiffViewMode = useUIStore((s) => s.setDiffViewMode);
   const queryClient = useQueryClient();
   const [showFullContext, setShowFullContext] = useState(false);
+  const [isRenderReady, setIsRenderReady] = useState(false);
+
+  useEffect(() => {
+    setIsRenderReady(false);
+    const timer = setTimeout(() => {
+      setIsRenderReady(true);
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [target.path, target.stage]);
+
   const currentIndex = files.findIndex((file) => file.path === target.path && file.stage === target.stage);
   const currentNumber = currentIndex >= 0 ? currentIndex + 1 : 1;
   const canGoPrevious = currentIndex > 0;
@@ -1058,7 +1127,7 @@ function DiffReviewModal({ target, files, onChangeTarget, onClose, onRefresh }: 
   }, [goTo, onClose]);
 
   return (
-    <div className="fixed inset-0 z-[9997] flex items-center justify-center bg-black/65 p-6 backdrop-blur-sm animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-[9997] flex items-center justify-center bg-black/65 p-6 animate-in fade-in duration-150">
       <div className="flex h-[88vh] w-[92vw] max-w-[1320px] min-w-[760px] flex-col overflow-hidden rounded-mac border border-border bg-surface-0 shadow-2xl">
         <div className="flex items-center justify-between gap-3 border-b border-border bg-surface-1 px-3 py-2 shrink-0">
           <div className="min-w-0 flex items-center gap-2">
@@ -1138,8 +1207,8 @@ function DiffReviewModal({ target, files, onChangeTarget, onClose, onRefresh }: 
         </div>
 
         <div className="min-h-0 flex-1 bg-surface-0">
-          {isLoading ? (
-            <div className="flex h-full items-center justify-center text-xs text-text-muted">Loading diff...</div>
+          {!isRenderReady || isLoading ? (
+            <div className="flex h-full items-center justify-center text-xs text-text-muted animate-pulse">Loading diff...</div>
           ) : diff ? (
             <LazyDiffViewer
               diff={diff}
