@@ -1,5 +1,6 @@
-import { api, type FileChange, type Branch, type Commit, type ConventionFile } from "@/api/tauri";
+import { api, type FileChange, type Branch, type Commit, type ConventionFile, type LintDiagnostic } from "@/api/tauri";
 import type { MergeRequest, MergeRequestFileChange } from "@/api/gitHost";
+import type { CommitLintResult } from "@/lib/commit-lint";
 import { scanForRisks, type RiskReport } from "./risk-scanner";
 import { loadActiveProfile, type AIProviderProfile, type AIProviderType } from "./ai-profiles";
 
@@ -163,6 +164,12 @@ export interface GeneratedTagDescription {
   reason?: string;
 }
 
+export interface LintReviewInput {
+  commitMessage: string;
+  commitIssues: CommitLintResult[];
+  codeDiagnostics: LintDiagnostic[];
+}
+
 export async function generateCommitMessageWithAI(
   repoPath: string,
   files: FileChange[],
@@ -261,6 +268,63 @@ ${languageInstruction}${conventionContext}`;
   }
 
   return { description, fallback: false };
+}
+
+export async function reviewLintIssuesWithAI(
+  repoPath: string,
+  input: LintReviewInput,
+): Promise<string> {
+  const settings = readAISettings();
+  if (!hasProvider(settings)) {
+    throw new Error("Configure an AI API key in settings to use AI lint review");
+  }
+
+  const commitIssues = input.commitIssues
+    .map((issue) => {
+      const suggestion = issue.suggestion ? ` Suggested fix: ${issue.suggestion}` : "";
+      return `- [${issue.severity}] ${issue.ruleId}: ${issue.message}${suggestion}`;
+    })
+    .join("\n");
+  const codeDiagnostics = input.codeDiagnostics
+    .slice(0, 80)
+    .map((diag) => {
+      const location = `${diag.file}${diag.line ? `:${diag.line}` : ""}${diag.column ? `:${diag.column}` : ""}`;
+      const rule = diag.rule ? ` (${diag.rule})` : "";
+      return `- [${diag.severity}] ${location}${rule}: ${diag.message}`;
+    })
+    .join("\n");
+  const diff = await api.diff.staged(repoPath).catch(() => "");
+  const conventionInstruction = await getConventionContext(repoPath);
+  const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
+  const customRulesInstruction = buildCustomRulesInstruction(settings.customRules);
+
+  const prompt = `You are a senior engineer helping fix pre-commit lint issues.
+
+COMMIT MESSAGE:
+${input.commitMessage || "(empty)"}
+
+COMMIT MESSAGE LINT:
+${commitIssues || "(no commit message lint issues)"}
+
+CODE LINT DIAGNOSTICS:
+${codeDiagnostics || "(no code lint diagnostics)"}
+
+STAGED DIFF CONTEXT (truncated):
+${diff.slice(0, 10_000) || "(diff unavailable)"}
+
+TASK:
+1. Explain the most important lint issues first.
+2. For each issue, say why it matters and the concrete fix.
+3. If an issue is likely auto-fixable, mention the command or edit style, but do not invent project scripts.
+4. If commit message lint is present, propose one corrected commit message.
+5. Keep it concise and actionable. No markdown tables.
+${languageInstruction}${customRulesInstruction}${conventionInstruction}`;
+
+  const review = cleanAIText(await requestAIText(prompt, withReviewModel(settings)));
+  if (!review) {
+    throw new Error("Empty response from AI lint reviewer");
+  }
+  return review;
 }
 
 export async function reviewDiffWithAI(filePath: string, diff: string, repoPath?: string, mode: AIReviewMode = "all") {

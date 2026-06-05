@@ -45,8 +45,14 @@ export interface CommitBoxProps {
   onUndoComplete: () => void;
   onImproveMessage: () => void;
   onAddBody: () => void;
+  onLintReview: () => void;
   // AI review state
   aiReviewPending: boolean;
+  // Lint review state
+  lintReviewPending: boolean;
+  lintReviewResult: string;
+  lintReviewOpen: boolean;
+  setLintReviewOpen: (open: boolean) => void;
   // Guardrail state
   guardrailPending: boolean;
   guardrailResult: CommitGuardrailResult | null;
@@ -91,7 +97,12 @@ export default function CommitBox({
   onUndoComplete,
   onImproveMessage,
   onAddBody,
+  onLintReview,
   aiReviewPending,
+  lintReviewPending,
+  lintReviewResult,
+  lintReviewOpen,
+  setLintReviewOpen,
   guardrailPending,
   guardrailResult,
   guardrailOpen,
@@ -337,6 +348,14 @@ export default function CommitBox({
                   Auto-fix
                 </button>
               )}
+              <button
+                type="button"
+                onClick={onLintReview}
+                disabled={lintReviewPending}
+                className="text-accent hover:underline font-semibold ml-1 cursor-pointer shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {lintReviewPending ? "Reviewing..." : "Ask AI"}
+              </button>
             </>
           ) : localStorage.getItem("gitflowCommitLintEnabled") !== "false" && commitMessage.trim().length > 0 ? (
             <span className="text-[#30d158] flex items-center gap-1">
@@ -352,6 +371,31 @@ export default function CommitBox({
           /72
         </div>
       </div>
+      {lintReviewOpen && (
+        <div className="border border-accent-20 bg-accent-5 rounded-mac p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              {lintReviewPending ? (
+                <RefreshCw size={12} className="animate-spin text-accent" />
+              ) : (
+                <Sparkles size={12} className="text-accent" />
+              )}
+              <span className="text-xs font-semibold text-accent">AI lint review</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setLintReviewOpen(false)}
+              className="text-text-muted hover:text-text-primary cursor-pointer"
+              title="Close AI lint review"
+            >
+              <X size={14} />
+            </button>
+          </div>
+          <div className="max-h-44 overflow-y-auto rounded-mac border border-border-20 bg-surface-0-60 px-3 py-2 text-2xs leading-relaxed text-text-secondary whitespace-pre-wrap">
+            {lintReviewPending ? "Reviewing lint issues with AI..." : lintReviewResult || "No lint review result yet."}
+          </div>
+        </div>
+      )}
       {scopeSuggestion && !scopeDismissed && (
         <div className="border border-accent-20 bg-accent-5 rounded-mac p-3 space-y-2">
           <div className="flex items-center justify-between">

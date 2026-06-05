@@ -1,6 +1,6 @@
 import { memo, useEffect, useState } from "react";
 import { getVersion } from "@tauri-apps/api/app";
-import { Book, GitBranch, ArrowUp, ArrowDown, Loader2, GraduationCap, AlertTriangle, Terminal, Activity, RotateCcw, MessageSquareText, Download, X } from "lucide-react";
+import { Book, GitBranch, ArrowUp, ArrowDown, Loader2, GraduationCap, AlertTriangle, Terminal, Activity, RotateCcw, MessageSquareText, Download, X, Command, Stethoscope } from "lucide-react";
 import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
 import { useGitBranches, useGitStatus, useGitSyncStatus } from "@/queries/useGitLog";
@@ -260,12 +260,21 @@ export default function BottomBar() {
         </button>
 
         <button
-          onClick={() => openDialogState("onboarding")}
+          onClick={() => openDialogState("command-palette")}
           className="flex items-center gap-1 text-text-muted hover:text-accent transition-all p-0.5 rounded cursor-pointer mr-0.5"
-          title="Onboarding Wizard"
+          title="Command Palette (⌘K)"
         >
-          <GraduationCap size={11} />
-          <span className="text-[9px] font-semibold">Setup</span>
+          <Command size={11} />
+          <span className="text-[9px] font-semibold">⌘K</span>
+        </button>
+
+        <button
+          onClick={() => openDialogState("diagnostics")}
+          className="flex items-center gap-1 text-text-muted hover:text-accent transition-all p-0.5 rounded cursor-pointer mr-0.5"
+          title="Diagnostics"
+        >
+          <Stethoscope size={11} />
+          <span className="text-[9px] font-semibold">Diag</span>
         </button>
 
         <button

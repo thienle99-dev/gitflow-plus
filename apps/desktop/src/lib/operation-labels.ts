@@ -17,6 +17,7 @@ const LABELS: Record<string, string> = {
   "ai.conflict-explain": "AI: Explain Conflict",
   "ai.commit-guardrail": "AI: Pre-Commit Guardrail",
   "ai.commit-readiness": "AI: Commit Readiness Check",
+  "ai.lint-review": "AI: Review Lint Issues",
 
   // Git mutations
   "git.merge": "Git: Merge Branch",

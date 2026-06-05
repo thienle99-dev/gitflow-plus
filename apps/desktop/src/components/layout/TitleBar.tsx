@@ -94,7 +94,7 @@ export default function TitleBar() {
       { label: "Check for Updates...", onClick: () => openDialog("settings") },
       { separator: true },
       { label: "Hide GitFlow Desktop", shortcut: "⌘H", onClick: () => { try { getCurrentWindow().hide(); } catch {} } },
-      { label: "Show All" },
+      { label: "Show All", onClick: () => { try { getCurrentWindow().show(); getCurrentWindow().setFocus(); } catch {} } },
       { separator: true },
       { label: "Quit GitFlow Desktop", shortcut: "⌘Q", onClick: handleCloseWindow }
     ],
@@ -127,7 +127,7 @@ export default function TitleBar() {
       { label: "Minimize", shortcut: "⌘M", onClick: handleMinimizeWindow },
       { label: "Zoom", onClick: handleZoomWindow },
       { separator: true },
-      { label: "Bring All to Front" }
+      { label: "Bring All to Front", onClick: () => { try { getCurrentWindow().setAlwaysOnTop(true); getCurrentWindow().setAlwaysOnTop(false); getCurrentWindow().setFocus(); } catch {} } }
     ],
     "Help": [
       { label: "Documentation", onClick: () => window.open("https://github.com/thienle99-dev/gitflow-plus", "_blank") },

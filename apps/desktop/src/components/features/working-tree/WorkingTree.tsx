@@ -3,7 +3,7 @@ import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useGitDiff, useGitStatus } from "@/queries/useGitLog";
 import { api, type FileChange, type LintDiagnostic } from "@/api/tauri";
-import { useGenerateCommitMessage, useAICommitScope, useAIDiffReview, useImproveCommitMessage, useAddCommitBody, useAICommitGuardrail, useAICommitReadiness } from "@/queries/useAI";
+import { useGenerateCommitMessage, useAICommitScope, useAIDiffReview, useImproveCommitMessage, useAddCommitBody, useAICommitGuardrail, useAICommitReadiness, useAILintReview } from "@/queries/useAI";
 import { generateLocalCommitMessage, shouldAnalyzeScope, type CommitScopeSuggestion, type CommitGuardrailResult, type CommitReadinessResult } from "@/lib/ai";
 import { useQueryClient } from "@tanstack/react-query";
 import { showToast } from "@/lib/toast";
@@ -43,6 +43,7 @@ export default function WorkingTree() {
   const addBody = useAddCommitBody(repoPath);
   const guardrail = useAICommitGuardrail(repoPath);
   const readiness = useAICommitReadiness(repoPath);
+  const lintReview = useAILintReview(repoPath);
   const [commitMessage, setCommitMessage] = useState("");
   const [lintResults, setLintResults] = useState<CommitLintResult[]>([]);
 
@@ -79,6 +80,8 @@ export default function WorkingTree() {
   const [guardrailOpen, setGuardrailOpen] = useState(false);
   const [readinessResult, setReadinessResult] = useState<CommitReadinessResult | null>(null);
   const [readinessOpen, setReadinessOpen] = useState(false);
+  const [lintReviewResult, setLintReviewResult] = useState("");
+  const [lintReviewOpen, setLintReviewOpen] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState<string | null>(null);
   const [confirmDiscardAll, setConfirmDiscardAll] = useState(false);
   const [stagedOpen, setStagedOpen] = useState(true);
@@ -327,6 +330,37 @@ export default function WorkingTree() {
     }
 
     await performActualCommit(commitMessage, amend);
+  };
+
+  const handleLintReview = async (source?: {
+    commitMessage?: string;
+    commitIssues?: CommitLintResult[];
+    codeDiagnostics?: LintDiagnostic[];
+  }) => {
+    if (!repoPath || lintReview.isPending) return;
+
+    const commitIssues = source?.commitIssues ?? lintResults;
+    const codeDiagnostics = source?.codeDiagnostics ?? [];
+    if (commitIssues.length === 0 && codeDiagnostics.length === 0) {
+      showToast("No lint issues to review", "info");
+      return;
+    }
+
+    setLintReviewOpen(true);
+    setLintReviewResult("");
+    lintReview.reset();
+
+    try {
+      const result = await lintReview.mutateAsync({
+        commitMessage: source?.commitMessage ?? commitMessage,
+        commitIssues,
+        codeDiagnostics,
+      });
+      setLintReviewResult(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "AI lint review failed";
+      showToast(message, "error");
+    }
   };
 
   const handleAIReview = async () => {
@@ -763,7 +797,12 @@ export default function WorkingTree() {
         onUndoComplete={invalidate}
         onImproveMessage={handleImproveMessage}
         onAddBody={handleAddBody}
+        onLintReview={() => handleLintReview()}
         aiReviewPending={aiReview.isPending}
+        lintReviewPending={lintReview.isPending}
+        lintReviewResult={lintReviewResult}
+        lintReviewOpen={lintReviewOpen}
+        setLintReviewOpen={setLintReviewOpen}
         guardrailPending={guardrail.isPending}
         guardrailResult={guardrailResult}
         guardrailOpen={guardrailOpen}
@@ -914,6 +953,13 @@ export default function WorkingTree() {
             performActualCommit(fixed, pendingAmend);
           }
         }}
+        onAIReview={() => handleLintReview({
+          commitMessage: pendingCommitMessage,
+          commitIssues: gateCommitErrors,
+          codeDiagnostics: gateCodeDiagnostics,
+        })}
+        aiReviewPending={lintReview.isPending}
+        aiReviewResult={lintReviewResult}
       />
       {ctxMenu && (
         <ContextMenu

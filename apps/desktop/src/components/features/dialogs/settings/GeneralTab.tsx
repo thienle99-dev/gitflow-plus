@@ -31,6 +31,7 @@ export const THEME_CARDS = [
   { id: "gruvbox-dark-hard",label: "Dark Hard",    group: "Gruvbox Dark",  colors: { bg: "#1d2021", surface: "#282828", sidebar: "#141617", accent: "#d79921", text: "#ebdbb2" } },
   { id: "gruvbox-light",    label: "Light Medium", group: "Gruvbox Light", colors: { bg: "#fbf1c7", surface: "#f9f5d7", sidebar: "#ebdbb2", accent: "#b57614", text: "#3c3836" } },
   { id: "gruvbox-light-soft",label:"Light Soft",   group: "Gruvbox Light", colors: { bg: "#f2e5bc", surface: "#ebdbb2", sidebar: "#d5c4a1", accent: "#b57614", text: "#3c3836" } },
+  { id: "gruvbox-light-hard",label:"Light Hard",   group: "Gruvbox Light", colors: { bg: "#f9f5d7", surface: "#ebdbb2", sidebar: "#d5c4a1", accent: "#b57614", text: "#3c3836" } },
 ] as const;
 
 export const THEME_GROUPS = ["OS Sync", "macOS 26 Liquid Glass", "Developer Classics", "Highly Personalized", "Gruvbox Dark", "Gruvbox Light"] as const;

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, ShieldAlert, AlertTriangle, ChevronDown, ChevronRight, Check, Sparkles } from "lucide-react";
+import { X, ShieldAlert, AlertTriangle, ChevronDown, ChevronRight, Sparkles, RefreshCw } from "lucide-react";
 import { type CommitLintResult } from "@/lib/commit-lint";
 import { type LintDiagnostic } from "@/api/tauri";
 
@@ -12,6 +12,9 @@ interface LintWarningDialogProps {
   mode?: "commit" | "review";
   onCommitAnyway: () => void;
   onAutoFixCommit: () => void;
+  onAIReview?: () => void;
+  aiReviewPending?: boolean;
+  aiReviewResult?: string;
 }
 
 export default function LintWarningDialog({
@@ -23,6 +26,9 @@ export default function LintWarningDialog({
   mode = "commit",
   onCommitAnyway,
   onAutoFixCommit,
+  onAIReview,
+  aiReviewPending = false,
+  aiReviewResult = "",
 }: LintWarningDialogProps) {
   const [expandedFiles, setExpandedFiles] = useState<Record<string, boolean>>({});
 
@@ -102,6 +108,34 @@ export default function LintWarningDialog({
 
         {/* Scrollable list of errors */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {onAIReview && (
+            <div className="border border-accent-20 bg-accent-5 rounded-mac p-3 space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  {aiReviewPending ? (
+                    <RefreshCw size={13} className="animate-spin text-accent shrink-0" />
+                  ) : (
+                    <Sparkles size={13} className="text-accent shrink-0" />
+                  )}
+                  <span className="text-xs font-semibold text-accent">AI lint review</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={onAIReview}
+                  disabled={aiReviewPending}
+                  className="h-7 px-2.5 rounded-mac border border-accent-25 bg-accent-10 text-2xs font-semibold text-accent hover:bg-accent-15 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {aiReviewPending ? "Reviewing..." : aiReviewResult ? "Run Again" : "Ask AI"}
+                </button>
+              </div>
+              {(aiReviewPending || aiReviewResult) && (
+                <div className="max-h-44 overflow-y-auto rounded-mac border border-border-20 bg-surface-0-60 px-3 py-2 text-2xs leading-relaxed text-text-secondary whitespace-pre-wrap">
+                  {aiReviewPending ? "Reviewing lint issues with AI..." : aiReviewResult}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Commit Message issues */}
           {commitErrors.length > 0 && (
             <div className="space-y-2">

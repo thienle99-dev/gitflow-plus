@@ -23,6 +23,7 @@ const THEME_OPTIONS: ThemeOption[] = [
   // Gruvbox Light
   { id: "gruvbox-light", label: "Light Medium", group: "Gruvbox Light", colors: { bg: "#fbf1c7", accent: "#b57614", text: "#3c3836" } },
   { id: "gruvbox-light-soft", label: "Light Soft", group: "Gruvbox Light", colors: { bg: "#f2e5bc", accent: "#b57614", text: "#3c3836" } },
+  { id: "gruvbox-light-hard", label: "Light Hard", group: "Gruvbox Light", colors: { bg: "#f9f5d7", accent: "#b57614", text: "#3c3836" } },
 ];
 
 const GROUPS = ["macOS", "macOS 26", "Gruvbox Dark", "Gruvbox Light"] as const;

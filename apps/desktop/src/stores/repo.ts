@@ -16,6 +16,7 @@ export type Theme =
   | "gruvbox-dark-hard"
   | "gruvbox-light"
   | "gruvbox-light-soft"
+  | "gruvbox-light-hard"
   | "one-dark"
   | "catppuccin-mocha"
   | "rose-pine"
@@ -38,6 +39,7 @@ export const THEME_CLASSES: Theme[] = [
   "gruvbox-dark-hard",
   "gruvbox-light",
   "gruvbox-light-soft",
+  "gruvbox-light-hard",
   "one-dark",
   "catppuccin-mocha",
   "rose-pine",
