@@ -104,6 +104,14 @@ GitFlow Desktop uses a two-part release system:
    python3 scripts/release.py
    ```
    This updates version in `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`, and `apps/desktop/package.json`, then creates a git tag and pushes to origin.
+   To force users to install the new version before continuing:
+   ```bash
+   python3 scripts/release.py --force-update
+   ```
+   For non-interactive releases:
+   ```bash
+   python3 scripts/release.py --version 1.2.3 --no-force-update
+   ```
 
 2. **GitHub Actions workflow** — builds and publishes cross-platform binaries:
    - Triggered automatically when a version tag (`v*.*.*`) is pushed

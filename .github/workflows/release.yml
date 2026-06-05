@@ -26,6 +26,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
         with:
@@ -73,6 +75,23 @@ jobs:
           releaseName: 'GitFlow Desktop ${{ github.ref_name }}'
           releaseDraft: true
           prerelease: false
+
+      - name: Apply release flags from tag message
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag_body="$(git for-each-ref "refs/tags/${{ github.ref_name }}" --format='%(contents)')"
+          if printf '%s\n' "$tag_body" | grep -Eiq '\[[xX]\][[:space:]]*Force update'; then
+            gh release view "${{ github.ref_name }}" --json body -q '.body // ""' > /tmp/release-body.md
+            if ! grep -Eiq '\[[xX]\][[:space:]]*Force update' /tmp/release-body.md; then
+              {
+                printf '\n\n'
+                printf '## Update Policy\n'
+                printf -- '- [x] Force update\n'
+              } >> /tmp/release-body.md
+            fi
+            gh release edit "${{ github.ref_name }}" --notes-file /tmp/release-body.md
+          fi
 
       - name: Publish GitHub release
         env:
