@@ -1173,12 +1173,28 @@ function AIReviewLine({ line }: { line: string }) {
   }
 
   const meta = aiReviewTagMeta(match[1]);
+  const itemText = `[${meta.label}] ${stripInlineMarkdown(match[2])}`;
   return (
-    <div className={`flex items-start gap-2 rounded-mac border border-l-[3px] px-2.5 py-2 ${meta.containerClassName}`}>
+    <div className={`group flex items-start gap-2 rounded-mac border border-l-[3px] px-2.5 py-2 ${meta.containerClassName}`}>
       <span className={`mt-0.5 shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-bold leading-none ${meta.badgeClassName}`}>
         {meta.label}
       </span>
       <p className="min-w-0 flex-1 whitespace-pre-wrap text-text-primary">{stripInlineMarkdown(match[2])}</p>
+      <button
+        type="button"
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(itemText);
+            showToast("Copied to clipboard", "success");
+          } catch {
+            showToast("Failed to copy", "error");
+          }
+        }}
+        className="mt-0.5 shrink-0 h-4 w-4 inline-flex items-center justify-center rounded text-text-muted hover:text-text-primary opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+        title="Copy this finding"
+      >
+        <Clipboard size={10} />
+      </button>
     </div>
   );
 }

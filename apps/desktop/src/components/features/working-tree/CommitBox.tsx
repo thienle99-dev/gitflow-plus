@@ -56,7 +56,7 @@ function formatReadinessText(result: CommitReadinessResult): string {
   return lines.join("\n");
 }
 
-function CopyButton({ text, label }: { text: string; label?: string }) {
+function CopyButton({ text, label, hoverOnly = true }: { text: string; label?: string; hoverOnly?: boolean }) {
   return (
     <button
       type="button"
@@ -68,7 +68,7 @@ function CopyButton({ text, label }: { text: string; label?: string }) {
           showToast("Failed to copy", "error");
         }
       }}
-      className="h-5 w-5 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer"
+      className={`${hoverOnly ? "opacity-0 group-hover:opacity-100" : ""} shrink-0 h-5 w-5 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-all cursor-pointer`}
       title={label || "Copy to clipboard"}
     >
       <Clipboard size={11} />
@@ -443,7 +443,7 @@ export default function CommitBox({
             </div>
             <div className="flex items-center gap-0.5">
               {!lintReviewPending && lintReviewResult && (
-                <CopyButton text={lintReviewResult} label="Copy lint review" />
+                <CopyButton text={lintReviewResult} label="Copy lint review" hoverOnly={false} />
               )}
               <button
                 type="button"
@@ -587,7 +587,7 @@ export default function CommitBox({
             </div>
             <div className="flex items-center gap-0.5">
               {guardrailResult && (
-                <CopyButton text={formatGuardrailText(guardrailResult)} label="Copy guardrail report" />
+                <CopyButton text={formatGuardrailText(guardrailResult)} label="Copy guardrail report" hoverOnly={false} />
               )}
               <button
                 type="button"
@@ -610,8 +610,10 @@ export default function CommitBox({
 
               {guardrailResult.findings.length > 0 && (
                 <div className="space-y-1">
-                  {guardrailResult.findings.map((finding, i) => (
-                    <div key={i} className={`flex items-start gap-2 p-2 rounded-mac text-2xs ${
+                  {guardrailResult.findings.map((finding, i) => {
+                    const findingText = `[${finding.severity.toUpperCase()}] ${finding.category}: ${finding.message}${finding.file ? ` (${finding.file})` : ""}${finding.action ? `\n  → ${finding.action}` : ""}`;
+                    return (
+                    <div key={i} className={`group flex items-start gap-2 p-2 rounded-mac text-2xs ${
                       finding.severity === "critical"
                         ? "bg-[#ff453a]/8 border-l-2 border-l-[#ff453a]"
                         : finding.severity === "high"
@@ -628,13 +630,15 @@ export default function CommitBox({
                       }`}>
                         {finding.category}
                       </span>
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <span className="text-text-primary">{finding.message}</span>
                         {finding.file && <span className="text-text-muted ml-1">({finding.file})</span>}
                         {finding.action && <span className="text-text-muted block mt-0.5 italic">{finding.action}</span>}
                       </div>
+                      <CopyButton text={findingText} label="Copy finding" />
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 
@@ -692,7 +696,7 @@ export default function CommitBox({
             </div>
             <div className="flex items-center gap-0.5">
               {readinessResult && (
-                <CopyButton text={formatReadinessText(readinessResult)} label="Copy readiness report" />
+                <CopyButton text={formatReadinessText(readinessResult)} label="Copy readiness report" hoverOnly={false} />
               )}
               <button
                 type="button"
@@ -715,8 +719,10 @@ export default function CommitBox({
 
               {readinessResult.items.length > 0 && (
                 <div className="space-y-1">
-                  {readinessResult.items.map((item, i) => (
-                    <div key={i} className={`flex items-start gap-2 p-2 rounded-mac text-2xs ${
+                  {readinessResult.items.map((item, i) => {
+                    const itemText = `[${item.severity.toUpperCase()}] ${item.category}: ${item.message}${item.file ? ` (${item.file})` : ""}${item.action ? `\n  → ${item.action}` : ""}`;
+                    return (
+                    <div key={i} className={`group flex items-start gap-2 p-2 rounded-mac text-2xs ${
                       item.severity === "blocker"
                         ? "bg-[#ff453a]/8 border-l-2 border-l-[#ff453a]"
                         : item.severity === "warning"
@@ -733,13 +739,15 @@ export default function CommitBox({
                       }`}>
                         {item.category}
                       </span>
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <span className="text-text-primary">{item.message}</span>
                         {item.file && <span className="text-text-muted ml-1">({item.file})</span>}
                         {item.action && <span className="text-text-muted block mt-0.5 italic">{item.action}</span>}
                       </div>
+                      <CopyButton text={itemText} label="Copy item" />
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
