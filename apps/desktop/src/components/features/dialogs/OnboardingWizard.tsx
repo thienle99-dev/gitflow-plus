@@ -17,6 +17,17 @@ import { useRepoStore, THEME_CLASSES, applyTheme, type Theme } from "@/stores/re
 import { THEME_CARDS, THEME_GROUPS, ThemeSkeletonCard } from "./SettingsDialog";
 import { Switch } from "@/components/ui/form";
 import { AI_REVIEW_CHECKLIST_OPTIONS, DEFAULT_AI_REVIEW_CHECKLIST, type AIReviewMode } from "@/lib/ai";
+import {
+  AI_PROVIDER_OPTIONS,
+  createDefaultProfile,
+  defaultApiUrlForProvider,
+  getActiveProfileId,
+  loadActiveProfile,
+  loadProfiles,
+  providerNeedsApiKey,
+  saveProfiles,
+  type AIProviderType,
+} from "@/lib/ai-profiles";
 
 const ONBOARDING_KEY = "gitflowOnboardingComplete";
 
@@ -48,16 +59,50 @@ const LS_KEY_REOPEN_LAST_REPO = "gitflowReopenLastRepo";
 const LS_KEY_CONFIRM_DANGEROUS = "gitflowConfirmDangerousActions";
 const LS_KEY_DIFF_MODE = "gitflowDefaultDiffViewMode";
 
+function defaultModelForProvider(provider: AIProviderType): string {
+  switch (provider) {
+    case "anthropic":
+      return "claude-sonnet-4-20250514";
+    case "ollama":
+      return "llama3.1";
+    case "llamacpp":
+      return "local-model";
+    case "openai-compatible":
+      return "gpt-4o-mini";
+  }
+}
+
+function normalizeModelForProvider(provider: AIProviderType, model: string | null | undefined): string {
+  if (!model) return defaultModelForProvider(provider);
+  if (provider === "openai-compatible" && model.startsWith("claude-")) {
+    return defaultModelForProvider(provider);
+  }
+  return model;
+}
+
 export default function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
   const [step, setStep] = useState(0);
   const theme = useRepoStore((s) => s.theme);
   const setTheme = useRepoStore((s) => s.setTheme);
+  const [initialAiProfile] = useState(() => loadActiveProfile());
 
   // AI state
-  const [aiApiKey, setAiApiKey] = useState(() => localStorage.getItem(LS_KEY_AI_API_KEY) || "");
-  const [aiApiUrl, setAiApiUrl] = useState(() => localStorage.getItem(LS_KEY_AI_API_URL) || "https://api.openai.com/v1");
-  const [aiModel, setAiModel] = useState(() => localStorage.getItem(LS_KEY_AI_MODEL) || "claude-sonnet-4-20250514");
-  const [aiReviewModel, setAiReviewModel] = useState(() => localStorage.getItem(LS_KEY_AI_REVIEW_MODEL) || localStorage.getItem(LS_KEY_AI_MODEL) || "claude-sonnet-4-20250514");
+  const [aiProvider, setAiProvider] = useState<AIProviderType>(() => initialAiProfile.provider || "openai-compatible");
+  const [aiApiKey, setAiApiKey] = useState(() => initialAiProfile.apiKey || localStorage.getItem(LS_KEY_AI_API_KEY) || "");
+  const [aiApiUrl, setAiApiUrl] = useState(
+    () => initialAiProfile.apiUrl || localStorage.getItem(LS_KEY_AI_API_URL) || defaultApiUrlForProvider(initialAiProfile.provider || "openai-compatible"),
+  );
+  const [aiModel, setAiModel] = useState(() => {
+    const provider = initialAiProfile.provider || "openai-compatible";
+    return normalizeModelForProvider(provider, initialAiProfile.commitModel || localStorage.getItem(LS_KEY_AI_MODEL));
+  });
+  const [aiReviewModel, setAiReviewModel] = useState(() => {
+    const provider = initialAiProfile.provider || "openai-compatible";
+    return normalizeModelForProvider(
+      provider,
+      initialAiProfile.reviewModel || localStorage.getItem(LS_KEY_AI_REVIEW_MODEL) || localStorage.getItem(LS_KEY_AI_MODEL),
+    );
+  });
   const [customRules, setCustomRules] = useState(() => localStorage.getItem(LS_KEY_AI_CUSTOM_RULES) || "");
   const [reviewLanguage, setReviewLanguage] = useState(() => localStorage.getItem(LS_KEY_AI_REVIEW_LANGUAGE) || "auto");
   const [reviewChecklist, setReviewChecklist] = useState<Exclude<AIReviewMode, "all" | "custom">[]>(() => {
@@ -97,8 +142,39 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
 
   if (!open) return null;
 
+  const persistAIProfile = () => {
+    const profiles = loadProfiles();
+    const activeId = getActiveProfileId();
+    const existing = profiles.find((profile) => profile.id === activeId) || profiles[0];
+    const updatedAt = Date.now();
+    const profile = existing
+      ? {
+          ...existing,
+          provider: aiProvider,
+          apiKey: aiApiKey,
+          apiUrl: aiApiUrl,
+          commitModel: aiModel,
+          reviewModel: aiReviewModel,
+          updatedAt,
+        }
+      : createDefaultProfile({
+          provider: aiProvider,
+          apiKey: aiApiKey,
+          apiUrl: aiApiUrl,
+          commitModel: aiModel,
+          reviewModel: aiReviewModel,
+          updatedAt,
+        });
+    const nextProfiles = profiles.some((item) => item.id === profile.id)
+      ? profiles.map((item) => (item.id === profile.id ? profile : item))
+      : [profile, ...profiles];
+
+    saveProfiles(nextProfiles, profile.id);
+  };
+
   const persistSettings = () => {
     // AI
+    persistAIProfile();
     if (aiApiKey) localStorage.setItem(LS_KEY_AI_API_KEY, aiApiKey);
     else localStorage.removeItem(LS_KEY_AI_API_KEY);
     localStorage.setItem(LS_KEY_AI_API_URL, aiApiUrl);
@@ -235,6 +311,8 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
           )}
           {step === 2 && (
             <AIStep
+              aiProvider={aiProvider}
+              setAiProvider={setAiProvider}
               aiApiKey={aiApiKey}
               setAiApiKey={setAiApiKey}
               aiApiUrl={aiApiUrl}
@@ -384,6 +462,8 @@ function ThemeStep({ theme, setTheme }: { theme: Theme; setTheme: (t: Theme) => 
 }
 
 interface AIStepProps {
+  aiProvider: AIProviderType;
+  setAiProvider: (v: AIProviderType) => void;
   aiApiKey: string;
   setAiApiKey: (v: string) => void;
   aiApiUrl: string;
@@ -397,12 +477,29 @@ interface AIStepProps {
 }
 
 function AIStep({
+  aiProvider, setAiProvider,
   aiApiKey, setAiApiKey,
   aiApiUrl, setAiApiUrl,
   aiModel, setAiModel,
   aiReviewModel, setAiReviewModel,
   showApiKey, setShowApiKey,
 }: AIStepProps) {
+  const needsApiKey = providerNeedsApiKey(aiProvider);
+  const apiUrlPlaceholder = aiProvider === "openai-compatible"
+    ? "https://api.openai.com/v1"
+    : defaultApiUrlForProvider(aiProvider);
+
+  const handleProviderChange = (provider: AIProviderType) => {
+    setAiProvider(provider);
+    setAiApiUrl(defaultApiUrlForProvider(provider));
+    const defaultModel = defaultModelForProvider(provider);
+    setAiModel(defaultModel);
+    setAiReviewModel(defaultModel);
+    if (!providerNeedsApiKey(provider)) {
+      setAiApiKey("");
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="text-center space-y-1">
@@ -414,23 +511,50 @@ function AIStep({
       </div>
       <div className="space-y-3 max-w-[400px] mx-auto">
         <div>
+          <label className="text-2xs font-medium text-text-secondary block mb-1.5">Provider</label>
+          <div className="grid grid-cols-2 gap-1.5">
+            {AI_PROVIDER_OPTIONS.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => handleProviderChange(option.id)}
+                className={`rounded-md border px-2.5 py-2 text-left transition-all ${
+                  aiProvider === option.id
+                    ? "border-accent-35 bg-accent-10 text-text-primary"
+                    : "border-border bg-surface-1 text-text-secondary hover:bg-surface-2"
+                }`}
+              >
+                <div className="text-2xs font-bold">{option.label}</div>
+                <div className="mt-0.5 text-[10px] leading-snug text-text-muted">{option.description}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
           <label className="text-2xs font-medium text-text-secondary block mb-1">API Base URL</label>
           <input
             type="text"
             value={aiApiUrl}
             onChange={(e) => setAiApiUrl(e.target.value)}
-            placeholder="https://api.openai.com/v1"
+            placeholder={apiUrlPlaceholder}
             className="w-full h-7 px-2.5 text-xs bg-surface-1 border border-border rounded-md text-text-primary placeholder:text-text-muted-60 focus:border-accent focus:ring-1 focus:ring-accent-20 outline-none"
           />
+          {aiProvider === "openai-compatible" && (
+            <div className="mt-1 text-[10px] text-text-muted">
+              Leave empty to use the default OpenAI endpoint.
+            </div>
+          )}
         </div>
         <div>
-          <label className="text-2xs font-medium text-text-secondary block mb-1">API Key</label>
+          <label className="text-2xs font-medium text-text-secondary block mb-1">
+            API Key{!needsApiKey ? " (optional for local providers)" : ""}
+          </label>
           <div className="relative">
             <input
               type={showApiKey ? "text" : "password"}
               value={aiApiKey}
               onChange={(e) => setAiApiKey(e.target.value)}
-              placeholder="sk-..."
+              placeholder={needsApiKey ? "sk-..." : "No key required"}
               className="w-full h-7 px-2.5 pr-8 text-xs bg-surface-1 border border-border rounded-md text-text-primary placeholder:text-text-muted-60 focus:border-accent focus:ring-1 focus:ring-accent-20 outline-none font-mono"
             />
             <button
@@ -450,7 +574,7 @@ function AIStep({
             type="text"
             value={aiModel}
             onChange={(e) => setAiModel(e.target.value)}
-            placeholder="claude-sonnet-4-20250514"
+            placeholder={defaultModelForProvider(aiProvider)}
             className="w-full h-7 px-2.5 text-xs bg-surface-1 border border-border rounded-md text-text-primary placeholder:text-text-muted-60 focus:border-accent focus:ring-1 focus:ring-accent-20 outline-none"
           />
         </div>
@@ -462,7 +586,7 @@ function AIStep({
             type="text"
             value={aiReviewModel}
             onChange={(e) => setAiReviewModel(e.target.value)}
-            placeholder="claude-sonnet-4-20250514"
+            placeholder={defaultModelForProvider(aiProvider)}
             className="w-full h-7 px-2.5 text-xs bg-surface-1 border border-border rounded-md text-text-primary placeholder:text-text-muted-60 focus:border-accent focus:ring-1 focus:ring-accent-20 outline-none"
           />
         </div>
