@@ -11,6 +11,7 @@ import Dialog from "@/components/ui/overlay/Dialog";
 import {
   GitBranch, Plus, Check, Merge, Tag, AlertTriangle,
   Rocket, Shield, Zap, ChevronRight, Sparkles,
+  ArrowRight, Trash2, FileCode2,
 } from "lucide-react";
 
 type ViewMode =
@@ -409,6 +410,13 @@ export default function GitFlowDialog({ open, onClose, initialMode }: GitFlowDia
               options={MERGE_STRATEGIES.map((s) => ({ value: s.value, label: s.label }))}
             />
             <Checkbox label="Delete branch after merge" checked={deleteAfterFinish} onChange={setDeleteAfterFinish} />
+            {branchName && (
+              <ActionPreview steps={[
+                { icon: "checkout", label: `Checkout ${gitflowConfig?.develop}` },
+                { icon: "merge", label: `Merge ${gitflowConfig?.feature_prefix}${branchName} → ${gitflowConfig?.develop}`, detail: mergeStrategy === "squash" ? "Squash merge" : mergeStrategy === "rebase" ? "Rebase" : "Regular merge" },
+                ...(deleteAfterFinish ? [{ icon: "delete" as const, label: `Delete branch ${gitflowConfig?.feature_prefix}${branchName}` }] : []),
+              ]} />
+            )}
           </div>
         )}
 
@@ -461,6 +469,16 @@ export default function GitFlowDialog({ open, onClose, initialMode }: GitFlowDia
                 generating={generateTagDescription.isPending}
                 canGenerate={!!branchName.trim()}
               />
+            )}
+            {branchName && (
+              <ActionPreview steps={[
+                { icon: "checkout", label: `Checkout ${gitflowConfig?.master}` },
+                { icon: "merge", label: `Merge ${gitflowConfig?.release_prefix}${branchName} → ${gitflowConfig?.master}`, detail: mergeStrategy === "squash" ? "Squash merge" : mergeStrategy === "rebase" ? "Rebase" : "Regular merge" },
+                { icon: "checkout", label: `Checkout ${gitflowConfig?.develop}` },
+                { icon: "merge", label: `Merge ${gitflowConfig?.release_prefix}${branchName} → ${gitflowConfig?.develop}` },
+                ...(createTag ? [{ icon: "tag" as const, label: `Create tag ${gitflowConfig?.versiontag_prefix}${branchName} on ${gitflowConfig?.master}` }] : []),
+                { icon: "delete", label: `Delete branch ${gitflowConfig?.release_prefix}${branchName}` },
+              ]} />
             )}
           </div>
         )}
@@ -517,6 +535,16 @@ export default function GitFlowDialog({ open, onClose, initialMode }: GitFlowDia
                 generating={generateTagDescription.isPending}
                 canGenerate={!!branchName.trim()}
               />
+            )}
+            {branchName && (
+              <ActionPreview steps={[
+                { icon: "checkout", label: `Checkout ${gitflowConfig?.master}` },
+                { icon: "merge", label: `Merge ${gitflowConfig?.hotfix_prefix}${branchName} → ${gitflowConfig?.master}`, detail: mergeStrategy === "squash" ? "Squash merge" : mergeStrategy === "rebase" ? "Rebase" : "Regular merge" },
+                { icon: "checkout", label: `Checkout ${gitflowConfig?.develop}` },
+                { icon: "merge", label: `Merge ${gitflowConfig?.hotfix_prefix}${branchName} → ${gitflowConfig?.develop}` },
+                ...(createTag ? [{ icon: "tag" as const, label: `Create tag ${gitflowConfig?.versiontag_prefix}${branchName} on ${gitflowConfig?.master}` }] : []),
+                { icon: "delete", label: `Delete branch ${gitflowConfig?.hotfix_prefix}${branchName}` },
+              ]} />
             )}
           </div>
         )}
@@ -704,5 +732,49 @@ function ModeTab({
       <span className={active ? color : ""}>{icon}</span>
       {label}
     </button>
+  );
+}
+
+interface PreviewStep {
+  icon: "checkout" | "merge" | "tag" | "delete";
+  label: string;
+  detail?: string;
+}
+
+function ActionPreview({ steps }: { steps: PreviewStep[] }) {
+  return (
+    <div className="rounded border border-accent/20 bg-accent/5 overflow-hidden">
+      <div className="px-3 py-1.5 border-b border-accent/15 flex items-center gap-1.5">
+        <FileCode2 size={11} className="text-accent" />
+        <span className="text-2xs font-semibold text-accent uppercase tracking-wider">Action Preview</span>
+      </div>
+      <div className="px-3 py-2 space-y-0">
+        {steps.map((step, i) => (
+          <div key={i} className="flex items-start gap-2 relative">
+            {/* Vertical connector line */}
+            {i < steps.length - 1 && (
+              <div className="absolute left-[7px] top-[18px] w-px h-[calc(100%)] bg-accent/20" />
+            )}
+            {/* Step icon */}
+            <div className="shrink-0 mt-0.5">
+              {step.icon === "checkout" && <GitBranch size={11} className="text-blue-400" />}
+              {step.icon === "merge" && <Merge size={11} className="text-green-400" />}
+              {step.icon === "tag" && <Tag size={11} className="text-purple-400" />}
+              {step.icon === "delete" && <Trash2 size={11} className="text-red-400" />}
+            </div>
+            {/* Step label */}
+            <div className="flex-1 min-w-0 pb-1">
+              <span className="text-2xs text-text-primary leading-tight">
+                {step.icon === "checkout" && <ArrowRight size={9} className="inline mr-1 text-blue-400" />}
+                {step.label}
+              </span>
+              {step.detail && (
+                <span className="ml-1.5 text-3xs text-text-muted">({step.detail})</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
