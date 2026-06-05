@@ -106,6 +106,10 @@ export function applyTheme(theme: Theme) {
     };
     media.addEventListener("change", systemThemeListener);
   }
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("gitflow-theme-applied", { detail: { theme } }));
+  }
 }
 
 const initialTheme = readStoredTheme();

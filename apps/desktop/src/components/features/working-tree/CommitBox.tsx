@@ -4,10 +4,12 @@ import { type CommitScopeSuggestion, type CommitGuardrailResult, type CommitRead
 import { type CommitLintResult, autoFixCommitMessage } from "@/lib/commit-lint";
 import UndoButton from "@/components/features/actions/UndoButton";
 import CommitTemplatePicker from "./CommitTemplatePicker";
+import { showToast } from "@/lib/toast";
 import { AlertCircle, ShieldAlert, ClipboardCheck } from "lucide-react";
 import {
   AlignLeft,
   Check,
+  Clipboard,
   GitCommit,
   Layers,
   RefreshCw,
@@ -16,6 +18,63 @@ import {
   Wand2,
   X,
 } from "lucide-react";
+
+function formatGuardrailText(result: CommitGuardrailResult): string {
+  const lines: string[] = [];
+  lines.push(`Pre-Commit Guardrail — ${result.verdict.toUpperCase()} (Risk: ${result.riskScore}/100)`);
+  lines.push(result.summary);
+  if (result.findings.length > 0) {
+    lines.push("");
+    lines.push("Findings:");
+    for (const f of result.findings) {
+      lines.push(`  [${f.severity.toUpperCase()}] ${f.category}: ${f.message}${f.file ? ` (${f.file})` : ""}`);
+      if (f.action) lines.push(`    → ${f.action}`);
+    }
+  }
+  if (result.suggestions.length > 0) {
+    lines.push("");
+    lines.push("Suggestions:");
+    for (const s of result.suggestions) {
+      lines.push(`  → ${s}`);
+    }
+  }
+  return lines.join("\n");
+}
+
+function formatReadinessText(result: CommitReadinessResult): string {
+  const lines: string[] = [];
+  lines.push(`Commit Readiness — ${result.verdict.toUpperCase()} (${result.stagedCount} staged, ${result.unstagedCount} unstaged)`);
+  lines.push(result.summary);
+  if (result.items.length > 0) {
+    lines.push("");
+    lines.push("Items:");
+    for (const item of result.items) {
+      lines.push(`  [${item.severity.toUpperCase()}] ${item.category}: ${item.message}${item.file ? ` (${item.file})` : ""}`);
+      if (item.action) lines.push(`    → ${item.action}`);
+    }
+  }
+  return lines.join("\n");
+}
+
+function CopyButton({ text, label }: { text: string; label?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          showToast("Copied to clipboard", "success");
+        } catch {
+          showToast("Failed to copy", "error");
+        }
+      }}
+      className="h-5 w-5 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer"
+      title={label || "Copy to clipboard"}
+    >
+      <Clipboard size={11} />
+    </button>
+  );
+}
 
 export interface CommitBoxProps {
   commitMessage: string;
@@ -382,14 +441,19 @@ export default function CommitBox({
               )}
               <span className="text-xs font-semibold text-accent">AI lint review</span>
             </div>
-            <button
-              type="button"
-              onClick={() => setLintReviewOpen(false)}
-              className="text-text-muted hover:text-text-primary cursor-pointer"
-              title="Close AI lint review"
-            >
-              <X size={14} />
-            </button>
+            <div className="flex items-center gap-0.5">
+              {!lintReviewPending && lintReviewResult && (
+                <CopyButton text={lintReviewResult} label="Copy lint review" />
+              )}
+              <button
+                type="button"
+                onClick={() => setLintReviewOpen(false)}
+                className="text-text-muted hover:text-text-primary cursor-pointer"
+                title="Close AI lint review"
+              >
+                <X size={14} />
+              </button>
+            </div>
           </div>
           <div className="max-h-44 overflow-y-auto rounded-mac border border-border-20 bg-surface-0-60 px-3 py-2 text-2xs leading-relaxed text-text-secondary whitespace-pre-wrap">
             {lintReviewPending ? "Reviewing lint issues with AI..." : lintReviewResult || "No lint review result yet."}
@@ -521,13 +585,18 @@ export default function CommitBox({
                 </span>
               )}
             </div>
-            <button
-              type="button"
-              onClick={() => setGuardrailOpen(false)}
-              className="h-5 w-5 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer"
-            >
-              <X size={12} />
-            </button>
+            <div className="flex items-center gap-0.5">
+              {guardrailResult && (
+                <CopyButton text={formatGuardrailText(guardrailResult)} label="Copy guardrail report" />
+              )}
+              <button
+                type="button"
+                onClick={() => setGuardrailOpen(false)}
+                className="h-5 w-5 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer"
+              >
+                <X size={12} />
+              </button>
+            </div>
           </div>
 
           {guardrailPending ? (
@@ -621,13 +690,18 @@ export default function CommitBox({
                 </span>
               )}
             </div>
-            <button
-              type="button"
-              onClick={() => setReadinessOpen(false)}
-              className="h-5 w-5 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer"
-            >
-              <X size={12} />
-            </button>
+            <div className="flex items-center gap-0.5">
+              {readinessResult && (
+                <CopyButton text={formatReadinessText(readinessResult)} label="Copy readiness report" />
+              )}
+              <button
+                type="button"
+                onClick={() => setReadinessOpen(false)}
+                className="h-5 w-5 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer"
+              >
+                <X size={12} />
+              </button>
+            </div>
           </div>
 
           {readinessPending ? (

@@ -11,7 +11,7 @@ import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
 import { fileIcon, statusLabel, statusColor } from "@/components/ui/shared";
 import ContextMenu, { type ContextMenuItem } from "@/components/ui/overlay/ContextMenu";
 import LazyDiffViewer from "@/components/features/diff/LazyDiffViewer";
-import { AlertCircle, ShieldAlert, MessageSquare } from "lucide-react";
+import { AlertCircle, Clipboard, ShieldAlert, MessageSquare } from "lucide-react";
 import { lintCommitMessage, autoFixCommitMessage, type CommitLintResult } from "@/lib/commit-lint";
 import { LintWarningDialog } from "@/components/features/dialogs";
 import {
@@ -721,6 +721,23 @@ export default function WorkingTree() {
                   <span className="mr-1 text-[9px] font-semibold text-text-secondary bg-surface-2 border border-border-40 rounded px-1.5 py-0.5 leading-none">
                     {aiReviewTagCount} tagged
                   </span>
+                )}
+                {!aiReview.isPending && aiReviewResult && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(aiReviewResult);
+                        showToast("Copied to clipboard", "success");
+                      } catch {
+                        showToast("Failed to copy", "error");
+                      }
+                    }}
+                    className={`${aiReviewCollapsed ? "h-5 w-5" : "h-6 w-6"} inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer`}
+                    title="Copy AI review"
+                  >
+                    <Clipboard size={aiReviewCollapsed ? 11 : 12} />
+                  </button>
                 )}
                 <button
                   type="button"

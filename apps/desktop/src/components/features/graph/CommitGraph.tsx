@@ -36,6 +36,7 @@ export default function CommitGraph() {
   const repoPath = useRepoStore((s) => s.repoPath);
   const selectedRef = useRepoStore((s) => s.selectedRef);
   const theme = useRepoStore((s) => s.theme);
+  const [appliedTheme, setAppliedTheme] = useState(theme);
   const selectCommit = useUIStore((s) => s.selectCommit);
   const selectedCommit = useUIStore((s) => s.selectedCommit);
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useGitLog(repoPath, selectedRef);
@@ -49,6 +50,19 @@ export default function CommitGraph() {
   const [confirmCherryPick, setConfirmCherryPick] = useState<string | null>(null);
   const [confirmRevert, setConfirmRevert] = useState<string | null>(null);
   const [filterScope, setFilterScope] = useState<CommitFilterScope>("all");
+
+  useEffect(() => {
+    setAppliedTheme(theme);
+  }, [theme]);
+
+  useEffect(() => {
+    const handleThemeApplied = (event: Event) => {
+      const nextTheme = (event as CustomEvent<{ theme?: typeof theme }>).detail?.theme;
+      if (nextTheme) setAppliedTheme(nextTheme);
+    };
+    window.addEventListener("gitflow-theme-applied", handleThemeApplied);
+    return () => window.removeEventListener("gitflow-theme-applied", handleThemeApplied);
+  }, []);
 
   // Preflight gates for risky operations
   const { data: gitflowConfig } = useGitFlowDetect(repoPath);
@@ -143,7 +157,7 @@ export default function CommitGraph() {
     selectedCommit,
     hoveredLane: hover.lane,
     totalLanes,
-    theme,
+    theme: appliedTheme,
   });
 
   // Infinite loading — triggered when the last virtual item becomes visible

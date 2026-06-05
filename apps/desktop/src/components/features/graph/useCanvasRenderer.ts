@@ -246,6 +246,14 @@ let _cachedTheme: string | null = null;
 let _cachedSurface0 = "#1c1c1e";
 let _cachedTextPrimary = "#e5e5e5";
 let _cachedTextSecondary = "#a1a1a6";
+let _cachedTextMuted = "#86868b";
+let _cachedAccent = "#0a84ff";
+let _cachedAccentFg = "#ffffff";
+let _cachedSuccess = "#30d158";
+let _cachedDanger = "#ff375f";
+let _cachedWarning = "#ff9f0a";
+let _cachedInfo = "#64d2ff";
+let _cachedGraphPalette = ["#0a84ff", "#30d158", "#ff9f0a", "#64d2ff", "#ff375f"];
 
 function readThemeColors(themeKey: string) {
   if (_cachedTheme === themeKey) return;
@@ -254,6 +262,48 @@ function readThemeColors(themeKey: string) {
   _cachedSurface0 = styles.getPropertyValue("--surface-0").trim() || "#1c1c1e";
   _cachedTextPrimary = styles.getPropertyValue("--text-primary").trim() || "#e5e5e5";
   _cachedTextSecondary = styles.getPropertyValue("--text-secondary").trim() || "#a1a1a6";
+  _cachedTextMuted = styles.getPropertyValue("--text-muted").trim() || "#86868b";
+  _cachedAccent = styles.getPropertyValue("--accent").trim() || "#0a84ff";
+  _cachedAccentFg = styles.getPropertyValue("--accent-fg").trim() || "#ffffff";
+  _cachedSuccess = styles.getPropertyValue("--success").trim() || "#30d158";
+  _cachedDanger = styles.getPropertyValue("--danger").trim() || "#ff375f";
+  _cachedWarning = styles.getPropertyValue("--warning").trim() || "#ff9f0a";
+  _cachedInfo = styles.getPropertyValue("--info").trim() || "#64d2ff";
+  _cachedGraphPalette = [
+    _cachedAccent,
+    _cachedSuccess,
+    _cachedWarning,
+    _cachedInfo,
+    _cachedDanger,
+    _cachedTextMuted,
+  ];
+}
+
+function laneColor(lane: number) {
+  return _cachedGraphPalette[Math.abs(lane) % _cachedGraphPalette.length] || _cachedAccent;
+}
+
+function withAlpha(color: string, alpha: number) {
+  const clamped = Math.max(0, Math.min(1, alpha));
+  const hex = color.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (hex) {
+    const raw = hex[1].length === 3
+      ? hex[1].split("").map((char) => char + char).join("")
+      : hex[1];
+    const value = Number.parseInt(raw, 16);
+    const r = (value >> 16) & 255;
+    const g = (value >> 8) & 255;
+    const b = value & 255;
+    return `rgba(${r}, ${g}, ${b}, ${clamped})`;
+  }
+
+  const rgba = color.match(/^rgba?\(([^)]+)\)$/i);
+  if (rgba) {
+    const parts = rgba[1].split(",").map((part) => part.trim()).slice(0, 3);
+    return `rgba(${parts.join(", ")}, ${clamped})`;
+  }
+
+  return color;
 }
 
 export function useCanvasRenderer({
@@ -347,6 +397,11 @@ export function useCanvasRenderer({
     const surface0 = _cachedSurface0;
     const textPrimary = _cachedTextPrimary;
     const textSecondary = _cachedTextSecondary;
+    const textMuted = _cachedTextMuted;
+    const accent = _cachedAccent;
+    const accentFg = _cachedAccentFg;
+    const warning = _cachedWarning;
+    const danger = _cachedDanger;
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, width, height);
@@ -358,7 +413,7 @@ export function useCanvasRenderer({
     if (hoveredRow !== null) {
       const hoverY = hoveredRow * ROW_HEIGHT + offsetY + ROW_HEIGHT / 2;
       if (hoverY > -ROW_HEIGHT && hoverY < height + ROW_HEIGHT) {
-        ctx.fillStyle = "rgba(255,255,255,0.025)";
+        ctx.fillStyle = withAlpha(textPrimary, 0.035);
         ctx.fillRect(0, hoverY - ROW_HEIGHT / 2, width, ROW_HEIGHT);
       }
     }
@@ -369,7 +424,7 @@ export function useCanvasRenderer({
       ctx.beginPath();
       ctx.rect(0, 0, graphClipRight, height);
       ctx.clip();
-      ctx.fillStyle = "rgba(255,255,255,0.035)";
+      ctx.fillStyle = withAlpha(accent, 0.08);
       const laneX = laneXFor(hoveredLane, laneWidth);
       ctx.fillRect(laneX - 6, 0, laneWidth + 3, height);
       ctx.restore();
@@ -383,20 +438,20 @@ export function useCanvasRenderer({
       const cy = selected.y + offsetY;
       // Outer glow
       const gradient = ctx.createLinearGradient(0, cy - ROW_HEIGHT / 2, 0, cy + ROW_HEIGHT / 2);
-      gradient.addColorStop(0, "rgba(10,132,255,0.0)");
-      gradient.addColorStop(0.15, "rgba(10,132,255,0.08)");
-      gradient.addColorStop(0.5, "rgba(10,132,255,0.12)");
-      gradient.addColorStop(0.85, "rgba(10,132,255,0.08)");
-      gradient.addColorStop(1, "rgba(10,132,255,0.0)");
+      gradient.addColorStop(0, withAlpha(accent, 0));
+      gradient.addColorStop(0.15, withAlpha(accent, 0.08));
+      gradient.addColorStop(0.5, withAlpha(accent, 0.12));
+      gradient.addColorStop(0.85, withAlpha(accent, 0.08));
+      gradient.addColorStop(1, withAlpha(accent, 0));
       ctx.fillStyle = gradient;
       ctx.fillRect(0, cy - ROW_HEIGHT / 2 - 2, width, ROW_HEIGHT + 4);
 
       // Inner highlight
-      ctx.fillStyle = "rgba(10,132,255,0.10)";
+      ctx.fillStyle = withAlpha(accent, 0.1);
       ctx.fillRect(0, cy - ROW_HEIGHT / 2, width, ROW_HEIGHT);
 
       // Left accent bar
-      ctx.fillStyle = "rgba(10,132,255,0.6)";
+      ctx.fillStyle = withAlpha(accent, 0.6);
       ctx.fillRect(0, cy - ROW_HEIGHT / 2 + 2, 3, ROW_HEIGHT - 4);
     }
 
@@ -414,7 +469,7 @@ export function useCanvasRenderer({
         continue;
       }
       ctx.beginPath();
-      ctx.strokeStyle = edge.color;
+      ctx.strokeStyle = laneColor(edge.fromLane);
       ctx.globalAlpha = 0.72;
       ctx.lineWidth = 1.35;
       if (edge.toLane === edge.fromLane) {
@@ -439,12 +494,13 @@ export function useCanvasRenderer({
       const cy = commit.y + offsetY;
       const isSelected = commit.hash === selectedCommit;
       const x = laneXFor(commit.lane, laneWidth);
+      const commitColor = laneColor(commit.lane);
 
       ctx.beginPath();
       ctx.arc(x, cy, NODE_RADIUS, 0, Math.PI * 2);
-      ctx.fillStyle = isSelected ? "#ffffff" : commit.color;
+      ctx.fillStyle = isSelected ? accentFg : commitColor;
       ctx.fill();
-      ctx.strokeStyle = commit.color;
+      ctx.strokeStyle = commitColor;
       ctx.lineWidth = isSelected ? 2 : 1;
       ctx.stroke();
     }
@@ -473,12 +529,12 @@ export function useCanvasRenderer({
         // Placeholder circle while loading
         ctx.beginPath();
         ctx.arc(avatarColumnX + AVATAR_SIZE / 2, cy, AVATAR_SIZE / 2, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(255,255,255,0.06)";
+        ctx.fillStyle = withAlpha(textMuted, 0.16);
         ctx.fill();
       }
 
       ctx.font = `${isSelected ? "600 " : ""}12px -apple-system, BlinkMacSystemFont, system-ui, sans-serif`;
-      ctx.fillStyle = isSelected ? "#0a84ff" : textPrimary;
+      ctx.fillStyle = isSelected ? accent : textPrimary;
       const refs = commit.refs.slice(0, 3);
       const badgeLabels = refs.map((ref) => {
         const label = ref.ref_type === "remote"
@@ -503,10 +559,10 @@ export function useCanvasRenderer({
             const truncated = badgeLabels[i];
             const badgeW = badgeWidths[i];
             const badgeColor =
-              ref.ref_type === "head" ? "#ff9f0a"
-              : ref.ref_type === "tag" ? "#bf5af2"
-              : ref.ref_type === "remote" ? "#636366"
-              : "#0a84ff";
+              ref.ref_type === "head" ? warning
+              : ref.ref_type === "tag" ? danger
+              : ref.ref_type === "remote" ? textMuted
+              : accent;
 
             ctx.fillStyle = badgeColor;
             if (ctx.roundRect) {
@@ -517,7 +573,7 @@ export function useCanvasRenderer({
               ctx.fillRect(badgeX, cy - 7, badgeW, 14);
             }
 
-            ctx.fillStyle = "#ffffff";
+            ctx.fillStyle = accentFg;
             ctx.font = "bold 9px -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
             ctx.fillText(truncated, badgeX + 5, cy);
             ctx.font = "12px -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
@@ -528,7 +584,7 @@ export function useCanvasRenderer({
       }
 
       ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
-      ctx.fillStyle = isSelected ? "#0a84ff" : textSecondary;
+      ctx.fillStyle = isSelected ? accent : textSecondary;
       ctx.fillText(commit.hash.slice(0, 7), columns.hashX, cy);
 
       ctx.font = "11px -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
@@ -629,5 +685,4 @@ function truncateText(ctx: CanvasRenderingContext2D, text: string, maxWidth: num
   }
   return text.slice(0, lo) + ellipsis;
 }
-
 
