@@ -147,6 +147,7 @@ export default function MainLayout() {
         scheduleInvalidate(["git", repoPath, "status"]);
         scheduleInvalidate(["git", repoPath, "submodules"]);
         scheduleInvalidate(["git", repoPath, "lfs"]);
+        scheduleInvalidate(["git", repoPath, "diff"]);
       } else if (type === "refs") {
         scheduleInvalidate(["git", repoPath, "branches"]);
         scheduleInvalidate(["git", repoPath, "log"]);

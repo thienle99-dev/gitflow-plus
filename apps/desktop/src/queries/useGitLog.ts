@@ -82,7 +82,7 @@ export function useGitStatus(repoPath: string | null) {
       return changes;
     },
     enabled: !!repoPath,
-    staleTime: 0,
+    staleTime: 30_000,
   });
 }
 
