@@ -8,7 +8,18 @@ pub struct StatusEntry {
 }
 
 #[tauri::command]
-pub async fn git_status(path: String) -> Result<Vec<StatusEntry>, String> {
+pub async fn git_status(
+    path: String,
+    cache_state: tauri::State<'_, crate::RepoCache>,
+) -> Result<Vec<StatusEntry>, String> {
+    // Check cache
+    {
+        let cache = cache_state.status_cache.lock().unwrap();
+        if let Some(entries) = cache.get(&path) {
+            return Ok(entries.clone());
+        }
+    }
+
     let output = Command::new("git")
         .args([
             "--no-pager",
@@ -29,7 +40,15 @@ pub async fn git_status(path: String) -> Result<Vec<StatusEntry>, String> {
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    Ok(parse_status_output(&stdout))
+    let entries = parse_status_output(&stdout);
+
+    // Save cache
+    {
+        let mut cache = cache_state.status_cache.lock().unwrap();
+        cache.insert(path, entries.clone());
+    }
+
+    Ok(entries)
 }
 
 fn parse_status_output(stdout: &str) -> Vec<StatusEntry> {

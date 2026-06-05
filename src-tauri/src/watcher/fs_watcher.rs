@@ -11,7 +11,7 @@ use std::sync::{
     Arc,
 };
 use std::time::{Duration, Instant};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 #[cfg(target_os = "macos")]
 type RepoFsWatcher = PollWatcher;
@@ -56,6 +56,7 @@ impl RepoWatcher {
                 create_watcher(tx).map_err(|e| format!("Failed to create watcher: {}", e))?;
 
             let app_clone = app.clone();
+            let repo_root_str = path.to_string();
 
             std::thread::spawn(move || {
                 let mut last_emit: Option<Instant> = None;
@@ -67,6 +68,12 @@ impl RepoWatcher {
                             let event_type = classify_event(&event);
                             if event_type.is_empty() {
                                 continue;
+                            }
+
+                            // Invalidate the backend status cache
+                            if let Some(cache) = app_clone.try_state::<crate::RepoCache>() {
+                                let mut cache_lock = cache.status_cache.lock().unwrap();
+                                cache_lock.remove(&repo_root_str);
                             }
 
                             // Debounce: skip if last emit was < 300ms ago

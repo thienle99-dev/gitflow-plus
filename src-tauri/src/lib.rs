@@ -10,6 +10,10 @@ mod watcher;
 
 struct WatcherState(Mutex<Option<watcher::fs_watcher::RepoWatcher>>);
 
+pub struct RepoCache {
+    pub status_cache: Mutex<std::collections::HashMap<String, Vec<commands::status::StatusEntry>>>,
+}
+
 fn create_menu<R: tauri::Runtime>(app: &tauri::App<R>) -> Result<Menu<R>, tauri::Error> {
     let menu = Menu::new(app)?;
 
@@ -137,6 +141,9 @@ pub fn run() {
             watcher::fs_watcher::RepoWatcher::new(),
         ))))
         .manage(commands::op_lock::RepoLocks::new())
+        .manage(RepoCache {
+            status_cache: Mutex::new(std::collections::HashMap::new()),
+        })
         .setup(|app| {
             log::info!("GitFlow Desktop starting");
 
