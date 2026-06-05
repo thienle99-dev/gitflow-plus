@@ -184,14 +184,14 @@
 ## Phase 2: Advanced Git + AI Features (after Phase 1 ships)
 
 ### GitFlow Workflow (core brand feature)
-- [ ] Detect gitflow init (`.git/config` có `[gitflow]` section)
-- [ ] `gitflow init` — setup branch naming conventions (main/develop/feature/release/hotfix prefix)
-- [ ] Feature: start (`git checkout -b feature/<name> develop`), finish (merge → develop, delete branch)
-- [ ] Release: start (`git checkout -b release/<version> develop`), finish (merge → main + develop, tag)
-- [ ] Hotfix: start (`git checkout -b hotfix/<version> main`), finish (merge → main + develop, tag)
-- [ ] GitFlow toolbar section — dedicated buttons cho từng action
-- [ ] Visual indicator trên commit graph — highlight gitflow branches theo màu riêng
-- [ ] GitFlow action previews — show target branches, changed files, conflicts risk trước khi finish/release/hotfix
+- [x] Detect gitflow init (`.git/config` có `[gitflow]` section)
+- [x] `gitflow init` — setup branch naming conventions (main/develop/feature/release/hotfix prefix)
+- [x] Feature: start (`git checkout -b feature/<name> develop`), finish (merge → develop, delete branch)
+- [x] Release: start (`git checkout -b release/<version> develop`), finish (merge → main + develop, tag)
+- [x] Hotfix: start (`git checkout -b hotfix/<version> main`), finish (merge → main + develop, tag)
+- [x] GitFlow toolbar section — dedicated buttons cho từng action
+- [x] Visual indicator trên commit graph — highlight gitflow branches theo màu riêng
+- [x] GitFlow action previews — show target branches, changed files, conflicts risk trước khi finish/release/hotfix
 
 ### Git Advanced
 - [x] Merge branch + detect conflict state
