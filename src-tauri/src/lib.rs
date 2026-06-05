@@ -243,6 +243,7 @@ pub fn run() {
             commands::app_logs::app_log_clear,
             commands::app_window::show_main_window,
             commands::app_window::open_settings_window,
+            commands::app_window::open_repo_from_tray,
             commands::log::git_log,
             commands::log::git_log_since,
             commands::log::git_log_stream,

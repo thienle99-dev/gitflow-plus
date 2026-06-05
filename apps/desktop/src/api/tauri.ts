@@ -261,6 +261,8 @@ export const api = {
       invoke<void>("show_main_window"),
     openSettings: () =>
       invoke<void>("open_settings_window"),
+    openRepoFromTray: () =>
+      invoke<void>("open_repo_from_tray"),
   },
 
   logs: {

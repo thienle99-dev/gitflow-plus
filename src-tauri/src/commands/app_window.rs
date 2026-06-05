@@ -30,3 +30,10 @@ pub async fn open_settings_window(app: AppHandle) -> Result<(), String> {
     app.emit_to("main", "open-dialog", "settings")
         .map_err(|e| format!("Failed to open settings: {}", e))
 }
+
+#[tauri::command]
+pub async fn open_repo_from_tray(app: AppHandle) -> Result<(), String> {
+    show_main_and_hide_tray(&app)?;
+    app.emit_to("main", "menu-action", "open-repo")
+        .map_err(|e| format!("Failed to emit open-repo: {}", e))
+}

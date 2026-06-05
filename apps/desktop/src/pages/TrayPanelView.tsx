@@ -21,6 +21,7 @@ import {
   Settings,
   Copy,
   MessageSquare,
+  Plus,
 } from "lucide-react";
 
 
@@ -174,9 +175,11 @@ export default function TrayPanelView() {
     }
   };
 
-  const invalidate = () => {
-    if (repoPath) {
-      queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
+  const invalidate = (path?: string) => {
+    const targetPath = path || repoPath;
+    if (targetPath) {
+      queryClient.invalidateQueries({ queryKey: ["git", targetPath] });
+      queryClient.invalidateQueries({ queryKey: ["repo", targetPath] });
     }
   };
 
@@ -334,6 +337,15 @@ export default function TrayPanelView() {
     }
   };
 
+  const handleOpenRepo = async () => {
+    try {
+      await api.window.openRepoFromTray();
+    } catch (e) {
+      console.error("[Tray] Error opening repo:", e);
+      showToast("Failed to open repo picker", "error");
+    }
+  };
+
   const handleOpenMainApp = async () => {
     console.log("[Tray] Open Full App clicked");
     try {
@@ -390,7 +402,7 @@ export default function TrayPanelView() {
     openRepo(path);
     setRepoDropdownOpen(false);
     setSearchQuery("");
-    invalidate();
+    invalidate(path);
   };
 
   const renderRepoItem = (path: string) => {
@@ -452,6 +464,13 @@ export default function TrayPanelView() {
                   autoFocus
                 />
               </div>
+              <button
+                onClick={handleOpenRepo}
+                className="w-full flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-semibold text-accent hover:bg-accent-10 transition-colors border-b border-border-40 cursor-pointer"
+              >
+                <Plus size={10} />
+                <span>Open Repo...</span>
+              </button>
               <div className="max-h-48 overflow-y-auto mt-1">
                 {filteredRepos.length === 0 ? (
                   <div className="px-3 py-2 text-[10px] text-text-muted italic">
@@ -673,8 +692,15 @@ export default function TrayPanelView() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={handleOpenMainApp}
+                onClick={handleOpenRepo}
                 className="h-7 px-3 rounded bg-accent text-accent-fg text-[10px] font-bold transition-all hover:opacity-95 cursor-pointer"
+              >
+                Open Repo
+              </button>
+              <button
+                type="button"
+                onClick={handleOpenMainApp}
+                className="h-7 px-3 rounded border border-border-40 bg-surface-1 text-[10px] font-bold text-text-primary transition-all hover:bg-surface-2 cursor-pointer"
               >
                 Open App
               </button>
