@@ -6,6 +6,8 @@ import {
   type ConflictExplanation,
   type MergeStrategyAdvice,
   type CommitSummaryResult,
+  type CommitGuardrailResult,
+  type CommitReadinessResult,
   generateCommitMessageWithAI,
   reviewDiffWithAI,
   generateInlineReviewComments,
@@ -19,6 +21,8 @@ import {
   addCommitBody,
   adviseMergeStrategy,
   generateCommitSummary,
+  runCommitGuardrail,
+  checkCommitReadiness,
 } from "@/lib/ai";
 
 export function useGenerateCommitMessage(repoPath: string | null) {
@@ -187,6 +191,33 @@ export function useAddCommitBody(repoPath: string | null) {
     }) => {
       if (!repoPath) throw new Error("No repository selected");
       return addCommitBody(repoPath, subject, files);
+    },
+  });
+}
+
+export function useAICommitGuardrail(repoPath: string | null) {
+  return useMutation<CommitGuardrailResult, Error, {
+    files: FileChange[];
+    commitMessage: string;
+  }>({
+    mutationKey: ["ai.commit-guardrail"],
+    mutationFn: ({ files, commitMessage }) => {
+      if (!repoPath) throw new Error("No repository selected");
+      return runCommitGuardrail(repoPath, files, commitMessage);
+    },
+  });
+}
+
+export function useAICommitReadiness(repoPath: string | null) {
+  return useMutation<CommitReadinessResult, Error, {
+    staged: FileChange[];
+    unstaged: FileChange[];
+    commitMessage: string;
+  }>({
+    mutationKey: ["ai.commit-readiness"],
+    mutationFn: ({ staged, unstaged, commitMessage }) => {
+      if (!repoPath) throw new Error("No repository selected");
+      return checkCommitReadiness(repoPath, staged, unstaged, commitMessage);
     },
   });
 }

@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useEffect, useState } from "react";
 import { Book, GitBranch, ArrowUp, ArrowDown, Loader2, GraduationCap, AlertTriangle, Terminal, Activity, RotateCcw, MessageSquareText } from "lucide-react";
 import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
@@ -9,6 +9,7 @@ import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import { useOperationsStore } from "@/stores/operations";
 import { useLogsPanelStore } from "@/stores/logs";
 import { GitPet } from "@/components/features/git-pet";
+import { LS_KEY_PET_ENABLED } from "@/components/features/git-pet/pet-types";
 
 /** Stable predicate — avoids recreating function on every render */
 const isBackgroundQuery = (query: any) => {
@@ -64,6 +65,15 @@ export default function BottomBar() {
   const runningOps = useOperationsStore(selectRunningOpsCount);
   const logsOpen = useLogsPanelStore((s) => s.isOpen);
   const toggleLogs = useLogsPanelStore((s) => s.toggleOpen);
+  const [petEnabled, setPetEnabled] = useState(() => localStorage.getItem(LS_KEY_PET_ENABLED) !== "false");
+
+  useEffect(() => {
+    const handleSettingsUpdated = () => {
+      setPetEnabled(localStorage.getItem(LS_KEY_PET_ENABLED) !== "false");
+    };
+    window.addEventListener("gitflow-settings-updated", handleSettingsUpdated);
+    return () => window.removeEventListener("gitflow-settings-updated", handleSettingsUpdated);
+  }, []);
 
   // Fetch Git details only if we have an active repository
   const { data: branches } = useGitBranches(repoPath);
@@ -87,7 +97,7 @@ export default function BottomBar() {
 
   return (
     <>
-    {repoPath && (
+    {repoPath && petEnabled && (
       <div className="footer-git-pet">
         <GitPet />
       </div>

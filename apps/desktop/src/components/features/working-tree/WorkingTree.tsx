@@ -3,8 +3,8 @@ import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useGitDiff, useGitStatus } from "@/queries/useGitLog";
 import { api, type FileChange, type LintDiagnostic } from "@/api/tauri";
-import { useGenerateCommitMessage, useAICommitScope, useAIDiffReview, useImproveCommitMessage, useAddCommitBody } from "@/queries/useAI";
-import { generateLocalCommitMessage, shouldAnalyzeScope, type CommitScopeSuggestion } from "@/lib/ai";
+import { useGenerateCommitMessage, useAICommitScope, useAIDiffReview, useImproveCommitMessage, useAddCommitBody, useAICommitGuardrail, useAICommitReadiness } from "@/queries/useAI";
+import { generateLocalCommitMessage, shouldAnalyzeScope, type CommitScopeSuggestion, type CommitGuardrailResult, type CommitReadinessResult } from "@/lib/ai";
 import { useQueryClient } from "@tanstack/react-query";
 import { showToast } from "@/lib/toast";
 import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
@@ -41,6 +41,8 @@ export default function WorkingTree() {
   const aiReview = useAIDiffReview();
   const improveMessage = useImproveCommitMessage(repoPath);
   const addBody = useAddCommitBody(repoPath);
+  const guardrail = useAICommitGuardrail(repoPath);
+  const readiness = useAICommitReadiness(repoPath);
   const [commitMessage, setCommitMessage] = useState("");
   const [lintResults, setLintResults] = useState<CommitLintResult[]>([]);
 
@@ -73,6 +75,10 @@ export default function WorkingTree() {
   const [aiReviewCollapsed, setAiReviewCollapsed] = useState(false);
   const [aiReviewResult, setAiReviewResult] = useState("");
   const [aiReviewModalOpen, setAiReviewModalOpen] = useState(false);
+  const [guardrailResult, setGuardrailResult] = useState<CommitGuardrailResult | null>(null);
+  const [guardrailOpen, setGuardrailOpen] = useState(false);
+  const [readinessResult, setReadinessResult] = useState<CommitReadinessResult | null>(null);
+  const [readinessOpen, setReadinessOpen] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState<string | null>(null);
   const [confirmDiscardAll, setConfirmDiscardAll] = useState(false);
   const [stagedOpen, setStagedOpen] = useState(true);
@@ -362,6 +368,44 @@ export default function WorkingTree() {
       setAiReviewResult(result);
     } catch (err: any) {
       showToast(`AI review failed: ${err?.message || err}`, "error");
+    }
+  };
+
+  const handleGuardrail = async () => {
+    if (!repoPath || guardrail.isPending) return;
+    const filesToCheck = staged.length > 0 ? staged : unstaged;
+    if (filesToCheck.length === 0) {
+      showToast("No changes to check", "info");
+      return;
+    }
+    setGuardrailOpen(true);
+    setGuardrailResult(null);
+    guardrail.reset();
+    try {
+      const result = await guardrail.mutateAsync({
+        files: filesToCheck,
+        commitMessage,
+      });
+      setGuardrailResult(result);
+    } catch (err: any) {
+      showToast(`Guardrail check failed: ${err?.message || err}`, "error");
+    }
+  };
+
+  const handleReadiness = async () => {
+    if (!repoPath || readiness.isPending) return;
+    setReadinessOpen(true);
+    setReadinessResult(null);
+    readiness.reset();
+    try {
+      const result = await readiness.mutateAsync({
+        staged,
+        unstaged,
+        commitMessage,
+      });
+      setReadinessResult(result);
+    } catch (err: any) {
+      showToast(`Readiness check failed: ${err?.message || err}`, "error");
     }
   };
 
@@ -711,6 +755,8 @@ export default function WorkingTree() {
         onGenerateCommit={handleGenerateCommit}
         onAnalyzeScope={handleAnalyzeScope}
         onAIReview={handleAIReview}
+        onGuardrail={handleGuardrail}
+        onReadiness={handleReadiness}
         onUseGroup={handleUseGroup}
         onCommitGroup={handleCommitGroup}
         onCommitAllSuggested={handleCommitAllSuggested}
@@ -718,6 +764,14 @@ export default function WorkingTree() {
         onImproveMessage={handleImproveMessage}
         onAddBody={handleAddBody}
         aiReviewPending={aiReview.isPending}
+        guardrailPending={guardrail.isPending}
+        guardrailResult={guardrailResult}
+        guardrailOpen={guardrailOpen}
+        setGuardrailOpen={setGuardrailOpen}
+        readinessPending={readiness.isPending}
+        readinessResult={readinessResult}
+        readinessOpen={readinessOpen}
+        setReadinessOpen={setReadinessOpen}
         generateCommitPending={generateCommit.isPending}
         commitScopePending={commitScope.isPending}
         improveMessagePending={improveMessage.isPending}

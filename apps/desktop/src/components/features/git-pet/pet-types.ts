@@ -40,3 +40,4 @@ export const PET_LABELS: Record<PetType, string> = {
 export const DEFAULT_PET: PetType = "panda";
 
 export const LS_KEY_PET_TYPE = "gitflowPetType";
+export const LS_KEY_PET_ENABLED = "gitflowPetEnabled";

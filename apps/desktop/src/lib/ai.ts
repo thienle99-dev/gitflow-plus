@@ -1538,3 +1538,577 @@ Be concise, professional, and actionable. Focus on outcomes, not implementation 
     },
   };
 }
+
+// ── AI Pre-Commit Guardrail ────────────────────────────────────────────
+
+export type GuardrailVerdict = "ready" | "warning" | "needs-attention";
+
+export interface GuardrailFinding {
+  severity: "critical" | "high" | "medium" | "low" | "info";
+  category: string;
+  message: string;
+  file?: string;
+  action?: string;
+}
+
+export interface CommitGuardrailResult {
+  verdict: GuardrailVerdict;
+  summary: string;
+  findings: GuardrailFinding[];
+  suggestions: string[];
+  riskScore: number; // 0-100, higher = riskier
+}
+
+/**
+ * AI-powered pre-commit guardrail: combines local risk scan with AI analysis
+ * to assess commit readiness before the user commits.
+ */
+export async function runCommitGuardrail(
+  repoPath: string,
+  files: FileChange[],
+  commitMessage: string,
+): Promise<CommitGuardrailResult> {
+  // Phase 1: instant local scan
+  const localReport = scanForRisks(
+    files.map((f) => ({ path: f.path, status: f.status })),
+  );
+
+  // Map local findings to guardrail findings
+  const localFindings: GuardrailFinding[] = localReport.findings.map((f) => ({
+    severity: f.severity,
+    category: f.category,
+    message: f.label,
+    file: f.file,
+    action: f.severity === "critical"
+      ? "Review and remove before committing"
+      : f.severity === "high"
+        ? "Consider addressing before committing"
+        : undefined,
+  }));
+
+  // Phase 2: AI deep analysis (if configured)
+  const settings = readAISettings();
+  if (!hasProvider(settings)) {
+    return buildLocalGuardrailResult(localFindings, files.length);
+  }
+
+  const diff = await api.diff.staged(repoPath).catch(() => "");
+  if (!diff.trim() && localFindings.length === 0) {
+    return {
+      verdict: "ready",
+      summary: "No staged changes or risks detected.",
+      findings: [],
+      suggestions: [],
+      riskScore: 0,
+    };
+  }
+
+  const fileList = files.map((f) => `- [${f.status}] ${f.path}`).join("\n");
+  const conventionContext = await getConventionContext(repoPath);
+  const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
+
+  const prompt = `You are a senior developer performing a pre-commit safety check. Analyze the staged changes and commit message below.
+
+STAGED FILES:
+${fileList}
+
+COMMIT MESSAGE:
+${commitMessage || "(empty)"}
+
+DIFF (truncated):
+${diff.slice(0, 8000)}
+
+TASK: Assess commit readiness. Check for:
+1. RISK ASSESSMENT: Are there risky patterns (secrets, destructive ops, large scope, config exposure)?
+2. COMMIT QUALITY: Does the commit message accurately describe the changes? Is the scope appropriate?
+3. CODE QUALITY: Are there obvious bugs, debug code, console.log, TODO/HACK markers, or test-only changes?
+4. SPLITTING: Should this commit be split into smaller atomic commits?
+
+Respond in this EXACT JSON format (no markdown, no code blocks):
+{
+  "verdict": "ready" | "warning" | "needs-attention",
+  "summary": "One-line summary of the guardrail assessment",
+  "findings": [
+    {
+      "severity": "critical" | "high" | "medium" | "low" | "info",
+      "category": "Security" | "Scope" | "Quality" | "Message" | "Config" | "Migration",
+      "message": "Brief description of the finding",
+      "file": "optional file path if applicable",
+      "action": "optional suggested action"
+    }
+  ],
+  "suggestions": ["actionable suggestion 1", "actionable suggestion 2"],
+  "riskScore": 42
+}
+
+RULES:
+- riskScore: 0=safe, 100=dangerous. Default 0 if no issues.
+- verdict: "ready" if riskScore < 25, "warning" if 25-60, "needs-attention" if > 60.
+- Be concise. Max 5 findings. Max 3 suggestions.
+- If everything looks good, return verdict "ready" with empty findings.
+${languageInstruction}${conventionContext}`;
+
+  try {
+    const raw = cleanAIText(await requestAIText(prompt, settings));
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (parsed && typeof parsed.verdict === "string") {
+        // Merge local findings into AI findings (deduplicate)
+        const aiFindings: GuardrailFinding[] = Array.isArray(parsed.findings) ? parsed.findings : [];
+        const merged = mergeGuardrailFindings(localFindings, aiFindings);
+        return {
+          verdict: parsed.verdict as GuardrailVerdict,
+          summary: parsed.summary || "Guardrail check complete.",
+          findings: merged,
+          suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions.slice(0, 3) : [],
+          riskScore: typeof parsed.riskScore === "number" ? Math.min(100, Math.max(0, parsed.riskScore)) : computeRiskScore(merged),
+        };
+      }
+    }
+  } catch {
+    // AI failed — fall back to local-only
+  }
+
+  return buildLocalGuardrailResult(localFindings, files.length);
+}
+
+function buildLocalGuardrailResult(
+  findings: GuardrailFinding[],
+  fileCount: number,
+): CommitGuardrailResult {
+  const hasCritical = findings.some((f) => f.severity === "critical");
+  const hasHigh = findings.some((f) => f.severity === "high");
+  const verdict: GuardrailVerdict = hasCritical
+    ? "needs-attention"
+    : hasHigh
+      ? "warning"
+      : "ready";
+
+  const riskScore = computeRiskScore(findings);
+
+  const suggestions: string[] = [];
+  if (hasCritical) suggestions.push("Critical issues found — review before committing.");
+  if (findings.length > 3) suggestions.push("Multiple findings detected — consider reviewing each file individually.");
+
+  return {
+    verdict,
+    summary: findings.length === 0
+      ? `No risks detected across ${fileCount} file(s).`
+      : `${findings.length} finding(s) detected across ${fileCount} file(s).`,
+    findings,
+    suggestions,
+    riskScore,
+  };
+}
+
+function computeRiskScore(findings: GuardrailFinding[]): number {
+  const weights: Record<string, number> = {
+    critical: 30,
+    high: 15,
+    medium: 8,
+    low: 3,
+    info: 1,
+  };
+  return Math.min(100, findings.reduce((sum, f) => sum + (weights[f.severity] || 0), 0));
+}
+
+function mergeGuardrailFindings(
+  local: GuardrailFinding[],
+  ai: GuardrailFinding[],
+): GuardrailFinding[] {
+  const merged = [...local];
+  const seenKeys = new Set(local.map((f) => `${f.category}|${f.message}|${f.file || ""}`));
+  for (const f of ai) {
+    const key = `${f.category}|${f.message}|${f.file || ""}`;
+    if (!seenKeys.has(key)) {
+      merged.push(f);
+      seenKeys.add(key);
+    }
+  }
+  // Sort by severity
+  const order = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+  merged.sort((a, b) => (order[a.severity] ?? 5) - (order[b.severity] ?? 5));
+  return merged;
+}
+
+// ─── Commit Readiness Check ───────────────────────────────────────────────────
+
+export type ReadinessSeverity = "blocker" | "warning" | "suggestion" | "info";
+
+export interface ReadinessCheckItem {
+  severity: ReadinessSeverity;
+  category: string;
+  message: string;
+  file?: string;
+  action?: string;
+}
+
+export type ReadinessVerdict = "ready" | "needs-work" | "not-ready";
+
+export interface CommitReadinessResult {
+  verdict: ReadinessVerdict;
+  summary: string;
+  items: ReadinessCheckItem[];
+  stagedCount: number;
+  unstagedCount: number;
+}
+
+/**
+ * Checks whether the current staging area + commit message is ready to commit.
+ * Phase 1: instant local heuristics (no API).
+ * Phase 2: optional AI deep analysis (if provider configured).
+ */
+export async function checkCommitReadiness(
+  repoPath: string,
+  staged: FileChange[],
+  unstaged: FileChange[],
+  commitMessage: string,
+): Promise<CommitReadinessResult> {
+  // Phase 1: local heuristics
+  const localItems = buildLocalReadinessItems(staged, unstaged, commitMessage);
+
+  // Phase 2: AI analysis (if available)
+  const settings = readAISettings();
+  let aiItems: ReadinessCheckItem[] = [];
+
+  if (hasProvider(settings) && staged.length > 0) {
+    try {
+      aiItems = await runAIReadinessCheck(repoPath, staged, unstaged, commitMessage, settings);
+    } catch {
+      // AI failure is non-fatal; fall back to local-only
+    }
+  }
+
+  // Merge & deduplicate
+  const allItems = mergeReadinessItems(localItems, aiItems);
+
+  // Compute verdict
+  const hasBlocker = allItems.some((i) => i.severity === "blocker");
+  const hasWarning = allItems.some((i) => i.severity === "warning");
+  const verdict: ReadinessVerdict = hasBlocker ? "not-ready" : hasWarning ? "needs-work" : "ready";
+
+  // Build summary
+  const summary = buildReadinessSummary(verdict, allItems, staged.length, unstaged.length);
+
+  return {
+    verdict,
+    summary,
+    items: allItems,
+    stagedCount: staged.length,
+    unstagedCount: unstaged.length,
+  };
+}
+
+// ─── Local Readiness Heuristics ───────────────────────────────────────────────
+
+const CONFIG_FILE_PATTERNS = [
+  /package-lock\.json$/,
+  /yarn\.lock$/,
+  /pnpm-lock\.yaml$/,
+  /Gemfile\.lock$/,
+  /Cargo\.lock$/,
+  /composer\.lock$/,
+  /poetry\.lock$/,
+  /\.env(\.\w+)?$/,
+  /\.env\.local$/,
+];
+
+const TEST_FILE_PATTERNS = [
+  /\.test\.[jt]sx?$/,
+  /\.spec\.[jt]sx?$/,
+  /\.spec\.ts$/,
+  /__tests__\//,
+  /test\//,
+  /tests\//,
+];
+
+const DOC_FILE_PATTERNS = [
+  /\.md$/,
+  /\.mdx$/,
+  /docs?\//,
+  /README/,
+  /CHANGELOG/,
+];
+
+const BINARY_EXTENSIONS = [
+  ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".ico", ".svg", ".webp",
+  ".mp3", ".mp4", ".wav", ".avi", ".mov",
+  ".zip", ".tar", ".gz", ".7z", ".rar",
+  ".exe", ".dll", ".so", ".dylib",
+  ".pdf", ".doc", ".docx", ".xls", ".xlsx",
+];
+
+function buildLocalReadinessItems(
+  staged: FileChange[],
+  unstaged: FileChange[],
+  commitMessage: string,
+): ReadinessCheckItem[] {
+  const items: ReadinessCheckItem[] = [];
+  const stagedPaths = staged.map((f) => f.path);
+  const unstagedPaths = unstaged.map((f) => f.path);
+
+  // 1. Empty commit message when files are staged
+  if (staged.length > 0 && !commitMessage.trim()) {
+    items.push({
+      severity: "blocker",
+      category: "message",
+      message: "No commit message entered",
+      action: "Enter a commit message before committing",
+    });
+  }
+
+  // 2. No files staged
+  if (staged.length === 0) {
+    if (unstaged.length > 0) {
+      items.push({
+        severity: "warning",
+        category: "staging",
+        message: `${unstaged.length} file(s) have unstaged changes but nothing is staged`,
+        action: "Stage the files you want to include in this commit",
+      });
+    } else {
+      items.push({
+        severity: "info",
+        category: "staging",
+        message: "No changes to commit",
+      });
+    }
+    return items;
+  }
+
+  // 3. Config/lock files staged alongside source changes
+  const hasSourceChanges = staged.some(
+    (f) => !CONFIG_FILE_PATTERNS.some((p) => p.test(f.path)) && !TEST_FILE_PATTERNS.some((p) => p.test(f.path)),
+  );
+  const stagedConfigFiles = staged.filter((f) =>
+    CONFIG_FILE_PATTERNS.some((p) => p.test(f.path)),
+  );
+  if (hasSourceChanges && stagedConfigFiles.length > 0) {
+    for (const cf of stagedConfigFiles) {
+      items.push({
+        severity: "warning",
+        category: "scope",
+        message: `Lock/config file staged with source changes`,
+        file: cf.path,
+        action: "Consider committing lock files separately to keep diffs clean",
+      });
+    }
+  }
+
+  // 4. Test files in unstaged when source files are staged
+  const stagedSourceFiles = staged.filter(
+    (f) => !TEST_FILE_PATTERNS.some((p) => p.test(f.path)) && !CONFIG_FILE_PATTERNS.some((p) => p.test(f.path)),
+  );
+  const unstagedTestFiles = unstaged.filter((f) =>
+    TEST_FILE_PATTERNS.some((p) => p.test(f.path)),
+  );
+  if (stagedSourceFiles.length > 0 && unstagedTestFiles.length > 0) {
+    items.push({
+      severity: "suggestion",
+      category: "tests",
+      message: `${unstagedTestFiles.length} test file(s) have changes but aren't staged`,
+      action: "Consider staging related test files with source changes",
+    });
+  }
+
+  // 5. Doc files in unstaged when source files are staged
+  const unstagedDocFiles = unstaged.filter((f) =>
+    DOC_FILE_PATTERNS.some((p) => p.test(f.path)),
+  );
+  if (stagedSourceFiles.length > 0 && unstagedDocFiles.length > 0) {
+    items.push({
+      severity: "info",
+      category: "docs",
+      message: `${unstagedDocFiles.length} documentation file(s) have unstaged changes`,
+      action: "Consider updating docs if this change affects public API",
+    });
+  }
+
+  // 6. Binary files staged
+  const binaryFiles = staged.filter((f) =>
+    BINARY_EXTENSIONS.some((ext) => f.path.toLowerCase().endsWith(ext)),
+  );
+  if (binaryFiles.length > 0) {
+    items.push({
+      severity: "info",
+      category: "binary",
+      message: `${binaryFiles.length} binary file(s) included in commit`,
+      file: binaryFiles[0].path,
+      action: binaryFiles.length > 1
+        ? `${binaryFiles.length} binary files total — ensure they're necessary`
+        : "Ensure this binary file is necessary",
+    });
+  }
+
+  // 7. Very large number of files (potential WIP commit)
+  if (staged.length > 20) {
+    items.push({
+      severity: "warning",
+      category: "scope",
+      message: `${staged.length} files staged — this is a large commit`,
+      action: "Consider splitting into smaller, focused commits for easier review",
+    });
+  }
+
+  // 8. Deleted files staged without replacements
+  const deletedFiles = staged.filter((f) => f.status === "deleted" || f.status === "D");
+  const addedFiles = staged.filter((f) => f.status === "added" || f.status === "A" || f.status === "untracked");
+  if (deletedFiles.length > 0 && addedFiles.length === 0 && staged.length === deletedFiles.length) {
+    items.push({
+      severity: "suggestion",
+      category: "scope",
+      message: `Commit contains only deletions (${deletedFiles.length} file(s))`,
+      action: "Verify these deletions are intentional",
+    });
+  }
+
+  // 9. Commit message type hints vs file types
+  const msgLower = commitMessage.toLowerCase();
+  if (msgLower.startsWith("feat") || msgLower.startsWith("add")) {
+    // Feature commits should have new files
+    if (staged.every((f) => f.status === "deleted" || f.status === "D")) {
+      items.push({
+        severity: "warning",
+        category: "message",
+        message: 'Commit message implies addition but only deletions are staged',
+        action: 'Use "chore" or "refactor" if removing code, or stage new files',
+      });
+    }
+  }
+  if (msgLower.startsWith("fix") || msgLower.startsWith("bugfix")) {
+    // Fix commits should ideally include tests
+    if (stagedSourceFiles.length > 0 && unstagedTestFiles.length === 0 && staged.every((f) => !TEST_FILE_PATTERNS.some((p) => p.test(f.path)))) {
+      items.push({
+        severity: "suggestion",
+        category: "tests",
+        message: "Fix commit without test changes",
+        action: "Consider adding a regression test",
+      });
+    }
+  }
+
+  return items;
+}
+
+// ─── AI Readiness Check ───────────────────────────────────────────────────────
+
+async function runAIReadinessCheck(
+  repoPath: string,
+  staged: FileChange[],
+  unstaged: FileChange[],
+  commitMessage: string,
+  settings: AISettings,
+): Promise<ReadinessCheckItem[]> {
+  const stagedList = staged.map((f) => `  ${statusVerb(f.status)} ${f.path}`).join("\n");
+  const unstagedList = unstaged.length > 0
+    ? unstaged.map((f) => `  ${statusVerb(f.status)} ${f.path}`).join("\n")
+    : "  (none)";
+
+  const conventionContext = await getConventionContext(repoPath);
+  const languageInstruction = buildReviewLanguageInstruction(readAIReviewLanguage());
+
+  const prompt = `You are a git commit readiness assistant. Analyze the staging area and commit message to determine if the developer is ready to commit.
+
+STAGED FILES (${staged.length}):
+${stagedList}
+
+UNSTAGED FILES (${unstaged.length}):
+${unstagedList}
+
+COMMIT MESSAGE:
+"${commitMessage}"
+${conventionContext}
+
+${languageInstruction}
+
+Check for these issues and return JSON:
+{
+  "verdict": "ready" | "needs-work" | "not-ready",
+  "summary": "one sentence overall assessment",
+  "items": [
+    {
+      "severity": "blocker" | "warning" | "suggestion" | "info",
+      "category": "message" | "staging" | "scope" | "tests" | "docs" | "compatibility",
+      "message": "what's wrong or could be improved",
+      "file": "optional file path",
+      "action": "optional suggested action"
+    }
+  ]
+}
+
+Focus on:
+1. Does the commit message accurately describe the staged changes?
+2. Are related files missing from staging (e.g., tests, types, config)?
+3. Are unrelated files accidentally staged?
+4. Is the commit scope appropriate (too many unrelated changes)?
+5. Are there breaking change risks?
+
+Be concise. Return ONLY the JSON object, no markdown fences.`;
+
+  const raw = await requestAIText(prompt, settings);
+  const cleaned = cleanAIText(raw);
+
+  try {
+    const parsed = JSON.parse(cleaned);
+    const items: ReadinessCheckItem[] = Array.isArray(parsed.items)
+      ? parsed.items.map((item: any) => ({
+          severity: item.severity || "info",
+          category: item.category || "scope",
+          message: item.message || "",
+          file: item.file || undefined,
+          action: item.action || undefined,
+        }))
+      : [];
+    return items;
+  } catch {
+    // If JSON parsing fails, create a single info item with the raw text
+    return [{
+      severity: "info",
+      category: "scope",
+      message: cleaned.slice(0, 200),
+    }];
+  }
+}
+
+// ─── Readiness Helpers ────────────────────────────────────────────────────────
+
+function mergeReadinessItems(
+  local: ReadinessCheckItem[],
+  ai: ReadinessCheckItem[],
+): ReadinessCheckItem[] {
+  const merged = [...local];
+  const seenKeys = new Set(local.map((i) => `${i.category}|${i.message}|${i.file || ""}`));
+  for (const item of ai) {
+    const key = `${item.category}|${item.message}|${item.file || ""}`;
+    if (!seenKeys.has(key)) {
+      merged.push(item);
+      seenKeys.add(key);
+    }
+  }
+  const order = { blocker: 0, warning: 1, suggestion: 2, info: 3 };
+  merged.sort((a, b) => (order[a.severity] ?? 4) - (order[b.severity] ?? 4));
+  return merged;
+}
+
+function buildReadinessSummary(
+  verdict: ReadinessVerdict,
+  items: ReadinessCheckItem[],
+  stagedCount: number,
+  unstagedCount: number,
+): string {
+  const blockers = items.filter((i) => i.severity === "blocker").length;
+  const warnings = items.filter((i) => i.severity === "warning").length;
+  const suggestions = items.filter((i) => i.severity === "suggestion").length;
+
+  if (verdict === "not-ready") {
+    return `${blockers} blocker(s) must be fixed before committing. ${stagedCount} staged, ${unstagedCount} unstaged.`;
+  }
+  if (verdict === "needs-work") {
+    return `${warnings} issue(s) to review. ${suggestions} suggestion(s). ${stagedCount} staged, ${unstagedCount} unstaged.`;
+  }
+  if (items.length === 0) {
+    return `All clear — ${stagedCount} file(s) staged and ready to commit.`;
+  }
+  return `${items.length} note(s) to review. ${stagedCount} staged, ${unstagedCount} unstaged.`;
+}

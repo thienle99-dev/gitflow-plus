@@ -51,7 +51,7 @@ export const PetSelectorCard = memo(function PetSelectorCard({ selected, onSelec
         🐾 Git Pet
       </div>
       <p className="text-2xs text-text-muted leading-normal">
-        Choose your companion that lives in the sidebar.
+        Choose your companion that lives in the footer.
       </p>
       <div className="grid grid-cols-3 gap-3 pt-1">
         {PET_TYPES.map((pet) => (

@@ -46,7 +46,7 @@ import {
   defaultApiUrlForProvider,
 } from "@/lib/ai-profiles";
 import type { PetType } from "@/components/features/git-pet/pet-types";
-import { LS_KEY_PET_TYPE, DEFAULT_PET } from "@/components/features/git-pet/pet-types";
+import { LS_KEY_PET_ENABLED, LS_KEY_PET_TYPE, DEFAULT_PET } from "@/components/features/git-pet/pet-types";
 
 // Re-export for backward compatibility (OnboardingWizard imports these)
 export { ThemeSkeletonCard, THEME_CARDS, THEME_GROUPS } from "./settings/GeneralTab";
@@ -126,6 +126,7 @@ const SETTINGS_KEYS = [
   "gitflowAiProfiles",
   "gitflowActiveAiProfileId",
   LS_KEY_PET_TYPE,
+  LS_KEY_PET_ENABLED,
 ];
 
 interface SettingsDialogProps {
@@ -197,6 +198,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
   // Advanced Tab States
   const [largeDiffMode, setLargeDiffMode] = useState<"full" | "prompt" | "summary">("prompt");
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [petEnabled, setPetEnabled] = useState(true);
   const [petType, setPetType] = useState<PetType>(DEFAULT_PET);
 
   // Accounts Tab States
@@ -250,6 +252,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       const savedDiffLineWrap = localStorage.getItem(LS_KEY_DIFF_LINE_WRAP);
       const savedLargeDiffMode = localStorage.getItem(LS_KEY_LARGE_DIFF_MODE) as "full" | "prompt" | "summary";
       const savedReducedMotion = localStorage.getItem(LS_KEY_REDUCED_MOTION);
+      const savedPetEnabled = localStorage.getItem(LS_KEY_PET_ENABLED);
       const savedDetailLevel = localStorage.getItem(LS_KEY_AI_DETAIL_LEVEL) as "minimal" | "medium" | "detailed";
       const savedCommitStyle = localStorage.getItem(LS_KEY_COMMIT_STYLE) as "conventional" | "plain" | "gitmoji" | "jira";
       const savedCustomRules = localStorage.getItem(LS_KEY_AI_CUSTOM_RULES) || "";
@@ -274,6 +277,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       if (savedDiffLineWrap !== null) setDiffLineWrap(savedDiffLineWrap === "true");
       if (savedLargeDiffMode) setLargeDiffMode(savedLargeDiffMode);
       if (savedReducedMotion !== null) setReducedMotion(savedReducedMotion === "true");
+      if (savedPetEnabled !== null) setPetEnabled(savedPetEnabled === "true");
       const savedPetType = localStorage.getItem(LS_KEY_PET_TYPE);
       if (savedPetType) setPetType(savedPetType as PetType);
 
@@ -352,6 +356,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       diffLineWrap,
       largeDiffMode,
       reducedMotion,
+      petEnabled,
       petType,
       provider,
       apiKey,
@@ -378,7 +383,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
     confirmDangerous, reopenLastRepo, recentRepoLimit,
     commitLintEnabled, codeLintEnabled, lintStrictness,
     graphDensity, graphShowHash, graphShowAuthor, graphShowDate,
-    diffContext, diffLineWrap, largeDiffMode, reducedMotion, petType,
+    diffContext, diffLineWrap, largeDiffMode, reducedMotion, petEnabled, petType,
     provider, apiKey, apiUrl, commitModel, reviewModel, tokenLimit, fetchedModels,
     aiDetailLevel, commitStyle, customRules, reviewLanguage, reviewChecklist,
     githubToken, gitlabToken, gitlabHost, profiles, activeProfileId,
@@ -567,6 +572,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       localStorage.setItem(LS_KEY_DIFF_LINE_WRAP, String(diffLineWrap));
       localStorage.setItem(LS_KEY_LARGE_DIFF_MODE, largeDiffMode);
       localStorage.setItem(LS_KEY_REDUCED_MOTION, String(reducedMotion));
+      localStorage.setItem(LS_KEY_PET_ENABLED, String(petEnabled));
       localStorage.setItem(LS_KEY_PET_TYPE, petType);
       localStorage.setItem(LS_KEY_DATE_FORMAT, dateFormat);
       localStorage.setItem(LS_KEY_CUSTOM_DATE_FORMAT, customDateFormat);
@@ -664,6 +670,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
     setDiffLineWrap(true);
     setLargeDiffMode("prompt");
     setReducedMotion(false);
+    setPetEnabled(true);
     setPetType(DEFAULT_PET);
     setDateFormat("relative");
     setCustomDateFormat("YYYY-MM-DD HH:mm");
@@ -887,6 +894,8 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
 
           {activeTab === "pet" && (
             <PetTab
+              petEnabled={petEnabled}
+              setPetEnabled={setPetEnabled}
               petType={petType}
               setPetType={setPetType}
             />

@@ -1,16 +1,17 @@
 import { useRef } from "react";
 import { type FileChange } from "@/api/tauri";
-import { type CommitScopeSuggestion } from "@/lib/ai";
+import { type CommitScopeSuggestion, type CommitGuardrailResult, type CommitReadinessResult } from "@/lib/ai";
 import { type CommitLintResult, autoFixCommitMessage } from "@/lib/commit-lint";
 import UndoButton from "@/components/features/actions/UndoButton";
 import CommitTemplatePicker from "./CommitTemplatePicker";
-import { AlertCircle, ShieldAlert } from "lucide-react";
+import { AlertCircle, ShieldAlert, ClipboardCheck } from "lucide-react";
 import {
   AlignLeft,
   Check,
   GitCommit,
   Layers,
   RefreshCw,
+  ShieldCheck,
   Sparkles,
   Wand2,
   X,
@@ -36,6 +37,8 @@ export interface CommitBoxProps {
   onGenerateCommit: () => void;
   onAnalyzeScope: () => void;
   onAIReview: () => void;
+  onGuardrail: () => void;
+  onReadiness: () => void;
   onUseGroup: (group: { files: string[]; message: string }) => void;
   onCommitGroup: (group: { files: string[]; message: string }) => void;
   onCommitAllSuggested: () => void;
@@ -44,6 +47,16 @@ export interface CommitBoxProps {
   onAddBody: () => void;
   // AI review state
   aiReviewPending: boolean;
+  // Guardrail state
+  guardrailPending: boolean;
+  guardrailResult: CommitGuardrailResult | null;
+  guardrailOpen: boolean;
+  setGuardrailOpen: (open: boolean) => void;
+  // Readiness state
+  readinessPending: boolean;
+  readinessResult: CommitReadinessResult | null;
+  readinessOpen: boolean;
+  setReadinessOpen: (open: boolean) => void;
   // Mutations
   generateCommitPending: boolean;
   commitScopePending: boolean;
@@ -70,6 +83,8 @@ export default function CommitBox({
   onGenerateCommit,
   onAnalyzeScope,
   onAIReview,
+  onGuardrail,
+  onReadiness,
   onUseGroup,
   onCommitGroup,
   onCommitAllSuggested,
@@ -77,6 +92,14 @@ export default function CommitBox({
   onImproveMessage,
   onAddBody,
   aiReviewPending,
+  guardrailPending,
+  guardrailResult,
+  guardrailOpen,
+  setGuardrailOpen,
+  readinessPending,
+  readinessResult,
+  readinessOpen,
+  setReadinessOpen,
   generateCommitPending,
   commitScopePending,
   improveMessagePending,
@@ -120,6 +143,50 @@ export default function CommitBox({
                 <Sparkles size={11} className="text-accent" />
               )}
               <span>AI Review</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onGuardrail}
+              disabled={committing || guardrailPending || (staged.length === 0 && unstaged.length === 0)}
+              className={`h-7 px-2.5 rounded-[5px] border text-3xs font-semibold inline-flex items-center gap-1 transition-all cursor-pointer shadow-2xs ${guardrailResult?.verdict === "needs-attention"
+                ? "bg-[#ff453a]/10 border-[#ff453a]/30 text-[#ff453a]"
+                : guardrailResult?.verdict === "warning"
+                  ? "bg-[#ff9f0a]/10 border-[#ff9f0a]/30 text-[#ff9f0a]"
+                  : guardrailResult?.verdict === "ready"
+                    ? "bg-[#30d158]/10 border-[#30d158]/30 text-[#30d158]"
+                    : "bg-surface-2-40 border-border-40 text-text-muted hover:text-text-primary hover:bg-surface-3"
+                } disabled:bg-surface-2-40 disabled:border-border-40 disabled:text-text-muted disabled:opacity-45 disabled:cursor-not-allowed ${guardrailPending ? "opacity-70" : ""}`}
+              title="Run AI pre-commit safety check"
+            >
+              {guardrailPending ? (
+                <RefreshCw size={11} className="animate-spin" />
+              ) : (
+                <ShieldCheck size={11} />
+              )}
+              <span>Guardrail</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onReadiness}
+              disabled={committing || readinessPending || (staged.length === 0 && unstaged.length === 0)}
+              className={`h-7 px-2.5 rounded-[5px] border text-3xs font-semibold inline-flex items-center gap-1 transition-all cursor-pointer shadow-2xs ${readinessResult?.verdict === "ready"
+                ? "bg-[#30d158]/10 border-[#30d158]/30 text-[#30d158]"
+                : readinessResult?.verdict === "not-ready"
+                  ? "bg-[#ff453a]/10 border-[#ff453a]/30 text-[#ff453a]"
+                  : readinessResult?.verdict === "needs-work"
+                    ? "bg-[#ff9f0a]/10 border-[#ff9f0a]/30 text-[#ff9f0a]"
+                    : "bg-surface-2-40 border-border-40 text-text-muted hover:text-text-primary hover:bg-surface-3"
+                } disabled:bg-surface-2-40 disabled:border-border-40 disabled:text-text-muted disabled:opacity-45 disabled:cursor-not-allowed ${readinessPending ? "opacity-70" : ""}`}
+              title="Check if your staging area is ready to commit"
+            >
+              {readinessPending ? (
+                <RefreshCw size={11} className="animate-spin" />
+              ) : (
+                <ClipboardCheck size={11} />
+              )}
+              <span>Ready?</span>
             </button>
 
             <UndoButton compact onUndoComplete={onUndoComplete} />
@@ -357,6 +424,195 @@ export default function CommitBox({
               Commit all as one
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Guardrail Result Panel */}
+      {guardrailOpen && (
+        <div className={`border rounded-mac p-3 space-y-2 ${
+          guardrailResult?.verdict === "needs-attention"
+            ? "border-[#ff453a]/30 bg-[#ff453a]/5"
+            : guardrailResult?.verdict === "warning"
+              ? "border-[#ff9f0a]/30 bg-[#ff9f0a]/5"
+              : guardrailResult?.verdict === "ready"
+                ? "border-[#30d158]/30 bg-[#30d158]/5"
+                : "border-border-40 bg-surface-2-30"
+        }`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <ShieldCheck size={12} className={`${
+                guardrailResult?.verdict === "needs-attention" ? "text-[#ff453a]"
+                  : guardrailResult?.verdict === "warning" ? "text-[#ff9f0a]"
+                    : guardrailResult?.verdict === "ready" ? "text-[#30d158]"
+                      : "text-accent"
+              }`} />
+              <span className="text-xs font-semibold text-text-primary">Pre-Commit Guardrail</span>
+              {guardrailResult && (
+                <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                  guardrailResult.verdict === "ready"
+                    ? "bg-[#30d158]/15 text-[#30d158]"
+                    : guardrailResult.verdict === "warning"
+                      ? "bg-[#ff9f0a]/15 text-[#ff9f0a]"
+                      : "bg-[#ff453a]/15 text-[#ff453a]"
+                }`}>
+                  {guardrailResult.verdict === "ready" ? "SAFE" : guardrailResult.verdict === "warning" ? "CAUTION" : "ATTENTION"}
+                </span>
+              )}
+              {guardrailResult && (
+                <span className="text-[9px] font-semibold text-text-muted bg-surface-2 border border-border-40 rounded px-1.5 py-0.5">
+                  Risk: {guardrailResult.riskScore}/100
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setGuardrailOpen(false)}
+              className="h-5 w-5 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer"
+            >
+              <X size={12} />
+            </button>
+          </div>
+
+          {guardrailPending ? (
+            <div className="flex items-center gap-2 rounded-mac border border-border-40 bg-surface-2-30 px-3 py-2.5 text-text-secondary">
+              <RefreshCw size={12} className="animate-spin text-accent" />
+              <span className="text-2xs">Running pre-commit safety check...</span>
+            </div>
+          ) : guardrailResult ? (
+            <div className="space-y-2">
+              <p className="text-2xs text-text-secondary leading-relaxed">{guardrailResult.summary}</p>
+
+              {guardrailResult.findings.length > 0 && (
+                <div className="space-y-1">
+                  {guardrailResult.findings.map((finding, i) => (
+                    <div key={i} className={`flex items-start gap-2 p-2 rounded-mac text-2xs ${
+                      finding.severity === "critical"
+                        ? "bg-[#ff453a]/8 border-l-2 border-l-[#ff453a]"
+                        : finding.severity === "high"
+                          ? "bg-[#ff9f0a]/8 border-l-2 border-l-[#ff9f0a]"
+                          : finding.severity === "medium"
+                            ? "bg-[#0a84ff]/8 border-l-2 border-l-[#0a84ff]"
+                            : "bg-surface-2-30 border-l-2 border-l-border-40"
+                    }`}>
+                      <span className={`font-bold uppercase shrink-0 ${
+                        finding.severity === "critical" ? "text-[#ff453a]"
+                          : finding.severity === "high" ? "text-[#ff9f0a]"
+                            : finding.severity === "medium" ? "text-[#0a84ff]"
+                              : "text-text-muted"
+                      }`}>
+                        {finding.category}
+                      </span>
+                      <div className="min-w-0">
+                        <span className="text-text-primary">{finding.message}</span>
+                        {finding.file && <span className="text-text-muted ml-1">({finding.file})</span>}
+                        {finding.action && <span className="text-text-muted block mt-0.5 italic">{finding.action}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {guardrailResult.suggestions.length > 0 && (
+                <div className="space-y-0.5">
+                  {guardrailResult.suggestions.map((s, i) => (
+                    <p key={i} className="text-2xs text-text-muted flex items-start gap-1">
+                      <span className="text-accent shrink-0">→</span>
+                      <span>{s}</span>
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {/* Readiness Check Result Panel */}
+      {readinessOpen && (
+        <div className={`border rounded-mac p-3 space-y-2 ${
+          readinessResult?.verdict === "ready"
+            ? "border-[#30d158]/30 bg-[#30d158]/5"
+            : readinessResult?.verdict === "not-ready"
+              ? "border-[#ff453a]/30 bg-[#ff453a]/5"
+              : readinessResult?.verdict === "needs-work"
+                ? "border-[#ff9f0a]/30 bg-[#ff9f0a]/5"
+                : "border-border-40 bg-surface-2-30"
+        }`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <ClipboardCheck size={12} className={`${
+                readinessResult?.verdict === "ready" ? "text-[#30d158]"
+                  : readinessResult?.verdict === "not-ready" ? "text-[#ff453a]"
+                    : readinessResult?.verdict === "needs-work" ? "text-[#ff9f0a]"
+                      : "text-accent"
+              }`} />
+              <span className="text-xs font-semibold text-text-primary">Commit Readiness</span>
+              {readinessResult && (
+                <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                  readinessResult.verdict === "ready"
+                    ? "bg-[#30d158]/15 text-[#30d158]"
+                    : readinessResult.verdict === "needs-work"
+                      ? "bg-[#ff9f0a]/15 text-[#ff9f0a]"
+                      : "bg-[#ff453a]/15 text-[#ff453a]"
+                }`}>
+                  {readinessResult.verdict === "ready" ? "READY" : readinessResult.verdict === "needs-work" ? "NEEDS WORK" : "NOT READY"}
+                </span>
+              )}
+              {readinessResult && (
+                <span className="text-[9px] font-semibold text-text-muted bg-surface-2 border border-border-40 rounded px-1.5 py-0.5">
+                  {readinessResult.stagedCount} staged, {readinessResult.unstagedCount} unstaged
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setReadinessOpen(false)}
+              className="h-5 w-5 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer"
+            >
+              <X size={12} />
+            </button>
+          </div>
+
+          {readinessPending ? (
+            <div className="flex items-center gap-2 rounded-mac border border-border-40 bg-surface-2-30 px-3 py-2.5 text-text-secondary">
+              <RefreshCw size={12} className="animate-spin text-accent" />
+              <span className="text-2xs">Checking commit readiness...</span>
+            </div>
+          ) : readinessResult ? (
+            <div className="space-y-2">
+              <p className="text-2xs text-text-secondary leading-relaxed">{readinessResult.summary}</p>
+
+              {readinessResult.items.length > 0 && (
+                <div className="space-y-1">
+                  {readinessResult.items.map((item, i) => (
+                    <div key={i} className={`flex items-start gap-2 p-2 rounded-mac text-2xs ${
+                      item.severity === "blocker"
+                        ? "bg-[#ff453a]/8 border-l-2 border-l-[#ff453a]"
+                        : item.severity === "warning"
+                          ? "bg-[#ff9f0a]/8 border-l-2 border-l-[#ff9f0a]"
+                          : item.severity === "suggestion"
+                            ? "bg-[#0a84ff]/8 border-l-2 border-l-[#0a84ff]"
+                            : "bg-surface-2-30 border-l-2 border-l-border-40"
+                    }`}>
+                      <span className={`font-bold uppercase shrink-0 ${
+                        item.severity === "blocker" ? "text-[#ff453a]"
+                          : item.severity === "warning" ? "text-[#ff9f0a]"
+                            : item.severity === "suggestion" ? "text-[#0a84ff]"
+                              : "text-text-muted"
+                      }`}>
+                        {item.category}
+                      </span>
+                      <div className="min-w-0">
+                        <span className="text-text-primary">{item.message}</span>
+                        {item.file && <span className="text-text-muted ml-1">({item.file})</span>}
+                        {item.action && <span className="text-text-muted block mt-0.5 italic">{item.action}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
       )}
 
