@@ -20,6 +20,8 @@ interface UIState {
   rebaseTargetCommit: string | null;
   prefilledRebaseTodos: RebaseTodoItem[] | null;
   squashNState: { open: boolean; commitHash: string | null };
+  pendingUpdateVersion: string | null;
+  setPendingUpdateVersion: (version: string | null) => void;
   setSidebarOpen: (open: boolean) => void;
   toggleSidebar: () => void;
   setRightPanelOpen: (open: boolean) => void;
@@ -52,6 +54,8 @@ export const useUIStore = create<UIState>((set) => ({
   rebaseTargetCommit: null,
   prefilledRebaseTodos: null,
   squashNState: { open: false, commitHash: null },
+  pendingUpdateVersion: null,
+  setPendingUpdateVersion: (version) => set({ pendingUpdateVersion: version }),
 
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),

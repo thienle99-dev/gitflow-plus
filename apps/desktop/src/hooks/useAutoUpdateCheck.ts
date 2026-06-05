@@ -9,6 +9,7 @@ const AUTO_UPDATE_START_DELAY_MS = 5_000;
 
 export function useAutoUpdateCheck(enabled: boolean) {
   const openDialog = useUIStore((s) => s.openDialog);
+  const setPendingUpdateVersion = useUIStore((s) => s.setPendingUpdateVersion);
 
   useEffect(() => {
     if (!enabled) return;
@@ -31,6 +32,7 @@ export function useAutoUpdateCheck(enabled: boolean) {
         if (lastNotifiedVersion === update.version) return;
 
         localStorage.setItem(AUTO_UPDATE_LAST_NOTIFIED_VERSION_KEY, update.version);
+        setPendingUpdateVersion(update.version);
         toast.info(`GitFlow Desktop v${update.version} is available`, {
           description: "Open settings to download and install the update.",
           duration: 12_000,
@@ -45,5 +47,5 @@ export function useAutoUpdateCheck(enabled: boolean) {
     }, AUTO_UPDATE_START_DELAY_MS);
 
     return () => window.clearTimeout(timer);
-  }, [enabled, openDialog]);
+  }, [enabled, openDialog, setPendingUpdateVersion]);
 }

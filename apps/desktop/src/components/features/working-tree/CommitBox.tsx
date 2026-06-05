@@ -126,13 +126,13 @@ export default function CommitBox({
 
   return (
     <div className="px-3 py-3 border-t border-border-60 bg-surface-1-10 space-y-2.5 shrink-0">
-      <div className="flex flex-col bg-surface-2-30 border border-border-40 rounded-mac p-2.5 focus-within:border-accent-60 focus-within:ring-1 focus-within:ring-accent-15 transition-all shadow-2xs">
+      <div className="commit-box-shell flex flex-col bg-surface-2-30 border border-border-40 rounded-mac p-2.5 transition-all shadow-2xs">
         <textarea
           ref={textareaRef}
           value={commitMessage}
           onChange={(e) => setCommitMessage(e.target.value)}
           placeholder="Commit message"
-          className="w-full min-h-[96px] max-h-[240px] text-xs bg-transparent text-text-primary placeholder:text-text-muted-60 resize-y outline-none border-none p-0 leading-relaxed font-mono focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:outline-none"
+          className="commit-message-textarea w-full min-h-[96px] max-h-[240px] text-xs bg-transparent text-text-primary placeholder:text-text-muted-60 resize-y outline-none border-none p-0 leading-relaxed font-mono focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:outline-none"
           style={{ outline: "none", border: "none", boxShadow: "none" }}
         />
         <div className="border-t border-border-60 pt-2.5 mt-2 select-none shrink-0 space-y-2">

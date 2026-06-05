@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from "react";
-import { Book, GitBranch, ArrowUp, ArrowDown, Loader2, GraduationCap, AlertTriangle, Terminal, Activity, RotateCcw, MessageSquareText } from "lucide-react";
+import { Book, GitBranch, ArrowUp, ArrowDown, Loader2, GraduationCap, AlertTriangle, Terminal, Activity, RotateCcw, MessageSquareText, Download, X } from "lucide-react";
 import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
 import { useGitBranches, useGitStatus, useGitSyncStatus } from "@/queries/useGitLog";
@@ -57,6 +57,36 @@ const LoadingIndicator = memo(function LoadingIndicator() {
 const selectRunningOpsCount = (s: { operations: Array<{ status: string }> }) =>
   s.operations.reduce((n, o) => (o.status === "running" ? n + 1 : n), 0);
 
+const UpdateBanner = memo(function UpdateBanner() {
+  const pendingVersion = useUIStore((s) => s.pendingUpdateVersion);
+  const setPendingVersion = useUIStore((s) => s.setPendingUpdateVersion);
+  const openDialogState = useUIStore((s) => s.openDialog);
+
+  if (!pendingVersion) return null;
+
+  return (
+    <div className="h-[22px] border-t border-accent-30 bg-accent-8 flex items-center px-4 text-2xs shrink-0 animate-in slide-in-from-bottom duration-200">
+      <Download size={10} className="text-accent shrink-0 mr-1.5" />
+      <span className="text-text-secondary">
+        <span className="font-semibold text-accent">v{pendingVersion}</span> is available
+      </span>
+      <button
+        onClick={() => openDialogState("settings")}
+        className="ml-2 px-2 py-0.5 text-2xs font-semibold text-accent-fg bg-accent rounded hover:bg-accent/80 transition-colors cursor-pointer"
+      >
+        Update
+      </button>
+      <button
+        onClick={() => setPendingVersion(null)}
+        className="ml-auto p-0.5 text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+        title="Dismiss"
+      >
+        <X size={10} />
+      </button>
+    </div>
+  );
+});
+
 export default function BottomBar() {
   const repoPath = useRepoStore((s) => s.repoPath);
   const openDialogState = useUIStore((s) => s.openDialog);
@@ -97,6 +127,7 @@ export default function BottomBar() {
 
   return (
     <>
+    <UpdateBanner />
     {repoPath && petEnabled && (
       <div className="footer-git-pet">
         <GitPet />
