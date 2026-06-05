@@ -1129,7 +1129,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
           <ConfirmDialog
             open={confirmResetOpen}
             title="Reset Settings"
-            message="Reset all GitFlow Desktop settings to their factory defaults?"
+            message="Reset all GitFlow settings to their factory defaults?"
             impactItems={[
               {
                 label: "All custom settings (theme, AI config, git preferences, integrations) will be lost",

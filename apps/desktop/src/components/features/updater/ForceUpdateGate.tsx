@@ -149,7 +149,7 @@ export default function ForceUpdateGate({ enabled }: { enabled: boolean }) {
             <div className="min-w-0">
               <h2 className="text-base font-bold text-text-primary">Required update</h2>
               <p className="mt-1 text-xs leading-relaxed text-text-secondary">
-                GitFlow Desktop v{state.version} is required before you can continue using the app.
+                GitFlow v{state.version} is required before you can continue using the app.
               </p>
             </div>
           </div>

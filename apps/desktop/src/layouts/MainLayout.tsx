@@ -555,9 +555,9 @@ function WelcomeScreen({ onOpen }: { onOpen: () => void }) {
       <div className="flex flex-col items-center w-full max-w-lg px-8">
         {/* App Icon */}
         <div className="mb-8 flex flex-col items-center gap-4">
-          <img src="/logo.png" alt="GitFlow Desktop" className="w-16 h-16 rounded-2xl shadow-lg" />
+          <img src="/logo.png" alt="GitFlow" className="w-16 h-16 rounded-2xl shadow-lg" />
           <div className="text-center">
-            <h1 className="text-lg font-semibold text-text-primary tracking-tight">GitFlow Desktop</h1>
+            <h1 className="text-lg font-semibold text-text-primary tracking-tight">GitFlow</h1>
             <p className="text-xs text-text-muted mt-1">Open a Git repository to get started</p>
           </div>
         </div>

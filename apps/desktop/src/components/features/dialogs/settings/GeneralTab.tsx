@@ -126,7 +126,7 @@ export function GeneralTab({
           <div className="space-y-0.5">
             <label className="text-xs font-semibold text-text-primary">App Updates</label>
             <p className="text-2xs text-text-muted">
-              Check for new versions of GitFlow Desktop.
+              Check for new versions of GitFlow.
             </p>
           </div>
           <button

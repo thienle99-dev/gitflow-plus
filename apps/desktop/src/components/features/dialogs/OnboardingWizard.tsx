@@ -244,7 +244,7 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
               <Sparkles size={14} className="text-accent" />
             </div>
             <div>
-              <span className="text-sm font-bold text-text-primary">Setup GitFlow Desktop</span>
+              <span className="text-sm font-bold text-text-primary">Setup GitFlow</span>
               <div className="text-2xs text-text-muted mt-0.5">Step {step + 1} of {totalSteps} — {steps[step].label}</div>
             </div>
           </div>
@@ -409,7 +409,7 @@ function WelcomeStep() {
         <img src="/logo.png" alt="GitFlow" className="w-12 h-12" />
       </div>
       <div className="space-y-2">
-        <h2 className="text-xl font-bold text-text-primary">Welcome to GitFlow Desktop</h2>
+        <h2 className="text-xl font-bold text-text-primary">Welcome to GitFlow</h2>
         <p className="text-xs text-text-secondary max-w-[400px] leading-relaxed">
           A modern, high-performance Git client with AI-powered commit messages,
           interactive commit graph, and full GitFlow workflow support.

@@ -69,7 +69,7 @@ export function useAutoUpdateCheck(enabled: boolean) {
             toast.error("Auto-download failed. You can retry from Settings.");
           }
         } else {
-          toast.info(`GitFlow Desktop v${update.version} is available`, {
+          toast.info(`GitFlow v${update.version} is available`, {
             description: "Open settings to download and install the update.",
             duration: 12_000,
             action: {

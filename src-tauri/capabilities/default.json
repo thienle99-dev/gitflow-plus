@@ -2,7 +2,7 @@
   "capabilities": [
     {
       "identifier": "default",
-      "description": "Default capability set for GitFlow Desktop",
+      "description": "Default capability set for GitFlow",
       "windows": ["main", "tray"],
       "permissions": [
         "core:default",
