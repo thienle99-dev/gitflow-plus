@@ -6,6 +6,7 @@ import TrayPanelView from "./pages/TrayPanelView";
 import { ErrorProvider } from "./lib/ErrorContext";
 import ErrorBoundary from "./components/ui/feedback/ErrorBoundary";
 import { useAutoUpdateCheck } from "./hooks/useAutoUpdateCheck";
+import ForceUpdateGate from "./components/features/updater/ForceUpdateGate";
 
 function App() {
   const theme = useRepoStore((s) => s.theme);
@@ -47,6 +48,7 @@ function App() {
     <ErrorBoundary>
       <ErrorProvider>
         {isTrayWindow ? <TrayPanelView /> : <RepoView />}
+        <ForceUpdateGate enabled={!isTrayWindow} />
         <Toaster
           position="bottom-center"
           toastOptions={{
