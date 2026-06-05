@@ -1,12 +1,15 @@
 import type { LayoutCommit } from "@/lib/graph-layout";
+import { classifyBranch } from "@/lib/gitflow-helpers";
+import type { GitFlowConfig } from "@/api/tauri";
 
 interface CommitTooltipProps {
   commit: LayoutCommit;
   x: number;
   y: number;
+  gitflowConfig?: GitFlowConfig | null;
 }
 
-export default function CommitTooltip({ commit, x, y }: CommitTooltipProps) {
+export default function CommitTooltip({ commit, x, y, gitflowConfig }: CommitTooltipProps) {
   const shortHash = commit.hash.slice(0, 7);
   const tooltipWidth = 320;
   const tooltipHeight = 96;
@@ -51,8 +54,18 @@ export default function CommitTooltip({ commit, x, y }: CommitTooltipProps) {
                   ? ref.name.split("/").slice(1).join("/")
                   : ref.name;
               const truncated = label.length > 20 ? label.slice(0, 19) + "…" : label;
-              const badgeColor =
-                ref.ref_type === "head"
+              const branchType = gitflowConfig && ref.ref_type !== "tag"
+                ? classifyBranch(ref.name, gitflowConfig)
+                : null;
+              const gitflowColors: Record<string, string> = {
+                feature: "#f59e0b",
+                release: "#3b82f6",
+                hotfix: "#ef4444",
+                develop: "#10b981",
+              };
+              const badgeColor = branchType && gitflowColors[branchType]
+                ? gitflowColors[branchType]
+                : ref.ref_type === "head"
                   ? "#ff9f0a"
                   : ref.ref_type === "tag"
                     ? "#bf5af2"

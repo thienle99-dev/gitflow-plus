@@ -228,6 +228,16 @@ export interface AppLogEntry {
   raw: string;
 }
 
+export interface GitFlowConfig {
+  initialized: boolean;
+  master: string;
+  develop: string;
+  feature_prefix: string;
+  release_prefix: string;
+  hotfix_prefix: string;
+  versiontag_prefix: string;
+}
+
 // Typed invoke wrappers
 export const api = {
   repo: {
@@ -501,5 +511,28 @@ export const api = {
     preflight: {
       check: (path: string) =>
         invoke<PreflightResult>("preflight_check", { path }),
+    },
+
+    gitflow: {
+      detect: (path: string) =>
+        invoke<GitFlowConfig>("gitflow_detect", { path }),
+      init: (
+        path: string,
+        master: string,
+        develop: string,
+        featurePrefix: string,
+        releasePrefix: string,
+        hotfixPrefix: string,
+        versiontagPrefix: string,
+      ) =>
+        invoke<GitFlowConfig>("gitflow_init", {
+          path,
+          master,
+          develop,
+          featurePrefix,
+          releasePrefix,
+          hotfixPrefix,
+          versiontagPrefix,
+        }),
     },
   };

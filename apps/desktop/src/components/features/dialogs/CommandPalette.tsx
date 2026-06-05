@@ -9,6 +9,7 @@ import {
   Search,
   GitBranch,
   GitCommit,
+  GitFork,
   FolderOpen,
   Download,
   Upload,
@@ -27,6 +28,8 @@ import {
   Sparkles,
   Trash2,
   RotateCcw,
+  Rocket,
+  Zap,
 } from "lucide-react";
 
 interface CommandPaletteProps {
@@ -262,6 +265,43 @@ const ACTIONS: PaletteAction[] = [
     action: () => {},
     requiresRepo: true,
   },
+  // GitFlow
+  {
+    id: "gitflow-init",
+    label: "GitFlow: Initialize",
+    description: "Initialize GitFlow branching model",
+    category: "git",
+    icon: <GitFork size={13} />,
+    action: () => {},
+    requiresRepo: true,
+  },
+  {
+    id: "gitflow-feature-start",
+    label: "GitFlow: Start Feature",
+    description: "Create a new feature branch from develop",
+    category: "git",
+    icon: <Plus size={13} />,
+    action: () => {},
+    requiresRepo: true,
+  },
+  {
+    id: "gitflow-release-start",
+    label: "GitFlow: Start Release",
+    description: "Create a new release branch from develop",
+    category: "git",
+    icon: <Rocket size={13} />,
+    action: () => {},
+    requiresRepo: true,
+  },
+  {
+    id: "gitflow-hotfix-start",
+    label: "GitFlow: Start Hotfix",
+    description: "Create a new hotfix branch from main",
+    category: "git",
+    icon: <Zap size={13} />,
+    action: () => {},
+    requiresRepo: true,
+  },
 ];
 
 export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
@@ -362,6 +402,10 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
         // Focus commit box — the user can then click the AI button
         showToast("Open the commit box and click ✨ to generate with AI");
       },
+      "gitflow-init": () => openDialog("gitflow"),
+      "gitflow-feature-start": () => openDialog("gitflow-feature-start"),
+      "gitflow-release-start": () => openDialog("gitflow-release-start"),
+      "gitflow-hotfix-start": () => openDialog("gitflow-hotfix-start"),
     } as Record<string, () => void | Promise<void>>;
   }, [repoPath, queryClient, openDialog, openRepo]);
 

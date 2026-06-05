@@ -7,6 +7,7 @@ pub mod cherry_pick;
 pub mod clone;
 pub mod commit;
 pub mod diff;
+pub mod gitflow;
 pub mod health;
 pub mod lfs;
 pub mod lint;

@@ -5,6 +5,7 @@ import { useGitBranches, useGitStatus, useGitSyncStatus } from "@/queries/useGit
 import { useGitLfsStatus } from "@/queries/useGitLfs";
 import { useMergeStatus } from "@/queries/useGitMerge";
 import { useUndoLast } from "@/queries/useGitReflog";
+import { useGitFlowDetect } from "@/queries/useGitFlow";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePreflightGate } from "@/hooks/usePreflightGate";
@@ -25,6 +26,10 @@ import {
   PanelLeft,
   PanelRight,
   MoreHorizontal,
+  Rocket,
+  Tag,
+  Zap,
+  GitFork,
 } from "lucide-react";
 import CreateBranchDialog from "@/components/features/dialogs/CreateBranchDialog";
 import { RiskSummaryDialog } from "@/components/features/dialogs";
@@ -51,6 +56,7 @@ export default function Toolbar() {
   const { data: lfsStatus } = useGitLfsStatus(repoPath);
   const { data: mergeStatus } = useMergeStatus(repoPath);
   const undoLast = useUndoLast(repoPath);
+  const { data: gitflowConfig } = useGitFlowDetect(repoPath);
   const { reportError } = useErrorReporter();
   const [loading, setLoading] = useState<string | null>(null);
 
@@ -392,6 +398,55 @@ export default function Toolbar() {
               <span>Stash</span>
             </button>
           </div>
+
+          {/* GitFlow Segment Group */}
+          {!collapsed && (
+            <div className="flex items-center bg-surface-2-40 border border-border-40 rounded-mac p-0.5 shadow-2xs" role="group" aria-label="GitFlow">
+              {gitflowConfig?.initialized ? (
+                <>
+                  <button
+                    className="h-7 px-3 flex items-center gap-1.5 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer"
+                    onClick={() => openDialog("gitflow-feature-start")}
+                    aria-label="Start new feature branch"
+                    title="Start new feature branch"
+                  >
+                    <Rocket size={13} className="text-amber-400" />
+                    <span className="text-amber-400/80">Feature</span>
+                  </button>
+                  <div className="w-[1px] h-3.5 bg-border-50" />
+                  <button
+                    className="h-7 px-3 flex items-center gap-1.5 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer"
+                    onClick={() => openDialog("gitflow-release-start")}
+                    aria-label="Start new release branch"
+                    title="Start new release branch"
+                  >
+                    <Tag size={13} className="text-blue-400" />
+                    <span className="text-blue-400/80">Release</span>
+                  </button>
+                  <div className="w-[1px] h-3.5 bg-border-50" />
+                  <button
+                    className="h-7 px-3 flex items-center gap-1.5 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer"
+                    onClick={() => openDialog("gitflow-hotfix-start")}
+                    aria-label="Start new hotfix branch"
+                    title="Start new hotfix branch"
+                  >
+                    <Zap size={13} className="text-red-400" />
+                    <span className="text-red-400/80">Hotfix</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  className="h-7 px-3 flex items-center gap-1.5 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer"
+                  onClick={() => openDialog("gitflow")}
+                  aria-label="Initialize GitFlow"
+                  title="Initialize GitFlow branching model"
+                >
+                  <GitFork size={13} className="text-text-muted" />
+                  <span>Init GitFlow</span>
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Utilities Segment Group — visible when not collapsed */}
           {!collapsed && (

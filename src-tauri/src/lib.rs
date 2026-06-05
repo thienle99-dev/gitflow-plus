@@ -317,6 +317,8 @@ pub fn run() {
             commands::health::diagnostic_bundle,
             commands::op_lock::repo_lock_status,
             commands::preflight::preflight_check,
+            commands::gitflow::gitflow_detect,
+            commands::gitflow::gitflow_init,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

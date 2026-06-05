@@ -4,6 +4,9 @@ import { useUIStore } from "@/stores/ui";
 import { useGitBranches, useGitSyncStatus } from "@/queries/useGitLog";
 import { useTagList } from "@/queries/useGitTag";
 import { useSubmoduleList } from "@/queries/useSubmoduleList";
+import { useGitFlowDetect } from "@/queries/useGitFlow";
+import { classifyBranch, gitflowBranchColor } from "@/lib/gitflow-helpers";
+import type { GitFlowConfig } from "@/api/tauri";
 import SubmoduleEntry from "./SubmoduleEntry";
 import { api } from "@/api/tauri";
 import ContextMenu from "@/components/ui/overlay/ContextMenu";
@@ -44,6 +47,7 @@ export default function Sidebar() {
   const { data: branches } = useGitBranches(repoPath);
   const { data: tags } = useTagList(repoPath);
   const { data: submodules } = useSubmoduleList(repoPath);
+  const { data: gitflowConfig } = useGitFlowDetect(repoPath);
   const { data: syncStatus } = useGitSyncStatus(repoPath);
   const [branchesOpen, setBranchesOpen] = useState(true);
   const [remotesOpen, setRemotesOpen] = useState(false);
@@ -331,6 +335,7 @@ export default function Sidebar() {
             onToggleFolder={handleToggleBranchFolder}
             aheadCount={aheadCount}
             behindCount={behindCount}
+            gitflowConfig={gitflowConfig ?? null}
           />
         </div>
       )}
@@ -630,6 +635,7 @@ interface BranchTreeRendererProps {
   onToggleFolder: (path: string) => void;
   aheadCount?: number;
   behindCount?: number;
+  gitflowConfig?: GitFlowConfig | null;
 }
 
 function BranchTreeRenderer({
@@ -643,6 +649,7 @@ function BranchTreeRenderer({
   onToggleFolder,
   aheadCount = 0,
   behindCount = 0,
+  gitflowConfig,
 }: BranchTreeRendererProps) {
   const sortedKeys = Object.keys(node.children).sort((a, b) => {
     const childA = node.children[a];
@@ -699,6 +706,7 @@ function BranchTreeRenderer({
                   onToggleFolder={onToggleFolder}
                   aheadCount={aheadCount}
                   behindCount={behindCount}
+                  gitflowConfig={gitflowConfig}
                 />
               )}
             </div>
@@ -726,6 +734,20 @@ function BranchTreeRenderer({
                 }}
               >
                 <GitBranch size={12} className={isSelected ? "text-accent" : child.current ? "text-[#30d158]" : "text-text-secondary"} />
+                {gitflowConfig && (() => {
+                  const branchType = classifyBranch(child.fullName, gitflowConfig);
+                  const color = gitflowBranchColor(branchType);
+                  if (branchType === "feature" || branchType === "release" || branchType === "hotfix") {
+                    return (
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: color }}
+                        title={`${branchType} branch`}
+                      />
+                    );
+                  }
+                  return null;
+                })()}
                 <span className={`min-w-0 flex-1 truncate text-xs ${child.current ? "font-semibold text-text-primary" : "text-text-secondary"}`}>
                   {child.name}
                 </span>

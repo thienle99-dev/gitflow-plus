@@ -38,6 +38,7 @@ const CommandPalette = lazy(() => import("@/components/features/dialogs/CommandP
 const InteractiveRebaseDialog = lazy(() => import("@/components/features/dialogs/InteractiveRebaseDialog"));
 const SquashDialog = lazy(() => import("@/components/features/dialogs/SquashDialog"));
 const CommitSummaryDialog = lazy(() => import("@/components/features/dialogs/CommitSummaryDialog"));
+const GitFlowDialog = lazy(() => import("@/components/features/dialogs/GitFlowDialog"));
 
 export default function MainLayout() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
@@ -393,6 +394,10 @@ export default function MainLayout() {
       />
     ),
     "commit-summary": <CommitSummaryDialog onClose={closeDialog} />,
+    gitflow: <GitFlowDialog open={true} onClose={closeDialog} />,
+    "gitflow-feature-start": <GitFlowDialog open={true} initialMode="feature-start" onClose={closeDialog} />,
+    "gitflow-release-start": <GitFlowDialog open={true} initialMode="release-start" onClose={closeDialog} />,
+    "gitflow-hotfix-start": <GitFlowDialog open={true} initialMode="hotfix-start" onClose={closeDialog} />,
   }), [closeDialog, selectedCommit, mergeTargetBranch, compareBranchTarget, selectedRef, rebaseTargetCommit]);
 
   const dialogOverlay = overlayDialog ? (

@@ -16,6 +16,7 @@ import { showToast } from "@/lib/toast";
 import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
 import { formatCommitDate } from "@/lib/date";
 import { usePreflightGate } from "@/hooks/usePreflightGate";
+import { useGitFlowDetect } from "@/queries/useGitFlow";
 import { Search, X } from "lucide-react";
 
 const ROW_HEIGHT = 38;
@@ -50,6 +51,7 @@ export default function CommitGraph() {
   const [filterScope, setFilterScope] = useState<CommitFilterScope>("all");
 
   // Preflight gates for risky operations
+  const { data: gitflowConfig } = useGitFlowDetect(repoPath);
   const cherryPickGate = usePreflightGate("cherry-pick");
   const revertGate = usePreflightGate("revert");
   const [filterQuery, setFilterQuery] = useState("");
@@ -413,7 +415,7 @@ export default function CommitGraph() {
 
       {/* Hover tooltip */}
       {hover.commit && (
-        <CommitTooltip commit={hover.commit} x={hover.x} y={hover.y} />
+        <CommitTooltip commit={hover.commit} x={hover.x} y={hover.y} gitflowConfig={gitflowConfig} />
       )}
 
       {/* Context menu */}
