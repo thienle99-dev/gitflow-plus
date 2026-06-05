@@ -91,9 +91,9 @@ export default function TitleBar() {
       { separator: true },
       { label: "Preferences...", shortcut: "⌘,", onClick: () => openDialog("settings") },
       { separator: true },
-      { label: "Check for Updates..." },
+      { label: "Check for Updates...", onClick: () => openDialog("settings") },
       { separator: true },
-      { label: "Hide GitFlow Desktop", shortcut: "⌘H" },
+      { label: "Hide GitFlow Desktop", shortcut: "⌘H", onClick: () => { try { getCurrentWindow().hide(); } catch {} } },
       { label: "Show All" },
       { separator: true },
       { label: "Quit GitFlow Desktop", shortcut: "⌘Q", onClick: handleCloseWindow }

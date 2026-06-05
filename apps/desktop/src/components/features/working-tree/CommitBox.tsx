@@ -236,7 +236,7 @@ export default function CommitBox({
                   type="button"
                   onClick={onAIReview}
                   disabled={committing || aiReviewPending || !hasAnyChanges}
-                  className={`${statusButtonBase} bg-accent-10 border-accent-25 text-accent hover:bg-accent-15 hover:border-accent-40 disabled:bg-transparent disabled:border-transparent disabled:text-text-muted ${aiReviewPending ? "opacity-70" : ""}`}
+                  className={`${statusButtonBase} bg-accent-10 border-transparent text-accent hover:bg-accent-15 hover:border-accent-30 disabled:bg-transparent disabled:border-transparent disabled:text-text-muted ${aiReviewPending ? "opacity-70" : ""}`}
                   title="Run AI review with custom checklist"
                 >
                   {aiReviewPending ? (

@@ -1,4 +1,5 @@
 import { memo, useEffect, useState } from "react";
+import { getVersion } from "@tauri-apps/api/app";
 import { Book, GitBranch, ArrowUp, ArrowDown, Loader2, GraduationCap, AlertTriangle, Terminal, Activity, RotateCcw, MessageSquareText, Download, X } from "lucide-react";
 import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
@@ -84,6 +85,26 @@ const UpdateBanner = memo(function UpdateBanner() {
         <X size={10} />
       </button>
     </div>
+  );
+});
+
+const AppVersion = memo(function AppVersion() {
+  const [version, setVersion] = useState<string>("");
+  const pendingVersion = useUIStore((s) => s.pendingUpdateVersion);
+
+  useEffect(() => {
+    getVersion().then(setVersion).catch(() => {});
+  }, []);
+
+  if (!version) return null;
+
+  return (
+    <span
+      className={`text-text-muted font-mono tabular-nums ${pendingVersion ? "text-accent" : ""}`}
+      title={pendingVersion ? `Update available: v${pendingVersion}` : `GitFlow Desktop v${version}`}
+    >
+      v{version}
+    </span>
   );
 });
 
@@ -264,6 +285,10 @@ export default function BottomBar() {
           <Book size={11} />
           <span className="text-[9px] font-semibold">Guide</span>
         </button>
+
+        <div className="border-l border-border-20 pl-2 ml-1">
+          <AppVersion />
+        </div>
       </div>
     </div>
     </>
