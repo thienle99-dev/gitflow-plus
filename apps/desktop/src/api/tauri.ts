@@ -57,6 +57,13 @@ export interface SyncStatus {
   behind: number;
 }
 
+export interface SshKeyInfo {
+  key_type: string;
+  file_name: string;
+  path: string;
+  readable: boolean;
+}
+
 /** Map of "YYYY-MM-DD" → commit count */
 export type ActivityMap = Record<string, number>;
 
@@ -374,6 +381,14 @@ export const api = {
       invoke<string>("git_fetch", { path, remote: remote ?? null }),
     getSyncStatus: (path: string) =>
       invoke<SyncStatus>("get_sync_status", { path }),
+    detectSshKeys: () =>
+      invoke<SshKeyInfo[]>("detect_ssh_keys"),
+    detectProtocol: (path: string) =>
+      invoke<string>("detect_remote_protocol", { path }),
+    setTempCredentials: (path: string, username: string, password: string, remote?: string) =>
+      invoke<string>("set_temp_credentials", { path, username, password, remote: remote ?? null }),
+    restoreRemoteUrl: (path: string, originalUrl: string, remote?: string) =>
+      invoke<void>("restore_remote_url", { path, originalUrl, remote: remote ?? null }),
   },
 
   lfs: {
