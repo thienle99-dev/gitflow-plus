@@ -10,9 +10,11 @@ import {
   Palette,
   PawPrint,
   RotateCcw,
+  Search,
   Settings,
   Sliders,
   Sparkles,
+  X,
 } from "lucide-react";
 import { useRepoStore, applyTheme, readStoredTheme } from "@/stores/repo";
 import { AI_REVIEW_CHECKLIST_OPTIONS, DEFAULT_AI_REVIEW_CHECKLIST, type AIReviewMode, readDetectedConventions, clearAICache } from "@/lib/ai";
@@ -142,7 +144,33 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
   const [activeTab, setActiveTab] = useState<"general" | "appearance" | "diff" | "git" | "accounts" | "ai" | "pet" | "advanced">(
     initialTab === "advanced" ? "diff" : initialTab
   );
-  
+  const [settingsSearch, setSettingsSearch] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Search index: maps tab IDs to searchable keywords
+  const TAB_SEARCH_INDEX: Record<string, { label: string; keywords: string[] }> = {
+    general: { label: "General", keywords: ["general", "startup", "repository", "recent", "last repo", "open"] },
+    appearance: { label: "Appearance", keywords: ["appearance", "theme", "display", "density", "graph", "date", "format", "motion", "animation", "color"] },
+    diff: { label: "Editor & Diff", keywords: ["editor", "diff", "split", "unified", "context", "wrap", "line wrap", "large diff", "mode"] },
+    git: { label: "Git Core", keywords: ["git", "fetch", "auto", "prune", "confirm", "dangerous", "lint", "commit", "code", "strictness"] },
+    ai: { label: "AI Assistant", keywords: ["ai", "artificial intelligence", "model", "api", "key", "token", "provider", "openai", "anthropic", "ollama", "profile", "review", "commit", "style", "conventional", "gitmoji", "jira", "convention", "rules", "language"] },
+    accounts: { label: "Accounts", keywords: ["accounts", "github", "gitlab", "token", "integration", "hosting", "oauth"] },
+    pet: { label: "Git Pet", keywords: ["pet", "companion", "mascot", "animal", "panda", "mushroom", "golden retriever"] },
+  };
+
+  // Filter tabs based on search
+  const filteredTabs = settingsSearch.trim()
+    ? (Object.entries(TAB_SEARCH_INDEX) as [string, { label: string; keywords: string[] }][]).filter(
+        ([, tab]) => {
+          const q = settingsSearch.toLowerCase();
+          return (
+            tab.label.toLowerCase().includes(q) ||
+            tab.keywords.some((kw) => kw.includes(q))
+          );
+        },
+      ).map(([id]) => id as typeof activeTab)
+    : null; // null = show all tabs
+
   // General Tab States
   const [theme, setSelectedTheme] = useState<typeof currentTheme>(currentTheme);
 
