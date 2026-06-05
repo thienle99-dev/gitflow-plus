@@ -10,6 +10,8 @@ Automates version bump, git tag, and push sequence across three version files:
 
 import json
 import re
+import argparse
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -82,6 +84,12 @@ def prompt_new_version(current):
         print(f"Error: New version must be greater than {current}", file=sys.stderr)
 
 
+def prompt_force_update():
+    """Ask whether this release should be mandatory."""
+    response = input("Force users to update before using the app? (y/N): ").strip().lower()
+    return response == "y"
+
+
 def check_tag_not_exists(version):
     """Abort if tag v{version} already exists."""
     tag = f"v{version}"
@@ -128,16 +136,50 @@ def update_package_json(version):
         f.write("\n")
 
 
+def build_tag_message(version, force_update):
+    """Build annotated tag message consumed by CI release workflow."""
+    marker = "[x] Force update" if force_update else "[ ] Force update"
+    return f"Release v{version}\n\n{marker}"
+
+
 def main():
     """Main release flow."""
+    parser = argparse.ArgumentParser(description="Release GitFlow Desktop.")
+    parser.add_argument("--version", help="New semver version, e.g. 1.2.3")
+    parser.add_argument(
+        "--force-update",
+        action="store_true",
+        help="Mark this release as mandatory. Users will be blocked until they update.",
+    )
+    parser.add_argument(
+        "--no-force-update",
+        action="store_true",
+        help="Mark this release as optional without prompting.",
+    )
+    args = parser.parse_args()
+
+    if args.force_update and args.no_force_update:
+        print("Error: Use only one of --force-update or --no-force-update", file=sys.stderr)
+        sys.exit(1)
+
     check_working_tree_clean()
     check_on_main()
 
     current_version = read_current_version()
     print(f"Current version: {current_version}")
 
-    new_version = prompt_new_version(current_version)
+    if args.version:
+        validate_semver(args.version)
+        if parse_version(args.version) <= parse_version(current_version):
+            print(f"Error: New version must be greater than {current_version}", file=sys.stderr)
+            sys.exit(1)
+        new_version = args.version
+    else:
+        new_version = prompt_new_version(current_version)
     print(f"New version: {new_version}")
+
+    force_update = args.force_update or (not args.no_force_update and prompt_force_update())
+    print(f"Force update: {'yes' if force_update else 'no'}")
 
     check_tag_not_exists(new_version)
 
@@ -149,11 +191,12 @@ def main():
     print("Staging files...")
     run_cmd("git add src-tauri/Cargo.toml src-tauri/tauri.conf.json apps/desktop/package.json")
 
-    print(f"Committing...")
+    print("Committing...")
     run_cmd(f'git commit -m "chore(release): v{new_version}"')
 
     print(f"Tagging v{new_version}...")
-    run_cmd(f"git tag v{new_version}")
+    tag_message = build_tag_message(new_version, force_update)
+    run_cmd(f"git tag -a v{new_version} -m {shlex.quote(tag_message)}")
 
     print("Pushing to origin...")
     run_cmd("git push origin main --tags")
