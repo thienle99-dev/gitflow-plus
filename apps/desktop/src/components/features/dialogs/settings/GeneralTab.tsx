@@ -3,6 +3,7 @@ import { ChevronDown, Download, Check, RefreshCw, Loader2, AlertCircle, ArrowUpC
 import { applyTheme } from "@/stores/repo";
 import { Switch } from "@/components/ui/form";
 import { useAppUpdater } from "@/queries/useAppUpdater";
+import { getAutoUpdateMode, setAutoUpdateMode, type AutoUpdateMode } from "@/hooks/useAutoUpdateCheck";
 import { formatDateString, formatRelativeTime } from "@/lib/date";
 
 export const THEME_CARDS = [
@@ -110,6 +111,11 @@ export function GeneralTab({
   handleClearRecentRepos,
 }: GeneralTabProps) {
   const updater = useAppUpdater();
+  const [updateMode, setUpdateModeState] = useState<AutoUpdateMode>(getAutoUpdateMode);
+  const handleUpdateModeChange = (mode: AutoUpdateMode) => {
+    setUpdateModeState(mode);
+    setAutoUpdateMode(mode);
+  };
 
   return (
     <div className="space-y-4">
@@ -134,6 +140,28 @@ export function GeneralTab({
             )}
             {updater.status === "checking" ? "Checking…" : "Check for Updates"}
           </button>
+        </div>
+
+        {/* Auto-Update Mode */}
+        <div className="border-t border-border-40 pt-2.5 flex items-center justify-between gap-4">
+          <div className="flex flex-col min-w-0">
+            <span className="text-xs font-semibold text-text-primary">Auto-Update Mode</span>
+            <span className="text-2xs text-text-muted mt-0.5 leading-normal">How the app handles background update checks.</span>
+          </div>
+          <div className="relative w-40 shrink-0">
+            <select
+              value={updateMode}
+              onChange={(e) => handleUpdateModeChange(e.target.value as AutoUpdateMode)}
+              className="w-full h-8 pl-2.5 pr-8 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent appearance-none cursor-pointer hover:bg-surface-2 transition-all"
+            >
+              <option value="notify-only">Notify Only</option>
+              <option value="auto-download">Auto Download</option>
+              <option value="disabled">Disabled</option>
+            </select>
+            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
+              <ChevronDown size={11} strokeWidth={2.5} />
+            </div>
+          </div>
         </div>
 
         {/* Status Messages */}
