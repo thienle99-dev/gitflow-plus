@@ -1,4 +1,5 @@
 use serde::Serialize;
+use std::path::PathBuf;
 use tokio::fs;
 use tokio::process::Command;
 
@@ -35,11 +36,9 @@ impl Default for GitFlowConfig {
     }
 }
 
-/// Detect whether GitFlow is initialized by reading `.git/config`.
-#[tauri::command]
-pub async fn gitflow_detect(path: String) -> Result<GitFlowConfig, String> {
+async fn git_config_path(path: &str) -> Result<PathBuf, String> {
     let git_dir_output = Command::new("git")
-        .args(["--no-pager", "-C", &path, "rev-parse", "--git-dir"])
+        .args(["--no-pager", "-C", path, "rev-parse", "--git-dir"])
         .output()
         .await
         .map_err(|e| format!("Failed to find git dir: {}", e))?;
@@ -49,12 +48,85 @@ pub async fn gitflow_detect(path: String) -> Result<GitFlowConfig, String> {
     }
 
     let git_dir = String::from_utf8_lossy(&git_dir_output.stdout).trim().to_string();
-    let git_config_path = if git_dir.starts_with('/') {
-        std::path::PathBuf::from(&git_dir).join("config")
+    let config_path = if git_dir.starts_with('/') {
+        PathBuf::from(&git_dir).join("config")
     } else {
-        std::path::PathBuf::from(&path).join(&git_dir).join("config")
+        PathBuf::from(path).join(&git_dir).join("config")
     };
+    Ok(config_path)
+}
 
+fn validate_gitflow_config(config: &GitFlowConfig) -> Result<(), String> {
+    let branch_names = [
+        ("master branch", config.master.as_str()),
+        ("develop branch", config.develop.as_str()),
+    ];
+    for (label, value) in branch_names {
+        if value.trim().is_empty() {
+            return Err(format!("{} cannot be empty", label));
+        }
+        if value.trim() != value {
+            return Err(format!("{} cannot start or end with whitespace", label));
+        }
+    }
+
+    let prefixes = [
+        ("feature prefix", config.feature_prefix.as_str()),
+        ("release prefix", config.release_prefix.as_str()),
+        ("hotfix prefix", config.hotfix_prefix.as_str()),
+    ];
+    for (label, value) in prefixes {
+        if value.trim().is_empty() {
+            return Err(format!("{} cannot be empty", label));
+        }
+        if value.trim() != value {
+            return Err(format!("{} cannot start or end with whitespace", label));
+        }
+    }
+
+    if config.versiontag_prefix.trim() != config.versiontag_prefix {
+        return Err("version tag prefix cannot start or end with whitespace".to_string());
+    }
+
+    Ok(())
+}
+
+async fn write_gitflow_config(path: &str, config: &GitFlowConfig) -> Result<(), String> {
+    validate_gitflow_config(config)?;
+    let git_config_path = git_config_path(path).await?;
+    let mut config_content = fs::read_to_string(&git_config_path)
+        .await
+        .map_err(|e| format!("Failed to read .git/config: {}", e))?;
+
+    if let Some(start) = config_content.find("[gitflow]") {
+        let after_section = &config_content[start..];
+        let end = after_section[1..]
+            .find('[')
+            .map(|i| i + 1)
+            .unwrap_or(after_section.len());
+        config_content.replace_range(start..start + end, "");
+    }
+
+    let gitflow_section = format!(
+        "\n[gitflow]\n\tmaster = {}\n\tdevelop = {}\n\tfeature = {}\n\trelease = {}\n\thotfix = {}\n\tversiontag = {}\n",
+        config.master,
+        config.develop,
+        config.feature_prefix,
+        config.release_prefix,
+        config.hotfix_prefix,
+        config.versiontag_prefix
+    );
+    config_content.push_str(&gitflow_section);
+
+    fs::write(&git_config_path, &config_content)
+        .await
+        .map_err(|e| format!("Failed to write .git/config: {}", e))
+}
+
+/// Detect whether GitFlow is initialized by reading `.git/config`.
+#[tauri::command]
+pub async fn gitflow_detect(path: String) -> Result<GitFlowConfig, String> {
+    let git_config_path = git_config_path(&path).await?;
     let config_content = match fs::read_to_string(&git_config_path).await {
         Ok(c) => c,
         Err(_) => return Ok(GitFlowConfig::default()),
@@ -111,21 +183,32 @@ pub async fn gitflow_init(
     hotfix_prefix: String,
     versiontag_prefix: String,
 ) -> Result<GitFlowConfig, String> {
+    let config = GitFlowConfig {
+        initialized: true,
+        master,
+        develop,
+        feature_prefix,
+        release_prefix,
+        hotfix_prefix,
+        versiontag_prefix,
+    };
+    validate_gitflow_config(&config)?;
+
     // Check if develop branch exists
     let check_output = Command::new("git")
-        .args(["--no-pager", "-C", &path, "branch", "--list", &develop])
+        .args(["--no-pager", "-C", &path, "branch", "--list", &config.develop])
         .output()
         .await
         .map_err(|e| format!("Failed to check branches: {}", e))?;
 
     let develop_exists = String::from_utf8_lossy(&check_output.stdout)
         .lines()
-        .any(|l| l.trim().replace("* ", "") == develop);
+        .any(|l| l.trim().replace("* ", "") == config.develop);
 
     // Create develop from main if it doesn't exist
     if !develop_exists {
         let create_output = Command::new("git")
-            .args(["-C", &path, "branch", &develop, &master])
+            .args(["-C", &path, "branch", &config.develop, &config.master])
             .output()
             .await
             .map_err(|e| format!("Failed to create develop branch: {}", e))?;
@@ -136,47 +219,22 @@ pub async fn gitflow_init(
         }
     }
 
-    // Read existing .git/config
-    let git_dir_output = Command::new("git")
-        .args(["--no-pager", "-C", &path, "rev-parse", "--git-dir"])
-        .output()
-        .await
-        .map_err(|e| format!("Failed to find git dir: {}", e))?;
+    write_gitflow_config(&path, &config).await?;
+    Ok(config)
+}
 
-    let git_dir = String::from_utf8_lossy(&git_dir_output.stdout).trim().to_string();
-    let git_config_path = if git_dir.starts_with('/') {
-        std::path::PathBuf::from(&git_dir).join("config")
-    } else {
-        std::path::PathBuf::from(&path).join(&git_dir).join("config")
-    };
-
-    let mut config_content = match fs::read_to_string(&git_config_path).await {
-        Ok(c) => c,
-        Err(e) => return Err(format!("Failed to read .git/config: {}", e)),
-    };
-
-    // Remove existing [gitflow] section if present
-    if let Some(start) = config_content.find("[gitflow]") {
-        let after_section = &config_content[start..];
-        let end = after_section[1..]
-            .find('[')
-            .map(|i| i + 1)
-            .unwrap_or(after_section.len());
-        config_content.replace_range(start..start + end, "");
-    }
-
-    // Append new [gitflow] section
-    let gitflow_section = format!(
-        "\n[gitflow]\n\tmaster = {}\n\tdevelop = {}\n\tfeature = {}\n\trelease = {}\n\thotfix = {}\n\tversiontag = {}\n",
-        master, develop, feature_prefix, release_prefix, hotfix_prefix, versiontag_prefix
-    );
-    config_content.push_str(&gitflow_section);
-
-    fs::write(&git_config_path, &config_content)
-        .await
-        .map_err(|e| format!("Failed to write .git/config: {}", e))?;
-
-    Ok(GitFlowConfig {
+/// Update GitFlow metadata in `.git/config` without creating branches.
+#[tauri::command]
+pub async fn gitflow_update_config(
+    path: String,
+    master: String,
+    develop: String,
+    feature_prefix: String,
+    release_prefix: String,
+    hotfix_prefix: String,
+    versiontag_prefix: String,
+) -> Result<GitFlowConfig, String> {
+    let config = GitFlowConfig {
         initialized: true,
         master,
         develop,
@@ -184,5 +242,7 @@ pub async fn gitflow_init(
         release_prefix,
         hotfix_prefix,
         versiontag_prefix,
-    })
+    };
+    write_gitflow_config(&path, &config).await?;
+    Ok(config)
 }

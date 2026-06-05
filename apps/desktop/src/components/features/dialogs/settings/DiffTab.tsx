@@ -25,7 +25,7 @@ export function DiffTab({
   return (
     <div className="space-y-4">
       {/* Diff & Editor Preferences Card */}
-      <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
+      <div id="diff-editor" className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
         {/* Default Diff Mode Selector */}
         <div className="space-y-1">
           <label className="text-xs font-semibold text-text-primary">Default Diff View Mode</label>
@@ -89,7 +89,7 @@ export function DiffTab({
       </div>
 
       {/* System Keyboard Shortcuts Card */}
-      <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
+      <div id="diff-shortcuts" className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
         <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary mb-1">
           <Keyboard size={13} className="text-accent" />
           System Shortcuts

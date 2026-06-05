@@ -27,7 +27,7 @@ export function defaultApiUrlForProvider(provider: AIProviderType): string {
   switch (provider) {
     case "ollama": return "http://localhost:11434";
     case "llamacpp": return "http://localhost:8080";
-    case "anthropic": return "https://api.anthropic.com";
+    case "anthropic": return "https://api.anthropic.com/v1";
     case "openai-compatible": return "";
   }
 }

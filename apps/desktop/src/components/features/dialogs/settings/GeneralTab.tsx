@@ -114,7 +114,7 @@ export function GeneralTab({
   return (
     <div className="space-y-4">
       {/* App Updates Card */}
-      <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
+      <div id="general-updates" className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
             <label className="text-xs font-semibold text-text-primary">App Updates</label>
@@ -202,7 +202,7 @@ export function GeneralTab({
       </div>
 
       {/* Launch Preferences Card */}
-      <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
+      <div id="general-launch" className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
         <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary mb-1">
           Launch Preferences
         </div>
@@ -230,7 +230,7 @@ export function GeneralTab({
       </div>
 
       {/* Diagnostics & Maintenance Card */}
-      <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
+      <div id="general-diagnostics" className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
         <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary mb-1">
           <ShieldAlert size={13} className="text-[#ff9f0a]" />
           Maintenance & Diagnostics
@@ -301,7 +301,7 @@ export function AppearanceTab({
   return (
     <div className="space-y-4">
       {/* Color Theme Card */}
-      <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
+      <div id="appearance-theme" className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
         <div className="space-y-2">
           <label className="text-xs font-semibold text-text-primary">Color Theme</label>
           <div className="space-y-3">
@@ -333,7 +333,7 @@ export function AppearanceTab({
       </div>
 
       {/* Graph Layout & Accessibility preferences */}
-      <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
+      <div id="appearance-graph" className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <label className="text-xs font-semibold text-text-primary">Commit Graph Density</label>
@@ -385,7 +385,7 @@ export function AppearanceTab({
       </div>
 
       {/* Date Format Card */}
-      <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
+      <div id="appearance-date" className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
         <div className="space-y-1">
           <label className="text-xs font-semibold text-text-primary">Commit Date Format</label>
           <div className="relative">

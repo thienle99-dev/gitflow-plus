@@ -168,7 +168,7 @@ export function AITab({
   return (
     <div className="space-y-4">
       {/* ── Profile Selector Card ──────────────────────────────────────── */}
-      <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
+      <div id="ai-profile" className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
         <div className="flex items-center gap-2">
           <Users size={13} className="text-accent shrink-0" />
           <label className="text-xs font-semibold text-text-primary">API Profile</label>
@@ -243,7 +243,7 @@ export function AITab({
       </div>
 
       {/* ── Provider Type Dropdown ──────────────────────────────────────── */}
-      <div className="space-y-1">
+      <div id="ai-provider" className="space-y-1">
         <label className="text-xs font-semibold text-text-primary">Provider Type</label>
         <div className="relative">
           <select
@@ -267,7 +267,7 @@ export function AITab({
       </div>
 
       {/* AI Provider Configuration Card */}
-      <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
+      <div id="ai-config" className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
         {/* API Key — only shown when the provider needs one */}
         {needsApiKey && (
           <div className="space-y-1">
@@ -331,7 +331,7 @@ export function AITab({
         </div>
 
         {/* Model Selection */}
-        <div className="space-y-1 border-t border-border-40 pt-3">
+        <div id="ai-models" className="space-y-1 border-t border-border-40 pt-3">
           <label className="text-xs font-semibold text-text-primary">AI Models</label>
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
@@ -400,7 +400,7 @@ export function AITab({
         </div>
 
         {/* Token Limit */}
-        <div className="space-y-1 border-t border-border-40 pt-3">
+        <div id="ai-tokens" className="space-y-1 border-t border-border-40 pt-3">
           <div className="flex items-center justify-between">
             <label className="text-xs font-semibold text-text-primary">Token Response Limit</label>
             <span className="text-2xs font-mono text-accent font-semibold">{tokenLimit.toLocaleString()} tokens</span>
@@ -425,7 +425,7 @@ export function AITab({
       {/* Suggestion Preferences Card */}
       <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
         {/* Commit Message Style */}
-        <div className="space-y-1">
+        <div id="ai-commit-style" className="space-y-1">
           <label className="text-xs font-semibold text-text-primary">Commit Message Style</label>
           <div className="relative">
             <select
@@ -444,7 +444,7 @@ export function AITab({
         </div>
 
         {/* Commit Message Detail Level */}
-        <div className="space-y-1 border-t border-border-40 pt-3">
+        <div id="ai-detail" className="space-y-1 border-t border-border-40 pt-3">
           <label className="text-xs font-semibold text-text-primary">Commit Message Detail</label>
           <div className="relative">
             <select
@@ -465,7 +465,7 @@ export function AITab({
         </div>
 
         {/* AI Review Language */}
-        <div className="space-y-1 border-t border-border-40 pt-3">
+        <div id="ai-language" className="space-y-1 border-t border-border-40 pt-3">
           <label className="text-xs font-semibold text-text-primary">AI Review Language</label>
           <div className="relative">
             <select
@@ -489,7 +489,7 @@ export function AITab({
         </div>
 
         {/* AI Review Checklist */}
-        <div className="space-y-2 border-t border-border-40 pt-3">
+        <div id="ai-checklist" className="space-y-2 border-t border-border-40 pt-3">
           <div className="flex items-center justify-between gap-2">
             <label className="text-xs font-semibold text-text-primary">Custom Review Checklist</label>
             <button
@@ -533,7 +533,7 @@ export function AITab({
         </div>
 
         {/* Custom Rules */}
-        <div className="space-y-1 border-t border-border-40 pt-3">
+        <div id="ai-rules" className="space-y-1 border-t border-border-40 pt-3">
           <label className="text-xs font-semibold text-text-primary">Custom Guidelines / Prompt Rules</label>
           <textarea
             value={customRules}
@@ -546,7 +546,7 @@ export function AITab({
 
         {/* Convention Files Preview */}
         {repoPath && (
-          <div className="space-y-1.5 border-t border-border-40 pt-3">
+          <div id="ai-conventions" className="space-y-1.5 border-t border-border-40 pt-3">
             <label className="text-xs font-semibold text-text-primary">Detected Convention Files</label>
             <p className="text-2xs text-text-muted">
               Project conventions from <code className="px-1 py-0.5 bg-surface-2 rounded text-text-secondary">CLAUDE.md</code>,{" "}

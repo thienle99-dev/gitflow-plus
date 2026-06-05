@@ -18,7 +18,7 @@ export function IntegrationsTab({
   return (
     <div className="space-y-4">
       {/* GitHub Card */}
-      <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
+      <div id="accounts-github" className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
         <div className="flex items-center gap-2">
           <div className="w-5 h-5 rounded-[5px] bg-[#24292f] dark:bg-[#e6edf2] flex items-center justify-center text-white dark:text-[#24292f] shrink-0">
             <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 16 16">
@@ -45,7 +45,7 @@ export function IntegrationsTab({
       </div>
 
       {/* GitLab Card */}
-      <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
+      <div id="accounts-gitlab" className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
         <div className="flex items-center gap-2">
           <div className="w-5 h-5 rounded-[5px] bg-[#e24329] flex items-center justify-center text-white shrink-0">
             <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 16 16">

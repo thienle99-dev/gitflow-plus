@@ -319,6 +319,7 @@ pub fn run() {
             commands::preflight::preflight_check,
             commands::gitflow::gitflow_detect,
             commands::gitflow::gitflow_init,
+            commands::gitflow::gitflow_update_config,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -110,7 +110,7 @@ export function GitTab({
   return (
     <div className="space-y-4">
       {/* GitFlow Configuration Card */}
-      <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
+      <div id="gitflow-config" className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary mb-1">
@@ -188,7 +188,7 @@ export function GitTab({
       </div>
 
       {/* Background Synchronization Card */}
-      <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
+      <div id="git-autofetch" className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
         <div>
           <Switch
             checked={autoFetch}
@@ -223,7 +223,7 @@ export function GitTab({
       </div>
 
       {/* Operations & Launch Preferences Card */}
-      <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
+      <div id="git-operations" className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
         <Switch
           checked={autoPrune}
           onChange={setAutoPrune}
@@ -244,7 +244,7 @@ export function GitTab({
       </div>
 
       {/* Pre-Commit Quality Gates Card */}
-      <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
+      <div id="git-lint" className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
         <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary mb-1">
           <ShieldAlert size={13} className="text-accent" />
           Pre-Commit Quality Gates
