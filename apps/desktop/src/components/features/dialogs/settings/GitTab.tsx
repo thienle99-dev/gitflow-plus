@@ -1,5 +1,9 @@
+import { useState, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import { Switch } from "@/components/ui/form";
+import { SshKeyStatus } from "./SshKeyStatus";
+import { useRepoStore } from "@/stores/repo";
+import { api } from "@/api/tauri";
 
 interface GitTabProps {
   autoFetch: boolean;
@@ -22,8 +26,24 @@ export function GitTab({
   confirmDangerous,
   setConfirmDangerous,
 }: GitTabProps) {
+  const repoPath = useRepoStore((s) => s.repoPath);
+  const [remoteProtocol, setRemoteProtocol] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (!repoPath) {
+      setRemoteProtocol(undefined);
+      return;
+    }
+    api.remote.detectProtocol(repoPath).then(setRemoteProtocol).catch(() => setRemoteProtocol(undefined));
+  }, [repoPath]);
+
   return (
     <div className="space-y-4">
+      {/* SSH Keys & Protocol */}
+      {repoPath && (
+        <SshKeyStatus remoteProtocol={remoteProtocol} />
+      )}
+
       {/* Background Synchronization Card */}
       <div id="git-autofetch" className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3.5">
         <div>
