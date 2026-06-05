@@ -534,5 +534,23 @@ export const api = {
           hotfixPrefix,
           versiontagPrefix,
         }),
+      updateConfig: (
+        path: string,
+        master: string,
+        develop: string,
+        featurePrefix: string,
+        releasePrefix: string,
+        hotfixPrefix: string,
+        versiontagPrefix: string,
+      ) =>
+        invoke<GitFlowConfig>("gitflow_update_config", {
+          path,
+          master,
+          develop,
+          featurePrefix,
+          releasePrefix,
+          hotfixPrefix,
+          versiontagPrefix,
+        }),
     },
   };
