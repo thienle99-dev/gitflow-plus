@@ -101,7 +101,7 @@ const AppVersion = memo(function AppVersion() {
   return (
     <span
       className={`text-text-muted font-mono tabular-nums ${pendingVersion ? "text-accent" : ""}`}
-      title={pendingVersion ? `Update available: v${pendingVersion}` : `GitFlow Desktop v${version}`}
+      title={pendingVersion ? `Update available: v${pendingVersion}` : `GitFlow v${version}`}
     >
       v{version}
     </span>

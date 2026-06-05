@@ -86,17 +86,17 @@ export default function TitleBar() {
   };
 
   const menus: Record<string, MenuItem[]> = {
-    "GitFlow Desktop": [
-      { label: "About GitFlow Desktop", onClick: () => openDialog("feature-guide") },
+    "GitFlow": [
+      { label: "About GitFlow", onClick: () => openDialog("feature-guide") },
       { separator: true },
       { label: "Preferences...", shortcut: "⌘,", onClick: () => openDialog("settings") },
       { separator: true },
       { label: "Check for Updates...", onClick: () => openDialog("settings") },
       { separator: true },
-      { label: "Hide GitFlow Desktop", shortcut: "⌘H", onClick: () => { try { getCurrentWindow().hide(); } catch {} } },
+      { label: "Hide GitFlow", shortcut: "⌘H", onClick: () => { try { getCurrentWindow().hide(); } catch {} } },
       { label: "Show All", onClick: () => { try { getCurrentWindow().show(); getCurrentWindow().setFocus(); } catch {} } },
       { separator: true },
-      { label: "Quit GitFlow Desktop", shortcut: "⌘Q", onClick: handleCloseWindow }
+      { label: "Quit GitFlow", shortcut: "⌘Q", onClick: handleCloseWindow }
     ],
     "File": [
       { label: "Open Repository...", shortcut: "⌘O", onClick: handleOpenRepo },
@@ -206,7 +206,7 @@ export default function TitleBar() {
                     onClick={() => setActiveMenu(isOpen ? null : name)}
                     onMouseEnter={() => handleMenuHeaderHover(name)}
                     className={`px-3 py-1 rounded-[4px] text-[11px] font-medium transition-all ${
-                      name === "GitFlow Desktop" ? "font-bold text-text-primary" : "text-text-secondary hover:text-text-primary"
+                      name === "GitFlow" ? "font-bold text-text-primary" : "text-text-secondary hover:text-text-primary"
                     } ${isOpen ? "bg-accent text-white" : "hover:bg-surface-2"}`}
                   >
                     {name}
