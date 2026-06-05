@@ -3,6 +3,8 @@ import type { LayoutState } from "@/lib/graph-layout";
 import { logPerformance } from "@/lib/performance";
 import type { Theme } from "@/stores/repo";
 import { useCommitDateFormatter } from "@/lib/date";
+import type { GitFlowConfig } from "@/api/tauri";
+import { classifyBranch, gitflowBranchColor } from "@/lib/gitflow-helpers";
 
 const ROW_HEIGHT = 38;
 const NODE_RADIUS = 4;
@@ -47,6 +49,7 @@ interface RenderParams {
   hoveredLane: number | null;
   totalLanes: number;
   theme: Theme;
+  gitflowConfig?: GitFlowConfig | null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -283,6 +286,22 @@ function laneColor(lane: number) {
   return _cachedGraphPalette[Math.abs(lane) % _cachedGraphPalette.length] || _cachedAccent;
 }
 
+/** Resolve the GitFlow branch color for a commit based on its refs. */
+function resolveGitFlowColor(
+  refs: Array<{ name: string; ref_type: string }>,
+  gitflowConfig: GitFlowConfig | null | undefined,
+): string | null {
+  if (!gitflowConfig?.initialized || !refs.length) return null;
+  for (const ref of refs) {
+    if (ref.ref_type === "tag") continue;
+    const branchType = classifyBranch(ref.name, gitflowConfig);
+    if (branchType === "feature" || branchType === "release" || branchType === "hotfix") {
+      return gitflowBranchColor(branchType);
+    }
+  }
+  return null;
+}
+
 /** Small offscreen canvas used to resolve any CSS color to #rrggbb */
 let _colorResolver: HTMLCanvasElement | null = null;
 
@@ -364,6 +383,7 @@ export function useCanvasRenderer({
   hoveredLane,
   totalLanes,
   theme,
+  gitflowConfig,
 }: RenderParams) {
   const formatCommitDateHook = useCommitDateFormatter();
   // Track which rows are hovered via mouse position
@@ -541,7 +561,8 @@ export function useCanvasRenderer({
       const cy = commit.y + offsetY;
       const isSelected = commit.hash === selectedCommit;
       const x = laneXFor(commit.lane, laneWidth);
-      const commitColor = laneColor(commit.lane);
+      const gitflowColor = resolveGitFlowColor(commit.refs, gitflowConfig);
+      const commitColor = gitflowColor || laneColor(commit.lane);
 
       ctx.beginPath();
       ctx.arc(x, cy, NODE_RADIUS, 0, Math.PI * 2);
@@ -605,11 +626,11 @@ export function useCanvasRenderer({
             const ref = refs[i];
             const truncated = badgeLabels[i];
             const badgeW = badgeWidths[i];
+            const refGitFlowColor = resolveGitFlowColor([ref], gitflowConfig);
             const badgeColor =
               ref.ref_type === "head" ? warning
               : ref.ref_type === "tag" ? danger
-              : ref.ref_type === "remote" ? textMuted
-              : accent;
+              : refGitFlowColor || (ref.ref_type === "remote" ? textMuted : accent);
 
             ctx.fillStyle = badgeColor;
             if (ctx.roundRect) {
@@ -647,7 +668,7 @@ export function useCanvasRenderer({
       width,
       height,
     });
-  }, [canvasRef, layout, graphIndex, scrollTop, containerHeight, containerWidth, selectedCommit, hoveredLane, totalLanes, theme, formatCommitDateHook]);
+  }, [canvasRef, layout, graphIndex, scrollTop, containerHeight, containerWidth, selectedCommit, hoveredLane, totalLanes, theme, formatCommitDateHook, gitflowConfig]);
 }
 
 function getColumns(width: number) {

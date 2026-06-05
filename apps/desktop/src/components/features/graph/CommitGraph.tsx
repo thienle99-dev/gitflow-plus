@@ -158,6 +158,7 @@ export default function CommitGraph() {
     hoveredLane: hover.lane,
     totalLanes,
     theme: appliedTheme,
+    gitflowConfig,
   });
 
   // Infinite loading — triggered when the last virtual item becomes visible
