@@ -125,12 +125,12 @@ interface RepoState {
   selectRef: (ref: string | null) => void;
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
-  syncThemeFromStorage: () => void;
+  syncFromStorage: () => void;
   removeRecentRepo: (path: string) => void;
 }
 
 export const useRepoStore = create<RepoState>((set) => ({
-  repoPath: null,
+  repoPath: localStorage.getItem("repoPath") || null,
   selectedRef: null,
   recentRepos: JSON.parse(localStorage.getItem("recentRepos") || "[]"),
   theme: initialTheme,
@@ -143,10 +143,14 @@ export const useRepoStore = create<RepoState>((set) => ({
         ...state.recentRepos.filter((r) => r !== path),
       ].slice(0, 10);
       localStorage.setItem("recentRepos", JSON.stringify(recent));
+      localStorage.setItem("repoPath", path);
       return { repoPath: path, selectedRef: null, recentRepos: recent };
     }),
 
-  closeRepo: () => set({ repoPath: null, selectedRef: null }),
+  closeRepo: () => {
+    localStorage.removeItem("repoPath");
+    set({ repoPath: null, selectedRef: null });
+  },
 
   selectRef: (ref) => set({ selectedRef: ref }),
 
@@ -165,10 +169,11 @@ export const useRepoStore = create<RepoState>((set) => ({
     set({ theme });
   },
 
-  syncThemeFromStorage: () => {
+  syncFromStorage: () => {
     const theme = readStoredTheme();
     applyTheme(theme);
-    set({ theme });
+    const repoPath = localStorage.getItem("repoPath") || null;
+    set({ theme, repoPath });
   },
 
   removeRecentRepo: (path) =>
@@ -178,3 +183,17 @@ export const useRepoStore = create<RepoState>((set) => ({
       return { recentRepos: recent };
     }),
 }));
+
+// Cross-window sync: when localStorage changes in another window (main ↔ tray),
+// update this window's store accordingly.
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (event) => {
+    if (event.key === "repoPath") {
+      const newPath = event.newValue || null;
+      useRepoStore.setState({ repoPath: newPath });
+    } else if (event.key === "recentRepos") {
+      const newRecent = JSON.parse(event.newValue || "[]");
+      useRepoStore.setState({ recentRepos: newRecent });
+    }
+  });
+}

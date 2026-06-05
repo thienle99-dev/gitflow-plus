@@ -10,7 +10,7 @@ import ForceUpdateGate from "./components/features/updater/ForceUpdateGate";
 
 function App() {
   const theme = useRepoStore((s) => s.theme);
-  const syncThemeFromStorage = useRepoStore((s) => s.syncThemeFromStorage);
+  const syncFromStorage = useRepoStore((s) => s.syncFromStorage);
 
   useEffect(() => {
     applyTheme(theme);
@@ -18,18 +18,20 @@ function App() {
 
   useEffect(() => {
     const handleStorage = (event: StorageEvent) => {
-      if (event.key === "theme") syncThemeFromStorage();
+      if (event.key === "theme" || event.key === "repoPath" || event.key === "recentRepos") {
+        syncFromStorage();
+      }
     };
     window.addEventListener("storage", handleStorage);
-    window.addEventListener("focus", syncThemeFromStorage);
-    window.addEventListener("gitflow-settings-updated", syncThemeFromStorage);
+    window.addEventListener("focus", syncFromStorage);
+    window.addEventListener("gitflow-settings-updated", syncFromStorage);
 
     return () => {
       window.removeEventListener("storage", handleStorage);
-      window.removeEventListener("focus", syncThemeFromStorage);
-      window.removeEventListener("gitflow-settings-updated", syncThemeFromStorage);
+      window.removeEventListener("focus", syncFromStorage);
+      window.removeEventListener("gitflow-settings-updated", syncFromStorage);
     };
-  }, [syncThemeFromStorage]);
+  }, [syncFromStorage]);
 
   const isTrayWindow = window.location.search.includes("window=tray");
   useAutoUpdateCheck(!isTrayWindow);
