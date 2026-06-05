@@ -8,7 +8,7 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AI_REVIEW_CHECKLIST_OPTIONS, DEFAULT_AI_REVIEW_CHECKLIST, type AIReviewMode } from "@/lib/ai";
 import type { ConventionFile } from "@/api/tauri";
 import {
@@ -111,9 +111,39 @@ export function AITab({
 }: AITabProps) {
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
+  const fetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevUrlRef = useRef(apiUrl);
+  const prevKeyRef = useRef(apiKey);
 
   const activeProfile = profiles.find((p) => p.id === activeProfileId);
   const needsApiKey = providerNeedsApiKey(provider);
+
+  // Auto-fetch models when apiUrl or apiKey change (debounced 600ms)
+  useEffect(() => {
+    if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
+
+    // Skip if values haven't actually changed
+    if (prevUrlRef.current === apiUrl && prevKeyRef.current === apiKey) return;
+    prevUrlRef.current = apiUrl;
+    prevKeyRef.current = apiKey;
+
+    // Need a valid URL to fetch
+    if (!apiUrl.trim()) return;
+
+    // For providers that need a key, wait until key is also provided
+    if (needsApiKey && !apiKey.trim()) return;
+
+    // Don't auto-fetch if already fetching
+    if (fetchingModels) return;
+
+    fetchTimerRef.current = setTimeout(() => {
+      handleFetchModels();
+    }, 600);
+
+    return () => {
+      if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
+    };
+  }, [apiUrl, apiKey, needsApiKey, fetchingModels, handleFetchModels]);
 
   const startRename = () => {
     setNameDraft(activeProfile?.name || "");
