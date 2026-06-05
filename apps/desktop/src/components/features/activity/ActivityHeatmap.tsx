@@ -130,6 +130,15 @@ export default function ActivityHeatmap() {
 
   const handleMouseLeave = useCallback(() => setTooltip(null), []);
 
+  const gridWidth = DAY_LABEL_WIDTH + WEEKS_TO_SHOW * (CELL_SIZE + CELL_GAP);
+  const gridHeight = MONTH_LABEL_HEIGHT + 7 * (CELL_SIZE + CELL_GAP);
+
+  useLayoutEffect(() => {
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
+    scrollEl.scrollLeft = scrollEl.scrollWidth - scrollEl.clientWidth;
+  }, [repoPath, gridWidth]);
+
   if (isLoading || !grid) {
     return (
       <div className="px-4 py-3">
@@ -141,14 +150,6 @@ export default function ActivityHeatmap() {
   }
 
   const { weeks, monthLabels, maxCount, totalCommits } = grid;
-  const gridWidth = DAY_LABEL_WIDTH + WEEKS_TO_SHOW * (CELL_SIZE + CELL_GAP);
-  const gridHeight = MONTH_LABEL_HEIGHT + 7 * (CELL_SIZE + CELL_GAP);
-
-  useLayoutEffect(() => {
-    const scrollEl = scrollRef.current;
-    if (!scrollEl) return;
-    scrollEl.scrollLeft = scrollEl.scrollWidth - scrollEl.clientWidth;
-  }, [repoPath, gridWidth]);
 
   return (
     <div className="px-4 py-2 select-none">

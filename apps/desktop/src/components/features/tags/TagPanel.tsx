@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useCommitDateFormatter } from "@/lib/date";
 import { useRepoStore } from "@/stores/repo";
+import { api } from "@/api/tauri";
 import { useTagList, useTagCreate, useTagDelete, useTagPush } from "@/queries/useGitTag";
+import { useGenerateTagDescription } from "@/queries/useAI";
 import { showToast } from "@/lib/toast";
-import { Tag, Plus, Trash2, Upload, GitCommit, User, Calendar } from "lucide-react";
+import { Tag, Plus, Trash2, Upload, GitCommit, User, Calendar, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/form";
 
 export default function TagPanel({ onClose }: { onClose?: () => void }) {
@@ -12,12 +14,45 @@ export default function TagPanel({ onClose }: { onClose?: () => void }) {
   const tagCreate = useTagCreate(repoPath);
   const tagDelete = useTagDelete(repoPath);
   const tagPush = useTagPush(repoPath);
+  const generateDescription = useGenerateTagDescription(repoPath);
 
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName] = useState("");
   const [target, setTarget] = useState("");
   const [message, setMessage] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+
+  const loadCommitsForTagDescription = async () => {
+    if (!repoPath) throw new Error("No repository selected");
+    const targetRef = target.trim() || "HEAD";
+    const previousTag = tags?.find((tag) => tag.name !== name.trim());
+    const commits = previousTag
+      ? await api.logSince(repoPath, previousTag.name, 200, targetRef)
+      : await api.log(repoPath, 0, 80, targetRef);
+
+    return { commits, previousTag: previousTag?.name, targetRef };
+  };
+
+  const handleGenerateDescription = async () => {
+    if (!name.trim()) {
+      showToast("Enter a tag name first", "error");
+      return;
+    }
+
+    try {
+      const { commits, previousTag, targetRef } = await loadCommitsForTagDescription();
+      const result = await generateDescription.mutateAsync({
+        tagName: name.trim(),
+        previousTag,
+        targetRef,
+        commits,
+      });
+      setMessage(result.description);
+      showToast(result.fallback ? result.reason || "Generated local tag description" : "Generated tag description");
+    } catch (e: any) {
+      showToast(`Error: ${e?.message || e}`, "error");
+    }
+  };
 
   const handleCreate = async () => {
     if (!name.trim()) return;
@@ -95,13 +130,34 @@ export default function TagPanel({ onClose }: { onClose?: () => void }) {
             variant="surface-1"
             className="text-xs h-8 px-2.5 rounded-mac"
           />
-          <Input
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Message (optional — creates annotated tag)"
-            variant="surface-1"
-            className="text-xs h-8 px-2.5 rounded-mac"
-          />
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label className="text-2xs font-semibold text-text-muted uppercase tracking-wider">
+                Tag description
+              </label>
+              <button
+                type="button"
+                onClick={handleGenerateDescription}
+                disabled={!name.trim() || generateDescription.isPending}
+                className="inline-flex items-center gap-1 h-6 px-2 text-3xs font-semibold rounded-mac border border-accent-30 bg-accent-10 text-accent hover:bg-accent-15 disabled:opacity-45 disabled:cursor-not-allowed transition-colors"
+                title="Generate tag description from commits since the previous tag"
+              >
+                {generateDescription.isPending ? (
+                  <span className="h-3 w-3 rounded-full border-2 border-accent/25 border-t-accent animate-spin" />
+                ) : (
+                  <Sparkles size={11} />
+                )}
+                Generate
+              </button>
+            </div>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Message (optional — creates annotated tag)"
+              rows={4}
+              className="w-full px-2.5 py-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary placeholder:text-text-muted-60 focus:border-accent focus:ring-1 focus:ring-accent-20 outline-none resize-y min-h-20"
+            />
+          </div>
           <div className="flex gap-2 pt-1">
             <button
               onClick={handleCreate}

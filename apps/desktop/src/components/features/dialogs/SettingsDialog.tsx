@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { showToast } from "@/lib/toast";
 import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
 import {
+  CheckCircle,
   ChevronDown,
   FileText,
   Gauge,
@@ -14,6 +15,7 @@ import {
   Settings,
   Sliders,
   Sparkles,
+  Tag,
   X,
 } from "lucide-react";
 import { useRepoStore, applyTheme, readStoredTheme } from "@/stores/repo";
@@ -25,8 +27,11 @@ import {
   AppearanceTab,
   DiffTab,
   AITab,
+  AIPreferencesTab,
   IntegrationsTab,
   GitTab,
+  GitFlowTab,
+  CodeQualityTab,
   PetTab,
 } from "./settings";
 import {
@@ -133,7 +138,7 @@ const SETTINGS_KEYS = [
 
 interface SettingsDialogProps {
   onClose?: () => void;
-  initialTab?: "general" | "appearance" | "diff" | "git" | "accounts" | "ai" | "pet" | "advanced";
+  initialTab?: "general" | "appearance" | "diff" | "git" | "gitflow" | "quality" | "ai" | "ai-prefs" | "integrations" | "pet" | "advanced";
 }
 
 export default function SettingsDialog({ onClose, initialTab = "general" }: SettingsDialogProps) {
@@ -141,7 +146,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
   const setTheme = useRepoStore((s) => s.setTheme);
   const repoPath = useRepoStore((s) => s.repoPath);
 
-  const [activeTab, setActiveTab] = useState<"general" | "appearance" | "diff" | "git" | "accounts" | "ai" | "pet" | "advanced">(
+  const [activeTab, setActiveTab] = useState<"general" | "appearance" | "diff" | "git" | "gitflow" | "quality" | "ai" | "ai-prefs" | "integrations" | "pet" | "advanced">(
     initialTab === "advanced" ? "diff" : initialTab
   );
   const [settingsSearch, setSettingsSearch] = useState("");
@@ -169,26 +174,29 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
     // Diff
     { tab: "diff", sectionId: "diff-editor", label: "Diff & Editor Preferences", keywords: ["diff", "split", "unified", "view", "mode", "wrap", "line wrap", "context", "lines", "large", "handling"] },
     { tab: "diff", sectionId: "diff-shortcuts", label: "System Shortcuts", keywords: ["shortcut", "keyboard", "hotkey", "keybinding", "cmd", "ctrl", "sidebar", "commit"] },
-    // Git
-    { tab: "git", sectionId: "gitflow-config", label: "GitFlow Configuration", keywords: ["gitflow", "branch", "main", "develop", "feature", "release", "hotfix", "prefix", "tag"] },
+    // Git Core
     { tab: "git", sectionId: "git-autofetch", label: "Background Auto-Fetch", keywords: ["fetch", "auto", "background", "sync", "interval", "refresh", "upstream"] },
     { tab: "git", sectionId: "git-operations", label: "Operations & Safety", keywords: ["prune", "delete", "remote", "confirm", "dangerous", "destructive", "force push", "discard"] },
-    { tab: "git", sectionId: "git-lint", label: "Pre-Commit Quality Gates", keywords: ["lint", "linting", "commit", "message", "code", "quality", "strictness", "error", "warning", "block", "eslint", "biome", "ruff", "clippy"] },
+    // GitFlow
+    { tab: "gitflow", sectionId: "gitflow-config", label: "GitFlow Configuration", keywords: ["gitflow", "branch", "main", "develop", "feature", "release", "hotfix", "prefix", "tag"] },
+    // Code Quality
+    { tab: "quality", sectionId: "git-lint", label: "Pre-Commit Quality Gates", keywords: ["lint", "linting", "commit", "message", "code", "quality", "strictness", "error", "warning", "block", "eslint", "biome", "ruff", "clippy"] },
     // AI
     { tab: "ai", sectionId: "ai-profile", label: "API Profile", keywords: ["profile", "add", "duplicate", "delete", "rename"] },
     { tab: "ai", sectionId: "ai-provider", label: "Provider Type", keywords: ["provider", "openai", "anthropic", "ollama", "llama", "type"] },
     { tab: "ai", sectionId: "ai-config", label: "API Key & Endpoint", keywords: ["api", "key", "endpoint", "url", "credential", "secret", "token", "fetch models"] },
     { tab: "ai", sectionId: "ai-models", label: "AI Models", keywords: ["model", "gpt", "claude", "sonnet", "haiku", "opus", "commit", "review", "generate"] },
     { tab: "ai", sectionId: "ai-tokens", label: "Token Response Limit", keywords: ["token", "limit", "response", "max", "context window"] },
-    { tab: "ai", sectionId: "ai-commit-style", label: "Commit Message Style", keywords: ["commit", "style", "conventional", "plain", "gitmoji", "jira", "message"] },
-    { tab: "ai", sectionId: "ai-detail", label: "Commit Message Detail", keywords: ["detail", "level", "minimal", "medium", "detailed", "comprehensive", "subject", "body"] },
-    { tab: "ai", sectionId: "ai-language", label: "AI Review Language", keywords: ["language", "review", "english", "vietnamese", "japanese", "korean", "chinese", "spanish", "french", "german"] },
-    { tab: "ai", sectionId: "ai-checklist", label: "Custom Review Checklist", keywords: ["checklist", "review", "custom", "bugs", "security", "performance", "testing"] },
-    { tab: "ai", sectionId: "ai-rules", label: "Custom Guidelines / Rules", keywords: ["rules", "guidelines", "custom", "prompt", "instructions"] },
-    { tab: "ai", sectionId: "ai-conventions", label: "Detected Convention Files", keywords: ["convention", "cursorrules", "claude", "agents", "rules file", "auto inject"] },
-    // Accounts
-    { tab: "accounts", sectionId: "accounts-github", label: "GitHub Integration", keywords: ["github", "pat", "token", "pull request", "branch"] },
-    { tab: "accounts", sectionId: "accounts-gitlab", label: "GitLab Integration", keywords: ["gitlab", "pat", "token", "self-hosted", "host", "instance"] },
+    // AI Preferences
+    { tab: "ai-prefs", sectionId: "ai-commit-style", label: "Commit Message Style", keywords: ["commit", "style", "conventional", "plain", "gitmoji", "jira", "message"] },
+    { tab: "ai-prefs", sectionId: "ai-detail", label: "Commit Message Detail", keywords: ["detail", "level", "minimal", "medium", "detailed", "comprehensive", "subject", "body"] },
+    { tab: "ai-prefs", sectionId: "ai-language", label: "AI Review Language", keywords: ["language", "review", "english", "vietnamese", "japanese", "korean", "chinese", "spanish", "french", "german"] },
+    { tab: "ai-prefs", sectionId: "ai-checklist", label: "Custom Review Checklist", keywords: ["checklist", "review", "custom", "bugs", "security", "performance", "testing"] },
+    { tab: "ai-prefs", sectionId: "ai-rules", label: "Custom Guidelines / Rules", keywords: ["rules", "guidelines", "custom", "prompt", "instructions"] },
+    { tab: "ai-prefs", sectionId: "ai-conventions", label: "Detected Convention Files", keywords: ["convention", "cursorrules", "claude", "agents", "rules file", "auto inject"] },
+    // Integrations
+    { tab: "integrations", sectionId: "accounts-github", label: "GitHub Integration", keywords: ["github", "pat", "token", "pull request", "branch"] },
+    { tab: "integrations", sectionId: "accounts-gitlab", label: "GitLab Integration", keywords: ["gitlab", "pat", "token", "self-hosted", "host", "instance"] },
     // Pet
     { tab: "pet", sectionId: "pet-toggle", label: "Show Git Pet", keywords: ["pet", "show", "enable", "display", "companion", "mascot"] },
     { tab: "pet", sectionId: "pet-selector", label: "Pet Selection", keywords: ["pet", "select", "panda", "mushroom", "golden retriever", "animal", "type", "choose"] },
@@ -199,9 +207,12 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
     general: "General",
     appearance: "Appearance",
     diff: "Editor & Diff",
-    git: "Git Core",
-    ai: "AI Assistant",
-    accounts: "Accounts",
+    git: "Git",
+    gitflow: "GitFlow",
+    quality: "Code Quality",
+    ai: "AI",
+    "ai-prefs": "AI Preferences",
+    integrations: "Integrations",
     pet: "Git Pet",
   };
 
@@ -862,8 +873,11 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
                     appearance: { icon: Palette, color: "#34c759" },
                     diff: { icon: FileText, color: "#30b0c7" },
                     git: { icon: GitBranch, color: "#ff2d55" },
+                    gitflow: { icon: Tag, color: "#ff2d55" },
+                    quality: { icon: CheckCircle, color: "#ff9500" },
                     ai: { icon: Sparkles, color: "#ff9500" },
-                    accounts: { icon: Link, color: "#5856d6" },
+                    "ai-prefs": { icon: Gauge, color: "#ff9500" },
+                    integrations: { icon: Link, color: "#5856d6" },
                     pet: { icon: PawPrint, color: "#af52de" },
                   };
                   return Object.entries(grouped).map(([tabId, items]) => {
@@ -900,14 +914,17 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
           ) : (
           /* Navigation vertical list (no search active) */
           <div className="space-y-0.5">
-            {["general", "appearance", "diff", "git", "ai", "accounts", "pet"].map((tabId) => {
+            {["general", "appearance", "diff", "git", "gitflow", "quality", "ai", "ai-prefs", "integrations", "pet"].map((tabId) => {
               const icons: Record<string, { icon: typeof Sliders; color: string }> = {
                 general: { icon: Sliders, color: "#007aff" },
                 appearance: { icon: Palette, color: "#34c759" },
                 diff: { icon: FileText, color: "#30b0c7" },
                 git: { icon: GitBranch, color: "#ff2d55" },
+                gitflow: { icon: Tag, color: "#ff2d55" },
+                quality: { icon: CheckCircle, color: "#ff9500" },
                 ai: { icon: Sparkles, color: "#ff9500" },
-                accounts: { icon: Link, color: "#5856d6" },
+                "ai-prefs": { icon: Gauge, color: "#ff9500" },
+                integrations: { icon: Link, color: "#5856d6" },
                 pet: { icon: PawPrint, color: "#af52de" },
               };
               const { icon: TabIcon, color } = icons[tabId] || { icon: Sliders, color: "#888" };
@@ -956,8 +973,11 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
             {activeTab === "appearance" && "Appearance & Display"}
             {activeTab === "diff" && "Editor & Diff Preferences"}
             {activeTab === "git" && "Git Core Settings"}
-            {activeTab === "accounts" && "Accounts & Hosting Integrations"}
-            {activeTab === "ai" && "AI Assistant Integration"}
+            {activeTab === "gitflow" && "GitFlow Configuration"}
+            {activeTab === "quality" && "Code Quality & Linting"}
+            {activeTab === "ai" && "AI Provider & Models"}
+            {activeTab === "ai-prefs" && "AI Preferences & Rules"}
+            {activeTab === "integrations" && "Integrations"}
             {activeTab === "pet" && "Git Pet Companion"}
           </h2>
         </div>
@@ -1028,6 +1048,15 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
               setAutoPrune={setAutoPrune}
               confirmDangerous={confirmDangerous}
               setConfirmDangerous={setConfirmDangerous}
+            />
+          )}
+
+          {activeTab === "gitflow" && (
+            <GitFlowTab />
+          )}
+
+          {activeTab === "quality" && (
+            <CodeQualityTab
               commitLintEnabled={commitLintEnabled}
               setCommitLintEnabled={setCommitLintEnabled}
               codeLintEnabled={codeLintEnabled}
@@ -1037,7 +1066,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
             />
           )}
 
-          {activeTab === "accounts" && (
+          {activeTab === "integrations" && (
             <IntegrationsTab
               githubToken={githubToken}
               setGithubToken={setGithubToken}
@@ -1050,7 +1079,6 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
 
           {activeTab === "ai" && (
             <AITab
-              // Profile management props
               profiles={profiles}
               activeProfileId={activeProfileId}
               onSwitchProfile={handleSwitchProfile}
@@ -1058,10 +1086,8 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
               onDuplicateProfile={handleDuplicateProfile}
               onDeleteProfile={handleDeleteProfile}
               onRenameProfile={handleRenameProfile}
-              // Provider type (bound to active profile)
               provider={provider}
               setProvider={setProvider}
-              // Existing credential props (bound to active profile)
               apiKey={apiKey}
               setApiKey={setApiKey}
               apiUrl={apiUrl}
@@ -1074,6 +1100,15 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
               setReviewModel={setReviewModel}
               tokenLimit={tokenLimit}
               setTokenLimit={setTokenLimit}
+              handleFetchModels={handleFetchModels}
+              maskKey={maskKey}
+              fetchedModels={fetchedModels}
+              fetchingModels={fetchingModels}
+            />
+          )}
+
+          {activeTab === "ai-prefs" && (
+            <AIPreferencesTab
               aiDetailLevel={aiDetailLevel}
               setAiDetailLevel={setAiDetailLevel}
               commitStyle={commitStyle}
@@ -1084,11 +1119,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
               setReviewLanguage={setReviewLanguage}
               reviewChecklist={reviewChecklist}
               setReviewChecklist={setReviewChecklist}
-              handleFetchModels={handleFetchModels}
               toggleReviewChecklistItem={toggleReviewChecklistItem}
-              maskKey={maskKey}
-              fetchedModels={fetchedModels}
-              fetchingModels={fetchingModels}
               conventions={conventions}
               expandedConvention={expandedConvention}
               setExpandedConvention={setExpandedConvention}

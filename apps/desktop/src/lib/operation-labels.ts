@@ -11,6 +11,7 @@ const LABELS: Record<string, string> = {
   "ai.commit-review": "AI: Review Commit",
   "ai.commit-explain": "AI: Explain Commit",
   "ai.commit-scope": "AI: Analyze Commit Scope",
+  "ai.generate-tag-description": "AI: Generate Tag Description",
   "ai.mr-explain": "AI: Explain Merge Request",
   "ai.mr-review": "AI: Review Merge Request",
   "ai.conflict-explain": "AI: Explain Conflict",

@@ -4,12 +4,13 @@ import { useRepoStore } from "@/stores/repo";
 import { api, type GitFlowConfig } from "@/api/tauri";
 import { useGitFlowDetect, useGitFlowInit } from "@/queries/useGitFlow";
 import { useGitBranches } from "@/queries/useGitLog";
+import { useGenerateTagDescription } from "@/queries/useAI";
 import { toKebabCase, validateGitFlowName, validateSemver, getActiveGitFlowBranches } from "@/lib/gitflow-helpers";
 import { showToast } from "@/lib/toast";
 import Dialog from "@/components/ui/overlay/Dialog";
 import {
   GitBranch, Plus, Check, Merge, Tag, AlertTriangle,
-  Rocket, Shield, Zap, ChevronRight,
+  Rocket, Shield, Zap, ChevronRight, Sparkles,
 } from "lucide-react";
 
 type ViewMode =
@@ -37,6 +38,7 @@ export default function GitFlowDialog({ open, onClose, initialMode }: GitFlowDia
   const { data: gitflowConfig, isLoading: configLoading } = useGitFlowDetect(repoPath);
   const { data: branches } = useGitBranches(repoPath);
   const initMutation = useGitFlowInit(repoPath);
+  const generateTagDescription = useGenerateTagDescription(repoPath);
 
   const [mode, setMode] = useState<ViewMode>(initialMode || "init");
   const [loading, setLoading] = useState(false);
@@ -84,6 +86,43 @@ export default function GitFlowDialog({ open, onClose, initialMode }: GitFlowDia
   const hotfixBranches = branches && gitflowConfig
     ? getActiveGitFlowBranches(branches, gitflowConfig, "hotfix")
     : [];
+
+  const loadCommitsForTagDescription = async () => {
+    if (!repoPath || !gitflowConfig) throw new Error("No repository selected");
+    const isHotfix = mode === "hotfix-finish";
+    const branchPrefix = isHotfix ? gitflowConfig.hotfix_prefix : gitflowConfig.release_prefix;
+    const targetRef = branchPrefix + branchName;
+    const tagName = gitflowConfig.versiontag_prefix + branchName;
+    const tags = await api.tag.list(repoPath);
+    const previousTag = tags.find((tag) => tag.name !== tagName);
+    const commits = previousTag
+      ? await api.logSince(repoPath, previousTag.name, 200, targetRef)
+      : await api.log(repoPath, 0, 80, targetRef);
+
+    return { tagName, previousTag: previousTag?.name, targetRef, commits };
+  };
+
+  const handleGenerateTagMessage = async () => {
+    if (!branchName.trim()) {
+      setError("Select a release or hotfix branch first");
+      return;
+    }
+
+    setError(null);
+    try {
+      const { tagName, previousTag, targetRef, commits } = await loadCommitsForTagDescription();
+      const result = await generateTagDescription.mutateAsync({
+        tagName,
+        previousTag,
+        targetRef,
+        commits,
+      });
+      setTagMessage(result.description);
+      showToast(result.fallback ? result.reason || "Generated local tag description" : "Generated tag description");
+    } catch (e: any) {
+      setError(e?.message || e?.toString() || "Failed to generate tag description");
+    }
+  };
 
   // --- Init ---
   const handleInit = async () => {
@@ -413,11 +452,14 @@ export default function GitFlowDialog({ open, onClose, initialMode }: GitFlowDia
             />
             <Checkbox label="Create tag" checked={createTag} onChange={setCreateTag} />
             {createTag && (
-              <Field
+              <TagMessageField
                 label="Tag message (optional)"
                 value={tagMessage}
                 onChange={setTagMessage}
                 placeholder={`Release ${branchName}`}
+                onGenerate={handleGenerateTagMessage}
+                generating={generateTagDescription.isPending}
+                canGenerate={!!branchName.trim()}
               />
             )}
           </div>
@@ -466,11 +508,14 @@ export default function GitFlowDialog({ open, onClose, initialMode }: GitFlowDia
             />
             <Checkbox label="Create tag" checked={createTag} onChange={setCreateTag} />
             {createTag && (
-              <Field
+              <TagMessageField
                 label="Tag message (optional)"
                 value={tagMessage}
                 onChange={setTagMessage}
                 placeholder={`Hotfix ${branchName}`}
+                onGenerate={handleGenerateTagMessage}
+                generating={generateTagDescription.isPending}
+                canGenerate={!!branchName.trim()}
               />
             )}
           </div>
@@ -502,7 +547,7 @@ export default function GitFlowDialog({ open, onClose, initialMode }: GitFlowDia
               : mode === "hotfix-start" ? handleHotfixStart
               : handleHotfixFinish
             }
-            disabled={loading || configLoading || (mode !== "init" && !branchName.trim())}
+            disabled={loading || configLoading || generateTagDescription.isPending || (mode !== "init" && !branchName.trim())}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded bg-accent hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
@@ -577,6 +622,53 @@ function SelectField({
           ))}
         </select>
       </div>
+    </label>
+  );
+}
+
+function TagMessageField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  onGenerate,
+  generating,
+  canGenerate,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  onGenerate: () => void;
+  generating: boolean;
+  canGenerate: boolean;
+}) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="flex items-center justify-between gap-2">
+        <span className="text-2xs font-semibold text-text-muted uppercase tracking-wider">{label}</span>
+        <button
+          type="button"
+          onClick={onGenerate}
+          disabled={!canGenerate || generating}
+          className="inline-flex items-center gap-1 h-6 px-2 text-3xs font-semibold rounded bg-accent/10 border border-accent/30 text-accent hover:bg-accent/15 disabled:opacity-45 disabled:cursor-not-allowed transition-colors"
+          title="Generate tag description from commits since the previous tag"
+        >
+          {generating ? (
+            <span className="h-3 w-3 rounded-full border-2 border-accent/25 border-t-accent animate-spin" />
+          ) : (
+            <Sparkles size={11} />
+          )}
+          Generate
+        </button>
+      </span>
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={5}
+        className="text-xs bg-surface-1 border border-border-40 text-text-primary px-2.5 py-2 rounded focus:outline-none focus:border-accent-60 transition-colors resize-y min-h-24"
+      />
     </label>
   );
 }

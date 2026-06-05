@@ -1,4 +1,4 @@
-import { api, type FileChange, type Branch, type ConventionFile } from "@/api/tauri";
+import { api, type FileChange, type Branch, type Commit, type ConventionFile } from "@/api/tauri";
 import type { MergeRequest, MergeRequestFileChange } from "@/api/gitHost";
 import { scanForRisks, type RiskReport } from "./risk-scanner";
 import { loadActiveProfile, type AIProviderProfile, type AIProviderType } from "./ai-profiles";
@@ -157,6 +157,12 @@ export interface CommitScopeSuggestion {
   explanation: string;
 }
 
+export interface GeneratedTagDescription {
+  description: string;
+  fallback: boolean;
+  reason?: string;
+}
+
 export async function generateCommitMessageWithAI(
   repoPath: string,
   files: FileChange[],
@@ -190,6 +196,71 @@ export async function generateCommitMessageWithAI(
   }
 
   return { message, fallback: false };
+}
+
+export async function generateTagDescriptionWithAI({
+  repoPath,
+  tagName,
+  previousTag,
+  targetRef,
+  commits,
+}: {
+  repoPath: string;
+  tagName: string;
+  previousTag?: string;
+  targetRef?: string;
+  commits: Commit[];
+}): Promise<GeneratedTagDescription> {
+  const fallback = generateLocalTagDescription(tagName, commits, previousTag);
+  const settings = readAISettings();
+
+  if (!hasProvider(settings)) {
+    return {
+      description: fallback,
+      fallback: true,
+      reason: "Configure AI provider in settings for richer release notes",
+    };
+  }
+
+  if (commits.length === 0) {
+    return {
+      description: fallback,
+      fallback: true,
+      reason: "No commits found for this tag range",
+    };
+  }
+
+  const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
+  const conventionContext = await getConventionContext(repoPath);
+  const commitList = commits
+    .slice(0, 120)
+    .map((commit) => `- ${commit.hash.slice(0, 7)} ${commit.message} (${commit.author})`)
+    .join("\n");
+
+  const prompt = `You are preparing an annotated Git tag message / release description.
+
+TAG: ${tagName || "new version"}
+RANGE: ${previousTag ? `${previousTag}..${targetRef || "HEAD"}` : `initial history..${targetRef || "HEAD"}`}
+
+COMMITS:
+${commitList}
+
+TASK:
+Write a polished release description for this version.
+- Start with a concise one-line summary.
+- Then include grouped bullet sections when relevant: Features, Fixes, Refactors, Docs, Chores, Breaking Changes.
+- Mention breaking changes only if the commits clearly imply them.
+- Do not include markdown tables.
+- Do not invent issues, tickets, or changes that are not visible in the commit list.
+- Keep it practical for an annotated git tag message.
+${languageInstruction}${conventionContext}`;
+
+  const description = cleanAIText(await requestAIText(prompt, withReviewModel(settings)));
+  if (!description) {
+    throw new Error("Empty response from AI");
+  }
+
+  return { description, fallback: false };
 }
 
 export async function reviewDiffWithAI(filePath: string, diff: string, repoPath?: string, mode: AIReviewMode = "all") {
@@ -791,6 +862,45 @@ export function generateLocalCommitMessage(files: FileChange[], branchName = "")
     : `update ${files.length} files`;
 
   return formatLocalCommitMessage(commitStyle, detailLevel, type, scope, description, branchName, files);
+}
+
+function generateLocalTagDescription(tagName: string, commits: Commit[], previousTag?: string) {
+  const title = tagName ? `Release ${tagName}` : "Release notes";
+  if (commits.length === 0) {
+    return previousTag
+      ? `${title}\n\nNo commits found since ${previousTag}.`
+      : `${title}\n\nNo commits found for this version.`;
+  }
+
+  const groups: Array<[string, (message: string) => boolean]> = [
+    ["Features", (message) => /^feat(\(.+\))?:/i.test(message)],
+    ["Fixes", (message) => /^fix(\(.+\))?:/i.test(message)],
+    ["Refactors", (message) => /^refactor(\(.+\))?:/i.test(message)],
+    ["Docs", (message) => /^docs(\(.+\))?:/i.test(message)],
+    ["Chores", (message) => /^(chore|build|ci|test|style|perf)(\(.+\))?:/i.test(message)],
+  ];
+
+  const used = new Set<string>();
+  const sections = groups.flatMap(([label, matcher]) => {
+    const items = commits.filter((commit) => matcher(commit.message)).slice(0, 8);
+    items.forEach((commit) => used.add(commit.hash));
+    if (items.length === 0) return [];
+    return [
+      `${label}:`,
+      ...items.map((commit) => `- ${commit.message} (${commit.hash.slice(0, 7)})`),
+    ];
+  });
+
+  const others = commits.filter((commit) => !used.has(commit.hash)).slice(0, 8);
+  if (others.length > 0) {
+    sections.push(
+      "Other changes:",
+      ...others.map((commit) => `- ${commit.message} (${commit.hash.slice(0, 7)})`),
+    );
+  }
+
+  const range = previousTag ? `Changes since ${previousTag}.` : `${commits.length} commit${commits.length > 1 ? "s" : ""} included.`;
+  return `${title}\n\n${range}\n\n${sections.join("\n")}`;
 }
 
 export function readAISettings(): AISettings {

@@ -117,6 +117,13 @@ export default function CommitBox({
     requestAnimationFrame(() => textareaRef.current?.focus());
   };
 
+  const hasAnyChanges = staged.length > 0 || unstaged.length > 0;
+  const hasCommitMessage = commitMessage.trim().length > 0;
+  const mutedButtonClass =
+    "h-7 px-2 rounded-mac border border-transparent text-3xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer bg-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40 active:scale-[0.99] disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-transparent";
+  const statusButtonBase =
+    "h-7 px-2 rounded-mac border text-3xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer active:scale-[0.99] disabled:opacity-35 disabled:cursor-not-allowed";
+
   return (
     <div className="px-3 py-3 border-t border-border-60 bg-surface-1-10 space-y-2.5 shrink-0">
       <div className="flex flex-col bg-surface-2-30 border border-border-40 rounded-mac p-2.5 focus-within:border-accent-60 focus-within:ring-1 focus-within:ring-accent-15 transition-all shadow-2xs">
@@ -129,12 +136,13 @@ export default function CommitBox({
           style={{ outline: "none", border: "none", boxShadow: "none" }}
         />
         <div className="flex items-center justify-between gap-2 border-t border-border-60 pt-2.5 mt-2 select-none shrink-0 flex-wrap">
-          <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+            <div className="flex items-center gap-0.5 rounded-mac border border-border-30 bg-surface-1-50 p-0.5">
             <button
               type="button"
               onClick={onAIReview}
-              disabled={committing || aiReviewPending || (staged.length === 0 && unstaged.length === 0)}
-              className={`h-7 px-2.5 rounded-[5px] border text-3xs font-semibold inline-flex items-center gap-1 transition-all cursor-pointer shadow-2xs bg-accent-10 border-accent-30 text-accent hover:bg-accent-20 hover:border-accent-40 active:scale-[0.99] disabled:bg-surface-2-40 disabled:border-border-40 disabled:text-text-muted disabled:opacity-45 disabled:cursor-not-allowed ${aiReviewPending ? "opacity-70" : ""}`}
+              disabled={committing || aiReviewPending || !hasAnyChanges}
+              className={`${statusButtonBase} bg-accent-10 border-accent-25 text-accent hover:bg-accent-15 hover:border-accent-40 disabled:bg-transparent disabled:border-transparent disabled:text-text-muted ${aiReviewPending ? "opacity-70" : ""}`}
               title="Run AI review with custom checklist"
             >
               {aiReviewPending ? (
@@ -148,15 +156,15 @@ export default function CommitBox({
             <button
               type="button"
               onClick={onGuardrail}
-              disabled={committing || guardrailPending || (staged.length === 0 && unstaged.length === 0)}
-              className={`h-7 px-2.5 rounded-[5px] border text-3xs font-semibold inline-flex items-center gap-1 transition-all cursor-pointer shadow-2xs ${guardrailResult?.verdict === "needs-attention"
+              disabled={committing || guardrailPending || !hasAnyChanges}
+              className={`${statusButtonBase} ${guardrailResult?.verdict === "needs-attention"
                 ? "bg-[#ff453a]/10 border-[#ff453a]/30 text-[#ff453a]"
                 : guardrailResult?.verdict === "warning"
                   ? "bg-[#ff9f0a]/10 border-[#ff9f0a]/30 text-[#ff9f0a]"
-                  : guardrailResult?.verdict === "ready"
+                : guardrailResult?.verdict === "ready"
                     ? "bg-[#30d158]/10 border-[#30d158]/30 text-[#30d158]"
-                    : "bg-surface-2-40 border-border-40 text-text-muted hover:text-text-primary hover:bg-surface-3"
-                } disabled:bg-surface-2-40 disabled:border-border-40 disabled:text-text-muted disabled:opacity-45 disabled:cursor-not-allowed ${guardrailPending ? "opacity-70" : ""}`}
+                    : "bg-transparent border-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40"
+                } disabled:bg-transparent disabled:border-transparent disabled:text-text-muted ${guardrailPending ? "opacity-70" : ""}`}
               title="Run AI pre-commit safety check"
             >
               {guardrailPending ? (
@@ -170,15 +178,15 @@ export default function CommitBox({
             <button
               type="button"
               onClick={onReadiness}
-              disabled={committing || readinessPending || (staged.length === 0 && unstaged.length === 0)}
-              className={`h-7 px-2.5 rounded-[5px] border text-3xs font-semibold inline-flex items-center gap-1 transition-all cursor-pointer shadow-2xs ${readinessResult?.verdict === "ready"
+              disabled={committing || readinessPending || !hasAnyChanges}
+              className={`${statusButtonBase} ${readinessResult?.verdict === "ready"
                 ? "bg-[#30d158]/10 border-[#30d158]/30 text-[#30d158]"
                 : readinessResult?.verdict === "not-ready"
                   ? "bg-[#ff453a]/10 border-[#ff453a]/30 text-[#ff453a]"
                   : readinessResult?.verdict === "needs-work"
                     ? "bg-[#ff9f0a]/10 border-[#ff9f0a]/30 text-[#ff9f0a]"
-                    : "bg-surface-2-40 border-border-40 text-text-muted hover:text-text-primary hover:bg-surface-3"
-                } disabled:bg-surface-2-40 disabled:border-border-40 disabled:text-text-muted disabled:opacity-45 disabled:cursor-not-allowed ${readinessPending ? "opacity-70" : ""}`}
+                    : "bg-transparent border-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40"
+                } disabled:bg-transparent disabled:border-transparent disabled:text-text-muted ${readinessPending ? "opacity-70" : ""}`}
               title="Check if your staging area is ready to commit"
             >
               {readinessPending ? (
@@ -188,15 +196,17 @@ export default function CommitBox({
               )}
               <span>Ready?</span>
             </button>
+            </div>
 
+            <div className="flex items-center gap-0.5 rounded-mac border border-border-30 bg-surface-1-50 p-0.5">
             <UndoButton compact onUndoComplete={onUndoComplete} />
 
             <button
               type="button"
               onClick={() => setAmend(!amend)}
-              className={`h-7 px-2.5 rounded-[5px] border text-3xs font-semibold flex items-center gap-1 transition-all cursor-pointer shadow-2xs ${amend
+              className={`${statusButtonBase} ${amend
                 ? "bg-[#ff9f0a]/10 border-[#ff9f0a]/30 text-[#ff9f0a]"
-                : "bg-surface-2-40 border-border-40 text-text-muted hover:text-text-primary hover:bg-surface-3"
+                : "bg-transparent border-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40"
                 }`}
               title="Amend last commit"
             >
@@ -206,13 +216,14 @@ export default function CommitBox({
             <CommitTemplatePicker
               onSelect={(msg) => setCommitMessage(msg)}
             />
+            </div>
           </div>
 
-          <div className="flex items-center justify-end gap-1.5 flex-wrap">
+          <div className="flex items-center justify-end gap-1.5 flex-wrap ml-auto">
             {staged.length >= 3 && (
               <button
                 type="button"
-                className={`h-7 px-2.5 rounded border text-3xs font-semibold flex items-center gap-1 transition-all bg-surface-2 border-border-40 text-text-secondary hover:text-text-primary hover:bg-surface-3 active:scale-95 cursor-pointer ${scopeAnalyzing || commitScopePending ? "opacity-50 cursor-not-allowed" : ""
+                className={`${mutedButtonClass} border-border-30 bg-surface-1-50 ${scopeAnalyzing || commitScopePending ? "opacity-50 cursor-not-allowed" : ""
                   }`}
                 onClick={onAnalyzeScope}
                 disabled={scopeAnalyzing || commitScopePending}
@@ -232,7 +243,7 @@ export default function CommitBox({
                   type="button"
                   onClick={onImproveMessage}
                   disabled={committing || improveMessagePending}
-                  className="h-7 px-2.5 rounded-[5px] border text-3xs font-semibold inline-flex items-center gap-1 transition-all cursor-pointer shadow-2xs bg-surface-2-40 border-border-40 text-text-muted hover:text-text-primary hover:bg-surface-3 active:scale-[0.99] disabled:opacity-45 disabled:cursor-not-allowed"
+                  className={mutedButtonClass}
                   title={improveMessagePending ? "Improving..." : "Improve commit message with AI"}
                 >
                   {improveMessagePending ? (
@@ -246,7 +257,7 @@ export default function CommitBox({
                   type="button"
                   onClick={onAddBody}
                   disabled={committing || addBodyPending}
-                  className="h-7 px-2.5 rounded-[5px] border text-3xs font-semibold inline-flex items-center gap-1 transition-all cursor-pointer shadow-2xs bg-surface-2-40 border-border-40 text-text-muted hover:text-text-primary hover:bg-surface-3 active:scale-[0.99] disabled:opacity-45 disabled:cursor-not-allowed"
+                  className={mutedButtonClass}
                   title={addBodyPending ? "Adding body..." : "Add detailed commit body with AI"}
                 >
                   {addBodyPending ? (
@@ -260,7 +271,7 @@ export default function CommitBox({
             )}
             <button
               type="button"
-              className={`h-7 px-2.5 rounded text-3xs font-semibold flex items-center gap-1 transition-all bg-accent text-accent-fg hover:opacity-95 active:scale-[0.99] active:scale-95 cursor-pointer shadow-sm ${generateCommitPending ? "opacity-50 cursor-not-allowed" : ""
+              className={`h-7 px-3 rounded-mac text-3xs font-bold flex items-center gap-1.5 transition-all bg-accent text-accent-fg hover:opacity-95 active:scale-[0.99] cursor-pointer shadow-sm shadow-accent-15 ${generateCommitPending ? "opacity-50 cursor-not-allowed" : ""
                 }`}
               onClick={handleGenerateCommit}
               disabled={generateCommitPending}
@@ -277,10 +288,10 @@ export default function CommitBox({
             <button
               type="button"
               onClick={onCommit}
-              disabled={!commitMessage.trim() || (staged.length === 0 && unstaged.length === 0) || committing || lintRunning}
-              className={`h-7 px-3 rounded-[5px] text-3xs font-semibold inline-flex items-center gap-1 transition-all shadow-sm cursor-pointer select-none ${commitMessage.trim() && (staged.length > 0 || unstaged.length > 0)
+              disabled={!hasCommitMessage || !hasAnyChanges || committing || lintRunning}
+              className={`h-7 px-3 rounded-mac text-3xs font-bold inline-flex items-center gap-1.5 transition-all shadow-sm cursor-pointer select-none ${hasCommitMessage && hasAnyChanges
                 ? "bg-[#30d158] text-[#07140a] hover:bg-[#30d158]/90 active:scale-[0.99]"
-                : "bg-surface-3 text-text-muted opacity-40 cursor-not-allowed"
+                : "bg-surface-2-40 text-text-muted opacity-35 cursor-not-allowed shadow-none"
                 } ${committing || lintRunning ? "opacity-60" : ""}`}
               title={
                 !commitMessage.trim()

@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import type { FileChange } from "@/api/tauri";
+import type { Commit, FileChange } from "@/api/tauri";
 import type { MergeRequest, MergeRequestFileChange } from "@/api/gitHost";
 import {
   type AIReviewMode,
@@ -8,7 +8,9 @@ import {
   type CommitSummaryResult,
   type CommitGuardrailResult,
   type CommitReadinessResult,
+  type GeneratedTagDescription,
   generateCommitMessageWithAI,
+  generateTagDescriptionWithAI,
   reviewDiffWithAI,
   generateInlineReviewComments,
   explainCommitWithAI,
@@ -176,6 +178,21 @@ export function useAICommitSummary() {
   }>({
     mutationKey: ["ai.commit-summary"],
     mutationFn: ({ commits, timeRange }) => generateCommitSummary(commits, timeRange),
+  });
+}
+
+export function useGenerateTagDescription(repoPath: string | null) {
+  return useMutation<GeneratedTagDescription, Error, {
+    tagName: string;
+    previousTag?: string;
+    targetRef?: string;
+    commits: Commit[];
+  }>({
+    mutationKey: ["ai.generate-tag-description"],
+    mutationFn: ({ tagName, previousTag, targetRef, commits }) => {
+      if (!repoPath) throw new Error("No repository selected");
+      return generateTagDescriptionWithAI({ repoPath, tagName, previousTag, targetRef, commits });
+    },
   });
 }
 
