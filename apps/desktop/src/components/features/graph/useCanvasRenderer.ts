@@ -283,8 +283,34 @@ function laneColor(lane: number) {
   return _cachedGraphPalette[Math.abs(lane) % _cachedGraphPalette.length] || _cachedAccent;
 }
 
+/** Small offscreen canvas used to resolve any CSS color to #rrggbb */
+let _colorResolver: HTMLCanvasElement | null = null;
+
+function resolveToRgb(color: string): string | null {
+  try {
+    if (!_colorResolver) {
+      _colorResolver = document.createElement("canvas");
+      _colorResolver.width = 1;
+      _colorResolver.height = 1;
+    }
+    const ctx = _colorResolver.getContext("2d")!;
+    ctx.fillStyle = "#000000";
+    ctx.fillStyle = color;
+    // Canvas always resolves to #rrggbb; if invalid, fillStyle stays unchanged
+    const resolved = ctx.fillStyle;
+    if (resolved === "#000000" && color !== "#000000" && color !== "rgb(0, 0, 0)" && color !== "rgba(0,0,0,0)") {
+      return null;
+    }
+    return resolved;
+  } catch {
+    return null;
+  }
+}
+
 function withAlpha(color: string, alpha: number) {
   const clamped = Math.max(0, Math.min(1, alpha));
+
+  // Fast path: #hex
   const hex = color.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
   if (hex) {
     const raw = hex[1].length === 3
@@ -297,10 +323,31 @@ function withAlpha(color: string, alpha: number) {
     return `rgba(${r}, ${g}, ${b}, ${clamped})`;
   }
 
+  // Fast path: rgb/rgba
   const rgba = color.match(/^rgba?\(([^)]+)\)$/i);
   if (rgba) {
-    const parts = rgba[1].split(",").map((part) => part.trim()).slice(0, 3);
+    const parts = rgba[1].split(",").map((p) => p.trim()).slice(0, 3);
     return `rgba(${parts.join(", ")}, ${clamped})`;
+  }
+
+  // Fast path: hsl/hsla
+  const hsla = color.match(/^hsla?\(([^)]+)\)$/i);
+  if (hsla) {
+    const parts = hsla[1].split(",").map((p) => p.trim());
+    return `hsla(${parts[0]}, ${parts[1]}, ${parts[2]}, ${clamped})`;
+  }
+
+  // Fallback: use canvas to resolve any CSS color (oklch, color(), etc.)
+  const resolved = resolveToRgb(color);
+  if (resolved) {
+    const m = resolved.match(/^#([0-9a-f]{6})$/i);
+    if (m) {
+      const value = Number.parseInt(m[1], 16);
+      const r = (value >> 16) & 255;
+      const g = (value >> 8) & 255;
+      const b = value & 255;
+      return `rgba(${r}, ${g}, ${b}, ${clamped})`;
+    }
   }
 
   return color;
