@@ -82,6 +82,15 @@ const MUTED_BUTTON_CLASS =
 const STATUS_BUTTON_BASE =
   "h-6 px-1.5 rounded-mac border text-[10px] font-semibold inline-flex items-center gap-1 transition-all cursor-pointer active:scale-[0.99] disabled:opacity-35 disabled:cursor-not-allowed";
 
+const QUICK_PICK_TEMPLATES = [
+  { label: "feat", prefix: "feat: ", color: "#0a84ff" },
+  { label: "fix", prefix: "fix: ", color: "#ff453a" },
+  { label: "docs", prefix: "docs: ", color: "#bf5af2" },
+  { label: "refactor", prefix: "refactor: ", color: "#30d158" },
+  { label: "chore", prefix: "chore: ", color: "#ff9f0a" },
+  { label: "test", prefix: "test: ", color: "#64d2ff" },
+];
+
 export interface CommitBoxProps {
   commitMessage: string;
   setCommitMessage: (msg: string) => void;
@@ -206,7 +215,32 @@ export default function CommitBox({
 
   return (
     <div className="px-3 py-3 border-t border-border-60 bg-surface-1-10 space-y-2.5 shrink-0">
-      <div className="commit-box-shell flex flex-col bg-surface-2-30 border border-border-40 rounded-mac p-2.5 transition-all shadow-2xs">
+      <div className="commit-box-shell flex flex-col bg-surface-2-30 border border-border-40 rounded-mac p-2.5 transition-all shadow-2xs focus-within:border-accent-40 focus-within:shadow-accent-5">
+        {/* Template quick-picks — shown when textarea is empty */}
+        {!commitMessage && (
+          <div className="flex items-center gap-1 mb-1.5 flex-wrap">
+            <span className="text-[10px] text-text-muted mr-0.5 select-none">Quick:</span>
+            {QUICK_PICK_TEMPLATES.map((tpl) => (
+              <button
+                key={tpl.label}
+                type="button"
+                onClick={() => {
+                  setCommitMessage(tpl.prefix);
+                  requestAnimationFrame(() => textareaRef.current?.focus());
+                }}
+                className="h-5 px-1.5 rounded-full border text-[9px] font-semibold transition-all cursor-pointer active:scale-95 hover:opacity-80"
+                style={{
+                  borderColor: `${tpl.color}30`,
+                  backgroundColor: `${tpl.color}10`,
+                  color: tpl.color,
+                }}
+              >
+                {tpl.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         <textarea
           ref={textareaRef}
           value={commitMessage}
@@ -215,6 +249,36 @@ export default function CommitBox({
           className="commit-message-textarea w-full min-h-[96px] max-h-[240px] text-xs bg-transparent text-text-primary placeholder:text-text-muted-60 resize-y outline-none border-none p-0 leading-relaxed font-mono focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:outline-none"
           style={{ outline: "none", border: "none", boxShadow: "none" }}
         />
+
+        {/* Character count progress bar */}
+        {commitMessage.length > 0 && (() => {
+          const subjectLine = commitMessage.split('\n')[0];
+          const len = subjectLine.length;
+          const ratio = Math.min(len / 72, 1);
+          const barColor = len <= 50 ? "#30d158" : len <= 72 ? "#ff9f0a" : "#ff453a";
+          return (
+            <div className="flex items-center gap-2 mt-1.5 select-none">
+              <div className="flex-1 h-1 rounded-full bg-surface-1-60 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-300 ease-out"
+                  style={{
+                    width: `${Math.max(ratio * 100, 2)}%`,
+                    backgroundColor: barColor,
+                    opacity: 0.8,
+                  }}
+                />
+              </div>
+              <span
+                className="text-[10px] font-mono tabular-nums shrink-0"
+                style={{ color: len > 72 ? barColor : undefined }}
+              >
+                {len}
+                <span className="text-text-muted-60">/72</span>
+              </span>
+            </div>
+          );
+        })()}
+
         <div className="border-t border-border-60 pt-2.5 mt-2 select-none shrink-0 space-y-2">
           <div className="flex items-center justify-end gap-1.5 flex-wrap">
             {staged.length >= 3 && (
@@ -444,13 +508,6 @@ export default function CommitBox({
               <Check size={11} className="text-[#30d158]" /> Message conforms to spec
             </span>
           ) : null}
-        </div>
-
-        <div className="text-2xs text-text-muted shrink-0 ml-2">
-          <span className={commitMessage.split('\n')[0].length > 72 ? "text-[#ff453a] font-semibold" : ""}>
-            {commitMessage.split('\n')[0].length}
-          </span>
-          /72
         </div>
       </div>
       {lintReviewOpen && (
