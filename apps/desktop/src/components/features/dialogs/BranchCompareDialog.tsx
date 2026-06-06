@@ -1,7 +1,10 @@
 import { useState, useMemo } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useBranchCompare, useBranchFileDiff } from "@/queries/useBranchCompare";
-import { ArrowLeftRight, GitBranch, FileText, Loader2, AlertCircle, Plus, Minus, Pencil, ArrowRight } from "lucide-react";
+import { useAIBranchCompareSummary } from "@/queries/useAI";
+import { trackAIBranchCompareSummary } from "@/lib/analytics";
+import { type BranchCompareSummary } from "@/lib/ai";
+import { ArrowLeftRight, GitBranch, FileText, Loader2, AlertCircle, Plus, Minus, Pencil, ArrowRight, Sparkles, Shield, GitMerge, RefreshCw, X, ChevronDown } from "lucide-react";
 import LazyDiffViewer from "@/components/features/diff/LazyDiffViewer";
 
 interface BranchCompareDialogProps {
@@ -14,6 +17,8 @@ export default function BranchCompareDialog({ baseBranch, targetBranch, onClose 
   const repoPath = useRepoStore((s) => s.repoPath);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [contextLines, setContextLines] = useState(3);
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summaryResult, setSummaryResult] = useState<BranchCompareSummary | null>(null);
 
   const { data: comparison, isLoading, error } = useBranchCompare(repoPath, baseBranch, targetBranch);
   const { data: fileDiff, isLoading: diffLoading } = useBranchFileDiff(
@@ -22,6 +27,26 @@ export default function BranchCompareDialog({ baseBranch, targetBranch, onClose 
     targetBranch,
     selectedFile,
   );
+  const summaryMutation = useAIBranchCompareSummary(repoPath);
+
+  const handleGenerateSummary = async () => {
+    if (!comparison || summaryMutation.isPending) return;
+    trackAIBranchCompareSummary();
+    summaryMutation.reset();
+    try {
+      const result = await summaryMutation.mutateAsync({
+        baseBranch,
+        targetBranch,
+        ahead: comparison.ahead,
+        behind: comparison.behind,
+        files: comparison.files.map((f) => ({ path: f.path, status: f.status })),
+      });
+      setSummaryResult(result);
+      setSummaryOpen(true);
+    } catch {
+      // Non-critical
+    }
+  };
 
   const statusIcon = (status: string) => {
     const s = status.charAt(0).toUpperCase();
@@ -46,6 +71,28 @@ export default function BranchCompareDialog({ baseBranch, targetBranch, onClose 
     if (s === "D") return "text-[#ff453a] bg-[#ff453a]/10";
     if (s === "R" || s === "C") return "text-[#ff9f0a] bg-[#ff9f0a]/10";
     return "text-accent bg-accent-10";
+  };
+
+  const riskColor = (level: string) => {
+    if (level === "safe") return "text-[#30d158] bg-[#30d158]/15 border-[#30d158]/30";
+    if (level === "low") return "text-[#0a84ff] bg-[#0a84ff]/15 border-[#0a84ff]/30";
+    if (level === "medium") return "text-[#ff9f0a] bg-[#ff9f0a]/15 border-[#ff9f0a]/30";
+    if (level === "high") return "text-[#ff453a] bg-[#ff453a]/15 border-[#ff453a]/30";
+    return "text-text-muted bg-surface-2-30 border-border-40";
+  };
+
+  const riskBorderColor = (level: string) => {
+    if (level === "safe") return "border-[#30d158]/30 bg-[#30d158]/5";
+    if (level === "low") return "border-[#0a84ff]/30 bg-[#0a84ff]/5";
+    if (level === "medium") return "border-[#ff9f0a]/30 bg-[#ff9f0a]/5";
+    if (level === "high") return "border-[#ff453a]/30 bg-[#ff453a]/5";
+    return "border-border-40 bg-surface-2-30";
+  };
+
+  const strategyIcon = (strategy: string) => {
+    if (strategy === "fast-forward") return <ArrowRight size={12} />;
+    if (strategy === "squash") return <RefreshCw size={12} />;
+    return <GitMerge size={12} />;
   };
 
   return (
@@ -108,7 +155,129 @@ export default function BranchCompareDialog({ baseBranch, targetBranch, onClose 
                 <div className="text-lg font-bold text-text-primary">{comparison.files.length}</div>
                 <div className="text-2xs text-text-muted mt-0.5">Changed files</div>
               </div>
+              {/* AI Summary button */}
+              <button
+                onClick={handleGenerateSummary}
+                disabled={summaryMutation.isPending || comparison.files.length === 0}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-2xs font-medium rounded-mac border border-accent-30 bg-accent-10 text-accent hover:bg-accent-20 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+              >
+                {summaryMutation.isPending ? (
+                  <RefreshCw size={11} className="animate-spin" />
+                ) : (
+                  <Sparkles size={11} />
+                )}
+                AI Summary
+              </button>
             </div>
+
+            {/* AI Summary Panel */}
+            {summaryOpen && summaryResult && (
+              <div className={`mx-5 mt-3 border rounded-mac p-3 space-y-2.5 ${riskBorderColor(summaryResult.overallRisk)}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Shield size={12} className={`${
+                      summaryResult.overallRisk === "safe" ? "text-[#30d158]"
+                        : summaryResult.overallRisk === "medium" ? "text-[#ff9f0a]"
+                          : summaryResult.overallRisk === "high" ? "text-[#ff453a]"
+                            : "text-[#0a84ff]"
+                    }`} />
+                    <span className="text-xs font-semibold text-text-primary">AI Branch Summary</span>
+                    <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border ${riskColor(summaryResult.overallRisk)}`}>
+                      {summaryResult.overallRisk.toUpperCase()} RISK
+                    </span>
+                    {summaryResult.mergeRecommendation && (
+                      <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-surface-2 border border-border-40 text-text-muted">
+                        {strategyIcon(summaryResult.mergeRecommendation.strategy)}
+                        {summaryResult.mergeRecommendation.strategy}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setSummaryOpen(false)}
+                    className="h-5 w-5 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+
+                {/* Changes summary */}
+                <p className="text-2xs text-text-secondary leading-relaxed">{summaryResult.changesSummary}</p>
+
+                {/* Stats row */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] text-text-muted bg-surface-2 border border-border-40 rounded px-1.5 py-0.5">
+                    +{summaryResult.stats.filesAdded} added
+                  </span>
+                  <span className="text-[9px] text-text-muted bg-surface-2 border border-border-40 rounded px-1.5 py-0.5">
+                    -{summaryResult.stats.filesDeleted} deleted
+                  </span>
+                  <span className="text-[9px] text-text-muted bg-surface-2 border border-border-40 rounded px-1.5 py-0.5">
+                    ~{summaryResult.stats.filesModified} modified
+                  </span>
+                </div>
+
+                {/* Risks */}
+                {summaryResult.risks.length > 0 && (
+                  <div className="space-y-1">
+                    <span className="text-[9px] font-semibold uppercase text-text-muted">Risks</span>
+                    {summaryResult.risks.map((risk, i) => (
+                      <div key={i} className={`flex items-start gap-2 p-2 rounded-mac text-2xs border ${riskBorderColor(risk.level)}`}>
+                        <span className={`text-[9px] font-bold uppercase shrink-0 ${risk.level === "high" ? "text-[#ff453a]" : risk.level === "medium" ? "text-[#ff9f0a]" : risk.level === "low" ? "text-[#0a84ff]" : "text-[#30d158]"}`}>
+                          {risk.level}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <span className="text-text-primary font-medium">{risk.area}</span>
+                          <span className="text-text-muted ml-1">{risk.description}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Affected components */}
+                {summaryResult.affectedComponents.length > 0 && (
+                  <div className="space-y-1">
+                    <span className="text-[9px] font-semibold uppercase text-text-muted">Affected Components</span>
+                    <div className="flex flex-wrap gap-1">
+                      {summaryResult.affectedComponents.map((comp, i) => (
+                        <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-surface-2 border border-border-40 text-text-secondary" title={comp.impact}>
+                          <span className="font-mono text-text-primary">{comp.path}</span>
+                          <span className="text-text-muted ml-1">({comp.category})</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Merge recommendation */}
+                {summaryResult.mergeRecommendation && (
+                  <div className="rounded-mac bg-surface-2-30 border border-border-40 p-2.5 space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      {strategyIcon(summaryResult.mergeRecommendation.strategy)}
+                      <span className="text-2xs font-semibold text-text-primary">
+                        Recommended: {summaryResult.mergeRecommendation.strategy}
+                      </span>
+                      <span className={`text-[9px] font-bold uppercase px-1 py-0.5 rounded ${
+                        summaryResult.mergeRecommendation.confidence === "high" ? "bg-[#30d158]/15 text-[#30d158]"
+                          : summaryResult.mergeRecommendation.confidence === "medium" ? "bg-[#ff9f0a]/15 text-[#ff9f0a]"
+                            : "bg-[#ff453a]/15 text-[#ff453a]"
+                      }`}>
+                        {summaryResult.mergeRecommendation.confidence} confidence
+                      </span>
+                    </div>
+                    <p className="text-2xs text-text-muted leading-relaxed">{summaryResult.mergeRecommendation.reasoning}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Loading state for summary */}
+            {summaryMutation.isPending && (
+              <div className="mx-5 mt-3 flex items-center gap-2 rounded-mac border border-accent-20 bg-accent-5 px-3 py-2.5 text-text-secondary">
+                <RefreshCw size={12} className="animate-spin text-accent" />
+                <span className="text-2xs">Analyzing branch comparison with AI...</span>
+              </div>
+            )}
 
             {/* File list + diff viewer */}
             <div className="flex-1 min-h-0 flex overflow-hidden">

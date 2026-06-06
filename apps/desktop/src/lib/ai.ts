@@ -2553,3 +2553,420 @@ function buildLocalFixPlan(findings: GuardrailFinding[]): FixPlanResult {
       : `Local fix plan: ${items.length} item(s) identified from guardrail findings.`,
   };
 }
+
+// ─── AI Commit Coach ────────────────────────────────────────────────────────
+
+export type CoachTipSeverity = "info" | "suggestion" | "warning" | "action";
+
+export interface CommitCoachTip {
+  category: "size" | "split" | "message" | "missed" | "quality";
+  severity: CoachTipSeverity;
+  message: string;
+}
+
+export interface CommitCoachResult {
+  tips: CommitCoachTip[];
+  verdict: "good" | "needs-attention" | "needs-work";
+  summary: string;
+}
+
+/**
+ * AI Commit Coach: analyzes staged/unstaged files + commit message and provides
+ * actionable coaching tips before committing.
+ */
+export async function runCommitCoach(
+  repoPath: string,
+  staged: FileChange[],
+  unstaged: FileChange[],
+  commitMessage: string,
+): Promise<CommitCoachResult> {
+  const settings = readAISettings();
+  if (!hasProvider(settings)) {
+    return buildLocalCoachTips(staged, unstaged, commitMessage);
+  }
+
+  const diff = await api.diff.staged(repoPath).catch(() => "");
+  const stagedList = staged.map((f) => `- [${f.status}] ${f.path}`).join("\n");
+  const unstagedList = unstaged.map((f) => `- [${f.status}] ${f.path}`).join("\n");
+
+  // Find unstaged files that share the same top-level dir as staged files
+  const stagedDirs = new Set(staged.map((f) => f.path.split("/")[0]));
+  const relatedUnstaged = unstaged.filter((f) => stagedDirs.has(f.path.split("/")[0]));
+  const relatedUnstagedList = relatedUnstaged.map((f) => `- [${f.status}] ${f.path}`).join("\n");
+
+  const conventionContext = await getConventionContext(repoPath);
+  const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
+
+  const prompt = `You are an expert commit coach. Analyze the staged changes, unstaged changes, and commit message to provide actionable coaching tips.
+
+STAGED FILES (${staged.length}):
+${stagedList || "(none)"}
+
+UNSTAGED FILES (${unstaged.length}):
+${unstagedList || "(none)"}
+
+RELATED UNSTAGED (same directories as staged):
+${relatedUnstagedList || "(none)"}
+
+COMMIT MESSAGE:
+${commitMessage || "(empty)"}
+
+STAGED DIFF (truncated):
+${diff.slice(0, 10000)}
+
+TASK: Provide coaching tips in these categories:
+1. SIZE: Is this commit too large? How many files/lines changed?
+2. SPLIT: Should it be split? How?
+3. MESSAGE: Does the message accurately describe the diff? Is it conventional?
+4. MISSED: Are there related unstaged files that should be included?
+5. QUALITY: Any other quality concerns (debug code, secrets, etc.)?
+
+Respond in this EXACT JSON format (no markdown, no code blocks):
+{
+  "tips": [
+    {
+      "category": "size" | "split" | "message" | "missed" | "quality",
+      "severity": "info" | "suggestion" | "warning" | "action",
+      "message": "Concise, actionable coaching tip"
+    }
+  ],
+  "verdict": "good" | "needs-attention" | "needs-work",
+  "summary": "One-line overall coaching summary"
+}
+
+RULES:
+- Max 6 tips. Focus on the most impactful.
+- "info" = FYI, "suggestion" = consider this, "warning" = should address, "action" = must fix before commit
+- If everything looks good, return verdict "good" with minimal tips.
+- Be concise and actionable. No fluff.
+${languageInstruction}${conventionContext}`;
+
+  try {
+    const raw = cleanAIText(await requestAIText(prompt, settings));
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (parsed && Array.isArray(parsed.tips)) {
+        const validCategories = ["size", "split", "message", "missed", "quality"];
+        const validSeverities = ["info", "suggestion", "warning", "action"];
+        const tips: CommitCoachTip[] = parsed.tips
+          .filter((t: any) => validCategories.includes(t.category) && validSeverities.includes(t.severity))
+          .slice(0, 6)
+          .map((t: any) => ({
+            category: t.category,
+            severity: t.severity,
+            message: String(t.message),
+          }));
+        return {
+          tips,
+          verdict: ["good", "needs-attention", "needs-work"].includes(parsed.verdict) ? parsed.verdict : "good",
+          summary: String(parsed.summary || `Coach: ${tips.length} tip(s) for your commit.`),
+        };
+      }
+    }
+  } catch {
+    // AI failed — fall back to local
+  }
+
+  return buildLocalCoachTips(staged, unstaged, commitMessage);
+}
+
+function buildLocalCoachTips(
+  staged: FileChange[],
+  unstaged: FileChange[],
+  commitMessage: string,
+): CommitCoachResult {
+  const tips: CommitCoachTip[] = [];
+
+  // Size check
+  if (staged.length > 15) {
+    tips.push({
+      category: "size",
+      severity: "warning",
+      message: `Large commit: ${staged.length} staged files. Consider splitting into smaller atomic commits.`,
+    });
+  } else if (staged.length > 8) {
+    tips.push({
+      category: "size",
+      severity: "suggestion",
+      message: `Moderate commit: ${staged.length} staged files. Review if all belong together.`,
+    });
+  }
+
+  // Split suggestion
+  const dirs = new Set(staged.map((f) => f.path.split("/")[0]));
+  if (dirs.size >= 3 && staged.length >= 6) {
+    tips.push({
+      category: "split",
+      severity: "suggestion",
+      message: `Changes span ${dirs.size} top-level directories. Consider splitting by directory or concern.`,
+    });
+  }
+
+  // Message check
+  if (!commitMessage.trim()) {
+    tips.push({
+      category: "message",
+      severity: "action",
+      message: "No commit message provided. Write a descriptive message before committing.",
+    });
+  } else if (commitMessage.length < 10) {
+    tips.push({
+      category: "message",
+      severity: "suggestion",
+      message: "Commit message is very short. Consider adding more context.",
+    });
+  }
+
+  // Missed files check
+  const stagedDirs = new Set(staged.map((f) => f.path.split("/")[0]));
+  const relatedUnstaged = unstaged.filter((f) => stagedDirs.has(f.path.split("/")[0]));
+  if (relatedUnstaged.length > 0) {
+    tips.push({
+      category: "missed",
+      severity: "suggestion",
+      message: `${relatedUnstaged.length} unstaged file(s) share directories with staged files. Check if they should be included.`,
+    });
+  }
+
+  const verdict = tips.some((t) => t.severity === "action")
+    ? "needs-work"
+    : tips.some((t) => t.severity === "warning")
+      ? "needs-attention"
+      : "good";
+
+  return {
+    tips,
+    verdict,
+    summary: tips.length === 0
+      ? "Looking good! Ready to commit."
+      : `Coach: ${tips.length} tip(s) for your commit.`,
+  };
+}
+
+// ─── AI Branch Compare Summary ──────────────────────────────────────────────
+
+export interface BranchCompareRisk {
+  level: "safe" | "low" | "medium" | "high";
+  area: string;
+  description: string;
+}
+
+export interface BranchAffectedComponent {
+  path: string;
+  category: string;
+  impact: string;
+}
+
+export interface BranchCompareSummary {
+  changesSummary: string;
+  risks: BranchCompareRisk[];
+  affectedComponents: BranchAffectedComponent[];
+  mergeRecommendation: {
+    strategy: "merge" | "rebase" | "squash" | "fast-forward";
+    confidence: "high" | "medium" | "low";
+    reasoning: string;
+  };
+  overallRisk: "safe" | "low" | "medium" | "high";
+  stats: {
+    filesChanged: number;
+    filesAdded: number;
+    filesDeleted: number;
+    filesModified: number;
+  };
+}
+
+export async function summarizeBranchComparison(
+  repoPath: string,
+  baseBranch: string,
+  targetBranch: string,
+  ahead: number,
+  behind: number,
+  files: Array<{ path: string; status: string }>,
+): Promise<BranchCompareSummary> {
+  const settings = readAISettings();
+  if (!hasProvider(settings)) {
+    return buildLocalBranchSummary(baseBranch, targetBranch, ahead, behind, files);
+  }
+
+  const fileSummary = files
+    .slice(0, 50)
+    .map((f) => `  [${f.status}] ${f.path}`)
+    .join("\n");
+
+  const conventionContext = await getConventionContext(repoPath);
+
+  const prompt = `You are a Git branch comparison analyst. Analyze the branch comparison data and provide a comprehensive summary.
+
+## Branch Comparison Data
+
+- Base branch: ${baseBranch}
+- Target branch: ${targetBranch}
+- Commits ahead (in ${targetBranch} but not ${baseBranch}): ${ahead}
+- Commits behind (in ${baseBranch} but not ${targetBranch}): ${behind}
+- Total changed files: ${files.length}
+
+## Changed Files
+
+${fileSummary || "(no files changed)"}
+${conventionContext}
+
+## Instructions
+
+Provide a JSON object with the following structure:
+
+{
+  "changesSummary": "A concise 1-2 sentence summary of what this branch changes",
+  "risks": [
+    { "level": "safe|low|medium|high", "area": "area name", "description": "risk description" }
+  ],
+  "affectedComponents": [
+    { "path": "file path", "category": "category like 'ui'|'api'|'config'|'test'|'data'|'core'", "impact": "brief impact description" }
+  ],
+  "mergeRecommendation": {
+    "strategy": "merge|rebase|squash|fast-forward",
+    "confidence": "high|medium|low",
+    "reasoning": "why this strategy is recommended"
+  },
+  "overallRisk": "safe|low|medium|high"
+}
+
+## Risk Assessment Guidelines
+
+- **safe**: Small changes, low-file-count, no critical paths affected
+- **low**: Moderate changes, well-contained, no breaking changes expected
+- **medium**: Significant changes, multiple areas affected, some review needed
+- **high**: Large changes, critical paths affected, breaking changes possible, or conflicts likely
+
+## Merge Strategy Guidelines
+
+- **fast-forward**: Linear history, no divergence, simple ahead/behind
+- **merge**: Non-linear but preserves branch topology, good for feature branches
+- **squash**: Many small commits that should be one, or messy history
+- **rebase**: Clean linear history preferred, few conflicts expected
+
+Return ONLY the JSON object, no markdown fences or extra text.`;
+
+  const raw = await requestAIText(prompt, settings);
+  const text = cleanAIText(raw);
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) {
+    return buildLocalBranchSummary(baseBranch, targetBranch, ahead, behind, files);
+  }
+
+  try {
+    const parsed = JSON.parse(match[0]);
+    const stats = computeFileStats(files);
+    return {
+      changesSummary: String(parsed.changesSummary || "No summary available."),
+      risks: Array.isArray(parsed.risks)
+        ? parsed.risks.map((r: any) => ({
+            level: ["safe", "low", "medium", "high"].includes(r.level) ? r.level : "low",
+            area: String(r.area || "unknown"),
+            description: String(r.description || ""),
+          }))
+        : [],
+      affectedComponents: Array.isArray(parsed.affectedComponents)
+        ? parsed.affectedComponents.map((c: any) => ({
+            path: String(c.path || ""),
+            category: String(c.category || "other"),
+            impact: String(c.impact || ""),
+          }))
+        : [],
+      mergeRecommendation: {
+        strategy: ["merge", "rebase", "squash", "fast-forward"].includes(parsed.mergeRecommendation?.strategy)
+          ? parsed.mergeRecommendation.strategy
+          : "merge",
+        confidence: ["high", "medium", "low"].includes(parsed.mergeRecommendation?.confidence)
+          ? parsed.mergeRecommendation.confidence
+          : "medium",
+        reasoning: String(parsed.mergeRecommendation?.reasoning || "No reasoning provided."),
+      },
+      overallRisk: ["safe", "low", "medium", "high"].includes(parsed.overallRisk)
+        ? parsed.overallRisk
+        : "low",
+      stats,
+    };
+  } catch {
+    return buildLocalBranchSummary(baseBranch, targetBranch, ahead, behind, files);
+  }
+}
+
+function computeFileStats(files: Array<{ path: string; status: string }>) {
+  let added = 0, deleted = 0, modified = 0;
+  for (const f of files) {
+    const s = f.status.toUpperCase();
+    if (s.startsWith("A")) added++;
+    else if (s.startsWith("D")) deleted++;
+    else modified++;
+  }
+  return { filesChanged: files.length, filesAdded: added, filesDeleted: deleted, filesModified: modified };
+}
+
+function buildLocalBranchSummary(
+  _baseBranch: string,
+  _targetBranch: string,
+  ahead: number,
+  behind: number,
+  files: Array<{ path: string; status: string }>,
+): BranchCompareSummary {
+  const stats = computeFileStats(files);
+
+  const risks: BranchCompareRisk[] = [];
+  if (files.length > 30) {
+    risks.push({ level: "high", area: "scope", description: `Large change: ${files.length} files affected` });
+  } else if (files.length > 15) {
+    risks.push({ level: "medium", area: "scope", description: `Moderate change: ${files.length} files affected` });
+  }
+
+  const criticalPaths = files.filter((f) =>
+    /^(src|lib|core|api|config|package\.json|Cargo\.toml)/.test(f.path),
+  );
+  if (criticalPaths.length > 5) {
+    risks.push({ level: "medium", area: "critical paths", description: `${criticalPaths.length} files in critical directories` });
+  }
+
+  const testFiles = files.filter((f) => /\.(test|spec)\./.test(f.path));
+  if (testFiles.length === 0 && files.length > 5) {
+    risks.push({ level: "low", area: "testing", description: "No test files changed in a multi-file change" });
+  }
+
+  if (risks.length === 0) {
+    risks.push({ level: "safe", area: "overall", description: "Small, well-contained change" });
+  }
+
+  const affectedComponents: BranchAffectedComponent[] = [];
+  const categories: Record<string, string[]> = {};
+  for (const f of files) {
+    const parts = f.path.split("/");
+    const cat = parts.length > 1 ? parts[0] : "root";
+    if (!categories[cat]) categories[cat] = [];
+    categories[cat].push(f.path);
+  }
+  for (const [cat, paths] of Object.entries(categories).slice(0, 8)) {
+    affectedComponents.push({
+      path: paths.length === 1 ? paths[0] : `${cat}/ (${paths.length} files)`,
+      category: cat,
+      impact: `${paths.length} file(s) changed`,
+    });
+  }
+
+  const strategy = ahead === 0 && behind <= 1 ? "fast-forward" : files.length > 20 ? "squash" : "merge";
+  const overallRisk = risks.some((r) => r.level === "high") ? "high"
+    : risks.some((r) => r.level === "medium") ? "medium"
+    : risks.some((r) => r.level === "low") ? "low"
+    : "safe";
+
+  return {
+    changesSummary: `${_targetBranch} has ${ahead} commit(s) ahead and ${behind} commit(s) behind ${_baseBranch}, with ${files.length} file(s) changed.`,
+    risks,
+    affectedComponents,
+    mergeRecommendation: {
+      strategy,
+      confidence: "low",
+      reasoning: `Local analysis (AI not configured). Recommended ${strategy} based on ${files.length} changed files.`,
+    },
+    overallRisk,
+    stats,
+  };
+}

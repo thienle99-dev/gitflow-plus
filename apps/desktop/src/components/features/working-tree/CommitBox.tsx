@@ -1,11 +1,11 @@
 import { useRef } from "react";
 import { type CommitGroupProgress, type FileChange } from "@/api/tauri";
-import { type CommitScopeSuggestion, type CommitGuardrailResult, type CommitReadinessResult } from "@/lib/ai";
+import { type CommitScopeSuggestion, type CommitGuardrailResult, type CommitReadinessResult, type FixPlanResult, type CommitCoachResult } from "@/lib/ai";
 import { type CommitLintResult, autoFixCommitMessage } from "@/lib/commit-lint";
 import UndoButton from "@/components/features/actions/UndoButton";
 import CommitTemplatePicker from "./CommitTemplatePicker";
 import { showToast } from "@/lib/toast";
-import { AlertCircle, ShieldAlert, ClipboardCheck } from "lucide-react";
+import { AlertCircle, ShieldAlert, ClipboardCheck, ListChecks, MessageCircle } from "lucide-react";
 import {
   AlignLeft,
   Check,
@@ -154,6 +154,17 @@ export interface CommitBoxProps {
   readinessResult: CommitReadinessResult | null;
   readinessOpen: boolean;
   setReadinessOpen: (open: boolean) => void;
+  // Fix plan
+  onGenerateFixPlan: () => void;
+  fixPlanPending: boolean;
+  fixPlanResult: FixPlanResult | null;
+  fixPlanOpen: boolean;
+  setFixPlanOpen: (open: boolean) => void;
+  // Commit coach
+  coachPending: boolean;
+  coachResult: CommitCoachResult | null;
+  coachOpen: boolean;
+  setCoachOpen: (open: boolean) => void;
   // Mutations
   generateCommitPending: boolean;
   commitScopePending: boolean;
@@ -210,6 +221,15 @@ export default function CommitBox({
   commitScopePending,
   improveMessagePending,
   addBodyPending,
+  onGenerateFixPlan,
+  fixPlanPending,
+  fixPlanResult,
+  fixPlanOpen,
+  setFixPlanOpen,
+  coachPending,
+  coachResult,
+  coachOpen,
+  setCoachOpen,
 }: CommitBoxProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -768,6 +788,109 @@ export default function CommitBox({
                   ))}
                 </div>
               )}
+
+              {guardrailResult && guardrailResult.findings.length > 0 && (
+                <button
+                  type="button"
+                  onClick={onGenerateFixPlan}
+                  disabled={fixPlanPending}
+                  className="h-6 px-2.5 rounded-mac text-2xs font-semibold inline-flex items-center gap-1.5 bg-accent-10 text-accent hover:bg-accent-15 border border-accent-20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {fixPlanPending ? (
+                    <RefreshCw size={10} className="animate-spin" />
+                  ) : (
+                    <ListChecks size={10} />
+                  )}
+                  <span>{fixPlanPending ? "Generating..." : "Generate Fix Plan"}</span>
+                </button>
+              )}
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {/* Fix Plan Result Panel */}
+      {fixPlanOpen && (
+        <div className="border border-[#0a84ff]/30 bg-[#0a84ff]/5 rounded-mac p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              {fixPlanPending ? (
+                <RefreshCw size={12} className="animate-spin text-[#0a84ff]" />
+              ) : (
+                <ListChecks size={12} className="text-[#0a84ff]" />
+              )}
+              <span className="text-xs font-semibold text-text-primary">Fix Plan</span>
+              {fixPlanResult && (
+                <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-[#0a84ff]/15 text-[#0a84ff]">
+                  {fixPlanResult.items.length} ITEM{fixPlanResult.items.length !== 1 ? "S" : ""}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-0.5">
+              {fixPlanResult && (
+                <CopyButton
+                  text={fixPlanResult.items.map((item) => `[${item.riskLevel.toUpperCase()}] ${item.file}: ${item.reason}\n  → ${item.suggestedAction}`).join("\n\n")}
+                  label="Copy fix plan"
+                  hoverOnly={false}
+                />
+              )}
+              <button
+                type="button"
+                onClick={() => setFixPlanOpen(false)}
+                className="h-5 w-5 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          </div>
+
+          {fixPlanPending ? (
+            <div className="flex items-center gap-2 rounded-mac border border-border-40 bg-surface-2-30 px-3 py-2.5 text-text-secondary">
+              <RefreshCw size={12} className="animate-spin text-[#0a84ff]" />
+              <span className="text-2xs">Generating fix plan from guardrail findings...</span>
+            </div>
+          ) : fixPlanResult ? (
+            <div className="space-y-2">
+              <p className="text-2xs text-text-secondary leading-relaxed">{fixPlanResult.summary}</p>
+
+              {fixPlanResult.items.length > 0 && (
+                <div className="space-y-1">
+                  {fixPlanResult.items.map((item, i) => (
+                    <div key={i} className={`p-2 rounded-mac text-2xs border-l-2 ${
+                      item.riskLevel === "safe"
+                        ? "bg-[#30d158]/8 border-l-[#30d158]"
+                        : item.riskLevel === "low"
+                          ? "bg-[#0a84ff]/8 border-l-[#0a84ff]"
+                          : item.riskLevel === "medium"
+                            ? "bg-[#ff9f0a]/8 border-l-[#ff9f0a]"
+                            : "bg-[#ff453a]/8 border-l-[#ff453a]"
+                    }`}>
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className={`font-bold uppercase text-[9px] px-1 py-0.5 rounded ${
+                          item.riskLevel === "safe"
+                            ? "bg-[#30d158]/15 text-[#30d158]"
+                            : item.riskLevel === "low"
+                              ? "bg-[#0a84ff]/15 text-[#0a84ff]"
+                              : item.riskLevel === "medium"
+                                ? "bg-[#ff9f0a]/15 text-[#ff9f0a]"
+                                : "bg-[#ff453a]/15 text-[#ff453a]"
+                        }`}>
+                          {item.riskLevel}
+                        </span>
+                        <span className="text-text-muted font-mono">{item.file}</span>
+                      </div>
+                      <p className="text-text-primary">{item.reason}</p>
+                      {item.suggestedAction && (
+                        <p className="text-text-muted italic mt-0.5">→ {item.suggestedAction}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {fixPlanResult.items.length === 0 && (
+                <p className="text-2xs text-text-muted">No actionable fixes generated. All findings are informational.</p>
+              )}
             </div>
           ) : null}
         </div>
@@ -865,6 +988,97 @@ export default function CommitBox({
                     );
                   })}
                 </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {/* Commit Coach Panel */}
+      {coachOpen && (
+        <div className={`border rounded-mac p-3 space-y-2 ${
+          coachResult?.verdict === "good"
+            ? "border-[#30d158]/30 bg-[#30d158]/5"
+            : coachResult?.verdict === "needs-work"
+              ? "border-[#ff453a]/30 bg-[#ff453a]/5"
+              : coachResult?.verdict === "needs-attention"
+                ? "border-[#ff9f0a]/30 bg-[#ff9f0a]/5"
+                : "border-border-40 bg-surface-2-30"
+        }`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <MessageCircle size={12} className={`${
+                coachResult?.verdict === "good" ? "text-[#30d158]"
+                  : coachResult?.verdict === "needs-work" ? "text-[#ff453a]"
+                    : coachResult?.verdict === "needs-attention" ? "text-[#ff9f0a]"
+                      : "text-accent"
+              }`} />
+              <span className="text-xs font-semibold text-text-primary">Commit Coach</span>
+              {coachResult && (
+                <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                  coachResult.verdict === "good"
+                    ? "bg-[#30d158]/15 text-[#30d158]"
+                    : coachResult.verdict === "needs-work"
+                      ? "bg-[#ff453a]/15 text-[#ff453a]"
+                      : "bg-[#ff9f0a]/15 text-[#ff9f0a]"
+                }`}>
+                  {coachResult.verdict === "good" ? "GOOD" : coachResult.verdict === "needs-work" ? "NEEDS WORK" : "NEEDS ATTENTION"}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-0.5">
+              {coachResult && (
+                <CopyButton text={`${coachResult.summary}\n\n${coachResult.tips.map(t => `[${t.severity.toUpperCase()}] ${t.category}: ${t.message}`).join("\n")}`} label="Copy coach tips" hoverOnly={false} />
+              )}
+              <button
+                type="button"
+                onClick={() => setCoachOpen(false)}
+                className="h-5 w-5 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          </div>
+
+          {coachPending ? (
+            <div className="flex items-center gap-2 rounded-mac border border-border-40 bg-surface-2-30 px-3 py-2.5 text-text-secondary">
+              <RefreshCw size={12} className="animate-spin text-accent" />
+              <span className="text-2xs">Analyzing your commit...</span>
+            </div>
+          ) : coachResult ? (
+            <div className="space-y-2">
+              <p className="text-2xs text-text-secondary leading-relaxed">{coachResult.summary}</p>
+
+              {coachResult.tips.length > 0 && (
+                <div className="space-y-1">
+                  {coachResult.tips.map((tip, i) => {
+                    const severityColors: Record<string, string> = {
+                      action: "bg-[#ff453a]/8 border-l-2 border-l-[#ff453a] text-[#ff453a]",
+                      warning: "bg-[#ff9f0a]/8 border-l-2 border-l-[#ff9f0a] text-[#ff9f0a]",
+                      suggestion: "bg-[#0a84ff]/8 border-l-2 border-l-[#0a84ff] text-[#0a84ff]",
+                      info: "bg-surface-2-30 border-l-2 border-l-border-40 text-text-muted",
+                    };
+                    const categoryLabels: Record<string, string> = {
+                      size: "SIZE",
+                      split: "SPLIT",
+                      message: "MSG",
+                      missed: "MISSED",
+                      quality: "QUALITY",
+                    };
+                    return (
+                    <div key={i} className={`group flex items-start gap-2 p-2 rounded-mac text-2xs ${severityColors[tip.severity] || severityColors.info}`}>
+                      <span className="font-bold uppercase shrink-0">
+                        {categoryLabels[tip.category] || tip.category}
+                      </span>
+                      <span className="min-w-0 flex-1 text-text-primary">{tip.message}</span>
+                    </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {coachResult.tips.length === 0 && (
+                <p className="text-2xs text-text-muted">No coaching tips — your commit looks good!</p>
               )}
             </div>
           ) : null}

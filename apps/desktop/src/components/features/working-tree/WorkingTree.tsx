@@ -4,8 +4,8 @@ import { useUIStore } from "@/stores/ui";
 import { useGitDiff, useGitStatus } from "@/queries/useGitLog";
 import { api, type CommitGroupProgress, type FileChange, type LintDiagnostic } from "@/api/tauri";
 import { listen } from "@tauri-apps/api/event";
-import { useGenerateCommitMessage, useAICommitScope, useAIDiffReview, useImproveCommitMessage, useAddCommitBody, useAICommitGuardrail, useAICommitReadiness, useAILintReview, useAIFixPlan } from "@/queries/useAI";
-import { generateLocalCommitMessage, shouldAnalyzeScope, type CommitScopeSuggestion, type CommitGuardrailResult, type CommitReadinessResult, type FixPlanResult } from "@/lib/ai";
+import { useGenerateCommitMessage, useAICommitScope, useAIDiffReview, useImproveCommitMessage, useAddCommitBody, useAICommitGuardrail, useAICommitReadiness, useAILintReview, useAIFixPlan, useAICommitCoach } from "@/queries/useAI";
+import { generateLocalCommitMessage, shouldAnalyzeScope, type CommitScopeSuggestion, type CommitGuardrailResult, type CommitReadinessResult, type FixPlanResult, type CommitCoachResult } from "@/lib/ai";
 import { useQueryClient } from "@tanstack/react-query";
 import { showToast } from "@/lib/toast";
 import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
@@ -13,7 +13,7 @@ import CommitSplitDialog from "@/components/features/dialogs/CommitSplitDialog";
 import { fileIcon, statusLabel, statusColor } from "@/components/ui/shared";
 import ContextMenu, { type ContextMenuItem } from "@/components/ui/overlay/ContextMenu";
 import LazyDiffViewer from "@/components/features/diff/LazyDiffViewer";
-import { trackCommit, trackAICommitMessage, trackAIReview, trackAIGuardrail, trackAIReadiness, trackAICommitScope, trackAIImproveMessage, trackAIAddBody, trackAILintReview, trackAIFixPlan } from "@/lib/analytics";
+import { trackCommit, trackAICommitMessage, trackAIReview, trackAIGuardrail, trackAIReadiness, trackAICommitScope, trackAIImproveMessage, trackAIAddBody, trackAILintReview, trackAIFixPlan, trackAICommitCoach } from "@/lib/analytics";
 import { AlertCircle, Clipboard, ShieldAlert, MessageSquare } from "lucide-react";
 import { Skeleton } from "@/components/ui/feedback/Skeleton";
 import { EmptyState } from "@/components/ui/feedback/EmptyState";
@@ -50,6 +50,7 @@ export default function WorkingTree() {
   const readiness = useAICommitReadiness(repoPath);
   const lintReview = useAILintReview(repoPath);
   const fixPlan = useAIFixPlan(repoPath);
+  const commitCoach = useAICommitCoach(repoPath);
   const [commitMessage, setCommitMessage] = useState("");
   const [lintResults, setLintResults] = useState<CommitLintResult[]>([]);
 
@@ -104,6 +105,12 @@ export default function WorkingTree() {
   const [readinessOpen, setReadinessOpen] = useState(false);
   const [lintReviewResult, setLintReviewResult] = useState("");
   const [lintReviewOpen, setLintReviewOpen] = useState(false);
+  const [fixPlanResult, setFixPlanResult] = useState<FixPlanResult | null>(null);
+  const [fixPlanOpen, setFixPlanOpen] = useState(false);
+  const [coachResult, setCoachResult] = useState<CommitCoachResult | null>(null);
+  const [coachOpen, setCoachOpen] = useState(false);
+  const coachTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const coachHashRef = useRef<string>("");
   const [splitDialogOpen, setSplitDialogOpen] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState<string | null>(null);
   const [confirmDiscardAll, setConfirmDiscardAll] = useState(false);
@@ -552,6 +559,43 @@ export default function WorkingTree() {
     }
   };
 
+  const handleGenerateFixPlan = async () => {
+    if (!repoPath || fixPlan.isPending || !guardrailResult || guardrailResult.findings.length === 0) return;
+    const filesToCheck = staged.length > 0 ? staged : unstaged;
+    setFixPlanOpen(true);
+    setFixPlanResult(null);
+    trackAIFixPlan(guardrailResult.findings.length);
+    fixPlan.reset();
+    try {
+      const result = await fixPlan.mutateAsync({
+        files: filesToCheck,
+        commitMessage,
+        findings: guardrailResult.findings,
+      });
+      setFixPlanResult(result);
+    } catch (err: any) {
+      showToast(`Fix plan generation failed: ${err?.message || err}`, "error");
+    }
+  };
+
+  const handleRunCoach = async () => {
+    if (!repoPath || commitCoach.isPending) return;
+    if (staged.length === 0) return;
+    trackAICommitCoach();
+    commitCoach.reset();
+    try {
+      const result = await commitCoach.mutateAsync({
+        staged,
+        unstaged,
+        commitMessage,
+      });
+      setCoachResult(result);
+      setCoachOpen(true);
+    } catch {
+      // Coach failure is non-critical — silently ignore
+    }
+  };
+
   const handleUseGroup = async (group: { files: string[]; message: string }) => {
     try {
       await api.commit.unstageAll(repoPath!);
@@ -745,6 +789,26 @@ export default function WorkingTree() {
       }
     }
   }, [staged.length]);
+
+  // Auto-trigger commit coach when message or staged files change (debounced 2s)
+  useEffect(() => {
+    if (staged.length === 0 || !commitMessage.trim()) {
+      setCoachResult(null);
+      setCoachOpen(false);
+      return;
+    }
+    const hash = `${commitMessage.trim()}|${staged.length}|${staged.map((f) => f.path).sort().join(",")}`;
+    if (hash === coachHashRef.current) return;
+    coachHashRef.current = hash;
+
+    if (coachTimerRef.current) clearTimeout(coachTimerRef.current);
+    coachTimerRef.current = setTimeout(() => {
+      handleRunCoach();
+    }, 2000);
+    return () => {
+      if (coachTimerRef.current) clearTimeout(coachTimerRef.current);
+    };
+  }, [commitMessage, staged.length]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -958,6 +1022,15 @@ export default function WorkingTree() {
         commitScopePending={commitScope.isPending}
         improveMessagePending={improveMessage.isPending}
         addBodyPending={addBody.isPending}
+        onGenerateFixPlan={handleGenerateFixPlan}
+        fixPlanPending={fixPlan.isPending}
+        fixPlanResult={fixPlanResult}
+        fixPlanOpen={fixPlanOpen}
+        setFixPlanOpen={setFixPlanOpen}
+        coachPending={commitCoach.isPending}
+        coachResult={coachResult}
+        coachOpen={coachOpen}
+        setCoachOpen={setCoachOpen}
       />
 
       {reviewTarget && (

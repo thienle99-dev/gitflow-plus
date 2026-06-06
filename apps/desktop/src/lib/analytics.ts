@@ -160,6 +160,16 @@ export function trackAIFixPlan(itemCount = 0) {
   if (a) logEvent(a, "ai_fix_plan", { itemCount });
 }
 
+export function trackAICommitCoach(tipCount = 0) {
+  const a = getA();
+  if (a) logEvent(a, "ai_commit_coach", { tipCount });
+}
+
+export function trackAIBranchCompareSummary(riskLevel = "safe") {
+  const a = getA();
+  if (a) logEvent(a, "ai_branch_compare_summary", { riskLevel });
+}
+
 export function trackAIBranchSuggestion() {
   const a = getA();
   if (a) logEvent(a, "ai_branch_suggestion");

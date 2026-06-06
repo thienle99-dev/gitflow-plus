@@ -9,7 +9,9 @@ import {
   type CommitSummaryResult,
   type CommitGuardrailResult,
   type CommitReadinessResult,
+  type CommitCoachResult,
   type FixPlanResult,
+  type BranchCompareSummary,
   type GeneratedTagDescription,
   type GuardrailFinding,
   reviewLintIssuesWithAI,
@@ -31,6 +33,8 @@ import {
   checkCommitReadiness,
   suggestBranchName,
   generateFixPlan,
+  runCommitCoach,
+  summarizeBranchComparison,
 } from "@/lib/ai";
 import type { CommitLintResult } from "@/lib/commit-lint";
 
@@ -282,6 +286,36 @@ export function useAIFixPlan(repoPath: string | null) {
     mutationFn: ({ files, commitMessage, findings }) => {
       if (!repoPath) throw new Error("No repository selected");
       return generateFixPlan(repoPath, files, commitMessage, findings);
+    },
+  });
+}
+
+export function useAIBranchCompareSummary(repoPath: string | null) {
+  return useMutation<BranchCompareSummary, Error, {
+    baseBranch: string;
+    targetBranch: string;
+    ahead: number;
+    behind: number;
+    files: Array<{ path: string; status: string }>;
+  }>({
+    mutationKey: ["ai.branch-compare-summary"],
+    mutationFn: ({ baseBranch, targetBranch, ahead, behind, files }) => {
+      if (!repoPath) throw new Error("No repository selected");
+      return summarizeBranchComparison(repoPath, baseBranch, targetBranch, ahead, behind, files);
+    },
+  });
+}
+
+export function useAICommitCoach(repoPath: string | null) {
+  return useMutation<CommitCoachResult, Error, {
+    staged: FileChange[];
+    unstaged: FileChange[];
+    commitMessage: string;
+  }>({
+    mutationKey: ["ai.commit-coach"],
+    mutationFn: ({ staged, unstaged, commitMessage }) => {
+      if (!repoPath) throw new Error("No repository selected");
+      return runCommitCoach(repoPath, staged, unstaged, commitMessage);
     },
   });
 }
