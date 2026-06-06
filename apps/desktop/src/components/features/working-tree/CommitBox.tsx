@@ -76,6 +76,12 @@ function CopyButton({ text, label, hoverOnly = true }: { text: string; label?: s
   );
 }
 
+// ─── Module-scope constants (avoid recreation on every render) ─────────────
+const MUTED_BUTTON_CLASS =
+  "h-6 px-1.5 rounded-mac border border-transparent text-[10px] font-semibold inline-flex items-center gap-1 transition-all cursor-pointer bg-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40 active:scale-[0.99] disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-transparent";
+const STATUS_BUTTON_BASE =
+  "h-6 px-1.5 rounded-mac border text-[10px] font-semibold inline-flex items-center gap-1 transition-all cursor-pointer active:scale-[0.99] disabled:opacity-35 disabled:cursor-not-allowed";
+
 export interface CommitBoxProps {
   commitMessage: string;
   setCommitMessage: (msg: string) => void;
@@ -189,10 +195,6 @@ export default function CommitBox({
 
   const hasAnyChanges = staged.length > 0 || unstaged.length > 0;
   const hasCommitMessage = commitMessage.trim().length > 0;
-  const mutedButtonClass =
-    "h-6 px-1.5 rounded-mac border border-transparent text-[10px] font-semibold inline-flex items-center gap-1 transition-all cursor-pointer bg-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40 active:scale-[0.99] disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-transparent";
-  const statusButtonBase =
-    "h-6 px-1.5 rounded-mac border text-[10px] font-semibold inline-flex items-center gap-1 transition-all cursor-pointer active:scale-[0.99] disabled:opacity-35 disabled:cursor-not-allowed";
 
   return (
     <div className="px-3 py-3 border-t border-border-60 bg-surface-1-10 space-y-2.5 shrink-0">
@@ -210,7 +212,7 @@ export default function CommitBox({
             {staged.length >= 3 && (
               <button
                 type="button"
-                className={`${mutedButtonClass} border-border-30 bg-surface-1-50 ${scopeAnalyzing || commitScopePending ? "opacity-50 cursor-not-allowed" : ""
+                className={`${MUTED_BUTTON_CLASS} border-border-30 bg-surface-1-50 ${scopeAnalyzing || commitScopePending ? "opacity-50 cursor-not-allowed" : ""
                   }`}
                 onClick={onAnalyzeScope}
                 disabled={scopeAnalyzing || commitScopePending}
@@ -230,7 +232,7 @@ export default function CommitBox({
                   type="button"
                   onClick={onImproveMessage}
                   disabled={committing || improveMessagePending}
-                  className={mutedButtonClass}
+                  className={MUTED_BUTTON_CLASS}
                   title={improveMessagePending ? "Improving..." : "Improve commit message with AI"}
                 >
                   {improveMessagePending ? (
@@ -244,7 +246,7 @@ export default function CommitBox({
                   type="button"
                   onClick={onAddBody}
                   disabled={committing || addBodyPending}
-                  className={mutedButtonClass}
+                  className={MUTED_BUTTON_CLASS}
                   title={addBodyPending ? "Adding body..." : "Add detailed commit body with AI"}
                 >
                   {addBodyPending ? (
@@ -306,7 +308,7 @@ export default function CommitBox({
                   type="button"
                   onClick={onAIReview}
                   disabled={committing || aiReviewPending || !hasAnyChanges}
-                  className={`${statusButtonBase} bg-accent-10 border-transparent text-accent hover:bg-accent-15 hover:border-accent-30 disabled:bg-transparent disabled:border-transparent disabled:text-text-muted ${aiReviewPending ? "opacity-70" : ""}`}
+                  className={`${STATUS_BUTTON_BASE} bg-accent-10 border-transparent text-accent hover:bg-accent-15 hover:border-accent-30 disabled:bg-transparent disabled:border-transparent disabled:text-text-muted ${aiReviewPending ? "opacity-70" : ""}`}
                   title="Run AI review with custom checklist"
                 >
                   {aiReviewPending ? (
@@ -321,7 +323,7 @@ export default function CommitBox({
                   type="button"
                   onClick={onGuardrail}
                   disabled={committing || guardrailPending || !hasAnyChanges}
-                  className={`${statusButtonBase} ${guardrailResult?.verdict === "needs-attention"
+                  className={`${STATUS_BUTTON_BASE} ${guardrailResult?.verdict === "needs-attention"
                     ? "bg-[#ff453a]/10 border-[#ff453a]/30 text-[#ff453a]"
                     : guardrailResult?.verdict === "warning"
                       ? "bg-[#ff9f0a]/10 border-[#ff9f0a]/30 text-[#ff9f0a]"
@@ -343,7 +345,7 @@ export default function CommitBox({
                   type="button"
                   onClick={onReadiness}
                   disabled={committing || readinessPending || !hasAnyChanges}
-                  className={`${statusButtonBase} ${readinessResult?.verdict === "ready"
+                  className={`${STATUS_BUTTON_BASE} ${readinessResult?.verdict === "ready"
                     ? "bg-[#30d158]/10 border-[#30d158]/30 text-[#30d158]"
                     : readinessResult?.verdict === "not-ready"
                       ? "bg-[#ff453a]/10 border-[#ff453a]/30 text-[#ff453a]"
@@ -368,7 +370,7 @@ export default function CommitBox({
                 <button
                   type="button"
                   onClick={() => setAmend(!amend)}
-                  className={`${statusButtonBase} ${amend
+                  className={`${STATUS_BUTTON_BASE} ${amend
                     ? "bg-[#ff9f0a]/10 border-[#ff9f0a]/30 text-[#ff9f0a]"
                     : "bg-transparent border-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40"
                     }`}

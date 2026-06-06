@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { api, Commit } from "@/api/tauri";
 
+const MAX_STREAM_COMMITS = 10_000;
+
 interface LogChunk {
   commits: Commit[];
   total_so_far: number;
@@ -27,16 +29,27 @@ export function useGitLogStream(repoPath: string | null, options: UseGitLogStrea
   useEffect(() => {
     let cancelled = false;
 
+    const seenHashesRef = new Set<string>();
+
     const setup = async () => {
       const unlisten = await listen<LogChunk>("git:log-chunk", (event) => {
         if (cancelled) return;
         const chunk = event.payload;
 
+        // Deduplicate incrementally — avoid rebuilding Set from entire array
+        const newCommits = chunk.commits.filter((c) => {
+          if (seenHashesRef.has(c.hash)) return false;
+          seenHashesRef.add(c.hash);
+          return true;
+        });
+
         setCommits((prev) => {
-          // Deduplicate by hash (in case of overlapping pages)
-          const existing = new Set(prev.map((c) => c.hash));
-          const newCommits = chunk.commits.filter((c) => !existing.has(c.hash));
-          return [...prev, ...newCommits];
+          // Safety cap to prevent unbounded memory growth
+          const next = [...prev, ...newCommits];
+          if (next.length > MAX_STREAM_COMMITS) {
+            return next.slice(next.length - MAX_STREAM_COMMITS);
+          }
+          return next;
         });
         setTotalLoaded(chunk.total_so_far);
 

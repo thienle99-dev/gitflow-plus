@@ -304,6 +304,8 @@ function resolveGitFlowColor(
 
 /** Small offscreen canvas used to resolve any CSS color to #rrggbb */
 let _colorResolver: HTMLCanvasElement | null = null;
+/** Cache resolved CSS color → rgb string to avoid repeated canvas lookups */
+const _rgbCache = new Map<string, string>();
 
 function resolveToRgb(color: string): string | null {
   try {
@@ -357,7 +359,14 @@ function withAlpha(color: string, alpha: number) {
   }
 
   // Fallback: use canvas to resolve any CSS color (oklch, color(), etc.)
-  const resolved = resolveToRgb(color);
+  let resolved = _rgbCache.get(color);
+  if (!resolved) {
+    const canvasResolved = resolveToRgb(color);
+    if (canvasResolved) {
+      resolved = canvasResolved;
+      _rgbCache.set(color, resolved);
+    }
+  }
   if (resolved) {
     const m = resolved.match(/^#([0-9a-f]{6})$/i);
     if (m) {

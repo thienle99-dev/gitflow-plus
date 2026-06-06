@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useGitDiff, useGitStatus } from "@/queries/useGitLog";
@@ -47,7 +47,9 @@ export default function WorkingTree() {
   const [commitMessage, setCommitMessage] = useState("");
   const [lintResults, setLintResults] = useState<CommitLintResult[]>([]);
 
-  const runLint = useCallback(() => {
+  const lintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const runLintImmediate = useCallback(() => {
     const isCommitLintEnabled = localStorage.getItem("gitflowCommitLintEnabled") !== "false";
     if (isCommitLintEnabled && commitMessage) {
       setLintResults(lintCommitMessage(commitMessage));
@@ -56,16 +58,28 @@ export default function WorkingTree() {
     }
   }, [commitMessage]);
 
+  // Debounce lint by 300ms to avoid running on every keystroke
   useEffect(() => {
-    runLint();
-  }, [commitMessage, runLint]);
+    if (lintTimerRef.current !== null) {
+      clearTimeout(lintTimerRef.current);
+    }
+    lintTimerRef.current = setTimeout(() => {
+      lintTimerRef.current = null;
+      runLintImmediate();
+    }, 300);
+    return () => {
+      if (lintTimerRef.current !== null) {
+        clearTimeout(lintTimerRef.current);
+      }
+    };
+  }, [commitMessage, runLintImmediate]);
 
   useEffect(() => {
-    window.addEventListener("gitflow-settings-updated", runLint);
+    window.addEventListener("gitflow-settings-updated", runLintImmediate);
     return () => {
-      window.removeEventListener("gitflow-settings-updated", runLint);
+      window.removeEventListener("gitflow-settings-updated", runLintImmediate);
     };
-  }, [runLint]);
+  }, [runLintImmediate]);
   const [amend, setAmend] = useState(false);
   const [scopeSuggestion, setScopeSuggestion] = useState<CommitScopeSuggestion | null>(null);
   const [scopeDismissed, setScopeDismissed] = useState(false);
@@ -126,11 +140,17 @@ export default function WorkingTree() {
 
   const staged = changes?.filter((c) => c.staged) || [];
   const unstaged = changes?.filter((c) => !c.staged) || [];
-  const reviewFiles: DiffReviewTarget[] = [
-    ...staged.map((file) => ({ path: file.path, stage: "staged" as const, status: file.status })),
-    ...unstaged.map((file) => ({ path: file.path, stage: "unstaged" as const, status: file.status })),
-  ];
-  const aiReviewTagCount = countAIReviewTags(aiReviewResult);
+
+  const reviewFiles: DiffReviewTarget[] = useMemo(
+    () => [
+      ...staged.map((file) => ({ path: file.path, stage: "staged" as const, status: file.status })),
+      ...unstaged.map((file) => ({ path: file.path, stage: "unstaged" as const, status: file.status })),
+    ],
+    [staged, unstaged],
+  );
+
+  const allFiles = useMemo(() => [...staged, ...unstaged], [staged, unstaged]);
+  const aiReviewTagCount = useMemo(() => countAIReviewTags(aiReviewResult), [aiReviewResult]);
 
   const openDiffReview = (path: string, stage: "staged" | "unstaged", autoInlineReview = false) => {
     const target = reviewFiles.find((file) => file.path === path && file.stage === stage) || { path, stage };
@@ -252,7 +272,7 @@ export default function WorkingTree() {
 
   // Multi-select for batch stage/unstage
   const handleFileClick = (filePath: string, e: React.MouseEvent) => {
-    const currentList = [...staged, ...unstaged];
+    const currentList = allFiles;
     if (e.shiftKey && lastClickedRef.current) {
       const currentIdx = currentList.findIndex(f => f.path === filePath);
       const lastIdx = currentList.findIndex(f => f.path === lastClickedRef.current);
@@ -293,9 +313,7 @@ export default function WorkingTree() {
 
       const filesToStage = Array.from(selectedFiles);
       setSelectedFiles(new Set());
-      for (const path of filesToStage) {
-        await api.commit.stage(repoPath!, path);
-      }
+      await Promise.all(filesToStage.map((path) => api.commit.stage(repoPath!, path)));
     } catch (e: any) {
       showToast(`Error: ${e}`, "error");
       queryClient.invalidateQueries({ queryKey: ["git", repoPath, "status"] });
@@ -316,9 +334,7 @@ export default function WorkingTree() {
 
       const filesToUnstage = Array.from(selectedFiles);
       setSelectedFiles(new Set());
-      for (const path of filesToUnstage) {
-        await api.commit.unstage(repoPath!, path);
-      }
+      await Promise.all(filesToUnstage.map((path) => api.commit.unstage(repoPath!, path)));
     } catch (e: any) {
       showToast(`Error: ${e}`, "error");
       queryClient.invalidateQueries({ queryKey: ["git", repoPath, "status"] });

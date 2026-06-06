@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Toaster } from "sonner";
 import { applyTheme, useRepoStore } from "./stores/repo";
 import RepoView from "./pages/RepoView";
@@ -11,6 +11,8 @@ import ForceUpdateGate from "./components/features/updater/ForceUpdateGate";
 function App() {
   const theme = useRepoStore((s) => s.theme);
   const syncFromStorage = useRepoStore((s) => s.syncFromStorage);
+
+  const isTrayWindow = useState(() => window.location.search.includes("window=tray"))[0];
 
   useEffect(() => {
     applyTheme(theme);
@@ -33,7 +35,6 @@ function App() {
     };
   }, [syncFromStorage]);
 
-  const isTrayWindow = window.location.search.includes("window=tray");
   useAutoUpdateCheck(!isTrayWindow);
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo, useState } from "react";
+import { useRef, useEffect, useMemo, useState, memo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
@@ -32,7 +32,7 @@ const FILTER_SCOPE_OPTIONS: Array<{ value: CommitFilterScope; label: string; pla
   { value: "ref", label: "Ref", placeholder: "Branch or tag" },
 ];
 
-export default function CommitGraph() {
+export default memo(function CommitGraph() {
   const repoPath = useRepoStore((s) => s.repoPath);
   const selectedRef = useRepoStore((s) => s.selectedRef);
   const theme = useRepoStore((s) => s.theme);
@@ -491,7 +491,7 @@ export default function CommitGraph() {
     />
     </>
   );
-}
+});
 
 function createFilteredGraphLayout(
   layout: LayoutState,
