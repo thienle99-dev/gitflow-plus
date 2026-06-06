@@ -1,5 +1,26 @@
+use serde::{Deserialize, Serialize};
+use tauri::Emitter;
 use tokio::process::Command;
 use super::op_lock::RepoLocks;
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct CommitFileGroup {
+    pub files: Vec<String>,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CommitGroupProgress {
+    pub current: usize,
+    pub total: usize,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CommitGroupsResult {
+    pub committed: usize,
+    pub message: String,
+}
 
 #[tauri::command]
 pub async fn stage_file(path: String, file_path: String) -> Result<String, String> {
@@ -14,6 +35,35 @@ pub async fn stage_file(path: String, file_path: String) -> Result<String, Strin
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
         Err(format!("Failed to stage: {}", stderr.trim()))
+    }
+}
+
+#[tauri::command]
+pub async fn stage_files(path: String, file_paths: Vec<String>) -> Result<String, String> {
+    if file_paths.is_empty() {
+        return Ok("No files to stage".to_string());
+    }
+
+    let mut args = vec![
+        "--no-pager".to_string(),
+        "-C".to_string(),
+        path,
+        "add".to_string(),
+        "--".to_string(),
+    ];
+    args.extend(file_paths.iter().cloned());
+
+    let output = Command::new("git")
+        .args(&args)
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run git: {}", e))?;
+
+    if output.status.success() {
+        Ok(format!("Staged {} files", file_paths.len()))
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Failed to stage files: {}", stderr.trim()))
     }
 }
 
@@ -175,6 +225,99 @@ pub async fn commit_changes(
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
         Err(format!("Commit failed: {}", stderr.trim()))
+    }
+}
+
+#[tauri::command]
+pub async fn commit_file_groups(
+    app: tauri::AppHandle,
+    locks: tauri::State<'_, RepoLocks>,
+    path: String,
+    groups: Vec<CommitFileGroup>,
+    no_verify: Option<bool>,
+) -> Result<CommitGroupsResult, String> {
+    let _guard = locks.acquire(&path).await;
+    let total = groups.len();
+    if total == 0 {
+        return Ok(CommitGroupsResult {
+            committed: 0,
+            message: "No groups to commit".to_string(),
+        });
+    }
+
+    let mut committed = 0usize;
+
+    for (index, group) in groups.into_iter().enumerate() {
+        let current = index + 1;
+        let message = group.message.trim().to_string();
+        if message.is_empty() {
+            return Err(format!("Group {} has an empty commit message", current));
+        }
+        if group.files.is_empty() {
+            return Err(format!("Group {} has no files", current));
+        }
+
+        let _ = app.emit(
+            "commit-groups-progress",
+            CommitGroupProgress {
+                current,
+                total,
+                message: message.clone(),
+            },
+        );
+
+        run_git(&path, &["restore", "--staged", "."])
+            .await
+            .map_err(|e| format!("Group {}/{} failed while unstaging: {}", current, total, e))?;
+
+        let mut add_args = vec!["add".to_string(), "--".to_string()];
+        add_args.extend(group.files.iter().cloned());
+        run_git_owned(&path, add_args)
+            .await
+            .map_err(|e| format!("Group {}/{} failed while staging files: {}", current, total, e))?;
+
+        let mut commit_args = vec!["commit".to_string(), "-m".to_string(), message];
+        if no_verify.unwrap_or(false) {
+            commit_args.push("--no-verify".to_string());
+        }
+        run_git_owned(&path, commit_args)
+            .await
+            .map_err(|e| format!("Group {}/{} failed while committing: {}", current, total, e))?;
+
+        committed += 1;
+    }
+
+    Ok(CommitGroupsResult {
+        committed,
+        message: format!("Committed {} suggested commits", committed),
+    })
+}
+
+async fn run_git(path: &str, args: &[&str]) -> Result<String, String> {
+    let mut owned_args = Vec::with_capacity(args.len());
+    owned_args.extend(args.iter().map(|arg| arg.to_string()));
+    run_git_owned(path, owned_args).await
+}
+
+async fn run_git_owned(path: &str, args: Vec<String>) -> Result<String, String> {
+    let mut full_args = vec![
+        "--no-pager".to_string(),
+        "-C".to_string(),
+        path.to_string(),
+    ];
+    full_args.extend(args);
+
+    let output = Command::new("git")
+        .args(&full_args)
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run git: {}", e))?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(stderr.trim().to_string())
     }
 }
 
