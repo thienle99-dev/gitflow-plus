@@ -3,6 +3,7 @@ import type { Commit, FileChange, LintDiagnostic } from "@/api/tauri";
 import type { MergeRequest, MergeRequestFileChange } from "@/api/gitHost";
 import {
   type AIReviewMode,
+  type BranchNameSuggestion,
   type ConflictExplanation,
   type MergeStrategyAdvice,
   type CommitSummaryResult,
@@ -26,6 +27,7 @@ import {
   generateCommitSummary,
   runCommitGuardrail,
   checkCommitReadiness,
+  suggestBranchName,
 } from "@/lib/ai";
 import type { CommitLintResult } from "@/lib/commit-lint";
 
@@ -237,6 +239,18 @@ export function useAICommitReadiness(repoPath: string | null) {
     mutationFn: ({ staged, unstaged, commitMessage }) => {
       if (!repoPath) throw new Error("No repository selected");
       return checkCommitReadiness(repoPath, staged, unstaged, commitMessage);
+    },
+  });
+}
+
+export function useAIBranchSuggestion(repoPath: string | null) {
+  return useMutation<BranchNameSuggestion[], Error, {
+    files: FileChange[];
+  }>({
+    mutationKey: ["ai.branch-suggestion"],
+    mutationFn: ({ files }) => {
+      if (!repoPath) throw new Error("No repository selected");
+      return suggestBranchName(repoPath, files);
     },
   });
 }

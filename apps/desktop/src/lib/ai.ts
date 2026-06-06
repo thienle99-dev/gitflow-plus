@@ -2320,3 +2320,108 @@ function buildReadinessSummary(
   }
   return `${items.length} note(s) to review. ${stagedCount} staged, ${unstagedCount} unstaged.`;
 }
+
+// ─── AI Branch Name Suggestion ───────────────────────────────────────────────
+
+export interface BranchNameSuggestion {
+  name: string;
+  reason: string;
+}
+
+/**
+ * Suggest branch names based on staged/unstaged file changes.
+ * Returns a JSON array of suggestions with reasons.
+ */
+export async function suggestBranchName(
+  repoPath: string,
+  files: FileChange[],
+): Promise<BranchNameSuggestion[]> {
+  const settings = readAISettings();
+  if (!hasProvider(settings)) {
+    throw new Error("Configure an AI API key in settings to use AI branch name suggestions");
+  }
+
+  if (files.length === 0) {
+    return [{ name: "feature/untitled", reason: "No file changes detected" }];
+  }
+
+  const branchName = await getCurrentBranchName(repoPath);
+  const branchContext = branchName ? `Current branch: ${branchName}\n` : "";
+  const conventionContext = await getConventionContext(repoPath);
+  const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
+
+  const fileList = files.map((f) => {
+    const statusLabel = f.staged ? "[staged]" : "[unstaged]";
+    return `- ${statusLabel} [${f.status}] ${f.path}`;
+  }).join("\n");
+
+  // Build a small diff snippet for context
+  let diffSnippet = "";
+  try {
+    const stagedDiff = await api.diff.staged(repoPath).catch(() => "");
+    if (stagedDiff.trim()) {
+      diffSnippet = `\nDIFF (truncated):\n${stagedDiff.slice(0, 4000)}`;
+    }
+  } catch {
+    // Diff unavailable — continue with file list only
+  }
+
+  const prompt = `You are a Git branch naming expert. Analyze the file changes below and suggest a short, descriptive branch name.
+
+RULES:
+1. Return a JSON array of exactly 3 suggestions, ordered from best to worst.
+2. Each suggestion must have "name" and "reason" fields.
+3. Branch names must follow conventional format: type/slug
+   - type: feat, fix, refactor, chore, docs, test, perf, style, ci, build
+   - slug: 2-4 words, lowercase, hyphen-separated, max 40 chars total
+4. Do NOT include the current branch name.
+5. Do NOT use special characters other than hyphens.
+6. Consider the file paths and changes to determine the correct type prefix.
+7. Be specific — "feat/user-auth" is better than "feat/feature".
+
+FILE CHANGES (${files.length} files):
+${fileList}
+${diffSnippet}
+${branchContext}
+${languageInstruction}${conventionContext}
+
+Return ONLY a valid JSON array. No markdown fences, no wrapping, no explanation.
+Example: [{"name":"feat/login-validation","reason":"Added form validation logic in auth module"},{"name":"fix/input-sanitize","reason":"Fixed XSS vulnerability in input handling"},{"name":"refactor/auth-module","reason":"Restructured authentication flow"}]`;
+
+  const raw = cleanAIText(await requestAIText(prompt, withReviewModel(settings)));
+  if (!raw) {
+    throw new Error("Empty response from AI");
+  }
+
+  // Parse JSON from response
+  let jsonStr = raw;
+  const fenceMatch = jsonStr.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
+  if (fenceMatch) jsonStr = fenceMatch[1].trim();
+  const arrayMatch = jsonStr.match(/\[[\s\S]*\]/);
+  if (arrayMatch) jsonStr = arrayMatch[0];
+
+  try {
+    const parsed = JSON.parse(jsonStr);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed
+        .filter((item: any) => typeof item.name === "string" && typeof item.reason === "string")
+        .slice(0, 3)
+        .map((item: any) => ({
+          name: item.name.trim().toLowerCase().replace(/[^a-z0-9/\-_]/g, "-").replace(/-{2,}/g, "-"),
+          reason: String(item.reason),
+        }));
+    }
+  } catch {
+    // JSON parse failed — return a single fallback
+  }
+
+  // Fallback: derive from file paths
+  const topFolder = mostCommon(files.map((f) => f.path.split("/")[0]));
+  const type = files.some((f) => f.status === "added" || f.status === "untracked")
+    ? "feat"
+    : files.some((f) => f.status === "deleted")
+      ? "refactor"
+      : "fix";
+  const slug = topFolder ? topFolder.toLowerCase().replace(/[^a-z0-9]/g, "-") : "changes";
+  return [{ name: `${type}/${slug}`, reason: "Derived from file paths (AI response could not be parsed)" }];
+}

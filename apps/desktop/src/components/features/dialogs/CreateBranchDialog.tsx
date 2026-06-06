@@ -1,11 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useGitBranches } from "@/queries/useGitLog";
 import { useTagList } from "@/queries/useGitTag";
+import { useAIBranchSuggestion } from "@/queries/useAI";
 import { useQueryClient } from "@tanstack/react-query";
-import { api } from "@/api/tauri";
-import { GitBranch, X, HelpCircle, Check, ChevronDown } from "lucide-react";
+import { api, type FileChange } from "@/api/tauri";
+import { GitBranch, X, HelpCircle, Check, ChevronDown, Sparkles } from "lucide-react";
+import { trackAIBranchSuggestion } from "@/lib/analytics";
 
 function Switch({
   checked,
@@ -61,6 +63,27 @@ export default function CreateBranchDialog({ open, onClose }: CreateBranchDialog
   const [checkoutNew, setCheckoutNew] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<Array<{ name: string; reason: string }>>([]);
+  const [suggestionError, setSuggestionError] = useState<string | null>(null);
+
+  const branchSuggestion = useAIBranchSuggestion(repoPath);
+
+  const handleSuggestBranch = useCallback(async () => {
+    if (!repoPath) return;
+    setSuggestionError(null);
+    try {
+      const files: FileChange[] = await api.status(repoPath);
+      if (files.length === 0) {
+        setSuggestionError("No file changes detected — make some changes first");
+        return;
+      }
+      const result = await branchSuggestion.mutateAsync({ files });
+      setSuggestions(result);
+      trackAIBranchSuggestion();
+    } catch (err: any) {
+      setSuggestionError(String(err?.message || err));
+    }
+  }, [repoPath, branchSuggestion]);
 
   const currentBranch = branches?.find((b) => b.current)?.name || "";
 
@@ -179,6 +202,56 @@ export default function CreateBranchDialog({ open, onClose }: CreateBranchDialog
                 autoFocus
                 disabled={loading}
               />
+              {/* AI Suggestion */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-2xs text-text-muted">
+                    {suggestions.length > 0 ? "Suggestions:" : "Need a suggestion?"}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleSuggestBranch}
+                    disabled={branchSuggestion.isPending || loading}
+                    className="flex items-center gap-1 text-2xs text-accent hover:text-accent-80 disabled:opacity-40 transition-colors"
+                  >
+                    {branchSuggestion.isPending ? (
+                      <>
+                        <span className="animate-pulse">Thinking...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={10} />
+                        <span>Suggest with AI</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                {suggestionError && (
+                  <div className="text-2xs text-text-muted italic">{suggestionError}</div>
+                )}
+                {suggestions.length > 0 && (
+                  <div className="space-y-1">
+                    {suggestions.map((s, i) => (
+                      <button
+                        key={`${s.name}-${i}`}
+                        type="button"
+                        onClick={() => {
+                          setName(s.name);
+                          setError(null);
+                        }}
+                        className={`w-full text-left px-2.5 py-1.5 rounded-mac border transition-all text-2xs ${
+                          name === s.name
+                            ? "bg-accent/10 border-accent/30 text-accent"
+                            : "bg-surface-1 border-border-40 hover:border-accent/20 text-text-secondary hover:text-text-primary"
+                        }`}
+                      >
+                        <span className="font-mono font-medium">{s.name}</span>
+                        <span className="ml-1.5 text-text-muted">{s.reason}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

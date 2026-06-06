@@ -155,6 +155,11 @@ export function trackAITagDescription() {
   if (a) logEvent(a, "ai_tag_description");
 }
 
+export function trackAIBranchSuggestion() {
+  const a = getA();
+  if (a) logEvent(a, "ai_branch_suggestion");
+}
+
 // ─── Diff & Review ──────────────────────────────────────────────────────────
 
 export function trackDiffOpen(mode: "split" | "unified") {
