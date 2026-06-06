@@ -162,6 +162,16 @@ export default function Toolbar() {
   const hasLfsFiles = !!lfsStatus?.installed && lfsStatus.tracked_files.length > 0;
   const lfsDirtyCount = lfsStatus?.dirty_files.length ?? 0;
   const isMac = typeof window !== "undefined" && navigator.userAgent.includes("Mac");
+  const syncButtonClass = (action: "pull" | "fetch" | "push") =>
+    `h-7 px-4 flex items-center gap-2 text-2xs font-semibold rounded transition-all cursor-pointer disabled:cursor-not-allowed ${
+      loading === action
+        ? "bg-accent-10 text-accent"
+        : loading
+          ? "text-text-muted-50 opacity-55"
+          : "text-text-secondary hover:text-text-primary hover:bg-surface-3"
+    }`;
+
+  const syncIconClass = "h-[13px] w-[13px] shrink-0";
 
   const moreMenuItems = [
     {
@@ -270,7 +280,7 @@ export default function Toolbar() {
           {/* Sync Segment Group (Pull, Fetch, Push) — always visible */}
           <div className="flex items-center bg-surface-2-40 border border-border-40 rounded-mac p-0.5 shadow-2xs" role="group" aria-label="Sync actions">
             <button
-              className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded transition-all disabled:opacity-40 cursor-pointer"
+              className={syncButtonClass("pull")}
               onClick={async () => {
                 const ok = await pullGate.runPreflight();
                 if (ok) doAction("pull", () => api.remote.pull(repoPath!));
@@ -279,7 +289,11 @@ export default function Toolbar() {
               aria-label={`Pull remote changes${syncStatus?.behind ? ` (${syncStatus.behind} behind)` : ""}`}
               title="Pull remote changes"
             >
-              <ArrowDownToLine size={13} className={`${loading === "pull" ? "animate-spin text-accent" : "text-text-muted group-hover:text-text-primary"}`} />
+              {loading === "pull" ? (
+                <RefreshCw size={13} className={`${syncIconClass} animate-spin text-accent`} />
+              ) : (
+                <ArrowDownToLine size={13} className={`${syncIconClass} text-text-muted`} />
+              )}
               <span>Pull</span>
               {!!syncStatus?.behind && (
                 <span className="ml-0.5 rounded bg-[#0a84ff]/15 px-1.5 py-0.5 text-[9px] font-bold text-[#0a84ff]">
@@ -289,24 +303,31 @@ export default function Toolbar() {
             </button>
             <div className="w-[1px] h-3.5 bg-border-50" />
             <button
-              className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded transition-all disabled:opacity-40 cursor-pointer"
+              className={syncButtonClass("fetch")}
               onClick={() => doAction("fetch", () => api.remote.fetch(repoPath!))}
               disabled={!!loading}
               aria-label="Fetch remote changes"
               title="Fetch remote changes"
             >
-              <RefreshCw size={13} className={`${loading === "fetch" ? "animate-spin text-accent" : "text-text-muted"}`} />
+              <RefreshCw
+                size={13}
+                className={`${syncIconClass} ${loading === "fetch" ? "animate-spin text-accent" : "text-text-muted"}`}
+              />
               <span>Fetch</span>
             </button>
             <div className="w-[1px] h-3.5 bg-border-50" />
             <button
-              className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded transition-all disabled:opacity-40 cursor-pointer"
+              className={syncButtonClass("push")}
               onClick={handlePush}
               disabled={!!loading}
               aria-label={`Push local commits${syncStatus?.ahead ? ` (${syncStatus.ahead} ahead)` : ""}`}
               title="Push local commits (risk analysis runs first)"
             >
-              <ArrowUpFromLine size={13} className={`${loading === "push" ? "animate-spin text-accent" : "text-text-muted"}`} />
+              {loading === "push" ? (
+                <RefreshCw size={13} className={`${syncIconClass} animate-spin text-accent`} />
+              ) : (
+                <ArrowUpFromLine size={13} className={`${syncIconClass} text-text-muted`} />
+              )}
               <span>Push</span>
               {!!syncStatus?.ahead && (
                 <span className="ml-0.5 rounded bg-[#30d158]/15 px-1.5 py-0.5 text-[9px] font-bold text-[#30d158]">
