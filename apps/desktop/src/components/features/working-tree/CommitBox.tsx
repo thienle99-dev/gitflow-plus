@@ -82,7 +82,7 @@ const MUTED_BUTTON_CLASS =
 const STATUS_BUTTON_BASE =
   "h-6 px-1.5 rounded-mac border text-[10px] font-semibold inline-flex items-center gap-1 transition-all cursor-pointer active:scale-[0.99] disabled:opacity-35 disabled:cursor-not-allowed";
 
-const QUICK_PICK_TEMPLATES = [
+const DEFAULT_QUICK_PICK_TEMPLATES = [
   { label: "feat", prefix: "feat: ", color: "#0a84ff" },
   { label: "fix", prefix: "fix: ", color: "#ff453a" },
   { label: "docs", prefix: "docs: ", color: "#bf5af2" },
@@ -90,6 +90,19 @@ const QUICK_PICK_TEMPLATES = [
   { label: "chore", prefix: "chore: ", color: "#ff9f0a" },
   { label: "test", prefix: "test: ", color: "#64d2ff" },
 ];
+
+function readQuickCommitTypes() {
+  try {
+    const raw = localStorage.getItem("gitflowQuickCommitTypes");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0 && parsed.every((t: any) => t.label && t.prefix && t.color)) {
+        return parsed;
+      }
+    }
+  } catch { /* ignore */ }
+  return DEFAULT_QUICK_PICK_TEMPLATES;
+}
 
 export interface CommitBoxProps {
   commitMessage: string;
@@ -220,7 +233,7 @@ export default function CommitBox({
         {!commitMessage && (
           <div className="flex items-center gap-1 mb-1.5 flex-wrap">
             <span className="text-[10px] text-text-muted mr-0.5 select-none">Quick:</span>
-            {QUICK_PICK_TEMPLATES.map((tpl) => (
+            {readQuickCommitTypes().map((tpl: { label: string; prefix: string; color: string }) => (
               <button
                 key={tpl.label}
                 type="button"

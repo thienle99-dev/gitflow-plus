@@ -86,6 +86,7 @@ const LS_KEY_CODE_LINT_ENABLED = "gitflowCodeLintEnabled";
 const LS_KEY_LINT_STRICTNESS = "gitflowLintStrictness";
 const LS_KEY_DATE_FORMAT = "gitflowDateFormat";
 const LS_KEY_CUSTOM_DATE_FORMAT = "gitflowCustomDateFormat";
+const LS_KEY_QUICK_COMMIT_TYPES = "gitflowQuickCommitTypes";
 
 // Legacy keys kept for reset and hasChanges comparison
 const LS_KEY_API_KEY = "gitflowAiApiKey";
@@ -130,6 +131,7 @@ const SETTINGS_KEYS = [
   LS_KEY_LINT_STRICTNESS,
   LS_KEY_DATE_FORMAT,
   LS_KEY_CUSTOM_DATE_FORMAT,
+  LS_KEY_QUICK_COMMIT_TYPES,
   "gitflowAiProfiles",
   "gitflowActiveAiProfileId",
   LS_KEY_PET_TYPE,
@@ -181,6 +183,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
     { tab: "gitflow", sectionId: "gitflow-config", label: "GitFlow Configuration", keywords: ["gitflow", "branch", "main", "develop", "feature", "release", "hotfix", "prefix", "tag"] },
     // Code Quality
     { tab: "quality", sectionId: "git-lint", label: "Pre-Commit Quality Gates", keywords: ["lint", "linting", "commit", "message", "code", "quality", "strictness", "error", "warning", "block", "eslint", "biome", "ruff", "clippy"] },
+    { tab: "quality", sectionId: "quick-commit-types", label: "Quick Commit Types", keywords: ["quick", "commit", "type", "feat", "fix", "docs", "chore", "refactor", "test", "template", "prefix", "conventional"] },
     // AI
     { tab: "ai", sectionId: "ai-profile", label: "API Profile", keywords: ["profile", "add", "duplicate", "delete", "rename"] },
     { tab: "ai", sectionId: "ai-provider", label: "Provider Type", keywords: ["provider", "openai", "anthropic", "ollama", "llama", "type"] },
@@ -296,6 +299,16 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
   const [commitLintEnabled, setCommitLintEnabled] = useState(true);
   const [codeLintEnabled, setCodeLintEnabled] = useState(true);
   const [lintStrictness, setLintStrictness] = useState<"warning" | "error" | "block_all">("error");
+
+  // Quick Commit Types
+  const [quickCommitTypes, setQuickCommitTypes] = useState<{ label: string; prefix: string; color: string }[]>([
+    { label: "feat", prefix: "feat: ", color: "#0a84ff" },
+    { label: "fix", prefix: "fix: ", color: "#ff453a" },
+    { label: "docs", prefix: "docs: ", color: "#bf5af2" },
+    { label: "refactor", prefix: "refactor: ", color: "#30d158" },
+    { label: "chore", prefix: "chore: ", color: "#ff9f0a" },
+    { label: "test", prefix: "test: ", color: "#64d2ff" },
+  ]);
 
   // AI Tab States — profile-aware
   const [profiles, setProfiles] = useState<AIProviderProfile[]>([]);
@@ -424,6 +437,16 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
         }
       }
       
+      const savedQuickCommitTypes = localStorage.getItem(LS_KEY_QUICK_COMMIT_TYPES);
+      if (savedQuickCommitTypes) {
+        try {
+          const parsed = JSON.parse(savedQuickCommitTypes);
+          if (Array.isArray(parsed) && parsed.every((t: any) => t.label && t.prefix && t.color)) {
+            setQuickCommitTypes(parsed);
+          }
+        } catch { /* ignore */ }
+      }
+
       const savedGithubToken = localStorage.getItem(LS_KEY_GITHUB_TOKEN);
       const savedGitlabToken = localStorage.getItem(LS_KEY_GITLAB_TOKEN);
       const savedGitlabHost = localStorage.getItem(LS_KEY_GITLAB_HOST);
@@ -497,6 +520,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       gitlabHost,
       profiles,
       activeProfileId,
+      quickCommitTypes,
       dateFormat,
       customDateFormat,
     });
@@ -509,7 +533,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
     provider, apiKey, apiUrl, commitModel, reviewModel, tokenLimit, fetchedModels,
     aiDetailLevel, commitStyle, customRules, reviewLanguage, reviewChecklist,
     githubToken, gitlabToken, gitlabHost, profiles, activeProfileId,
-    dateFormat, customDateFormat,
+    quickCommitTypes, dateFormat, customDateFormat,
   ]);
 
   // Check for unsaved changes
@@ -698,6 +722,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       localStorage.setItem(LS_KEY_PET_TYPE, petType);
       localStorage.setItem(LS_KEY_DATE_FORMAT, dateFormat);
       localStorage.setItem(LS_KEY_CUSTOM_DATE_FORMAT, customDateFormat);
+      localStorage.setItem(LS_KEY_QUICK_COMMIT_TYPES, JSON.stringify(quickCommitTypes));
 
       // Save global (non-credential) AI preferences
       localStorage.setItem(LS_KEY_AI_DETAIL_LEVEL, aiDetailLevel);
@@ -810,6 +835,14 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
     setReviewChecklist(DEFAULT_AI_REVIEW_CHECKLIST);
     setGithubToken("");
     setGitlabToken("");
+    setQuickCommitTypes([
+      { label: "feat", prefix: "feat: ", color: "#0a84ff" },
+      { label: "fix", prefix: "fix: ", color: "#ff453a" },
+      { label: "docs", prefix: "docs: ", color: "#bf5af2" },
+      { label: "refactor", prefix: "refactor: ", color: "#30d158" },
+      { label: "chore", prefix: "chore: ", color: "#ff9f0a" },
+      { label: "test", prefix: "test: ", color: "#64d2ff" },
+    ]);
     setGitlabHost("");
     showToast("Settings reset to defaults");
     window.dispatchEvent(new Event("gitflow-settings-updated"));
@@ -1063,6 +1096,8 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
               setCodeLintEnabled={setCodeLintEnabled}
               lintStrictness={lintStrictness}
               setLintStrictness={setLintStrictness}
+              quickCommitTypes={quickCommitTypes}
+              setQuickCommitTypes={setQuickCommitTypes}
             />
           )}
 
