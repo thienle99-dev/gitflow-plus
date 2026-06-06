@@ -3,3 +3,8 @@ dist/
 target/
 *.log
 .DS_Store
+
+# Environment files (Firebase keys etc.)
+.env
+.env.local
+.env.*.local
