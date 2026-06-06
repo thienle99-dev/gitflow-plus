@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { type FileChange } from "@/api/tauri";
+import { type CommitGroupProgress, type FileChange } from "@/api/tauri";
 import { type CommitScopeSuggestion, type CommitGuardrailResult, type CommitReadinessResult } from "@/lib/ai";
 import { type CommitLintResult, autoFixCommitMessage } from "@/lib/commit-lint";
 import UndoButton from "@/components/features/actions/UndoButton";
@@ -97,6 +97,9 @@ export interface CommitBoxProps {
   setScopeDismissed: (v: boolean) => void;
   scopeAnalyzing: boolean;
   committingGroupKey: string | null;
+  commitGroupProgress: CommitGroupProgress | null;
+  skipSuggestedCommitHooks: boolean;
+  setSkipSuggestedCommitHooks: (v: boolean) => void;
   // Callbacks
   onCommit: () => void;
   onGenerateCommit: () => void;
@@ -152,6 +155,9 @@ export default function CommitBox({
   setScopeDismissed,
   scopeAnalyzing,
   committingGroupKey,
+  commitGroupProgress,
+  skipSuggestedCommitHooks,
+  setSkipSuggestedCommitHooks,
   onCommit,
   onGenerateCommit,
   onAnalyzeScope,
@@ -552,8 +558,25 @@ export default function CommitBox({
               disabled={!!committingGroupKey || committing}
               className="flex-1 text-2xs font-semibold text-accent-fg py-1.5 cursor-pointer bg-accent hover:opacity-90 rounded-mac border border-accent transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {committingGroupKey === "__all__" ? "Committing suggestions..." : "Commit all suggested"}
+              {committingGroupKey === "__all__"
+                ? commitGroupProgress
+                  ? `Committing ${commitGroupProgress.current}/${commitGroupProgress.total}...`
+                  : "Starting commits..."
+                : "Commit all suggested"}
             </button>
+            <label
+              className="shrink-0 inline-flex items-center gap-1.5 text-2xs text-text-muted hover:text-text-secondary cursor-pointer select-none"
+              title="Skip Git pre-commit hooks for suggested commits (--no-verify)"
+            >
+              <input
+                type="checkbox"
+                checked={skipSuggestedCommitHooks}
+                onChange={(e) => setSkipSuggestedCommitHooks(e.target.checked)}
+                disabled={!!committingGroupKey || committing}
+                className="h-3 w-3 accent-accent cursor-pointer disabled:cursor-not-allowed"
+              />
+              <span>Skip hooks</span>
+            </label>
             <button
               onClick={() => setScopeDismissed(true)}
               disabled={!!committingGroupKey || committing}

@@ -2,7 +2,8 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useGitDiff, useGitStatus } from "@/queries/useGitLog";
-import { api, type FileChange, type LintDiagnostic } from "@/api/tauri";
+import { api, type CommitGroupProgress, type FileChange, type LintDiagnostic } from "@/api/tauri";
+import { listen } from "@tauri-apps/api/event";
 import { useGenerateCommitMessage, useAICommitScope, useAIDiffReview, useImproveCommitMessage, useAddCommitBody, useAICommitGuardrail, useAICommitReadiness, useAILintReview } from "@/queries/useAI";
 import { generateLocalCommitMessage, shouldAnalyzeScope, type CommitScopeSuggestion, type CommitGuardrailResult, type CommitReadinessResult } from "@/lib/ai";
 import { useQueryClient } from "@tanstack/react-query";
@@ -87,6 +88,8 @@ export default function WorkingTree() {
   const [scopeDismissed, setScopeDismissed] = useState(false);
   const [committing, setCommitting] = useState(false);
   const [committingGroupKey, setCommittingGroupKey] = useState<string | null>(null);
+  const [commitGroupProgress, setCommitGroupProgress] = useState<CommitGroupProgress | null>(null);
+  const [skipSuggestedCommitHooks, setSkipSuggestedCommitHooks] = useState(false);
   const [scopeAnalyzing, setScopeAnalyzing] = useState(false);
   const [aiReviewOpen, setAiReviewOpen] = useState(false);
   const [aiReviewCollapsed, setAiReviewCollapsed] = useState(false);
@@ -154,6 +157,26 @@ export default function WorkingTree() {
 
   const allFiles = useMemo(() => [...staged, ...unstaged], [staged, unstaged]);
   const aiReviewTagCount = useMemo(() => countAIReviewTags(aiReviewResult), [aiReviewResult]);
+
+  useEffect(() => {
+    let disposed = false;
+    let unlisten: (() => void) | null = null;
+
+    listen<CommitGroupProgress>("commit-groups-progress", (event) => {
+      if (!disposed) setCommitGroupProgress(event.payload);
+    }).then((fn) => {
+      if (disposed) {
+        fn();
+      } else {
+        unlisten = fn;
+      }
+    });
+
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, []);
 
   const openDiffReview = (path: string, stage: "staged" | "unstaged", autoInlineReview = false) => {
     const target = reviewFiles.find((file) => file.path === path && file.stage === stage) || { path, stage };
@@ -529,9 +552,7 @@ export default function WorkingTree() {
   const handleUseGroup = async (group: { files: string[]; message: string }) => {
     try {
       await api.commit.unstageAll(repoPath!);
-      for (const filePath of group.files) {
-        await api.commit.stage(repoPath!, filePath);
-      }
+      await api.commit.stageFiles(repoPath!, group.files);
       setCommitMessage(group.message);
       setScopeSuggestion((prev) => {
         if (!prev) return null;
@@ -552,9 +573,7 @@ export default function WorkingTree() {
     setCommitting(true);
     try {
       await api.commit.unstageAll(repoPath);
-      for (const filePath of group.files) {
-        await api.commit.stage(repoPath, filePath);
-      }
+      await api.commit.stageFiles(repoPath, group.files);
       const result = await api.commit.commit(repoPath, group.message, false);
       setCommitMessage("");
       setAmend(false);
@@ -577,26 +596,23 @@ export default function WorkingTree() {
   const handleCommitAllSuggested = async () => {
     if (!repoPath || !scopeSuggestion || committingGroupKey || committing) return;
     setCommittingGroupKey("__all__");
+    setCommitGroupProgress(null);
     setCommitting(true);
     try {
-      for (const group of scopeSuggestion.groups) {
-        await api.commit.unstageAll(repoPath);
-        for (const filePath of group.files) {
-          await api.commit.stage(repoPath, filePath);
-        }
-        await api.commit.commit(repoPath, group.message, false);
-      }
+      const result = await api.commit.commitGroups(repoPath, scopeSuggestion.groups, skipSuggestedCommitHooks);
+      scopeSuggestion.groups.forEach((group) => trackCommit(group.files.length));
       setCommitMessage("");
       setAmend(false);
       setScopeSuggestion(null);
       setScopeDismissed(true);
-      showToast(`Committed ${scopeSuggestion.groups.length} suggested commits`);
+      showToast(result.message || `Committed ${result.committed} suggested commits`);
       invalidate();
     } catch (e: any) {
       showToast(`Error: ${e}`, "error");
     } finally {
       setCommitting(false);
       setCommittingGroupKey(null);
+      setCommitGroupProgress(null);
     }
   };
 
@@ -905,6 +921,9 @@ export default function WorkingTree() {
         setScopeDismissed={setScopeDismissed}
         scopeAnalyzing={scopeAnalyzing}
         committingGroupKey={committingGroupKey}
+        commitGroupProgress={commitGroupProgress}
+        skipSuggestedCommitHooks={skipSuggestedCommitHooks}
+        setSkipSuggestedCommitHooks={setSkipSuggestedCommitHooks}
         onCommit={handleCommit}
         onGenerateCommit={handleGenerateCommit}
         onAnalyzeScope={handleAnalyzeScope}

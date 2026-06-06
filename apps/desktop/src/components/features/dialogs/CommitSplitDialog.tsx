@@ -1,6 +1,7 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import Dialog from "@/components/ui/overlay/Dialog";
-import { api } from "@/api/tauri";
+import { api, type CommitGroupProgress } from "@/api/tauri";
+import { listen } from "@tauri-apps/api/event";
 import { showToast } from "@/lib/toast";
 import { trackCommit, trackAICommitSplit } from "@/lib/analytics";
 import { RefreshCw, X, ChevronDown, ChevronRight, GitCommit, Sparkles } from "lucide-react";
@@ -34,7 +35,10 @@ export default function CommitSplitDialog({
   const [committing, setCommitting] = useState(false);
   const [committedCount, setCommittedCount] = useState(0);
   const [currentGroupIdx, setCurrentGroupIdx] = useState<number | null>(null);
+  const [progress, setProgress] = useState<CommitGroupProgress | null>(null);
+  const [skipHooks, setSkipHooks] = useState(false);
   const prevSuggestionRef = useRef<CommitScopeSuggestion | null>(null);
+  const committedCountRef = useRef(0);
 
   // Initialize groups when suggestion changes
   useEffect(() => {
@@ -46,15 +50,43 @@ export default function CommitSplitDialog({
       setMessages(msgs);
       setExpandedFiles({});
       setCommittedCount(0);
+      committedCountRef.current = 0;
       setCurrentGroupIdx(null);
+      setProgress(null);
     }
   }, [suggestion]);
+
+  useEffect(() => {
+    let disposed = false;
+    let unlisten: (() => void) | null = null;
+
+    listen<CommitGroupProgress>("commit-groups-progress", (event) => {
+      if (disposed) return;
+      setProgress(event.payload);
+      setCurrentGroupIdx(event.payload.current - 1);
+      const completed = Math.max(0, event.payload.current - 1);
+      committedCountRef.current = completed;
+      setCommittedCount(completed);
+    }).then((fn) => {
+      if (disposed) {
+        fn();
+      } else {
+        unlisten = fn;
+      }
+    });
+
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, []);
 
   // Reset when dialog closes
   useEffect(() => {
     if (!open) {
       setCommitting(false);
       setCurrentGroupIdx(null);
+      setProgress(null);
     }
   }, [open]);
 
@@ -79,29 +111,28 @@ export default function CommitSplitDialog({
     if (committing || groups.length === 0) return;
     setCommitting(true);
     setCommittedCount(0);
-    let successCount = 0;
+    committedCountRef.current = 0;
+    setCurrentGroupIdx(null);
+    setProgress(null);
 
     try {
-      for (let i = 0; i < groups.length; i++) {
-        const group = groups[i];
-        const msg = getMessage(i) || group.message;
-        setCurrentGroupIdx(i);
-        await api.commit.unstageAll(repoPath);
-        for (const filePath of group.files) {
-          await api.commit.stage(repoPath, filePath);
-        }
-        await api.commit.commit(repoPath, msg, false);
+      const groupsToCommit = groups.map((group, i) => ({
+        files: group.files,
+        message: getMessage(i) || group.message,
+      }));
+      const result = await api.commit.commitGroups(repoPath, groupsToCommit, skipHooks);
+      committedCountRef.current = result.committed;
+      setCommittedCount(result.committed);
+      for (const group of groups) {
         trackCommit(group.files.length);
-        successCount++;
-        setCommittedCount(successCount);
       }
       trackAICommitSplit(groups.length);
-      showToast(`Committed ${successCount} ${successCount === 1 ? "commit" : "commits"}`);
+      showToast(result.message || `Committed ${result.committed} ${result.committed === 1 ? "commit" : "commits"}`);
       onCommitted();
       onClose();
     } catch (e: any) {
-      if (successCount > 0) {
-        showToast(`Committed ${successCount} of ${groups.length} groups: ${e}`, "info");
+      if (committedCountRef.current > 0) {
+        showToast(`Committed ${committedCountRef.current} of ${groups.length} groups: ${e}`, "info");
         onCommitted();
       } else {
         showToast(`Commit failed: ${e}`, "error");
@@ -109,6 +140,7 @@ export default function CommitSplitDialog({
     } finally {
       setCommitting(false);
       setCurrentGroupIdx(null);
+      setProgress(null);
     }
   };
 
@@ -226,7 +258,7 @@ export default function CommitSplitDialog({
               {committing ? (
                 <>
                   <RefreshCw size={12} className="animate-spin" />
-                  <span>Committing {committedCount + 1} of {groups.length}...</span>
+                  <span>Committing {progress?.current ?? committedCount + 1} of {progress?.total ?? groups.length}...</span>
                 </>
               ) : (
                 <>
@@ -235,6 +267,19 @@ export default function CommitSplitDialog({
                 </>
               )}
             </button>
+            <label
+              className="inline-flex items-center gap-1.5 text-2xs text-text-muted hover:text-text-secondary cursor-pointer select-none"
+              title="Skip Git pre-commit hooks for split commits (--no-verify)"
+            >
+              <input
+                type="checkbox"
+                checked={skipHooks}
+                onChange={(e) => setSkipHooks(e.target.checked)}
+                disabled={committing}
+                className="h-3 w-3 accent-accent cursor-pointer disabled:cursor-not-allowed"
+              />
+              <span>Skip hooks</span>
+            </label>
             {!committing && (
               <button
                 type="button"

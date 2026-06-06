@@ -22,6 +22,22 @@ export interface FileChange {
   status: string;
 }
 
+export interface CommitFileGroupInput {
+  files: string[];
+  message: string;
+}
+
+export interface CommitGroupsResult {
+  committed: number;
+  message: string;
+}
+
+export interface CommitGroupProgress {
+  current: number;
+  total: number;
+  message: string;
+}
+
 export interface CommitFileChange {
   path: string;
   old_path: string | null;
@@ -338,6 +354,8 @@ export const api = {
   commit: {
     stage: (path: string, filePath: string) =>
       invoke<string>("stage_file", { path, filePath }),
+    stageFiles: (path: string, filePaths: string[]) =>
+      invoke<string>("stage_files", { path, filePaths }),
     unstage: (path: string, filePath: string) =>
       invoke<string>("unstage_file", { path, filePath }),
     stageAll: (path: string) =>
@@ -350,6 +368,8 @@ export const api = {
       invoke<string>("discard_all", { path }),
     commit: (path: string, message: string, amend?: boolean) =>
       invoke<string>("commit_changes", { path, message, amend: amend ?? false }),
+    commitGroups: (path: string, groups: CommitFileGroupInput[], noVerify?: boolean) =>
+      invoke<CommitGroupsResult>("commit_file_groups", { path, groups, noVerify: noVerify ?? false }),
     revert: (path: string, commitHash: string) =>
       invoke<string>("revert_commit", { path, commitHash }),
   },
