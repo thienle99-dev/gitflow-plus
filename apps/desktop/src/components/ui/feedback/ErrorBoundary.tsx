@@ -77,8 +77,8 @@ export default class ErrorBoundary extends Component<Props, State> {
 
       return (
         <>
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-0-90 backdrop-blur-md p-6 select-none animate-in fade-in duration-300">
-          <div className="w-[520px] bg-surface-1 border border-border shadow-2xl rounded-mac p-6 flex flex-col items-center text-center space-y-5 animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-0-90 backdrop-blur-md p-6 select-none anim-overlay-enter">
+          <div className="w-[520px] bg-surface-1 border border-border shadow-2xl rounded-mac p-6 flex flex-col items-center text-center space-y-5 anim-dialog-enter">
             {/* Danger Icon with Accent styling */}
             <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-[#ff453a] animate-pulse">
               <AlertOctagon size={24} />
@@ -116,7 +116,7 @@ export default class ErrorBoundary extends Component<Props, State> {
               </button>
 
               {this.state.showDetails && (
-                <div className="mt-2 text-left bg-surface-2 border border-border-40 rounded-mac p-3 overflow-auto max-h-[180px] font-mono text-[10px] text-text-secondary select-text space-y-3 scrollbar-thin animate-in slide-in-from-top-2 duration-150">
+                <div className="mt-2 text-left bg-surface-2 border border-border-40 rounded-mac p-3 overflow-auto max-h-[180px] font-mono text-[10px] text-text-secondary select-text space-y-3 scrollbar-thin anim-slide-down-enter">
                   <div className="flex justify-between items-center border-b border-border-40 pb-1.5 shrink-0">
                     <span className="text-3xs font-semibold text-text-muted uppercase">Diagnostics</span>
                     <button
@@ -151,7 +151,7 @@ export default class ErrorBoundary extends Component<Props, State> {
               <button
                 type="button"
                 onClick={() => this.setState({ showReportBug: true })}
-                className="h-8 px-4 bg-surface-2 hover:bg-surface-3 border border-border text-text-secondary rounded-[5px] text-2xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+                className="h-8 px-4 bg-surface-2 hover:bg-surface-3 border border-border text-text-secondary rounded text-2xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
               >
                 <Bug size={11} />
                 <span>Report Bug</span>
@@ -159,7 +159,7 @@ export default class ErrorBoundary extends Component<Props, State> {
               <button
                 type="button"
                 onClick={this.handleReset}
-                className="h-8 px-4 bg-accent text-accent-fg rounded-[5px] text-2xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:opacity-90 active:scale-98"
+                className="h-8 px-4 bg-accent text-accent-fg rounded text-2xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:opacity-90 active:scale-98"
               >
                 <RefreshCw size={11} className="animate-spin-once" />
                 <span>Reload Application</span>

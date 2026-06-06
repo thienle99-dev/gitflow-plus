@@ -75,7 +75,7 @@ export default function ThemePicker() {
                     {/* Color swatch */}
                     <span className="shrink-0 flex items-center gap-0.5">
                       <span
-                        className="inline-block w-4 h-4 rounded-[3px] border border-border"
+                        className="inline-block w-4 h-4 rounded border border-border"
                         style={{ background: opt.colors.bg }}
                       />
                       <span

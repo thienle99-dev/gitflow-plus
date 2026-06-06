@@ -26,7 +26,7 @@ export default function DiffAIReview({
   if (!showReview) return null;
 
   return (
-    <div className="w-[360px] border-l border-border flex flex-col bg-surface-1 overflow-hidden shrink-0 animate-in slide-in-from-right duration-200">
+    <div className="w-[360px] border-l border-border flex flex-col bg-surface-1 overflow-hidden shrink-0 anim-slide-right-enter">
       <div className="h-9 px-3 border-b border-border flex items-center justify-between bg-surface-2 shrink-0">
         <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
           <Sparkles size={13} className="text-accent" />

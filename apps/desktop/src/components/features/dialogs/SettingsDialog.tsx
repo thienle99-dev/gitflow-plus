@@ -885,7 +885,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
                     return (
                       <div key={tabId} className="mb-2">
                         <div className="px-2.5 py-1 text-2xs font-semibold text-text-muted uppercase tracking-wider flex items-center gap-1.5">
-                          <div className="w-3.5 h-3.5 rounded-[3px] flex items-center justify-center text-white shrink-0" style={{ backgroundColor: color }}>
+                          <div className="w-3.5 h-3.5 rounded flex items-center justify-center text-white shrink-0" style={{ backgroundColor: color }}>
                             <TabIcon size={8} strokeWidth={2.5} />
                           </div>
                           {TAB_LABELS[tabId] || tabId}
@@ -939,7 +939,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
                       : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
                   }`}
                 >
-                  <div className="w-5 h-5 rounded-[5px] flex items-center justify-center text-white shrink-0" style={{ backgroundColor: color }}>
+                  <div className="w-5 h-5 rounded flex items-center justify-center text-white shrink-0" style={{ backgroundColor: color }}>
                     <TabIcon size={12} strokeWidth={2.2} />
                   </div>
                   {TAB_LABELS[tabId] || tabId}

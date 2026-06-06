@@ -826,7 +826,7 @@ export default function WorkingTree() {
 
       {aiReviewOpen && (
         <div className={`${aiReviewCollapsed ? "shrink-0 px-3 py-2" : "flex-1 min-h-0 px-3 py-2"} border-t border-border-60`}>
-          <div className={`h-full border border-accent-30 bg-surface-1 overflow-hidden transition-all ${aiReviewCollapsed ? "rounded-[5px] shadow-2xs" : "rounded-mac shadow-lg shadow-black/10 flex flex-col"}`}>
+          <div className={`h-full border border-accent-30 bg-surface-1 overflow-hidden transition-all ${aiReviewCollapsed ? "rounded shadow-2xs" : "rounded-mac shadow-lg shadow-black/10 flex flex-col"}`}>
             <div className={`flex items-center justify-between gap-2 select-none shrink-0 ${aiReviewCollapsed ? "px-2 py-1 bg-surface-2-30" : "px-3 py-1.5 border-b border-border-40 bg-accent-5"}`}>
               <div className="flex items-center gap-1.5 min-w-0">
                 <Sparkles size={aiReviewCollapsed ? 11 : 13} className="text-accent shrink-0" />
@@ -970,9 +970,9 @@ export default function WorkingTree() {
       )}
 
       {aiReviewModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setAiReviewModalOpen(false)}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-md anim-overlay-enter" onClick={() => setAiReviewModalOpen(false)}>
           <div
-            className="bg-surface-0 rounded-[6px] shadow-2xl border border-border-60 overflow-hidden w-[min(900px,95vw)] h-[600px] max-h-[85vh] flex flex-col animate-in zoom-in-95 duration-200"
+            className="bg-surface-0 rounded-mac shadow-2xl border border-border-60 overflow-hidden w-[min(900px,95vw)] h-[600px] max-h-[85vh] flex flex-col anim-dialog-enter"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -986,7 +986,7 @@ export default function WorkingTree() {
               </div>
               <button
                 onClick={() => setAiReviewModalOpen(false)}
-                className="p-1 hover:bg-surface-2 rounded-[4px] transition-colors cursor-pointer text-text-muted hover:text-text-primary"
+                className="p-1 hover:bg-surface-2 rounded transition-colors cursor-pointer text-text-muted hover:text-text-primary"
               >
                 <X size={13} />
               </button>
@@ -994,7 +994,7 @@ export default function WorkingTree() {
 
             {/* Content */}
             <div className="flex-1 p-4 space-y-4 min-h-0 flex flex-col">
-              <div className="flex gap-3 p-3.5 bg-gradient-to-br from-accent-5 to-surface-1 border border-accent-20 rounded-[4px] shrink-0">
+              <div className="flex gap-3 p-3.5 bg-gradient-to-br from-accent-5 to-surface-1 border border-accent-20 rounded shrink-0">
                 <div className="h-7 w-7 rounded-full bg-accent-15 border border-accent-20 flex items-center justify-center text-accent shrink-0">
                   <Sparkles size={13} />
                 </div>
@@ -1006,7 +1006,7 @@ export default function WorkingTree() {
                 </div>
               </div>
 
-              <div className="flex-1 text-[11px] text-text-secondary bg-surface-1 border border-border-30 rounded-[4px] p-4 whitespace-pre-wrap leading-relaxed overflow-y-auto font-sans">
+              <div className="flex-1 text-[11px] text-text-secondary bg-surface-1 border border-border-30 rounded p-4 whitespace-pre-wrap leading-relaxed overflow-y-auto font-sans">
                 {aiReviewResult ? (
                   aiReviewResult.split("\n").map((line, index) => <AIReviewLine key={index} line={line} />)
                 ) : (
@@ -1019,7 +1019,7 @@ export default function WorkingTree() {
             <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border-30 bg-surface-1-40 shrink-0 select-none">
               <button
                 onClick={() => setAiReviewModalOpen(false)}
-                className="px-3.5 py-1.5 text-[11px] font-semibold text-white bg-accent hover:bg-accent-90 rounded-[4px] transition-colors cursor-pointer shadow-2xs"
+                className="px-3.5 py-1.5 text-[11px] font-semibold text-white bg-accent hover:bg-accent-90 rounded transition-colors cursor-pointer shadow-2xs"
               >
                 Done
               </button>
@@ -1202,7 +1202,7 @@ function DiffReviewModal({ target, files, onChangeTarget, onClose, onRefresh }: 
   }, [goTo, onClose]);
 
   return (
-    <div className="fixed inset-0 z-[9997] flex items-center justify-center bg-black/65 p-6 animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-[9997] flex items-center justify-center bg-black/65 p-6 anim-overlay-enter">
       <div className="flex h-[88vh] w-[92vw] max-w-[1320px] min-w-[760px] flex-col overflow-hidden rounded-mac border border-border bg-surface-0 shadow-2xl">
         <div className="flex items-center justify-between gap-3 border-b border-border bg-surface-1 px-3 py-2 shrink-0">
           <div className="min-w-0 flex items-center gap-2">

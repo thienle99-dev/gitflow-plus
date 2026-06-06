@@ -248,13 +248,13 @@ export default function InteractiveRebaseDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center anim-overlay-enter"
       onClick={(e) => {
         if (e.target === e.currentTarget && !isPending) onClose();
       }}
     >
       <div className="absolute inset-0 bg-[#000000]/45" />
-      <div className="relative w-[min(580px,92vw)] max-h-[min(720px,85vh)] bg-surface-0 border border-border rounded-mac shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+      <div className="relative w-[min(580px,92vw)] max-h-[min(720px,85vh)] bg-surface-0 border border-border rounded-mac shadow-2xl overflow-hidden flex flex-col anim-dialog-enter">
         {/* Header */}
         <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-surface-1-40 shrink-0">
           {conflictMode ? (
@@ -429,7 +429,7 @@ export default function InteractiveRebaseDialog({
 
                       {/* Inline message editor */}
                       {isEditing && (
-                        <div className="px-3 pb-2 pt-0 animate-in slide-in-from-top-1 duration-100">
+                        <div className="px-3 pb-2 pt-0 anim-slide-down-enter">
                           <input
                             ref={messageInputRef}
                             type="text"
@@ -466,7 +466,7 @@ export default function InteractiveRebaseDialog({
                 Action Legend
               </button>
               {showLegend && (
-                <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3 space-y-1.5 animate-in slide-in-from-top-1 duration-100">
+                <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3 space-y-1.5 anim-slide-down-enter">
                   {ACTION_OPTIONS.map((opt) => (
                     <div key={opt.value} className="flex items-center gap-2">
                       <span

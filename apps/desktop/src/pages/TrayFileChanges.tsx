@@ -81,7 +81,7 @@ export function TrayFileChanges({
               title={`Pop latest stash (${stashes.length})`}
             >
               {popLoading ? <Loader2 size={11} className="animate-spin" /> : <History size={11} />}
-              <span className="absolute -right-1 -top-1 min-w-[13px] rounded-[3px] bg-accent px-0.5 text-[7px] font-bold leading-[13px] text-accent-fg">
+              <span className="absolute -right-1 -top-1 min-w-[13px] rounded bg-accent px-0.5 text-[7px] font-bold leading-[13px] text-accent-fg">
                 {stashes.length}
               </span>
             </button>

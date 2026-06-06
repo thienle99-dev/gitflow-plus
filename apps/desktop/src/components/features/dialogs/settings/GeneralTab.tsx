@@ -440,7 +440,7 @@ export function AppearanceTab({
         </div>
 
         {dateFormat === "custom" && (
-          <div className="space-y-1 border-t border-border-40 pt-2.5 animate-in fade-in duration-150">
+          <div className="space-y-1 border-t border-border-40 pt-2.5 anim-slide-down-enter">
             <label className="text-xs font-semibold text-text-primary">Custom Format Pattern</label>
             <input
               type="text"

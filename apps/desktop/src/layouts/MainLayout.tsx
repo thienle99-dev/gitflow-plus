@@ -445,7 +445,7 @@ export default function MainLayout() {
 
 function InlineErrorFallback({ name }: { name: string }) {
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center p-4 bg-surface-1 text-center space-y-2 border border-dashed border-border select-none animate-in fade-in duration-200">
+    <div className="h-full w-full flex flex-col items-center justify-center p-4 bg-surface-1 text-center space-y-2 border border-dashed border-border select-none anim-overlay-enter">
       <div className="w-8 h-8 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-[#ff453a] shrink-0">
         <AlertOctagon size={16} />
       </div>
@@ -569,7 +569,7 @@ function WelcomeScreen({ onOpen }: { onOpen: () => void }) {
         {/* Primary Action */}
         <button
           onClick={onOpen}
-          className="flex items-center gap-2 px-5 py-2 bg-accent text-accent-fg rounded-lg text-sm font-medium hover:opacity-90 active:scale-[0.98] transition-all shadow-sm mb-8"
+          className="flex items-center gap-2 px-5 py-2 bg-accent text-accent-fg rounded-mac text-sm font-medium hover:opacity-90 active:scale-[0.98] transition-all shadow-sm mb-8"
         >
           <FolderOpen size={15} />
           Open Repository
@@ -582,7 +582,7 @@ function WelcomeScreen({ onOpen }: { onOpen: () => void }) {
               <Clock size={10} />
               Recent
             </div>
-            <div className="bg-surface-1-50 border border-border-40 rounded-lg overflow-hidden divide-y divide-border-30">
+            <div className="bg-surface-1-50 border border-border-40 rounded-mac overflow-hidden divide-y divide-border-30">
               {recentRepos.map((repo) => {
                 const name = repo.split(/[/\\]/).filter(Boolean).pop() || repo;
                 const parent = repo.split(/[/\\]/).filter(Boolean).slice(-2, -1)[0] || "";

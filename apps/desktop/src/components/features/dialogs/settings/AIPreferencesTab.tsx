@@ -131,7 +131,7 @@ export function AIPreferencesTab({
                       : "border-border-40 bg-surface-1-40 text-text-secondary hover:bg-surface-2"
                   }`}
                 >
-                  <span className={`mt-0.5 h-3.5 w-3.5 rounded-[4px] border flex items-center justify-center shrink-0 ${
+                  <span className={`mt-0.5 h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0 ${
                     checked ? "border-accent bg-accent text-accent-fg" : "border-border"
                   }`}>
                     {checked && <span className="text-[9px] leading-none">✓</span>}

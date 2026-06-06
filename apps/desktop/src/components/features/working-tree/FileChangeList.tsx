@@ -157,7 +157,7 @@ function FileTreeRenderer({
                 <span className="truncate font-semibold text-text-primary flex-1">{child.name}</span>
 
                 <span
-                  className={`h-3.5 w-3.5 rounded-[4px] border flex items-center justify-center transition-all cursor-pointer mr-1 opacity-0 group-hover:opacity-100 ${checked
+                  className={`h-3.5 w-3.5 rounded border flex items-center justify-center transition-all cursor-pointer mr-1 opacity-0 group-hover:opacity-100 ${checked
                     ? "bg-accent border-accent text-accent-fg"
                     : "border-border text-transparent hover:border-text-secondary hover:bg-surface-2"
                   }`}
@@ -262,7 +262,7 @@ const ChangeRow = memo(
         }}
       >
         <span
-          className={`h-3.5 w-3.5 rounded-[4px] border flex items-center justify-center transition-all cursor-pointer ${checked
+          className={`h-3.5 w-3.5 rounded border flex items-center justify-center transition-all cursor-pointer ${checked
             ? selected
               ? "bg-accent-fg border-accent-fg text-accent"
               : "bg-accent border-accent text-accent-fg"
@@ -408,7 +408,7 @@ function ChangeSection({
           <ChevronDown size={13} className={`transition-transform duration-150 ${open ? "" : "-rotate-90"}`} />
         </span>
         <button
-          className={`h-3.5 w-3.5 rounded-[4px] border flex items-center justify-center transition-all shrink-0 ${checked
+          className={`h-3.5 w-3.5 rounded border flex items-center justify-center transition-all shrink-0 ${checked
             ? "bg-accent border-accent text-accent-fg"
             : "border-border text-transparent hover:border-text-secondary hover:bg-surface-2"
             }`}

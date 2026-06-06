@@ -134,13 +134,13 @@ export default function CreateBranchDialog({ open, onClose }: CreateBranchDialog
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center anim-overlay-enter"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div className="absolute inset-0 bg-[#000000]/45" />
-      <div className="relative w-[400px] bg-surface-0 border border-border rounded-mac shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="relative w-[400px] bg-surface-0 border border-border rounded-mac shadow-2xl overflow-hidden anim-dialog-enter">
         {/* Header */}
         <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-surface-1-40">
           <GitBranch size={15} className="text-accent shrink-0" />
@@ -244,7 +244,7 @@ export default function CreateBranchDialog({ open, onClose }: CreateBranchDialog
 
             {/* Selector Dropdown / Text Input depending on type */}
             {baseType === "branch" && (
-              <div className="space-y-1.5 animate-in slide-in-from-top-1 duration-150 border-t border-border-40 pt-3">
+              <div className="space-y-1.5 anim-slide-down-enter border-t border-border-40 pt-3">
                 <label className="block text-3xs font-semibold text-text-muted">
                   Select Base Branch
                 </label>
@@ -269,7 +269,7 @@ export default function CreateBranchDialog({ open, onClose }: CreateBranchDialog
             )}
 
             {baseType === "tag" && (
-              <div className="space-y-1.5 animate-in slide-in-from-top-1 duration-150 border-t border-border-40 pt-3">
+              <div className="space-y-1.5 anim-slide-down-enter border-t border-border-40 pt-3">
                 <label className="block text-3xs font-semibold text-text-muted">
                   Select Base Tag
                 </label>
@@ -300,7 +300,7 @@ export default function CreateBranchDialog({ open, onClose }: CreateBranchDialog
             )}
 
             {baseType === "hash" && (
-              <div className="space-y-1.5 animate-in slide-in-from-top-1 duration-150 border-t border-border-40 pt-3">
+              <div className="space-y-1.5 anim-slide-down-enter border-t border-border-40 pt-3">
                 <label className="block text-3xs font-semibold text-text-muted">
                   Enter Commit Hash
                 </label>

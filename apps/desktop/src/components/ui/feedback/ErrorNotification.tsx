@@ -21,7 +21,7 @@ export function ErrorToast({ error, onDismiss, onRetry }: ErrorToastProps) {
 
   return (
     <div className="toast min-w-[320px] max-w-[420px]" style={{ bottom: "auto", top: 52, right: 16 }}>
-      <div className={`-m-[1px] rounded-lg border ${style.border} ${style.bg} p-3`}>
+      <div className={`-m-[1px] rounded-mac border ${style.border} ${style.bg} p-3`}>
         <div className="flex items-start gap-2">
           <span className={`shrink-0 mt-0.5 ${style.text}`}>
             {ICON_MAP[style.icon] || <AlertCircle size={14} />}

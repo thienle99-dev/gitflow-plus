@@ -262,13 +262,13 @@ export default function AnalyticsDialog({ open, onClose }: AnalyticsDialogProps)
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-6 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-6 anim-overlay-enter"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       {/* Backdrop */}
       <div className="absolute inset-0 bg-[#000000]/45" />
 
-      <div className="relative w-[740px] max-h-[85vh] bg-surface-0 border border-border rounded-mac shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="relative w-[740px] max-h-[85vh] bg-surface-0 border border-border rounded-mac shadow-2xl flex flex-col overflow-hidden anim-dialog-enter">
         {/* Header */}
         <div className="px-4 py-3 border-b border-border-60 flex items-center justify-between bg-surface-1-40 backdrop-blur-md">
           <div className="flex items-center gap-2 text-text-primary">

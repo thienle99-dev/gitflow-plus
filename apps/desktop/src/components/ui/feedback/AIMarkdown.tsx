@@ -188,7 +188,7 @@ export default function AIMarkdown({ content, className }: AIMarkdownProps) {
   const flushCodeBlock = () => {
     if (codeLines.length > 0) {
       elements.push(
-        <div key={`cb${key++}`} className="my-2 rounded-lg overflow-hidden border border-border-40">
+        <div key={`cb${key++}`} className="my-2 rounded-mac overflow-hidden border border-border-40">
           {codeLang && (
             <div className="px-2.5 py-1 bg-surface-3-60 text-[10px] font-mono font-medium text-text-muted uppercase tracking-wide border-b border-border-30">
               {codeLang}

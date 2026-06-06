@@ -69,7 +69,7 @@ export default function RiskSummaryDialog({ open, report, loading, action, onPro
     return parts.map((part, index) => {
       if (part.startsWith("`") && part.endsWith("`")) {
         return (
-          <code key={index} className="px-1.5 py-0.5 rounded-[3px] bg-surface-2 border border-border-40 font-mono text-[10px] text-accent select-all">
+          <code key={index} className="px-1.5 py-0.5 rounded bg-surface-2 border border-border-40 font-mono text-[10px] text-accent select-all">
             {part.slice(1, -1)}
           </code>
         );
@@ -79,9 +79,9 @@ export default function RiskSummaryDialog({ open, report, loading, action, onPro
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-md animate-in fade-in duration-200" onClick={onCancel}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-md anim-overlay-enter" onClick={onCancel}>
       <div
-        className="bg-surface-0 rounded-[6px] shadow-2xl border border-border-60 overflow-hidden w-[min(540px,92vw)] h-[540px] max-h-[82vh] flex flex-col animate-in zoom-in-95 duration-200"
+        className="bg-surface-0 rounded-mac shadow-2xl border border-border-60 overflow-hidden w-[min(540px,92vw)] h-[540px] max-h-[82vh] flex flex-col anim-dialog-enter"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -91,7 +91,7 @@ export default function RiskSummaryDialog({ open, report, loading, action, onPro
             <span className="text-[12px] font-bold text-text-primary">AI Review Report</span>
             <span className="text-[10px] text-text-muted capitalize">· {action} context</span>
           </div>
-          <button onClick={onCancel} className="p-1 hover:bg-surface-2 rounded-[4px] transition-colors cursor-pointer text-text-muted hover:text-text-primary">
+          <button onClick={onCancel} className="p-1 hover:bg-surface-2 rounded transition-colors cursor-pointer text-text-muted hover:text-text-primary">
             <X size={13} />
           </button>
         </div>
@@ -102,7 +102,7 @@ export default function RiskSummaryDialog({ open, report, loading, action, onPro
             <div className="flex gap-1.5 h-full items-center">
               <button
                 onClick={() => setActiveTab("findings")}
-                className={`flex items-center gap-1.5 px-3 h-7 rounded-[4px] text-[10px] font-bold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 h-7 rounded text-[10px] font-bold transition-all cursor-pointer ${
                   activeTab === "findings"
                     ? "bg-accent text-white shadow-sm"
                     : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
@@ -113,7 +113,7 @@ export default function RiskSummaryDialog({ open, report, loading, action, onPro
               </button>
               <button
                 onClick={() => setActiveTab("copilot")}
-                className={`flex items-center gap-1.5 px-3 h-7 rounded-[4px] text-[10px] font-bold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 h-7 rounded text-[10px] font-bold transition-all cursor-pointer ${
                   activeTab === "copilot"
                     ? "bg-accent text-white shadow-sm"
                     : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
@@ -143,7 +143,7 @@ export default function RiskSummaryDialog({ open, report, loading, action, onPro
               {activeTab === "findings" ? (
                 <div className="space-y-3.5">
                   {/* Overall Status Banner */}
-                  <div className={`flex items-center gap-3 px-3.5 py-3 rounded-[4px] border ${meta.bg} ${meta.color} ${meta.border} select-none`}>
+                  <div className={`flex items-center gap-3 px-3.5 py-3 rounded border ${meta.bg} ${meta.color} ${meta.border} select-none`}>
                     <div className="h-7 w-7 rounded-full bg-current/10 flex items-center justify-center shrink-0">
                       <OverallIcon size={16} />
                     </div>
@@ -178,7 +178,7 @@ export default function RiskSummaryDialog({ open, report, loading, action, onPro
                         const expanded = expandedCategories.has(category);
 
                         return (
-                          <div key={category} className={`rounded-[4px] border ${sMeta.border} overflow-hidden bg-surface-1-10`}>
+                          <div key={category} className={`rounded border ${sMeta.border} overflow-hidden bg-surface-1-10`}>
                             <button
                               type="button"
                               onClick={() => {
@@ -207,7 +207,7 @@ export default function RiskSummaryDialog({ open, report, loading, action, onPro
                                       <div className="min-w-0 flex-1">
                                         <div className="text-text-primary font-medium leading-relaxed">{finding.label}</div>
                                         {finding.file && (
-                                          <div className="flex items-center gap-1 mt-1 text-[10px] font-mono text-text-secondary bg-surface-2 px-2 py-0.5 rounded-[3px] w-fit truncate">
+                                          <div className="flex items-center gap-1 mt-1 text-[10px] font-mono text-text-secondary bg-surface-2 px-2 py-0.5 rounded w-fit truncate">
                                             <FileText size={10} className="text-text-muted" />
                                             <span className="select-all">{finding.file}</span>
                                           </div>
@@ -231,9 +231,9 @@ export default function RiskSummaryDialog({ open, report, loading, action, onPro
                 </div>
               ) : (
                 /* Copilot AI Analysis view */
-                <div className="space-y-4 animate-in fade-in duration-200">
+                <div className="space-y-4 anim-overlay-enter">
                   {/* Avatar Copilot Card */}
-                  <div className="flex gap-3 p-3.5 bg-gradient-to-br from-accent-5 to-surface-1 border border-accent-20 rounded-[4px]">
+                  <div className="flex gap-3 p-3.5 bg-gradient-to-br from-accent-5 to-surface-1 border border-accent-20 rounded">
                     <div className="h-7 w-7 rounded-full bg-accent-15 border border-accent-20 flex items-center justify-center text-accent shrink-0">
                       <Sparkles size={13} />
                     </div>
@@ -246,7 +246,7 @@ export default function RiskSummaryDialog({ open, report, loading, action, onPro
                   </div>
 
                   {/* Pre-formatted assessment report */}
-                  <div className="text-[11px] text-text-secondary bg-surface-1 border border-border-30 rounded-[4px] p-4 whitespace-pre-wrap leading-relaxed max-h-[380px] overflow-y-auto">
+                  <div className="text-[11px] text-text-secondary bg-surface-1 border border-border-30 rounded p-4 whitespace-pre-wrap leading-relaxed max-h-[380px] overflow-y-auto">
                     {formatCopilotText(report.aiSummary || "")}
                   </div>
                 </div>
@@ -268,14 +268,14 @@ export default function RiskSummaryDialog({ open, report, loading, action, onPro
           <div className="flex items-center gap-2">
             <button
               onClick={onCancel}
-              className="px-3.5 py-1.5 text-[11px] font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-2 rounded-[4px] transition-colors cursor-pointer"
+              className="px-3.5 py-1.5 text-[11px] font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-2 rounded transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               onClick={onProceed}
               disabled={loading}
-              className={`px-3.5 py-1.5 text-[11px] font-semibold rounded-[4px] transition-all cursor-pointer disabled:opacity-40 shadow-xs ${
+              className={`px-3.5 py-1.5 text-[11px] font-semibold rounded transition-all cursor-pointer disabled:opacity-40 shadow-xs ${
                 canProceed
                   ? "text-white bg-accent hover:bg-accent-90"
                   : "text-white bg-[#ff375f] hover:bg-[#ff375f]/90"

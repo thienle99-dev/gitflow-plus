@@ -240,7 +240,7 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-accent-10 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-mac bg-accent-10 flex items-center justify-center">
               <Sparkles size={14} className="text-accent" />
             </div>
             <div>
@@ -250,7 +250,7 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
           </div>
           <button
             onClick={handleSkip}
-            className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-surface-2 text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+            className="h-7 w-7 flex items-center justify-center rounded-mac hover:bg-surface-2 text-text-muted hover:text-text-primary transition-colors cursor-pointer"
             title="Skip onboarding"
           >
             <X size={14} />
@@ -372,7 +372,7 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
           <button
             onClick={handlePrev}
             disabled={isFirst}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-text-secondary hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer rounded-lg hover:bg-surface-2"
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-text-secondary hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer rounded-mac hover:bg-surface-2"
           >
             <ChevronLeft size={14} />
             Back
@@ -381,14 +381,14 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
             {!isLast && (
               <button
                 onClick={handleSkip}
-                className="px-3.5 py-2 text-xs font-medium text-text-muted hover:text-text-secondary transition-colors cursor-pointer rounded-lg hover:bg-surface-2"
+                className="px-3.5 py-2 text-xs font-medium text-text-muted hover:text-text-secondary transition-colors cursor-pointer rounded-mac hover:bg-surface-2"
               >
                 Skip All
               </button>
             )}
             <button
               onClick={handleNext}
-              className="flex items-center gap-1.5 px-5 py-2 text-xs font-semibold bg-accent text-accent-fg rounded-lg hover:opacity-90 transition-opacity cursor-pointer shadow-sm shadow-accent-15"
+              className="flex items-center gap-1.5 px-5 py-2 text-xs font-semibold bg-accent text-accent-fg rounded-mac hover:opacity-90 transition-opacity cursor-pointer shadow-sm shadow-accent-15"
             >
               {isLast ? "Get Started" : "Continue"}
               {!isLast && <ChevronRight size={14} />}
@@ -669,7 +669,7 @@ function AIPreferencesStep({
                       : "border-border bg-surface-1 text-text-secondary hover:bg-surface-2"
                   }`}
                 >
-                  <span className={`h-3.5 w-3.5 rounded-[4px] border flex items-center justify-center shrink-0 ${
+                  <span className={`h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0 ${
                     checked ? "border-accent bg-accent text-accent-fg" : "border-border"
                   }`}>
                     {checked && <Check size={9} strokeWidth={3.5} />}
@@ -812,7 +812,7 @@ function PreferencesStep({
         <p className="text-2xs text-text-muted">Fine-tune your experience. All settings are adjustable later.</p>
       </div>
       <div className="space-y-2 max-w-[400px] mx-auto">
-        <div className="rounded-lg bg-surface-1 border border-border overflow-hidden">
+        <div className="rounded-mac bg-surface-1 border border-border overflow-hidden">
           <Switch
             label="Auto-fetch in background"
             description="Periodically fetch remote changes when a repo is open"
@@ -820,7 +820,7 @@ function PreferencesStep({
             onChange={setAutoFetch}
           />
         </div>
-        <div className="rounded-lg bg-surface-1 border border-border overflow-hidden">
+        <div className="rounded-mac bg-surface-1 border border-border overflow-hidden">
           <Switch
             label="Reopen last repository"
             description="Automatically open the last viewed repo on launch"
@@ -828,7 +828,7 @@ function PreferencesStep({
             onChange={setReopenLastRepo}
           />
         </div>
-        <div className="rounded-lg bg-surface-1 border border-border overflow-hidden">
+        <div className="rounded-mac bg-surface-1 border border-border overflow-hidden">
           <Switch
             label="Confirm destructive actions"
             description="Ask before discard, reset, delete branch, or drop stash actions"
@@ -836,7 +836,7 @@ function PreferencesStep({
             onChange={setConfirmDangerous}
           />
         </div>
-        <div className="rounded-lg bg-surface-1 border border-border px-3 py-2">
+        <div className="rounded-mac bg-surface-1 border border-border px-3 py-2">
           <label className="text-xs font-semibold text-text-primary block mb-1">Default diff view</label>
           <div className="grid grid-cols-2 gap-1.5">
             {(["split", "unified"] as const).map((mode) => (
@@ -872,7 +872,7 @@ function PreferencesStep({
 function FeatureCard({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
   return (
     <div className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-surface-1 border border-border hover:border-accent-20 hover:bg-accent-5 transition-all text-center group">
-      <div className="w-8 h-8 rounded-lg bg-accent-10 flex items-center justify-center text-accent group-hover:bg-accent-15 transition-colors">{icon}</div>
+      <div className="w-8 h-8 rounded-mac bg-accent-10 flex items-center justify-center text-accent group-hover:bg-accent-15 transition-colors">{icon}</div>
       <span className="text-2xs font-bold text-text-primary">{title}</span>
       <span className="text-[10px] text-text-muted leading-relaxed">{desc}</span>
     </div>

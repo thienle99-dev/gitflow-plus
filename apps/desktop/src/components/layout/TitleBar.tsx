@@ -205,7 +205,7 @@ export default function TitleBar() {
                   <button
                     onClick={() => setActiveMenu(isOpen ? null : name)}
                     onMouseEnter={() => handleMenuHeaderHover(name)}
-                    className={`px-3 py-1 rounded-[4px] text-[11px] font-medium transition-all ${
+                    className={`px-3 py-1 rounded text-[11px] font-medium transition-all ${
                       name === "GitFlow" ? "font-bold text-text-primary" : "text-text-secondary hover:text-text-primary"
                     } ${isOpen ? "bg-accent text-white" : "hover:bg-surface-2"}`}
                   >

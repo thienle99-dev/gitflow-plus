@@ -66,7 +66,7 @@ const UpdateBanner = memo(function UpdateBanner() {
   if (!pendingVersion) return null;
 
   return (
-    <div className="h-[22px] border-t border-accent-30 bg-accent-8 flex items-center px-4 text-2xs shrink-0 animate-in slide-in-from-bottom duration-200">
+    <div className="h-[22px] border-t border-accent-30 bg-accent-8 flex items-center px-4 text-2xs shrink-0 anim-slide-up-enter">
       <Download size={10} className="text-accent shrink-0 mr-1.5" />
       <span className="text-text-secondary">
         <span className="font-semibold text-accent">v{pendingVersion}</span> is available
@@ -234,7 +234,7 @@ export default function BottomBar() {
 
           {/* Staging stats summary */}
           {totalChanges > 0 && (
-            <div className="flex items-center gap-1.5 text-[10px] text-text-muted border-l border-border-20 pl-3 h-3">
+            <div className="flex items-center gap-3 text-[10px] text-text-muted border-l border-border-20 pl-3 h-3">
               {stagedCount > 0 && (
                 <span className="text-[#30d158]" title={`${stagedCount} staged files`}>
                   {stagedCount} staged
@@ -254,7 +254,7 @@ export default function BottomBar() {
       <div className="flex-1" />
 
       {/* Right side: Primary actions + More popover */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         {/* Primary: Ops (with badge) */}
         <button
           onClick={toggleOps}

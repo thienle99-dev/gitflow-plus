@@ -33,8 +33,8 @@ export default function KeyboardShortcutsModal({ open, onClose }: KeyboardShortc
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#000000]/45 animate-in fade-in duration-200">
-      <div className="bg-surface-0 rounded-mac shadow-2xl border border-border w-[500px] max-h-[80vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#000000]/45 anim-overlay-enter">
+      <div className="bg-surface-0 rounded-mac shadow-2xl border border-border w-[500px] max-h-[80vh] overflow-hidden flex flex-col anim-dialog-enter">
         {/* Header */}
         <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-surface-1-40">
           <Keyboard size={15} className="text-accent shrink-0" />

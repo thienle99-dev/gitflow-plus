@@ -59,7 +59,7 @@ export default function UndoButton({ expanded: controlledExpanded, compact = fal
 
       {/* Dropdown with reflog */}
       {displayOpen && reflog && reflog.length > 0 && (
-        <div className="absolute right-0 bottom-full mb-1.5 w-[320px] bg-surface-1-95 backdrop-blur-md border border-border-60 rounded-mac shadow-xl z-40 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-150">
+        <div className="absolute right-0 bottom-full mb-1.5 w-[320px] bg-surface-1-95 backdrop-blur-md border border-border-60 rounded-mac shadow-xl z-40 overflow-hidden anim-palette-enter">
           {/* Header with undo action */}
           <div className="px-2.5 py-2 border-b border-border-40 bg-surface-2-20">
             <button
@@ -84,7 +84,7 @@ export default function UndoButton({ expanded: controlledExpanded, compact = fal
                 className="flex items-center gap-2 px-3 py-2 border-b border-border-40 hover:bg-surface-2-40 transition-colors"
               >
                 <GitCommit size={10} className="shrink-0 text-text-muted" />
-                <span className="text-[10px] font-mono font-bold text-accent bg-accent-10 px-1 py-0.5 rounded-[3px] shrink-0">
+                <span className="text-[10px] font-mono font-bold text-accent bg-accent-10 px-1 py-0.5 rounded shrink-0">
                   {entry.commit_hash?.slice(0, 7)}
                 </span>
                 <div className="min-w-0 flex-1">

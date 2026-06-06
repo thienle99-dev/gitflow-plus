@@ -678,11 +678,11 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
 
                   <div className="flex items-center justify-between mt-0.5 gap-1">
                     <div className="flex items-center gap-1 text-[10px] text-text-muted font-mono min-w-0 flex-1 overflow-hidden">
-                      <span className="truncate bg-[#30d158]/10 text-[#30d158] px-1 py-0.5 rounded-[3px] border border-[#30d158]/15 max-w-[45%]">
+                      <span className="truncate bg-[#30d158]/10 text-[#30d158] px-1 py-0.5 rounded border border-[#30d158]/15 max-w-[45%]">
                         {mr.sourceBranch}
                       </span>
                       <ArrowRight size={8} className="shrink-0 text-accent" />
-                      <span className="truncate bg-[#0a84ff]/10 text-[#0a84ff] px-1 py-0.5 rounded-[3px] border border-[#0a84ff]/15 max-w-[45%]">
+                      <span className="truncate bg-[#0a84ff]/10 text-[#0a84ff] px-1 py-0.5 rounded border border-[#0a84ff]/15 max-w-[45%]">
                         {mr.targetBranch}
                       </span>
                     </div>
@@ -826,11 +826,11 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
                   <div className="flex flex-row items-center justify-between gap-3 p-3 bg-surface-1-40 border border-border-40 rounded-mac">
                     <div className="min-w-0 flex items-center gap-2 text-xs flex-1 overflow-hidden">
                       <GitBranch size={13} className="text-accent shrink-0" />
-                      <span className="min-w-0 max-w-[50%] truncate font-mono font-semibold bg-[#30d158]/10 text-[#30d158] px-1.5 py-0.5 rounded-[4px] border border-[#30d158]/20">
+                      <span className="min-w-0 max-w-[50%] truncate font-mono font-semibold bg-[#30d158]/10 text-[#30d158] px-1.5 py-0.5 rounded border border-[#30d158]/20">
                         {selectedMr.sourceBranch}
                       </span>
                       <ArrowRight size={12} className="text-accent shrink-0" />
-                      <span className="min-w-0 max-w-[35%] truncate font-mono font-semibold bg-[#0a84ff]/10 text-[#0a84ff] px-1.5 py-0.5 rounded-[4px] border border-[#0a84ff]/20">
+                      <span className="min-w-0 max-w-[35%] truncate font-mono font-semibold bg-[#0a84ff]/10 text-[#0a84ff] px-1.5 py-0.5 rounded border border-[#0a84ff]/20">
                         {selectedMr.targetBranch}
                       </span>
                     </div>

@@ -142,7 +142,7 @@ export function TrayActions({
         </button>
 
         {branchDropdownOpen && (
-          <div className="absolute left-0 bottom-full mb-1 w-56 bg-surface-1 border border-border-60 rounded-mac shadow-xl z-50 py-1.5 animate-in fade-in slide-in-from-bottom-1 duration-150">
+          <div className="absolute left-0 bottom-full mb-1 w-56 bg-surface-1 border border-border-60 rounded-mac shadow-xl z-50 py-1.5 anim-palette-enter">
             <div className="px-2 pb-1.5 border-b border-border-40 flex items-center gap-1.5">
               <Search size={10} className="text-text-muted" />
               <input
@@ -196,7 +196,7 @@ export function TrayActions({
             <Download size={13} />
           )}
           {!!syncStatus?.behind && (
-            <span className="absolute -right-1 -top-1 min-w-[15px] rounded-[4px] bg-[#0a84ff] px-1 py-0.5 text-[8px] font-bold leading-none text-white shadow-sm">
+            <span className="absolute -right-1 -top-1 min-w-[15px] rounded bg-[#0a84ff] px-1 py-0.5 text-[8px] font-bold leading-none text-white shadow-sm">
               {syncStatus.behind}
             </span>
           )}
@@ -213,7 +213,7 @@ export function TrayActions({
             <Upload size={13} />
           )}
           {!!syncStatus?.ahead && (
-            <span className="absolute -right-1 -top-1 min-w-[15px] rounded-[4px] bg-[#30d158] px-1 py-0.5 text-[8px] font-bold leading-none text-white shadow-sm">
+            <span className="absolute -right-1 -top-1 min-w-[15px] rounded bg-[#30d158] px-1 py-0.5 text-[8px] font-bold leading-none text-white shadow-sm">
               {syncStatus.ahead}
             </span>
           )}

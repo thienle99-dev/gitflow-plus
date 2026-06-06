@@ -266,11 +266,11 @@ export default function Toolbar() {
         </div>
 
         {/* Middle Side: Action Button Segment Groups */}
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
           {/* Sync Segment Group (Pull, Fetch, Push) — always visible */}
           <div className="flex items-center bg-surface-2-40 border border-border-40 rounded-mac p-0.5 shadow-2xs" role="group" aria-label="Sync actions">
             <button
-              className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all disabled:opacity-40 cursor-pointer"
+              className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded transition-all disabled:opacity-40 cursor-pointer"
               onClick={async () => {
                 const ok = await pullGate.runPreflight();
                 if (ok) doAction("pull", () => api.remote.pull(repoPath!));
@@ -282,14 +282,14 @@ export default function Toolbar() {
               <ArrowDownToLine size={13} className="text-text-muted group-hover:text-text-primary" />
               <span>Pull</span>
               {!!syncStatus?.behind && (
-                <span className="ml-0.5 rounded-[3px] bg-[#0a84ff]/15 px-1.5 py-0.5 text-[9px] font-bold text-[#0a84ff]">
+                <span className="ml-0.5 rounded bg-[#0a84ff]/15 px-1.5 py-0.5 text-[9px] font-bold text-[#0a84ff]">
                   {syncStatus.behind}
                 </span>
               )}
             </button>
             <div className="w-[1px] h-3.5 bg-border-50" />
             <button
-              className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all disabled:opacity-40 cursor-pointer"
+              className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded transition-all disabled:opacity-40 cursor-pointer"
               onClick={() => doAction("fetch", () => api.remote.fetch(repoPath!))}
               disabled={!!loading}
               aria-label="Fetch remote changes"
@@ -300,7 +300,7 @@ export default function Toolbar() {
             </button>
             <div className="w-[1px] h-3.5 bg-border-50" />
             <button
-              className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all disabled:opacity-40 cursor-pointer"
+              className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded transition-all disabled:opacity-40 cursor-pointer"
               onClick={handlePush}
               disabled={!!loading}
               aria-label={`Push local commits${syncStatus?.ahead ? ` (${syncStatus.ahead} ahead)` : ""}`}
@@ -309,7 +309,7 @@ export default function Toolbar() {
               <ArrowUpFromLine size={13} className="text-text-muted" />
               <span>Push</span>
               {!!syncStatus?.ahead && (
-                <span className="ml-0.5 rounded-[3px] bg-[#30d158]/15 px-1.5 py-0.5 text-[9px] font-bold text-[#30d158]">
+                <span className="ml-0.5 rounded bg-[#30d158]/15 px-1.5 py-0.5 text-[9px] font-bold text-[#30d158]">
                   {syncStatus.ahead}
                 </span>
               )}
@@ -325,18 +325,18 @@ export default function Toolbar() {
               >
                 <Database size={13} className="text-accent" />
                 <span>LFS</span>
-                <span className="ml-0.5 rounded-[3px] bg-accent-10 px-1.5 py-0.5 text-[9px] font-bold text-accent">
+                <span className="ml-0.5 rounded bg-accent-10 px-1.5 py-0.5 text-[9px] font-bold text-accent">
                   {lfsStatus.tracked_files.length}
                 </span>
                 {lfsDirtyCount > 0 && (
-                  <span className="rounded-[3px] bg-[#ff9f0a]/15 px-1.5 py-0.5 text-[9px] font-bold text-[#ff9f0a]">
+                  <span className="rounded bg-[#ff9f0a]/15 px-1.5 py-0.5 text-[9px] font-bold text-[#ff9f0a]">
                     {lfsDirtyCount}
                   </span>
                 )}
               </div>
               <div className="w-[1px] h-3.5 bg-border-50" />
               <button
-                className="h-7 px-2.5 flex items-center gap-1.5 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all disabled:opacity-40 cursor-pointer"
+                className="h-7 px-2.5 flex items-center gap-1.5 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded transition-all disabled:opacity-40 cursor-pointer"
                 onClick={() => doAction("lfs-pull", () => api.lfs.pull(repoPath!))}
                 disabled={!!loading}
                 title="Pull Git LFS objects"
@@ -346,7 +346,7 @@ export default function Toolbar() {
               </button>
               <div className="w-[1px] h-3.5 bg-border-50" />
               <button
-                className="h-7 px-2.5 flex items-center gap-1.5 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all disabled:opacity-40 cursor-pointer"
+                className="h-7 px-2.5 flex items-center gap-1.5 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded transition-all disabled:opacity-40 cursor-pointer"
                 onClick={() => doAction("lfs-push", () => api.lfs.push(repoPath!))}
                 disabled={!!loading}
                 title="Push Git LFS objects"
@@ -360,7 +360,7 @@ export default function Toolbar() {
           {/* Git Operations Segment Group (Branch, Merge, Stash) — always visible */}
           <div className="flex items-center bg-surface-2-40 border border-border-40 rounded-mac p-0.5 shadow-2xs" role="group" aria-label="Git operations">
             <button
-              className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer"
+              className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded transition-all cursor-pointer"
               onClick={() => setShowBranchDialog(true)}
               aria-label="Create branch"
               title="Create branch"
@@ -370,7 +370,7 @@ export default function Toolbar() {
             </button>
             <div className="w-[1px] h-3.5 bg-border-50" />
             <button
-              className={`h-7 px-4 flex items-center gap-2 text-2xs font-semibold hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer ${inMerge
+              className={`h-7 px-4 flex items-center gap-2 text-2xs font-semibold hover:bg-surface-3 rounded transition-all cursor-pointer ${inMerge
                 ? "text-[#ff9f0a] bg-[#ff9f0a]/10 hover:bg-[#ff9f0a]/20"
                 : "text-text-secondary hover:text-text-primary"
                 }`}
@@ -390,7 +390,7 @@ export default function Toolbar() {
             </button>
             <div className="w-[1px] h-3.5 bg-border-50" />
             <button
-              className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer"
+              className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded transition-all cursor-pointer"
               onClick={() => openDialog("stash")}
               aria-label="Manage stashes"
               title="Manage stashes"
@@ -406,7 +406,7 @@ export default function Toolbar() {
               {gitflowConfig?.initialized ? (
                 <>
                   <button
-                    className="h-7 px-3 flex items-center gap-1.5 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer"
+                    className="h-7 px-3 flex items-center gap-1.5 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded transition-all cursor-pointer"
                     onClick={() => openDialog("gitflow-feature-start")}
                     aria-label="Start new feature branch"
                     title="Start new feature branch"
@@ -416,7 +416,7 @@ export default function Toolbar() {
                   </button>
                   <div className="w-[1px] h-3.5 bg-border-50" />
                   <button
-                    className="h-7 px-3 flex items-center gap-1.5 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer"
+                    className="h-7 px-3 flex items-center gap-1.5 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded transition-all cursor-pointer"
                     onClick={() => openDialog("gitflow-release-start")}
                     aria-label="Start new release branch"
                     title="Start new release branch"
@@ -426,7 +426,7 @@ export default function Toolbar() {
                   </button>
                   <div className="w-[1px] h-3.5 bg-border-50" />
                   <button
-                    className="h-7 px-3 flex items-center gap-1.5 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer"
+                    className="h-7 px-3 flex items-center gap-1.5 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded transition-all cursor-pointer"
                     onClick={() => openDialog("gitflow-hotfix-start")}
                     aria-label="Start new hotfix branch"
                     title="Start new hotfix branch"
@@ -437,7 +437,7 @@ export default function Toolbar() {
                 </>
               ) : (
                 <button
-                  className="h-7 px-3 flex items-center gap-1.5 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer"
+                  className="h-7 px-3 flex items-center gap-1.5 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded transition-all cursor-pointer"
                   onClick={() => openDialog("gitflow")}
                   aria-label="Initialize GitFlow"
                   title="Initialize GitFlow branching model"
@@ -453,7 +453,7 @@ export default function Toolbar() {
           {!collapsed && (
             <div className="flex items-center bg-surface-2-40 border border-border-40 rounded-mac p-0.5 shadow-2xs" role="group" aria-label="Utilities">
               <button
-                className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer"
+                className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded transition-all cursor-pointer"
                 onClick={() => openDialog("search")}
                 aria-label="Spotlight Search"
                 title="Spotlight Search"
@@ -463,7 +463,7 @@ export default function Toolbar() {
               </button>
               <div className="w-[1px] h-3.5 bg-border-50" />
               <button
-                className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all cursor-pointer"
+                className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded transition-all cursor-pointer"
                 onClick={() => openDialog("analytics")}
                 aria-label="View Repository Activity Analytics"
                 title="View Repository Activity Analytics"
@@ -473,7 +473,7 @@ export default function Toolbar() {
               </button>
               <div className="w-[1px] h-3.5 bg-border-50" />
               <button
-                className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded-[5px] transition-all disabled:opacity-40 cursor-pointer"
+                className="h-7 px-4 flex items-center gap-2 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded transition-all disabled:opacity-40 cursor-pointer"
                 onClick={() => doAction("undo", () => undoLast.mutateAsync())}
                 disabled={undoLast.isPending}
                 aria-label="Undo last Git action"
@@ -523,7 +523,7 @@ export default function Toolbar() {
         </div>
 
         {/* Right Side: Integrations */}
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           {/* PR Trigger */}
           <button
             onClick={() => openDialog("merge-request")}

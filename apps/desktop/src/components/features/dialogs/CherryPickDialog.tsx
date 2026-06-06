@@ -91,11 +91,11 @@ export default function CherryPickDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center anim-overlay-enter"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="absolute inset-0 bg-[#000000]/45" />
-      <div className="relative w-[420px] bg-surface-0 border border-border rounded-mac shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="relative w-[420px] bg-surface-0 border border-border rounded-mac shadow-2xl overflow-hidden anim-dialog-enter">
         {/* Header */}
         <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-surface-1-40">
           {hasConflicts ? (
@@ -136,7 +136,7 @@ export default function CherryPickDialog({
 
           {/* Options Card */}
           {!hasConflicts && (
-            <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 animate-in slide-in-from-top-1 duration-150">
+            <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 anim-slide-down-enter">
               <Switch
                 checked={noCommit}
                 onChange={setNoCommit}
@@ -148,7 +148,7 @@ export default function CherryPickDialog({
 
           {/* Conflict Details Card */}
           {hasConflicts && cherryPick.data?.conflicted_files?.length > 0 && (
-            <div className="bg-red-500/5 border border-red-500/10 rounded-mac p-3.5 space-y-2 animate-in slide-in-from-top-1 duration-150">
+            <div className="bg-red-500/5 border border-red-500/10 rounded-mac p-3.5 space-y-2 anim-slide-down-enter">
               <div className="text-2xs font-semibold text-[#ff453a] flex items-center gap-1.5">
                 <AlertTriangle size={12} />
                 <span>Conflicted Files ({cherryPick.data.conflicted_files.length})</span>

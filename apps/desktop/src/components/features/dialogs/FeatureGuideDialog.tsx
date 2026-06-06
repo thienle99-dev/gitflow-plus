@@ -1046,7 +1046,7 @@ function FeatureItem({ feature }: { feature: Feature }) {
   const isExpandable = hasDetails || !!feature.illustration;
 
   return (
-    <div className="rounded-lg border border-border-30 overflow-hidden transition-all">
+    <div className="rounded-mac border border-border-30 overflow-hidden transition-all">
       <div
         className={`flex items-start gap-2.5 p-2.5 ${isExpandable ? "cursor-pointer hover:bg-surface-2-30" : ""} transition-colors`}
         onClick={() => isExpandable && setExpanded(!expanded)}
@@ -1071,7 +1071,7 @@ function FeatureItem({ feature }: { feature: Feature }) {
       </div>
 
       {expanded && (feature.illustration || feature.details) && (
-        <div className="px-2.5 pb-2.5 space-y-2.5 border-t border-border-20 bg-surface-1-20 animate-in slide-in-from-top-1 duration-150">
+        <div className="px-2.5 pb-2.5 space-y-2.5 border-t border-border-20 bg-surface-1-20 anim-slide-down-enter">
           {/* Illustration */}
           {feature.illustration && (
             <div className="pt-2.5">
@@ -1148,7 +1148,7 @@ export default function FeatureGuideDialog({ open, onClose }: FeatureGuideDialog
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.45)" }} onClick={onClose}>
-      <div className="bg-surface-0 rounded-mac shadow-2xl border border-border w-[720px] max-h-[82vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-surface-0 rounded-mac shadow-2xl border border-border w-[720px] max-h-[82vh] overflow-hidden flex flex-col anim-dialog-enter" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center gap-2 px-5 py-3 border-b border-border bg-surface-1-40">
           <Book size={15} className="text-accent shrink-0" />

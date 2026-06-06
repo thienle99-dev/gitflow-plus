@@ -453,7 +453,7 @@ export default function TrayPanelView() {
           </button>
 
           {repoDropdownOpen && (
-            <div className="absolute left-0 mt-1 w-64 bg-surface-1 border border-border-60 rounded-mac shadow-xl z-50 py-1.5 animate-in fade-in slide-in-from-top-1 duration-150">
+            <div className="absolute left-0 mt-1 w-64 bg-surface-1 border border-border-60 rounded-mac shadow-xl z-50 py-1.5 anim-palette-enter">
               <div className="px-2 pb-1.5 border-b border-border-40 flex items-center gap-1.5">
                 <Search size={11} className="text-text-muted" />
                 <input
@@ -599,7 +599,7 @@ export default function TrayPanelView() {
                 <span className="text-[8px] text-text-muted">Click commit to copy hash</span>
               </div>
 
-              <div className="flex-1 overflow-y-auto mt-2 space-y-1.5 pr-1 animate-in fade-in duration-200">
+              <div className="flex-1 overflow-y-auto mt-2 space-y-1.5 pr-1 anim-overlay-enter">
                 {isLoadingCommits ? (
                   <div className="h-full flex items-center justify-center py-8 text-text-muted gap-1.5">
                     <Loader2 size={12} className="animate-spin text-accent" />

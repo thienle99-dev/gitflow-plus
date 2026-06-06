@@ -57,11 +57,11 @@ export default function SquashDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center anim-overlay-enter"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="absolute inset-0 bg-[#000000]/45" />
-      <div className="relative w-[360px] bg-surface-0 border border-border rounded-mac shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="relative w-[360px] bg-surface-0 border border-border rounded-mac shadow-2xl overflow-hidden anim-dialog-enter">
         {/* Header */}
         <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-surface-1-40">
           <GitCommit size={15} className="text-purple-400 shrink-0" />
@@ -111,14 +111,14 @@ export default function SquashDialog({
         <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border bg-surface-1-20">
           <button
             onClick={onClose}
-            className="h-7 px-3 rounded-[5px] text-3xs font-semibold border border-border-40 bg-surface-2-40 text-text-muted hover:text-text-primary hover:bg-surface-3 transition-colors cursor-pointer"
+            className="h-7 px-3 rounded text-3xs font-semibold border border-border-40 bg-surface-2-40 text-text-muted hover:text-text-primary hover:bg-surface-3 transition-colors cursor-pointer"
           >
             Cancel
           </button>
           <button
             onClick={handleSquash}
             disabled={loading}
-            className="h-7 px-3 rounded-[5px] text-3xs font-semibold bg-purple-500/15 border border-purple-500/30 text-purple-400 hover:bg-purple-500/25 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-7 px-3 rounded text-3xs font-semibold bg-purple-500/15 border border-purple-500/30 text-purple-400 hover:bg-purple-500/25 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Loading..." : "Squash & Review"}
           </button>

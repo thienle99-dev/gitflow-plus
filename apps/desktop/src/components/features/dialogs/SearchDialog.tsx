@@ -255,14 +255,14 @@ CRITICAL INSTRUCTIONS:
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh] animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh] anim-overlay-enter"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       {/* Backdrop */}
       <div className="absolute inset-0 bg-[#000000]/45" />
 
       {/* Dialog */}
-      <div className="relative w-[600px] max-h-[70vh] bg-surface-0 border border-border rounded-mac shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="relative w-[600px] max-h-[70vh] bg-surface-0 border border-border rounded-mac shadow-2xl flex flex-col overflow-hidden anim-dialog-enter">
         {/* Spotlight Header & Segmented Tabs */}
         <div className="p-3 border-b border-border bg-surface-1-40 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -274,7 +274,7 @@ CRITICAL INSTRUCTIONS:
           <div className="grid grid-cols-2 p-0.5 rounded-mac bg-surface-2-60 border border-border-40 w-[240px]">
             <button
               onClick={() => setSearchMode("standard")}
-              className={`h-6 text-3xs font-semibold rounded-[5px] transition-all flex items-center justify-center border border-transparent outline-none ${
+              className={`h-6 text-3xs font-semibold rounded transition-all flex items-center justify-center border border-transparent outline-none ${
                 searchMode === "standard"
                   ? "bg-surface-0 text-text-primary shadow-sm"
                   : "text-text-muted hover:text-text-primary"
@@ -284,7 +284,7 @@ CRITICAL INSTRUCTIONS:
             </button>
             <button
               onClick={() => setSearchMode("semantic")}
-              className={`h-6 text-3xs font-semibold rounded-[5px] transition-all flex items-center justify-center gap-1 border border-transparent outline-none ${
+              className={`h-6 text-3xs font-semibold rounded transition-all flex items-center justify-center gap-1 border border-transparent outline-none ${
                 searchMode === "semantic"
                   ? "bg-surface-0 text-text-primary shadow-sm"
                   : "text-text-muted hover:text-text-primary"
@@ -364,7 +364,7 @@ CRITICAL INSTRUCTIONS:
                     value={author}
                     onChange={(e) => setAuthor(e.target.value)}
                     placeholder="Author name"
-                    className="h-7 pl-7 pr-2 text-2xs rounded-[5px]"
+                    className="h-7 pl-7 pr-2 text-2xs rounded"
                   />
                 </div>
                 {/* Branch Selector with Chevron */}
@@ -373,7 +373,7 @@ CRITICAL INSTRUCTIONS:
                   <select
                     value={branch}
                     onChange={(e) => setBranch(e.target.value)}
-                    className="w-full h-7 pl-7 pr-7 text-2xs bg-surface-2-40 border border-border-40 hover:border-border rounded-[5px] text-text-primary outline-none focus:border-accent appearance-none cursor-pointer font-medium transition-colors"
+                    className="w-full h-7 pl-7 pr-7 text-2xs bg-surface-2-40 border border-border-40 hover:border-border rounded text-text-primary outline-none focus:border-accent appearance-none cursor-pointer font-medium transition-colors"
                   >
                     <option value="">All branches</option>
                     {branchGroups.local.length > 0 && (
@@ -408,7 +408,7 @@ CRITICAL INSTRUCTIONS:
                     value={file}
                     onChange={(e) => setFile(e.target.value)}
                     placeholder="File path filter"
-                    className="h-7 pl-7 pr-2 text-2xs rounded-[5px]"
+                    className="h-7 pl-7 pr-2 text-2xs rounded"
                   />
                 </div>
                 {/* Date range inputs with From/To indicators */}
@@ -419,7 +419,7 @@ CRITICAL INSTRUCTIONS:
                     type="date"
                     value={since}
                     onChange={(e) => setSince(e.target.value)}
-                    className="h-7 pl-10 pr-1 text-2xs rounded-[5px] [color-scheme:dark]"
+                    className="h-7 pl-10 pr-1 text-2xs rounded [color-scheme:dark]"
                     title="From date"
                   />
                 </div>
@@ -430,7 +430,7 @@ CRITICAL INSTRUCTIONS:
                     type="date"
                     value={until}
                     onChange={(e) => setUntil(e.target.value)}
-                    className="h-7 pl-7 pr-1 text-2xs rounded-[5px] [color-scheme:dark]"
+                    className="h-7 pl-7 pr-1 text-2xs rounded [color-scheme:dark]"
                     title="To date"
                   />
                 </div>

@@ -62,8 +62,8 @@ export default function LintWarningDialog({
   const isReviewMode = mode === "review";
 
   return (
-    <div className="fixed inset-0 bg-[#000000]/65 backdrop-blur-md z-[9998] flex items-center justify-center p-6 animate-in fade-in duration-200">
-      <div className="w-full max-w-2xl bg-surface-0 border border-border rounded-mac shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 bg-[#000000]/65 backdrop-blur-md z-[9998] flex items-center justify-center p-6 anim-overlay-enter">
+      <div className="w-full max-w-2xl bg-surface-0 border border-border rounded-mac shadow-2xl overflow-hidden flex flex-col max-h-[85vh] anim-dialog-enter">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-surface-1-40 shrink-0">
           <div className="flex items-center gap-2">
