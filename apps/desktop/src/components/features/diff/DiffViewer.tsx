@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
 import { api } from "@/api/tauri";
@@ -32,9 +32,11 @@ export default function DiffViewer({
   const repoPath = useRepoStore((s) => s.repoPath);
   const appTheme = useRepoStore((s) => s.theme);
   const [applying, setApplying] = useState<number | null>(null);
+  const [batchingAll, setBatchingAll] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDiscardHunk, setConfirmDiscardHunk] = useState<{ hunk: DiffHunk; index: number } | null>(null);
   const [confirmDiscardLine, setConfirmDiscardLine] = useState<{ hunk: DiffHunk; lineIndex: number } | null>(null);
+  const [confirmRejectAll, setConfirmRejectAll] = useState(false);
 
   const [showReview, setShowReview] = useState(false);
   const [reviewResult, setReviewResult] = useState<string>("");
@@ -125,7 +127,7 @@ export default function DiffViewer({
   const patchPrefix = useMemo(() => getPatchPrefix(diff), [diff]);
   const canPatch = source === "working" || source === "staged";
 
-  const applyHunk = async (hunk: DiffHunk, index: number, action: "stage" | "unstage" | "discard") => {
+  const applyHunk = useCallback(async (hunk: DiffHunk, index: number, action: "stage" | "unstage" | "discard") => {
     if (!repoPath) return;
     if (action === "discard") {
       setConfirmDiscardHunk({ hunk, index });
@@ -142,7 +144,7 @@ export default function DiffViewer({
     } finally {
       setApplying(null);
     }
-  };
+  }, [repoPath, patchPrefix, onPatchApplied]);
 
   const doDiscardHunk = async (hunk: DiffHunk, index: number) => {
     setConfirmDiscardHunk(null);
@@ -159,7 +161,7 @@ export default function DiffViewer({
     }
   };
 
-  const applyLine = async (
+  const applyLine = useCallback(async (
     hunk: DiffHunk,
     lineIndex: number,
     action: "stage" | "unstage" | "discard",
@@ -182,7 +184,7 @@ export default function DiffViewer({
     } finally {
       setApplying(null);
     }
-  };
+  }, [repoPath, patchPrefix, onPatchApplied]);
 
   const doDiscardLine = async (hunk: DiffHunk, lineIndex: number) => {
     setConfirmDiscardLine(null);
@@ -200,6 +202,43 @@ export default function DiffViewer({
       setApplying(null);
     }
   };
+
+  const handleAcceptAll = useCallback(async () => {
+    if (!repoPath || hunks.length === 0) return;
+    setBatchingAll(true);
+    setError(null);
+    try {
+      for (let i = 0; i < hunks.length; i++) {
+        await api.diff.applyHunk(repoPath, buildHunkPatch(patchPrefix, hunks[i]), "stage");
+      }
+      onPatchApplied?.();
+    } catch (e: any) {
+      setError(String(e));
+    } finally {
+      setBatchingAll(false);
+    }
+  }, [repoPath, patchPrefix, hunks, onPatchApplied]);
+
+  const handleRejectAll = useCallback(() => {
+    setConfirmRejectAll(true);
+  }, []);
+
+  const doRejectAll = useCallback(async () => {
+    setConfirmRejectAll(false);
+    if (!repoPath || hunks.length === 0) return;
+    setBatchingAll(true);
+    setError(null);
+    try {
+      for (let i = 0; i < hunks.length; i++) {
+        await api.diff.applyHunk(repoPath, buildHunkPatch(patchPrefix, hunks[i]), "discard");
+      }
+      onPatchApplied?.();
+    } catch (e: any) {
+      setError(String(e));
+    } finally {
+      setBatchingAll(false);
+    }
+  }, [repoPath, patchPrefix, hunks, onPatchApplied]);
 
   const handleRetryInlineComments = () => {
     setInlineComments([]);
@@ -239,6 +278,9 @@ export default function DiffViewer({
           canPatch={canPatch}
           applying={applying}
           onApplyHunk={applyHunk}
+          onAcceptAll={handleAcceptAll}
+          onRejectAll={handleRejectAll}
+          batchingAll={batchingAll}
           error={error}
           inlineCommentsError={inlineCommentsMutation.isError ? (inlineCommentsMutation.error instanceof Error ? inlineCommentsMutation.error.message : "Unknown error") : null}
           onRetryInlineComments={handleRetryInlineComments}
@@ -318,6 +360,21 @@ export default function DiffViewer({
       variant="destructive"
       onConfirm={() => confirmDiscardLine && doDiscardLine(confirmDiscardLine.hunk, confirmDiscardLine.lineIndex)}
       onCancel={() => setConfirmDiscardLine(null)}
+    />
+    <ConfirmDialog
+      open={confirmRejectAll}
+      title="Reject All Hunks"
+      message={`Discard all ${hunks.length} hunks from the working tree? All changes in this file will be reverted to its committed state.`}
+      impactItems={[
+        {
+          label: `All ${hunks.length} hunks will be reverted to the committed version`,
+          severity: "irreversible",
+        },
+      ]}
+      confirmLabel="Reject All"
+      variant="destructive"
+      onConfirm={doRejectAll}
+      onCancel={() => setConfirmRejectAll(false)}
     />
     </>
   );

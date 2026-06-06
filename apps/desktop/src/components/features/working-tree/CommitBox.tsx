@@ -111,6 +111,7 @@ export interface CommitBoxProps {
   onImproveMessage: () => void;
   onAddBody: () => void;
   onLintReview: () => void;
+  onOpenSplitDialog: () => void;
   // AI review state
   aiReviewPending: boolean;
   // Lint review state
@@ -139,6 +140,7 @@ export default function CommitBox({
   commitMessage,
   setCommitMessage,
   lintResults,
+  onOpenSplitDialog,
   staged,
   unstaged,
   committing,
@@ -210,21 +212,34 @@ export default function CommitBox({
         <div className="border-t border-border-60 pt-2.5 mt-2 select-none shrink-0 space-y-2">
           <div className="flex items-center justify-end gap-1.5 flex-wrap">
             {staged.length >= 3 && (
-              <button
-                type="button"
-                className={`${MUTED_BUTTON_CLASS} border-border-30 bg-surface-1-50 ${scopeAnalyzing || commitScopePending ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
-                onClick={onAnalyzeScope}
-                disabled={scopeAnalyzing || commitScopePending}
-                title={scopeAnalyzing ? "Analyzing scope..." : "Analyze commit scope (suggest splitting)"}
-              >
-                {scopeAnalyzing || commitScopePending ? (
-                  <RefreshCw size={11} className="animate-spin" />
-                ) : (
-                  <Layers size={11} />
-                )}
-                <span>Split Scope</span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  className={`${MUTED_BUTTON_CLASS} border-border-30 bg-surface-1-50 ${scopeAnalyzing || commitScopePending ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                  onClick={onAnalyzeScope}
+                  disabled={scopeAnalyzing || commitScopePending}
+                  title={scopeAnalyzing ? "Analyzing scope..." : "Analyze commit scope (suggest splitting)"}
+                >
+                  {scopeAnalyzing || commitScopePending ? (
+                    <RefreshCw size={11} className="animate-spin" />
+                  ) : (
+                    <Layers size={11} />
+                  )}
+                  <span>Split Scope</span>
+                </button>
+                <button
+                  type="button"
+                  className={`${MUTED_BUTTON_CLASS} border-accent-30 bg-accent-5 text-accent ${commitScopePending ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                  onClick={onOpenSplitDialog}
+                  disabled={commitScopePending}
+                  title="AI-powered commit split dialog"
+                >
+                  <Sparkles size={11} />
+                  <span>AI Split</span>
+                </button>
+              </>
             )}
             {commitMessage.trim() && staged.length > 0 && (
               <>

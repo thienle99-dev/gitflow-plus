@@ -8,6 +8,7 @@ import { generateLocalCommitMessage, shouldAnalyzeScope, type CommitScopeSuggest
 import { useQueryClient } from "@tanstack/react-query";
 import { showToast } from "@/lib/toast";
 import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
+import CommitSplitDialog from "@/components/features/dialogs/CommitSplitDialog";
 import { fileIcon, statusLabel, statusColor } from "@/components/ui/shared";
 import ContextMenu, { type ContextMenuItem } from "@/components/ui/overlay/ContextMenu";
 import LazyDiffViewer from "@/components/features/diff/LazyDiffViewer";
@@ -96,6 +97,7 @@ export default function WorkingTree() {
   const [readinessOpen, setReadinessOpen] = useState(false);
   const [lintReviewResult, setLintReviewResult] = useState("");
   const [lintReviewOpen, setLintReviewOpen] = useState(false);
+  const [splitDialogOpen, setSplitDialogOpen] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState<string | null>(null);
   const [confirmDiscardAll, setConfirmDiscardAll] = useState(false);
   const [stagedOpen, setStagedOpen] = useState(true);
@@ -628,7 +630,7 @@ export default function WorkingTree() {
     if (!repoPath || scopeAnalyzing || commitScope.isPending) return;
     if (staged.length === 0) {
       showToast("Stage some files first to analyze scope", "info");
-      return;
+      return null;
     }
     setScopeAnalyzing(true);
     setScopeDismissed(false);
@@ -642,10 +644,25 @@ export default function WorkingTree() {
       } else {
         showToast("Changes look cohesive — single commit is fine");
       }
+      return scope;
     } catch {
       showToast("Scope analysis failed", "error");
+      return null;
     } finally {
       setScopeAnalyzing(false);
+    }
+  };
+
+  const handleOpenSplitDialog = async () => {
+    if (!repoPath) return;
+    if (staged.length === 0) {
+      showToast("Stage some files first to analyze scope", "info");
+      return;
+    }
+    setSplitDialogOpen(true);
+    // If we already have a suggestion, reuse it; otherwise analyze first
+    if (!scopeSuggestion) {
+      await handleAnalyzeScope();
     }
   };
 
@@ -890,6 +907,7 @@ export default function WorkingTree() {
         onImproveMessage={handleImproveMessage}
         onAddBody={handleAddBody}
         onLintReview={() => handleLintReview()}
+        onOpenSplitDialog={handleOpenSplitDialog}
         aiReviewPending={aiReview.isPending}
         lintReviewPending={lintReview.isPending}
         lintReviewResult={lintReviewResult}
@@ -1053,6 +1071,15 @@ export default function WorkingTree() {
         aiReviewPending={lintReview.isPending}
         aiReviewResult={lintReviewResult}
       />
+
+      <CommitSplitDialog
+        open={splitDialogOpen}
+        suggestion={scopeSuggestion}
+        repoPath={repoPath || ""}
+        onClose={() => setSplitDialogOpen(false)}
+        onCommitted={invalidate}
+      />
+
       {ctxMenu && (
         <ContextMenu
           x={ctxMenu.x}

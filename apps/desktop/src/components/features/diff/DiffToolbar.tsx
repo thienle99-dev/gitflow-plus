@@ -26,6 +26,9 @@ export interface DiffToolbarProps {
   canPatch: boolean;
   applying: number | null;
   onApplyHunk: (hunk: DiffHunk, index: number, action: "stage" | "unstage" | "discard") => void;
+  onAcceptAll?: () => void;
+  onRejectAll?: () => void;
+  batchingAll?: boolean;
   error: string | null;
   inlineCommentsError: string | null;
   onRetryInlineComments: () => void;
@@ -53,6 +56,9 @@ export default function DiffToolbar({
   canPatch,
   applying,
   onApplyHunk,
+  onAcceptAll,
+  onRejectAll,
+  batchingAll = false,
   error,
   inlineCommentsError,
   onRetryInlineComments,
@@ -165,7 +171,7 @@ export default function DiffToolbar({
                     <button
                       className="ghost text-2xs px-2 text-[#30d158] hover:bg-[#30d158]/10"
                       onClick={() => onApplyHunk(hunk, index, "stage")}
-                      disabled={applying !== null}
+                      disabled={applying !== null || batchingAll}
                       title="Accept all changes in this hunk (stage)"
                     >
                       {applying === index ? "Applying..." : "✓ Accept Hunk"}
@@ -173,7 +179,7 @@ export default function DiffToolbar({
                     <button
                       className="ghost text-2xs px-2 text-[#ff375f] hover:bg-[#ff375f]/10"
                       onClick={() => onApplyHunk(hunk, index, "discard")}
-                      disabled={applying !== null}
+                      disabled={applying !== null || batchingAll}
                       title="Reject and discard all changes in this hunk"
                     >
                       {applying === index ? "Applying..." : "✗ Reject Hunk"}
@@ -183,7 +189,7 @@ export default function DiffToolbar({
                   <button
                     className="ghost text-2xs px-2 hover:text-[#ff9f0a]"
                     onClick={() => onApplyHunk(hunk, index, "unstage")}
-                    disabled={applying !== null}
+                    disabled={applying !== null || batchingAll}
                     title="Unstage this hunk"
                   >
                     {applying === index ? "Applying..." : "↩ Unstage Hunk"}
@@ -192,6 +198,26 @@ export default function DiffToolbar({
               </div>
             );
           })}
+          {source === "working" && hunks.length > 1 && (
+            <div className="flex items-center gap-2 px-3 py-1.5 border-t border-border-60 bg-surface-1-20">
+              <button
+                className="ghost text-2xs px-2 text-[#30d158] hover:bg-[#30d158]/10 font-medium"
+                onClick={() => onAcceptAll?.()}
+                disabled={applying !== null || batchingAll}
+                title="Accept all hunks at once (stage)"
+              >
+                {batchingAll ? "Accepting..." : `✓ Accept All (${hunks.length})`}
+              </button>
+              <button
+                className="ghost text-2xs px-2 text-[#ff375f] hover:bg-[#ff375f]/10 font-medium"
+                onClick={() => onRejectAll?.()}
+                disabled={applying !== null || batchingAll}
+                title="Reject all hunks at once (discard)"
+              >
+                {batchingAll ? "Rejecting..." : `✗ Reject All (${hunks.length})`}
+              </button>
+            </div>
+          )}
         </div>
       )}
       {error && (
