@@ -1,6 +1,6 @@
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useState, useRef, useCallback } from "react";
 import { getVersion } from "@tauri-apps/api/app";
-import { Book, GitBranch, ArrowUp, ArrowDown, Loader2, GraduationCap, AlertTriangle, Terminal, Activity, RotateCcw, MessageSquareText, Download, X, Command, Stethoscope } from "lucide-react";
+import { Book, GitBranch, ArrowUp, ArrowDown, Loader2, AlertTriangle, Terminal, Activity, RotateCcw, MessageSquareText, Download, X, Command, Stethoscope, EllipsisVertical } from "lucide-react";
 import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
 import { useGitBranches, useGitStatus, useGitSyncStatus } from "@/queries/useGitLog";
@@ -117,6 +117,8 @@ export default function BottomBar() {
   const logsOpen = useLogsPanelStore((s) => s.isOpen);
   const toggleLogs = useLogsPanelStore((s) => s.toggleOpen);
   const [petEnabled, setPetEnabled] = useState(() => localStorage.getItem(LS_KEY_PET_ENABLED) !== "false");
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleSettingsUpdated = () => {
@@ -124,6 +126,23 @@ export default function BottomBar() {
     };
     window.addEventListener("gitflow-settings-updated", handleSettingsUpdated);
     return () => window.removeEventListener("gitflow-settings-updated", handleSettingsUpdated);
+  }, []);
+
+  // Close more popover on click outside
+  useEffect(() => {
+    if (!moreOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
+        setMoreOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [moreOpen]);
+
+  const handleMoreAction = useCallback((action: () => void) => {
+    setMoreOpen(false);
+    action();
   }, []);
 
   // Fetch Git details only if we have an active repository
@@ -234,11 +253,12 @@ export default function BottomBar() {
 
       <div className="flex-1" />
 
-      {/* Right side: Operations + Feature Guide + Onboarding */}
-      <div className="flex items-center gap-3">
+      {/* Right side: Primary actions + More popover */}
+      <div className="flex items-center gap-2">
+        {/* Primary: Ops (with badge) */}
         <button
           onClick={toggleOps}
-          className={`flex items-center gap-1 text-text-muted hover:text-accent transition-all p-0.5 rounded cursor-pointer mr-0.5 ${opsOpen ? "text-accent" : ""}`}
+          className={`flex items-center gap-1 text-text-muted hover:text-accent transition-all p-0.5 rounded cursor-pointer ${opsOpen ? "text-accent" : ""}`}
           title="Operation Center"
         >
           <Activity size={11} />
@@ -250,52 +270,70 @@ export default function BottomBar() {
           )}
         </button>
 
+        {/* Primary: Logs */}
         <button
           onClick={toggleLogs}
-          className={`flex items-center gap-1 text-text-muted hover:text-accent transition-all p-0.5 rounded cursor-pointer mr-0.5 ${logsOpen ? "text-accent" : ""}`}
+          className={`flex items-center gap-1 text-text-muted hover:text-accent transition-all p-0.5 rounded cursor-pointer ${logsOpen ? "text-accent" : ""}`}
           title="App Logs"
         >
           <Terminal size={11} />
           <span className="text-[9px] font-semibold">Logs</span>
         </button>
 
+        {/* Primary: Command Palette */}
         <button
           onClick={() => openDialogState("command-palette")}
-          className="flex items-center gap-1 text-text-muted hover:text-accent transition-all p-0.5 rounded cursor-pointer mr-0.5"
+          className="flex items-center gap-1 text-text-muted hover:text-accent transition-all p-0.5 rounded cursor-pointer"
           title="Command Palette (⌘K)"
         >
           <Command size={11} />
           <span className="text-[9px] font-semibold">⌘K</span>
         </button>
 
-        <button
-          onClick={() => openDialogState("diagnostics")}
-          className="flex items-center gap-1 text-text-muted hover:text-accent transition-all p-0.5 rounded cursor-pointer mr-0.5"
-          title="Diagnostics"
-        >
-          <Stethoscope size={11} />
-          <span className="text-[9px] font-semibold">Diag</span>
-        </button>
+        {/* Separator */}
+        <div className="border-l border-border-20 h-3" />
 
-        <button
-          onClick={() => openDialogState("commit-summary")}
-          className="flex items-center gap-1 text-text-muted hover:text-accent transition-all p-0.5 rounded cursor-pointer mr-0.5"
-          title="AI Commit Summary"
-        >
-          <MessageSquareText size={11} />
-          <span className="text-[9px] font-semibold">Summary</span>
-        </button>
+        {/* More popover trigger */}
+        <div className="relative" ref={moreRef}>
+          <button
+            onClick={() => setMoreOpen((v) => !v)}
+            className={`flex items-center justify-center text-text-muted hover:text-accent transition-all p-0.5 rounded cursor-pointer ${moreOpen ? "text-accent bg-surface-2-40" : ""}`}
+            title="More tools"
+          >
+            <EllipsisVertical size={12} />
+          </button>
 
-        <button
-          onClick={() => openDialogState("feature-guide")}
-          className="flex items-center gap-1 text-text-muted hover:text-text-primary transition-all p-0.5 rounded cursor-pointer mr-0.5"
-          title="Feature Guide (⌘⇧H)"
-        >
-          <Book size={11} />
-          <span className="text-[9px] font-semibold">Guide</span>
-        </button>
+          {moreOpen && (
+            <div className="absolute bottom-full right-0 mb-1 w-48 bg-surface-1-95 backdrop-blur-xl border border-border-40 rounded-mac shadow-xl py-1 z-[999] animate-in fade-in slide-in-from-bottom-1 duration-100">
+              <button
+                onClick={() => handleMoreAction(() => openDialogState("diagnostics"))}
+                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-left text-2xs text-text-secondary hover:bg-surface-2 hover:text-text-primary transition-colors cursor-default"
+              >
+                <Stethoscope size={11} className="text-text-muted shrink-0" />
+                <span>Diagnostics</span>
+                <kbd className="ml-auto px-1 py-0.5 bg-surface-2 border border-border rounded text-[9px] font-mono text-text-muted">⌘⇧D</kbd>
+              </button>
+              <button
+                onClick={() => handleMoreAction(() => openDialogState("commit-summary"))}
+                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-left text-2xs text-text-secondary hover:bg-surface-2 hover:text-text-primary transition-colors cursor-default"
+              >
+                <MessageSquareText size={11} className="text-text-muted shrink-0" />
+                <span>AI Commit Summary</span>
+              </button>
+              <button
+                onClick={() => handleMoreAction(() => openDialogState("feature-guide"))}
+                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-left text-2xs text-text-secondary hover:bg-surface-2 hover:text-text-primary transition-colors cursor-default"
+              >
+                <Book size={11} className="text-text-muted shrink-0" />
+                <span>Feature Guide</span>
+                <kbd className="ml-auto px-1 py-0.5 bg-surface-2 border border-border rounded text-[9px] font-mono text-text-muted">⌘⇧H</kbd>
+              </button>
+            </div>
+          )}
+        </div>
 
-        <div className="border-l border-border-20 pl-2 ml-1">
+        {/* Version */}
+        <div className="border-l border-border-20 pl-2 ml-0.5">
           <AppVersion />
         </div>
       </div>
