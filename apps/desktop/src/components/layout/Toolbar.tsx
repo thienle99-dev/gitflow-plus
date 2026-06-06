@@ -279,7 +279,7 @@ export default function Toolbar() {
               aria-label={`Pull remote changes${syncStatus?.behind ? ` (${syncStatus.behind} behind)` : ""}`}
               title="Pull remote changes"
             >
-              <ArrowDownToLine size={13} className="text-text-muted group-hover:text-text-primary" />
+              <ArrowDownToLine size={13} className={`${loading === "pull" ? "animate-spin text-accent" : "text-text-muted group-hover:text-text-primary"}`} />
               <span>Pull</span>
               {!!syncStatus?.behind && (
                 <span className="ml-0.5 rounded bg-[#0a84ff]/15 px-1.5 py-0.5 text-[9px] font-bold text-[#0a84ff]">
@@ -306,7 +306,7 @@ export default function Toolbar() {
               aria-label={`Push local commits${syncStatus?.ahead ? ` (${syncStatus.ahead} ahead)` : ""}`}
               title="Push local commits (risk analysis runs first)"
             >
-              <ArrowUpFromLine size={13} className="text-text-muted" />
+              <ArrowUpFromLine size={13} className={`${loading === "push" ? "animate-spin text-accent" : "text-text-muted"}`} />
               <span>Push</span>
               {!!syncStatus?.ahead && (
                 <span className="ml-0.5 rounded bg-[#30d158]/15 px-1.5 py-0.5 text-[9px] font-bold text-[#30d158]">
@@ -341,7 +341,7 @@ export default function Toolbar() {
                 disabled={!!loading}
                 title="Pull Git LFS objects"
               >
-                <ArrowDownToLine size={13} className="text-text-muted" />
+                <ArrowDownToLine size={13} className={`${loading === "lfs-pull" ? "animate-spin text-accent" : "text-text-muted"}`} />
                 <span>Pull</span>
               </button>
               <div className="w-[1px] h-3.5 bg-border-50" />
@@ -351,7 +351,7 @@ export default function Toolbar() {
                 disabled={!!loading}
                 title="Push Git LFS objects"
               >
-                <ArrowUpFromLine size={13} className="text-text-muted" />
+                <ArrowUpFromLine size={13} className={`${loading === "lfs-push" ? "animate-spin text-accent" : "text-text-muted"}`} />
                 <span>Push</span>
               </button>
             </div>
@@ -479,7 +479,7 @@ export default function Toolbar() {
                 aria-label="Undo last Git action"
                 title="Undo last Git action"
               >
-                <RotateCcw size={13} className="text-text-muted" />
+                <RotateCcw size={13} className={`${undoLast.isPending ? "animate-spin text-accent" : "text-text-muted"}`} />
                 <span>Undo</span>
               </button>
             </div>
