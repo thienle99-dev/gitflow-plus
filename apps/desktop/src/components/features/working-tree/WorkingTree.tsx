@@ -15,6 +15,8 @@ import ContextMenu, { type ContextMenuItem } from "@/components/ui/overlay/Conte
 import LazyDiffViewer from "@/components/features/diff/LazyDiffViewer";
 import { trackCommit, trackAICommitMessage, trackAIReview, trackAIGuardrail, trackAIReadiness, trackAICommitScope, trackAIImproveMessage, trackAIAddBody, trackAILintReview } from "@/lib/analytics";
 import { AlertCircle, Clipboard, ShieldAlert, MessageSquare } from "lucide-react";
+import { Skeleton } from "@/components/ui/feedback/Skeleton";
+import { EmptyState } from "@/components/ui/feedback/EmptyState";
 import { lintCommitMessage, autoFixCommitMessage, type CommitLintResult } from "@/lib/commit-lint";
 import { LintWarningDialog } from "@/components/features/dialogs";
 import {
@@ -1281,7 +1283,15 @@ function DiffReviewModal({ target, files, onChangeTarget, onClose, onRefresh }: 
 
         <div className="min-h-0 flex-1 bg-surface-0">
           {!isRenderReady || isLoading ? (
-            <div className="flex h-full items-center justify-center text-xs text-text-muted animate-pulse">Loading diff...</div>
+            <div className="flex h-full items-center justify-center p-4">
+              <div className="space-y-2 w-full max-w-xs">
+                <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-4 w-1/3" />
+              </div>
+            </div>
           ) : diff ? (
             <LazyDiffViewer
               diff={diff}
@@ -1291,7 +1301,7 @@ function DiffReviewModal({ target, files, onChangeTarget, onClose, onRefresh }: 
               autoInlineReview={target.autoInlineReview}
             />
           ) : (
-            <div className="flex h-full items-center justify-center text-xs text-text-muted">No changes</div>
+            <EmptyState variant="changes" title="No changes" description="This file has no diff to display" />
           )}
         </div>
       </div>

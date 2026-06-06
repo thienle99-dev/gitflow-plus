@@ -12,6 +12,8 @@ import TagPanel from "@/components/features/tags/TagPanel";
 import SubmoduleDetail from "@/components/features/submodules/SubmoduleDetail";
 import { useSubmoduleList } from "@/queries/useSubmoduleList";
 import FileHistoryPanel from "./FileHistoryPanel";
+import { EmptyState } from "@/components/ui/feedback/EmptyState";
+import { Skeleton } from "@/components/ui/feedback/Skeleton";
 
 export default function RightPanel() {
   const selectedCommit = useUIStore((s) => s.selectedCommit);
@@ -157,8 +159,11 @@ function DiffViewerPanel() {
       {showFileHistory && !selectedCommit ? (
         <FileHistoryPanel />
       ) : isLoading ? (
-        <div className="flex-1 flex items-center justify-center text-text-muted text-xs">
-          Loading diff...
+        <div className="flex-1 flex flex-col p-4 gap-2">
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+          <Skeleton className="h-4 w-2/3" />
         </div>
       ) : diff ? (
         <LazyDiffViewer
@@ -168,9 +173,7 @@ function DiffViewerPanel() {
           onPatchApplied={refreshDiff}
         />
       ) : (
-        <div className="flex-1 flex items-center justify-center text-text-muted text-xs">
-          No changes
-        </div>
+        <EmptyState variant="changes" title="No changes" description="Select a file to view its diff" />
       )}
     </div>
   );

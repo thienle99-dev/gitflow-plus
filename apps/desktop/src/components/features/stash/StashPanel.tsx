@@ -8,6 +8,8 @@ import { parseDiffFiles, countDiffChanges } from "@/lib/parse-diff";
 import { GitBranch, Download, Upload, Trash2, Play, FileText, Plus, Minus } from "lucide-react";
 import StashDiffViewer from "./StashDiffViewer";
 import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
+import { EmptyStateInline } from "@/components/ui/feedback/EmptyState";
+import { Skeleton } from "@/components/ui/feedback/Skeleton";
 
 /** Inline preview of stash contents (file count + insertions/deletions) */
 function StashPreview({ repoPath, stashIndex }: { repoPath: string; stashIndex: number }) {
@@ -152,10 +154,14 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
             Stashes ({stashes?.length ?? 0})
           </div>
           {isLoading && (
-            <div className="text-xs text-text-muted text-center py-4">Loading...</div>
+            <div className="space-y-1 px-3 py-2">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-3/4" />
+            </div>
           )}
           {!isLoading && (!stashes || stashes.length === 0) && (
-            <div className="text-xs text-text-muted text-center py-4">No stashes</div>
+            <EmptyStateInline variant="stash" title="No stashes" />
           )}
           {stashes?.map((stash) => {
             const { branch, label } = formatDate(stash.message);

@@ -3,6 +3,8 @@ import { useUIStore } from "@/stores/ui";
 import { useFileHistory } from "@/queries/useFileHistory";
 import { GitCommit, User, Clock, History } from "lucide-react";
 import { useCommitDateFormatter } from "@/lib/date";
+import { EmptyStateInline } from "@/components/ui/feedback/EmptyState";
+import { SkeletonCommitRow } from "@/components/ui/feedback/Skeleton";
 
 export default function FileHistoryPanel() {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -27,10 +29,15 @@ export default function FileHistoryPanel() {
 
       <div className="flex-1 overflow-y-auto">
         {isLoading && (
-          <div className="text-xs text-text-muted text-center py-6">Loading history...</div>
+          <div className="py-1">
+            <SkeletonCommitRow />
+            <SkeletonCommitRow />
+            <SkeletonCommitRow />
+            <SkeletonCommitRow />
+          </div>
         )}
         {!isLoading && (!commits || commits.length === 0) && (
-          <div className="text-xs text-text-muted text-center py-6">No commits for this file</div>
+          <EmptyStateInline variant="commits" title="No commits for this file" />
         )}
         {commits?.map((commit) => (
           <div

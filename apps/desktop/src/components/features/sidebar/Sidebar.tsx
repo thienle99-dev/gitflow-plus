@@ -12,6 +12,7 @@ import { api } from "@/api/tauri";
 import ContextMenu from "@/components/ui/overlay/ContextMenu";
 import { showToast } from "@/lib/toast";
 import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
+import { EmptyStateInline } from "@/components/ui/feedback/EmptyState";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { usePreflightGate } from "@/hooks/usePreflightGate";
 import {
@@ -282,9 +283,7 @@ export default function Sidebar() {
                       return name.toLowerCase().includes(repoSearchQuery.toLowerCase()) ||
                              path.toLowerCase().includes(repoSearchQuery.toLowerCase());
                     }).length === 0 && (
-                      <div className="px-3 py-2 text-xs text-text-muted italic">
-                        No repositories found
-                      </div>
+                      <EmptyStateInline variant="repo" title="No repositories found" />
                     )}
                   </div>
                 </>
@@ -433,10 +432,7 @@ export default function Sidebar() {
               </div>
             ))
           ) : (
-            <div className="flex items-center gap-2 px-3 py-[3px] mx-1 text-text-muted">
-              <Tag size={12} />
-              <span className="text-xs">No tags</span>
-            </div>
+            <EmptyStateInline variant="tags" title="No tags" />
           )}
         </div>
       )}

@@ -7,6 +7,8 @@ import { useGenerateTagDescription } from "@/queries/useAI";
 import { showToast } from "@/lib/toast";
 import { Tag, Plus, Trash2, Upload, GitCommit, User, Calendar, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/form";
+import { EmptyStateInline } from "@/components/ui/feedback/EmptyState";
+import { SkeletonTagRow } from "@/components/ui/feedback/Skeleton";
 
 export default function TagPanel({ onClose }: { onClose?: () => void }) {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -179,10 +181,14 @@ export default function TagPanel({ onClose }: { onClose?: () => void }) {
       {/* Tag list */}
       <div className="flex-1 overflow-y-auto">
         {isLoading && (
-          <div className="text-xs text-text-muted text-center py-6">Loading tags...</div>
+          <div className="py-2">
+            <SkeletonTagRow />
+            <SkeletonTagRow />
+            <SkeletonTagRow />
+          </div>
         )}
         {!isLoading && (!tags || tags.length === 0) && (
-          <div className="text-xs text-text-muted text-center py-6">No tags found</div>
+          <EmptyStateInline variant="tags" title="No tags found" />
         )}
         {tags?.map((tag) => (
           <div
