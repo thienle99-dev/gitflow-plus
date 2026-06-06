@@ -3,6 +3,12 @@ use tauri::Emitter;
 use tokio::process::Command;
 use super::op_lock::RepoLocks;
 
+fn clear_status_cache(cache_state: &tauri::State<'_, crate::RepoCache>, path: &str) {
+    if let Ok(mut cache) = cache_state.status_cache.lock() {
+        cache.remove(path);
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct CommitFileGroup {
     pub files: Vec<String>,
@@ -23,7 +29,11 @@ pub struct CommitGroupsResult {
 }
 
 #[tauri::command]
-pub async fn stage_file(path: String, file_path: String) -> Result<String, String> {
+pub async fn stage_file(
+    cache_state: tauri::State<'_, crate::RepoCache>,
+    path: String,
+    file_path: String,
+) -> Result<String, String> {
     let output = Command::new("git")
         .args(["--no-pager", "-C", &path, "add", &file_path])
         .output()
@@ -31,6 +41,7 @@ pub async fn stage_file(path: String, file_path: String) -> Result<String, Strin
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if output.status.success() {
+        clear_status_cache(&cache_state, &path);
         Ok(format!("Staged '{}'", file_path))
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -39,7 +50,11 @@ pub async fn stage_file(path: String, file_path: String) -> Result<String, Strin
 }
 
 #[tauri::command]
-pub async fn stage_files(path: String, file_paths: Vec<String>) -> Result<String, String> {
+pub async fn stage_files(
+    cache_state: tauri::State<'_, crate::RepoCache>,
+    path: String,
+    file_paths: Vec<String>,
+) -> Result<String, String> {
     if file_paths.is_empty() {
         return Ok("No files to stage".to_string());
     }
@@ -47,7 +62,7 @@ pub async fn stage_files(path: String, file_paths: Vec<String>) -> Result<String
     let mut args = vec![
         "--no-pager".to_string(),
         "-C".to_string(),
-        path,
+        path.clone(),
         "add".to_string(),
         "--".to_string(),
     ];
@@ -60,6 +75,7 @@ pub async fn stage_files(path: String, file_paths: Vec<String>) -> Result<String
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if output.status.success() {
+        clear_status_cache(&cache_state, &path);
         Ok(format!("Staged {} files", file_paths.len()))
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -68,7 +84,11 @@ pub async fn stage_files(path: String, file_paths: Vec<String>) -> Result<String
 }
 
 #[tauri::command]
-pub async fn unstage_file(path: String, file_path: String) -> Result<String, String> {
+pub async fn unstage_file(
+    cache_state: tauri::State<'_, crate::RepoCache>,
+    path: String,
+    file_path: String,
+) -> Result<String, String> {
     let output = Command::new("git")
         .args(["--no-pager", "-C", &path, "restore", "--staged", &file_path])
         .output()
@@ -76,6 +96,7 @@ pub async fn unstage_file(path: String, file_path: String) -> Result<String, Str
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if output.status.success() {
+        clear_status_cache(&cache_state, &path);
         Ok(format!("Unstaged '{}'", file_path))
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -84,7 +105,10 @@ pub async fn unstage_file(path: String, file_path: String) -> Result<String, Str
 }
 
 #[tauri::command]
-pub async fn stage_all(path: String) -> Result<String, String> {
+pub async fn stage_all(
+    cache_state: tauri::State<'_, crate::RepoCache>,
+    path: String,
+) -> Result<String, String> {
     let output = Command::new("git")
         .args(["--no-pager", "-C", &path, "add", "-A"])
         .output()
@@ -92,6 +116,7 @@ pub async fn stage_all(path: String) -> Result<String, String> {
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if output.status.success() {
+        clear_status_cache(&cache_state, &path);
         Ok("Staged all changes".to_string())
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -100,7 +125,10 @@ pub async fn stage_all(path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub async fn unstage_all(path: String) -> Result<String, String> {
+pub async fn unstage_all(
+    cache_state: tauri::State<'_, crate::RepoCache>,
+    path: String,
+) -> Result<String, String> {
     let output = Command::new("git")
         .args(["--no-pager", "-C", &path, "restore", "--staged", "."])
         .output()
@@ -108,6 +136,7 @@ pub async fn unstage_all(path: String) -> Result<String, String> {
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if output.status.success() {
+        clear_status_cache(&cache_state, &path);
         Ok("Unstaged all changes".to_string())
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -116,7 +145,11 @@ pub async fn unstage_all(path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub async fn discard_file(path: String, file_path: String) -> Result<String, String> {
+pub async fn discard_file(
+    cache_state: tauri::State<'_, crate::RepoCache>,
+    path: String,
+    file_path: String,
+) -> Result<String, String> {
     let restore = Command::new("git")
         .args([
             "--no-pager",
@@ -139,6 +172,7 @@ pub async fn discard_file(path: String, file_path: String) -> Result<String, Str
         .map_err(|e| format!("Failed to run git clean: {}", e))?;
 
     if restore.status.success() || clean.status.success() {
+        clear_status_cache(&cache_state, &path);
         Ok(format!("Discarded '{}'", file_path))
     } else {
         let restore_stderr = String::from_utf8_lossy(&restore.stderr);
@@ -152,7 +186,10 @@ pub async fn discard_file(path: String, file_path: String) -> Result<String, Str
 }
 
 #[tauri::command]
-pub async fn discard_all(path: String) -> Result<String, String> {
+pub async fn discard_all(
+    cache_state: tauri::State<'_, crate::RepoCache>,
+    path: String,
+) -> Result<String, String> {
     let restore = Command::new("git")
         .args([
             "--no-pager",
@@ -174,6 +211,7 @@ pub async fn discard_all(path: String) -> Result<String, String> {
         .map_err(|e| format!("Failed to run git clean: {}", e))?;
 
     if restore.status.success() || clean.status.success() {
+        clear_status_cache(&cache_state, &path);
         Ok("Discarded all changes".to_string())
     } else {
         let restore_stderr = String::from_utf8_lossy(&restore.stderr);
@@ -189,6 +227,7 @@ pub async fn discard_all(path: String) -> Result<String, String> {
 #[tauri::command]
 pub async fn commit_changes(
     locks: tauri::State<'_, RepoLocks>,
+    cache_state: tauri::State<'_, crate::RepoCache>,
     path: String,
     message: String,
     amend: Option<bool>,
@@ -214,6 +253,7 @@ pub async fn commit_changes(
         .map_err(|e| format!("Failed to run git: {}", e))?;
 
     if output.status.success() {
+        clear_status_cache(&cache_state, &args[2]);
         let stdout = String::from_utf8_lossy(&output.stdout);
         let short = stdout
             .lines()
@@ -232,6 +272,7 @@ pub async fn commit_changes(
 pub async fn commit_file_groups(
     app: tauri::AppHandle,
     locks: tauri::State<'_, RepoLocks>,
+    cache_state: tauri::State<'_, crate::RepoCache>,
     path: String,
     groups: Vec<CommitFileGroup>,
     no_verify: Option<bool>,
@@ -269,12 +310,14 @@ pub async fn commit_file_groups(
         run_git(&path, &["restore", "--staged", "."])
             .await
             .map_err(|e| format!("Group {}/{} failed while unstaging: {}", current, total, e))?;
+        clear_status_cache(&cache_state, &path);
 
         let mut add_args = vec!["add".to_string(), "--".to_string()];
         add_args.extend(group.files.iter().cloned());
         run_git_owned(&path, add_args)
             .await
             .map_err(|e| format!("Group {}/{} failed while staging files: {}", current, total, e))?;
+        clear_status_cache(&cache_state, &path);
 
         let mut commit_args = vec!["commit".to_string(), "-m".to_string(), message];
         if no_verify.unwrap_or(false) {
@@ -283,6 +326,7 @@ pub async fn commit_file_groups(
         run_git_owned(&path, commit_args)
             .await
             .map_err(|e| format!("Group {}/{} failed while committing: {}", current, total, e))?;
+        clear_status_cache(&cache_state, &path);
 
         committed += 1;
     }

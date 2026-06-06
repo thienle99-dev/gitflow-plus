@@ -69,3 +69,30 @@ export const useOperationsStore = create<OperationsState>((set, get) => ({
 
   setOpen: (open) => set({ isOpen: open }),
 }));
+
+/**
+ * Track a direct (non-React-Query) async operation in the operations store.
+ * Use this for Tauri API calls like fetch/pull/push that bypass React Query.
+ */
+export function trackRemoteOp(label: string, fn: () => Promise<any>): Promise<any> {
+  const id = `remote-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  useOperationsStore.getState().addOperation({
+    id,
+    type: "git",
+    label,
+  });
+  return fn().then(
+    (result) => {
+      useOperationsStore.getState().updateOperation(id, { status: "completed", endedAt: Date.now() });
+      return result;
+    },
+    (error) => {
+      useOperationsStore.getState().updateOperation(id, {
+        status: "failed",
+        endedAt: Date.now(),
+        error: error?.message ?? String(error),
+      });
+      throw error;
+    }
+  );
+}

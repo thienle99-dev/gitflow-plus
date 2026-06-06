@@ -51,6 +51,10 @@ const isBackgroundQuery = (query: any) => {
 const selectLastCompletedOrFailedId = (s: { operations: Array<{ id: string; status: string }> }) =>
   s.operations.find((op) => op.status === "completed" || op.status === "failed")?.id ?? null;
 
+/** Check if any operation in the store is still running */
+const selectHasRunningOps = (s: { operations: Array<{ status: string }> }) =>
+  s.operations.some((op) => op.status === "running");
+
 export function usePetState(): PetState {
   const repoPath = useRepoStore((s) => s.repoPath);
   const isFetching = useIsFetching({ predicate: isBackgroundQuery });
@@ -62,6 +66,7 @@ export function usePetState(): PetState {
 
   // Use primitive id selector so Zustand only re-renders when the id actually changes
   const lastOperationId = useOperationsStore(selectLastCompletedOrFailedId);
+  const hasRunningOps = useOperationsStore(selectHasRunningOps);
   const opsStore = useOperationsStore;
 
   // Internal state driven by timers
@@ -75,7 +80,7 @@ export function usePetState(): PetState {
   // Track activity timestamps
   useEffect(() => {
     lastActivityRef.current = Date.now();
-  }, [isLoading, hasConflicts]);
+  }, [isLoading, hasConflicts, hasRunningOps]);
 
   // Blink scheduler: random interval while idle
   const scheduleBlink = useCallback(() => {
@@ -109,11 +114,11 @@ export function usePetState(): PetState {
 
   // Wake up from sleep on any activity
   useEffect(() => {
-    if (isLoading || hasConflicts) {
+    if (isLoading || hasConflicts || hasRunningOps) {
       setTimerState((prev) => (prev === "sleeping" ? "idle" : prev));
       lastActivityRef.current = Date.now();
     }
-  }, [isLoading, hasConflicts]);
+  }, [isLoading, hasConflicts, hasRunningOps]);
 
   // Start blink schedule when idle
   useEffect(() => {
@@ -168,7 +173,7 @@ export function usePetState(): PetState {
   let derived: PetState = timerState;
 
   if (hasConflicts) derived = pickHigher("alarmed", derived);
-  if (isLoading) derived = pickHigher("loading", derived);
+  if (isLoading || hasRunningOps) derived = pickHigher("loading", derived);
 
   return derived;
 }

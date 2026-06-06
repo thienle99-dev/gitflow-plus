@@ -1,6 +1,7 @@
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { api } from "@/api/tauri";
+import { trackRemoteOp } from "@/stores/operations";
 import { useGitBranches, useGitStatus, useGitSyncStatus } from "@/queries/useGitLog";
 import { useGitLfsStatus } from "@/queries/useGitLfs";
 import { useMergeStatus } from "@/queries/useGitMerge";
@@ -113,7 +114,7 @@ export default function Toolbar() {
   const doAction = async (action: string, fn: () => Promise<any>) => {
     setLoading(action);
     try {
-      await fn();
+      await trackRemoteOp(action, fn);
       if (action === "pull" || action === "push" || action === "fetch") {
         queryClient.invalidateQueries({ queryKey: ["git", repoPath, "sync-status"] });
       }

@@ -8,6 +8,7 @@ import { useGenerateCommitMessage } from "@/queries/useAI";
 import { lintCommitMessage, autoFixCommitMessage, type CommitLintResult } from "@/lib/commit-lint";
 import { LintWarningDialog } from "@/components/features/dialogs";
 import { showToast } from "@/lib/toast";
+import { trackRemoteOp } from "@/stores/operations";
 import { TrayCommitBox } from "./TrayCommitBox";
 import { TrayFileChanges } from "./TrayFileChanges";
 import { TrayActions } from "./TrayActions";
@@ -306,13 +307,13 @@ export default function TrayPanelView() {
     setSyncLoading(action);
     try {
       if (action === "fetch") {
-        await api.remote.fetch(repoPath);
+        await trackRemoteOp("fetch", () => api.remote.fetch(repoPath));
         showToast("Fetch complete");
       } else if (action === "pull") {
-        await api.remote.pull(repoPath);
+        await trackRemoteOp("pull", () => api.remote.pull(repoPath));
         showToast("Pulled successfully");
       } else if (action === "push") {
-        await api.remote.push(repoPath);
+        await trackRemoteOp("push", () => api.remote.push(repoPath));
         showToast("Pushed successfully");
       }
       invalidate();

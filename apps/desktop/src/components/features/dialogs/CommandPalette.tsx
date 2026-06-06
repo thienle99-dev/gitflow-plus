@@ -5,6 +5,7 @@ import { useGitBranches } from "@/queries/useGitLog";
 import { api } from "@/api/tauri";
 import { showToast } from "@/lib/toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { trackRemoteOp } from "@/stores/operations";
 import {
   Search,
   GitBranch,
@@ -334,21 +335,21 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
     return {
       "git-fetch": async () => {
         try {
-          await api.remote.fetch(repoPath);
+          await trackRemoteOp("fetch", () => api.remote.fetch(repoPath));
           showToast("Fetched from remote");
           invalidate();
         } catch (e: any) { showToast(`Fetch failed: ${e}`, "error"); }
       },
       "git-pull": async () => {
         try {
-          await api.remote.pull(repoPath);
+          await trackRemoteOp("pull", () => api.remote.pull(repoPath));
           showToast("Pulled from remote");
           invalidate();
         } catch (e: any) { showToast(`Pull failed: ${e}`, "error"); }
       },
       "git-push": async () => {
         try {
-          await api.remote.push(repoPath);
+          await trackRemoteOp("push", () => api.remote.push(repoPath));
           showToast("Pushed to remote");
           invalidate();
         } catch (e: any) { showToast(`Push failed: ${e}`, "error"); }

@@ -7,6 +7,7 @@ import { Panel, PanelGroup, PanelResizeHandle, type ImperativePanelHandle } from
 import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
 import { api } from "@/api/tauri";
+import { trackRemoteOp } from "@/stores/operations";
 import Toolbar from "@/components/layout/Toolbar";
 import Sidebar from "@/components/features/sidebar/Sidebar";
 import CommitGraph from "@/components/features/graph/CommitGraph";
@@ -175,7 +176,7 @@ export default function MainLayout() {
     const intervalMs = safeMinutes * 60_000;
 
     const runFetch = () => {
-      api.remote.fetch(repoPath).then(() => {
+      trackRemoteOp("fetch", () => api.remote.fetch(repoPath)).then(() => {
         scheduleInvalidate(["git", repoPath, "sync-status"]);
         scheduleInvalidate(["git", repoPath, "branches"]);
       }).catch(() => {
@@ -236,7 +237,7 @@ export default function MainLayout() {
       } else if (action === "refresh") {
         if (repoPath) {
           queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
-          api.remote.fetch(repoPath).catch(console.error);
+          trackRemoteOp("fetch", () => api.remote.fetch(repoPath)).catch(console.error);
         }
       } else if (action === "toggle-theme") {
         toggleTheme();
