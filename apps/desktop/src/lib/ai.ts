@@ -186,7 +186,7 @@ export async function generateCommitMessageWithAI(
     };
   }
 
-  const diff = await api.diff.staged(repoPath);
+  const diff = await buildCommitMessageDiff(repoPath, files);
   if (!diff.trim()) {
     return {
       message: fallback,
@@ -203,6 +203,40 @@ export async function generateCommitMessageWithAI(
   }
 
   return { message, fallback: false };
+}
+
+async function buildCommitMessageDiff(repoPath: string, files: FileChange[]): Promise<string> {
+  const parts: string[] = [];
+
+  const stagedDiff = await api.diff.staged(repoPath).catch(() => "");
+  if (stagedDiff.trim()) {
+    parts.push("Staged changes:\n" + stagedDiff.trim());
+  }
+
+  const unstagedFiles = files.filter((file) => !file.staged);
+  if (unstagedFiles.length > 0) {
+    const unstagedDiffs = await Promise.all(
+      unstagedFiles.slice(0, 30).map(async (file) => {
+        if (file.status === "untracked") {
+          return `diff --git a/${file.path} b/${file.path}\nnew file: ${file.path}\n`;
+        }
+        const diff = await api.diff.file(repoPath, file.path).catch(() => "");
+        if (diff.trim()) return diff.trim();
+        return `${file.status}: ${file.path}`;
+      }),
+    );
+
+    const unstagedDiff = unstagedDiffs.filter(Boolean).join("\n\n");
+    if (unstagedDiff.trim()) {
+      parts.push("Unstaged changes:\n" + unstagedDiff.trim());
+    }
+
+    if (unstagedFiles.length > 30) {
+      parts.push(`Additional unstaged files omitted: ${unstagedFiles.length - 30}`);
+    }
+  }
+
+  return parts.join("\n\n");
 }
 
 export async function generateTagDescriptionWithAI({
