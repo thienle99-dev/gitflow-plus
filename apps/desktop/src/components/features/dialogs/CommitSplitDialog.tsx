@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import Dialog from "@/components/ui/overlay/Dialog";
 import { api } from "@/api/tauri";
 import { showToast } from "@/lib/toast";
+import { trackCommit, trackAICommitSplit } from "@/lib/analytics";
 import { RefreshCw, X, ChevronDown, ChevronRight, GitCommit, Sparkles } from "lucide-react";
 import type { CommitScopeSuggestion, CommitGroup } from "@/lib/ai";
 
@@ -90,9 +91,11 @@ export default function CommitSplitDialog({
           await api.commit.stage(repoPath, filePath);
         }
         await api.commit.commit(repoPath, msg, false);
+        trackCommit(group.files.length);
         successCount++;
         setCommittedCount(successCount);
       }
+      trackAICommitSplit(groups.length);
       showToast(`Committed ${successCount} ${successCount === 1 ? "commit" : "commits"}`);
       onCommitted();
       onClose();

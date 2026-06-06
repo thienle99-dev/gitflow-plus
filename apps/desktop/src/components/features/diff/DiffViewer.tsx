@@ -11,6 +11,7 @@ import DiffToolbar from "./DiffToolbar";
 import DiffSplitView from "./DiffSplitView";
 import DiffUnifiedView from "./DiffUnifiedView";
 import DiffAIReview from "./DiffAIReview";
+import { trackDiffOpen, trackDiffHunkAction, trackAIReview, trackAIInlineComments } from "@/lib/analytics";
 
 interface DiffViewerProps {
   diff: string;
@@ -49,6 +50,10 @@ export default function DiffViewer({
   const autoFiredRef = useRef(false);
 
   useEffect(() => {
+    trackDiffOpen(diffViewMode);
+  }, [diffViewMode]);
+
+  useEffect(() => {
     setReviewResult("");
     setShowReview(false);
     aiReview.reset();
@@ -72,6 +77,7 @@ export default function DiffViewer({
     }
     
     setShowReview(true);
+    trackAIReview(reviewMode);
     if (reviewResult) return;
 
     try {
@@ -98,6 +104,7 @@ export default function DiffViewer({
         mode: reviewMode,
       });
       setInlineComments(comments);
+      trackAIInlineComments(comments.length);
     } catch {
       // Error is rendered from the mutation state.
     }
@@ -138,6 +145,7 @@ export default function DiffViewer({
     setError(null);
     try {
       await api.diff.applyHunk(repoPath, buildHunkPatch(patchPrefix, hunk), action);
+      trackDiffHunkAction(action);
       onPatchApplied?.();
     } catch (e: any) {
       setError(String(e));
@@ -153,6 +161,7 @@ export default function DiffViewer({
     setError(null);
     try {
       await api.diff.applyHunk(repoPath, buildHunkPatch(patchPrefix, hunk), "discard");
+      trackDiffHunkAction("discard");
       onPatchApplied?.();
     } catch (e: any) {
       setError(String(e));
@@ -178,6 +187,7 @@ export default function DiffViewer({
       const line = hunk.lines[lineIndex];
       const patch = buildSingleLinePatch(patchPrefix, hunk, line);
       await api.diff.applyHunk(repoPath, patch, action);
+      trackDiffHunkAction(action);
       onPatchApplied?.();
     } catch (e: any) {
       setError(String(e));
@@ -195,6 +205,7 @@ export default function DiffViewer({
       const line = hunk.lines[lineIndex];
       const patch = buildSingleLinePatch(patchPrefix, hunk, line);
       await api.diff.applyHunk(repoPath, patch, "discard");
+      trackDiffHunkAction("discard");
       onPatchApplied?.();
     } catch (e: any) {
       setError(String(e));

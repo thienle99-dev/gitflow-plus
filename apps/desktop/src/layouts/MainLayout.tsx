@@ -18,6 +18,7 @@ import { useOperationObserver } from "@/hooks/useOperationObserver";
 import { isOnboardingComplete } from "@/components/features/dialogs";
 import ErrorBoundary from "@/components/ui/feedback/ErrorBoundary";
 import { AlertOctagon, RefreshCw, Trash2, FolderOpen, GitBranch, Clock } from "lucide-react";
+import { trackRepoOpen } from "@/lib/analytics";
 
 /* Lazy-loaded dialog components — only downloaded when opened */
 const SearchDialog = lazy(() => import("@/components/features/dialogs/SearchDialog"));
@@ -208,6 +209,7 @@ export default function MainLayout() {
       const selected = await openDialog({ directory: true, multiple: false });
       if (selected) {
         openRepo(selected as string);
+        trackRepoOpen("browse");
       }
     } catch (e) {
       const path = prompt("Enter repository path:");

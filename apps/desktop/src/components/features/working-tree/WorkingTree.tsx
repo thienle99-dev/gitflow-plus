@@ -12,6 +12,7 @@ import CommitSplitDialog from "@/components/features/dialogs/CommitSplitDialog";
 import { fileIcon, statusLabel, statusColor } from "@/components/ui/shared";
 import ContextMenu, { type ContextMenuItem } from "@/components/ui/overlay/ContextMenu";
 import LazyDiffViewer from "@/components/features/diff/LazyDiffViewer";
+import { trackCommit, trackAICommitMessage, trackAIReview, trackAIGuardrail, trackAIReadiness, trackAICommitScope, trackAIImproveMessage, trackAIAddBody, trackAILintReview } from "@/lib/analytics";
 import { AlertCircle, Clipboard, ShieldAlert, MessageSquare } from "lucide-react";
 import { lintCommitMessage, autoFixCommitMessage, type CommitLintResult } from "@/lib/commit-lint";
 import { LintWarningDialog } from "@/components/features/dialogs";
@@ -350,6 +351,7 @@ export default function WorkingTree() {
         await api.commit.stageAll(repoPath!);
       }
       const result = await api.commit.commit(repoPath!, msg, isAmend);
+      trackCommit(staged.length || unstaged.length);
       showToast(result);
       setCommitMessage("");
       setAmend(false);
@@ -425,6 +427,7 @@ export default function WorkingTree() {
 
     setLintReviewOpen(true);
     setLintReviewResult("");
+    trackAILintReview();
     lintReview.reset();
 
     try {
@@ -457,6 +460,7 @@ export default function WorkingTree() {
     setAiReviewOpen(true);
     setAiReviewCollapsed(false);
     setAiReviewResult("");
+    trackAIReview("custom");
     aiReview.reset();
 
     try {
@@ -491,6 +495,7 @@ export default function WorkingTree() {
     }
     setGuardrailOpen(true);
     setGuardrailResult(null);
+    trackAIGuardrail(filesToCheck.length);
     guardrail.reset();
     try {
       const result = await guardrail.mutateAsync({
@@ -507,6 +512,7 @@ export default function WorkingTree() {
     if (!repoPath || readiness.isPending) return;
     setReadinessOpen(true);
     setReadinessResult(null);
+    trackAIReadiness();
     readiness.reset();
     try {
       const result = await readiness.mutateAsync({
@@ -607,12 +613,14 @@ export default function WorkingTree() {
     showToast("Generating commit message for all changes...", "info");
     try {
       const result = await generateCommit.mutateAsync({ files: changes });
+      trackAICommitMessage();
       setCommitMessage(result.message);
       showToast(result.fallback ? `Generated message using local template${result.reason ? ` (${result.reason})` : ""}` : "AI commit message generated");
 
       // Run scope analysis in background (non-blocking)
       if (!result.fallback && changes.length > 0) {
         commitScope.mutateAsync({ repoPath: repoPath!, files: changes }).then((scope) => {
+          trackAICommitScope(scope?.groups.length ?? 0);
           if (scope?.shouldSplit && scope.groups.length > 1) {
             setScopeSuggestion(scope);
           }
@@ -638,6 +646,7 @@ export default function WorkingTree() {
     showToast("Analyzing commit scope...", "info");
     try {
       const scope = await commitScope.mutateAsync({ repoPath, files: changes || staged });
+      trackAICommitScope(scope?.groups.length ?? 0);
       if (scope?.shouldSplit && scope.groups.length > 1) {
         setScopeSuggestion(scope);
         showToast(`AI suggests splitting into ${scope.groups.length} commits`);
@@ -674,6 +683,7 @@ export default function WorkingTree() {
     }
     showToast("Improving commit message...", "info");
     try {
+      trackAIImproveMessage();
       const result = await improveMessage.mutateAsync({
         currentMessage: commitMessage,
         files: staged,
@@ -693,6 +703,7 @@ export default function WorkingTree() {
     }
     showToast("Generating commit body...", "info");
     try {
+      trackAIAddBody();
       const result = await addBody.mutateAsync({
         subject: commitMessage.split("\n")[0],
         files: staged,

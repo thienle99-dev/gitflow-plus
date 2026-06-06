@@ -7,6 +7,8 @@ import { ErrorProvider } from "./lib/ErrorContext";
 import ErrorBoundary from "./components/ui/feedback/ErrorBoundary";
 import { useAutoUpdateCheck } from "./hooks/useAutoUpdateCheck";
 import ForceUpdateGate from "./components/features/updater/ForceUpdateGate";
+import { initFirebase } from "./lib/firebase";
+import { trackAppOpen } from "./lib/analytics";
 
 function App() {
   const theme = useRepoStore((s) => s.theme);
@@ -17,6 +19,13 @@ function App() {
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
+
+  // Initialize Firebase on mount
+  useEffect(() => {
+    if (initFirebase()) {
+      trackAppOpen();
+    }
+  }, []);
 
   useEffect(() => {
     const handleStorage = (event: StorageEvent) => {

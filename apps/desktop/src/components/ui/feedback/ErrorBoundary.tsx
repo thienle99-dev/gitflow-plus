@@ -1,5 +1,7 @@
 import React, { Component, type ErrorInfo, type ReactNode } from "react";
-import { AlertOctagon, RefreshCw, Terminal, ChevronDown, ChevronRight, Copy, Check } from "lucide-react";
+import { AlertOctagon, RefreshCw, Terminal, ChevronDown, ChevronRight, Copy, Check, Bug } from "lucide-react";
+import { recordCrash } from "@/lib/crashlytics";
+import BugReportDialog from "@/components/features/dialogs/BugReportDialog";
 
 interface Props {
   children: ReactNode;
@@ -12,6 +14,7 @@ interface State {
   errorInfo: ErrorInfo | null;
   showDetails: boolean;
   copied: boolean;
+  showReportBug: boolean;
 }
 
 export default class ErrorBoundary extends Component<Props, State> {
@@ -21,6 +24,7 @@ export default class ErrorBoundary extends Component<Props, State> {
     errorInfo: null,
     showDetails: false,
     copied: false,
+    showReportBug: false,
   };
 
   public static getDerivedStateFromError(error: Error): Partial<State> {
@@ -30,6 +34,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error caught by ErrorBoundary:", error, errorInfo);
     this.setState({ errorInfo });
+    recordCrash(error, errorInfo.componentStack ?? undefined, "ErrorBoundary");
   }
 
   private handleReset = () => {
@@ -59,10 +64,19 @@ export default class ErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
-        return this.props.fallback;
+        return (
+          <>
+            {this.props.fallback}
+            <BugReportDialog
+              open={this.state.showReportBug}
+              onClose={() => this.setState({ showReportBug: false })}
+            />
+          </>
+        );
       }
 
       return (
+        <>
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-0-90 backdrop-blur-md p-6 select-none animate-in fade-in duration-300">
           <div className="w-[520px] bg-surface-1 border border-border shadow-2xl rounded-mac p-6 flex flex-col items-center text-center space-y-5 animate-in zoom-in-95 duration-200">
             {/* Danger Icon with Accent styling */}
@@ -136,6 +150,14 @@ export default class ErrorBoundary extends Component<Props, State> {
             <div className="flex items-center justify-end gap-2.5 w-full border-t border-border-40 pt-4 shrink-0">
               <button
                 type="button"
+                onClick={() => this.setState({ showReportBug: true })}
+                className="h-8 px-4 bg-surface-2 hover:bg-surface-3 border border-border text-text-secondary rounded-[5px] text-2xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <Bug size={11} />
+                <span>Report Bug</span>
+              </button>
+              <button
+                type="button"
                 onClick={this.handleReset}
                 className="h-8 px-4 bg-accent text-accent-fg rounded-[5px] text-2xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:opacity-90 active:scale-98"
               >
@@ -145,6 +167,11 @@ export default class ErrorBoundary extends Component<Props, State> {
             </div>
           </div>
         </div>
+        <BugReportDialog
+          open={this.state.showReportBug}
+          onClose={() => this.setState({ showReportBug: false })}
+        />
+        </>
       );
     }
 
