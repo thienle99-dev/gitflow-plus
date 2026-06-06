@@ -984,6 +984,109 @@ button.ghost:active {
   }
 }
 
+/* ─── Panel Transition Animations ─────────────────────────────────────── */
+
+@keyframes overlay-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes overlay-backdrop-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes dialog-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+@keyframes dialog-exit {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+}
+
+@keyframes palette-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+@keyframes palette-exit {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.96) translateY(-8px);
+  }
+}
+
+@keyframes slide-up-enter {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes slide-up-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+}
+
+/* Animation utility classes */
+.anim-overlay-enter {
+  animation: overlay-backdrop-in 150ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.anim-overlay-exit {
+  animation: overlay-backdrop-out 120ms ease-in forwards;
+}
+
+.anim-dialog-enter {
+  animation: dialog-enter 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.anim-dialog-exit {
+  animation: dialog-exit 150ms ease-in forwards;
+}
+
+.anim-palette-enter {
+  animation: palette-enter 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.anim-palette-exit {
+  animation: palette-exit 120ms ease-in forwards;
+}
+
+.anim-slide-up-enter {
+  animation: slide-up-enter 250ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.anim-slide-up-exit {
+  animation: slide-up-exit 200ms ease-in forwards;
+}
+
 .inline-review-comment-error {
   border-left-color: var(--danger);
   background: color-mix(in srgb, var(--danger) 8%, transparent);

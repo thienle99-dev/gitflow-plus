@@ -1,4 +1,5 @@
 import { useOperationsStore, type Operation } from "@/stores/operations";
+import { useAnimatedMount } from "@/hooks/useAnimatedMount";
 import { Loader2, CheckCircle2, XCircle, X, Trash2, Clock, Bot, GitBranch } from "lucide-react";
 
 function elapsed(startMs: number, endMs?: number): string {
@@ -70,10 +71,17 @@ export default function OperationCenter() {
   const running = operations.filter((op) => op.status === "running");
   const history = operations.filter((op) => op.status !== "running");
 
-  if (!isOpen) return null;
+  const [shouldRender, phase] = useAnimatedMount(isOpen, 250);
+
+  if (!shouldRender) return null;
+
+  const isExiting = phase === "exit";
 
   return (
-    <div className="border-t border-border-60 bg-surface-1-80 backdrop-blur-md flex flex-col" style={{ height: 200 }}>
+    <div
+      className={`border-t border-border-60 bg-surface-1-80 backdrop-blur-md flex flex-col ${isExiting ? "anim-slide-up-exit" : "anim-slide-up-enter"}`}
+      style={{ height: 200 }}
+    >
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-border-40 shrink-0">
         <div className="flex items-center gap-2">

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useAnimatedMount } from "@/hooks/useAnimatedMount";
 
 export interface DialogProps {
   open: boolean;
@@ -80,11 +81,15 @@ export default function Dialog({
     [closeOnBackdrop, onClose],
   );
 
-  if (!open) return null;
+  const [shouldRender, phase] = useAnimatedMount(open, 200);
+
+  if (!shouldRender) return null;
+
+  const isExiting = phase === "exit";
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-150"
+      className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm ${isExiting ? "anim-overlay-exit" : "anim-overlay-enter"}`}
       onMouseDown={handleBackdropClick}
     >
       <div
@@ -93,7 +98,7 @@ export default function Dialog({
         aria-modal="true"
         aria-labelledby={title ? "dialog-title" : undefined}
         tabIndex={-1}
-        className="relative w-full mx-4 rounded-xl border border-border bg-surface-1 shadow-2xl animate-in zoom-in-95 fade-in duration-150 outline-none"
+        className={`relative w-full mx-4 rounded-xl border border-border bg-surface-1 shadow-2xl outline-none ${isExiting ? "anim-dialog-exit" : "anim-dialog-enter"}`}
         style={{ maxWidth }}
         onKeyDown={(e) => {
           // Trap focus within dialog

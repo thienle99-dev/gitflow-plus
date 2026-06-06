@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, Copy, Loader2, RefreshCw, Search, Terminal, Trash2, X } from "lucide-react";
 import { api, type AppLogEntry } from "@/api/tauri";
 import { useLogsPanelStore } from "@/stores/logs";
+import { useAnimatedMount } from "@/hooks/useAnimatedMount";
 
 function levelBadgeClass(level: string) {
   switch (level.toUpperCase()) {
@@ -21,6 +22,7 @@ function levelBadgeClass(level: string) {
 export default function LogCenter() {
   const isOpen = useLogsPanelStore((s) => s.isOpen);
   const setOpen = useLogsPanelStore((s) => s.setOpen);
+  const [shouldRender, phase] = useAnimatedMount(isOpen, 250);
   const [entries, setEntries] = useState<AppLogEntry[]>([]);
   const [logPath, setLogPath] = useState("");
   const [level, setLevel] = useState("ALL");
@@ -62,7 +64,9 @@ export default function LogCenter() {
     await refreshLogs();
   };
 
-  if (!isOpen) return null;
+  if (!shouldRender) return null;
+
+  const isExiting = phase === "exit";
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -85,7 +89,7 @@ export default function LogCenter() {
   const warnCount = entries.filter((e) => e.level.toUpperCase() === "WARN").length;
 
   return (
-    <div className="border-t border-border-60 bg-surface-1-80 backdrop-blur-md flex flex-col" style={{ height: 300 }}>
+    <div className={`border-t border-border-60 bg-surface-1-80 backdrop-blur-md flex flex-col ${isExiting ? "anim-slide-up-exit" : "anim-slide-up-enter"}`} style={{ height: 300 }}>
       <div className="flex items-center justify-between gap-3 px-3 py-1.5 border-b border-border-40 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <Terminal size={12} className="text-accent shrink-0" />
