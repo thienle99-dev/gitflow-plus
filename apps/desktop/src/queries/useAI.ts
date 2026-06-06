@@ -9,7 +9,9 @@ import {
   type CommitSummaryResult,
   type CommitGuardrailResult,
   type CommitReadinessResult,
+  type FixPlanResult,
   type GeneratedTagDescription,
+  type GuardrailFinding,
   reviewLintIssuesWithAI,
   generateCommitMessageWithAI,
   generateTagDescriptionWithAI,
@@ -28,6 +30,7 @@ import {
   runCommitGuardrail,
   checkCommitReadiness,
   suggestBranchName,
+  generateFixPlan,
 } from "@/lib/ai";
 import type { CommitLintResult } from "@/lib/commit-lint";
 
@@ -265,6 +268,20 @@ export function useAILintReview(repoPath: string | null) {
     mutationFn: (input) => {
       if (!repoPath) throw new Error("No repository selected");
       return reviewLintIssuesWithAI(repoPath, input);
+    },
+  });
+}
+
+export function useAIFixPlan(repoPath: string | null) {
+  return useMutation<FixPlanResult, Error, {
+    files: FileChange[];
+    commitMessage: string;
+    findings: GuardrailFinding[];
+  }>({
+    mutationKey: ["ai.fix-plan"],
+    mutationFn: ({ files, commitMessage, findings }) => {
+      if (!repoPath) throw new Error("No repository selected");
+      return generateFixPlan(repoPath, files, commitMessage, findings);
     },
   });
 }

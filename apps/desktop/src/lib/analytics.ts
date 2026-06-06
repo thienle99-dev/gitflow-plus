@@ -155,6 +155,11 @@ export function trackAITagDescription() {
   if (a) logEvent(a, "ai_tag_description");
 }
 
+export function trackAIFixPlan(itemCount = 0) {
+  const a = getA();
+  if (a) logEvent(a, "ai_fix_plan", { itemCount });
+}
+
 export function trackAIBranchSuggestion() {
   const a = getA();
   if (a) logEvent(a, "ai_branch_suggestion");

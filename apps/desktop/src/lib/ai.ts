@@ -2425,3 +2425,131 @@ Example: [{"name":"feat/login-validation","reason":"Added form validation logic 
   const slug = topFolder ? topFolder.toLowerCase().replace(/[^a-z0-9]/g, "-") : "changes";
   return [{ name: `${type}/${slug}`, reason: "Derived from file paths (AI response could not be parsed)" }];
 }
+
+// ─── AI Fix Plan ────────────────────────────────────────────────────────────
+
+export type FixPlanRiskLevel = "safe" | "low" | "medium" | "high";
+
+export interface FixPlanItem {
+  file: string;
+  reason: string;
+  riskLevel: FixPlanRiskLevel;
+  suggestedAction: string;
+}
+
+export interface FixPlanResult {
+  items: FixPlanItem[];
+  summary: string;
+}
+
+/**
+ * Generate an AI-powered fix plan from guardrail findings.
+ * Returns a list of files to fix, reasons, risk levels, and suggested actions.
+ */
+export async function generateFixPlan(
+  repoPath: string,
+  files: FileChange[],
+  commitMessage: string,
+  findings: GuardrailFinding[],
+): Promise<FixPlanResult> {
+  const settings = readAISettings();
+  if (!hasProvider(settings)) {
+    // Local-only fallback: derive plan from findings without AI
+    return buildLocalFixPlan(findings);
+  }
+
+  const diff = await api.diff.staged(repoPath).catch(() => "");
+  const fileList = files.map((f) => `- [${f.status}] ${f.path}`).join("\n");
+  const findingsText = findings
+    .map((f) => `- [${f.severity.toUpperCase()}] ${f.category}: ${f.message}${f.file ? ` (${f.file})` : ""}${f.action ? ` → ${f.action}` : ""}`)
+    .join("\n");
+  const conventionContext = await getConventionContext(repoPath);
+  const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
+
+  const prompt = `You are a senior developer generating a fix plan based on pre-commit guardrail findings. Analyze the findings, staged files, and diff to produce actionable fix suggestions.
+
+STAGED FILES:
+${fileList}
+
+COMMIT MESSAGE:
+${commitMessage || "(empty)"}
+
+GUARDRAIL FINDINGS:
+${findingsText || "(none)"}
+
+DIFF (truncated):
+${diff.slice(0, 8000)}
+
+TASK: Generate a fix plan. For each finding that can be fixed:
+1. Identify the specific file(s) affected
+2. Explain WHY the fix is needed
+3. Assess the risk level of applying the fix
+4. Suggest a concrete action
+
+Respond in this EXACT JSON format (no markdown, no code blocks):
+{
+  "items": [
+    {
+      "file": "path/to/file",
+      "reason": "Brief explanation of why this fix is needed",
+      "riskLevel": "safe" | "low" | "medium" | "high",
+      "suggestedAction": "Concrete description of what to change"
+    }
+  ],
+  "summary": "One-line summary of the fix plan"
+}
+
+RULES:
+- riskLevel: "safe" = no side effects (e.g. remove console.log), "low" = minor changes, "medium" = structural changes, "high" = risky changes that need careful review
+- Only include files that have actionable fixes. Skip informational findings.
+- Max 8 items. Focus on the most impactful fixes first.
+- If all findings are informational or have no actionable fixes, return empty items array with summary explaining why.
+${languageInstruction}${conventionContext}`;
+
+  try {
+    const raw = cleanAIText(await requestAIText(prompt, settings));
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (parsed && Array.isArray(parsed.items)) {
+        const items: FixPlanItem[] = parsed.items
+          .filter((item: any) => typeof item.file === "string" && typeof item.reason === "string")
+          .slice(0, 8)
+          .map((item: any) => ({
+            file: String(item.file),
+            reason: String(item.reason),
+            riskLevel: ["safe", "low", "medium", "high"].includes(item.riskLevel) ? item.riskLevel : "medium",
+            suggestedAction: String(item.suggestedAction || ""),
+          }));
+        return {
+          items,
+          summary: String(parsed.summary || `Fix plan: ${items.length} item(s) to address.`),
+        };
+      }
+    }
+  } catch {
+    // AI failed — fall back to local
+  }
+
+  return buildLocalFixPlan(findings);
+}
+
+function buildLocalFixPlan(findings: GuardrailFinding[]): FixPlanResult {
+  const items: FixPlanItem[] = [];
+  for (const f of findings) {
+    if (f.severity === "critical" || f.severity === "high") {
+      items.push({
+        file: f.file || "(multiple files)",
+        reason: f.message,
+        riskLevel: f.severity === "critical" ? "high" : "medium",
+        suggestedAction: f.action || `Address the ${f.category} issue: ${f.message}`,
+      });
+    }
+  }
+  return {
+    items,
+    summary: items.length === 0
+      ? "No actionable fixes needed based on guardrail findings."
+      : `Local fix plan: ${items.length} item(s) identified from guardrail findings.`,
+  };
+}

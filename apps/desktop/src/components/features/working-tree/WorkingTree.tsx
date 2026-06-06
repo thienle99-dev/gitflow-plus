@@ -4,8 +4,8 @@ import { useUIStore } from "@/stores/ui";
 import { useGitDiff, useGitStatus } from "@/queries/useGitLog";
 import { api, type CommitGroupProgress, type FileChange, type LintDiagnostic } from "@/api/tauri";
 import { listen } from "@tauri-apps/api/event";
-import { useGenerateCommitMessage, useAICommitScope, useAIDiffReview, useImproveCommitMessage, useAddCommitBody, useAICommitGuardrail, useAICommitReadiness, useAILintReview } from "@/queries/useAI";
-import { generateLocalCommitMessage, shouldAnalyzeScope, type CommitScopeSuggestion, type CommitGuardrailResult, type CommitReadinessResult } from "@/lib/ai";
+import { useGenerateCommitMessage, useAICommitScope, useAIDiffReview, useImproveCommitMessage, useAddCommitBody, useAICommitGuardrail, useAICommitReadiness, useAILintReview, useAIFixPlan } from "@/queries/useAI";
+import { generateLocalCommitMessage, shouldAnalyzeScope, type CommitScopeSuggestion, type CommitGuardrailResult, type CommitReadinessResult, type FixPlanResult } from "@/lib/ai";
 import { useQueryClient } from "@tanstack/react-query";
 import { showToast } from "@/lib/toast";
 import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
@@ -13,7 +13,7 @@ import CommitSplitDialog from "@/components/features/dialogs/CommitSplitDialog";
 import { fileIcon, statusLabel, statusColor } from "@/components/ui/shared";
 import ContextMenu, { type ContextMenuItem } from "@/components/ui/overlay/ContextMenu";
 import LazyDiffViewer from "@/components/features/diff/LazyDiffViewer";
-import { trackCommit, trackAICommitMessage, trackAIReview, trackAIGuardrail, trackAIReadiness, trackAICommitScope, trackAIImproveMessage, trackAIAddBody, trackAILintReview } from "@/lib/analytics";
+import { trackCommit, trackAICommitMessage, trackAIReview, trackAIGuardrail, trackAIReadiness, trackAICommitScope, trackAIImproveMessage, trackAIAddBody, trackAILintReview, trackAIFixPlan } from "@/lib/analytics";
 import { AlertCircle, Clipboard, ShieldAlert, MessageSquare } from "lucide-react";
 import { Skeleton } from "@/components/ui/feedback/Skeleton";
 import { EmptyState } from "@/components/ui/feedback/EmptyState";
@@ -49,6 +49,7 @@ export default function WorkingTree() {
   const guardrail = useAICommitGuardrail(repoPath);
   const readiness = useAICommitReadiness(repoPath);
   const lintReview = useAILintReview(repoPath);
+  const fixPlan = useAIFixPlan(repoPath);
   const [commitMessage, setCommitMessage] = useState("");
   const [lintResults, setLintResults] = useState<CommitLintResult[]>([]);
 

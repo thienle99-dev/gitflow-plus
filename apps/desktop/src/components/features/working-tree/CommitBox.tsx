@@ -375,27 +375,33 @@ export default function CommitBox({
             <button
               type="button"
               onClick={onCommit}
-              disabled={!hasCommitMessage || !hasAnyChanges || committing || lintRunning}
-              className={`h-7 px-3 rounded-mac text-3xs font-bold inline-flex items-center gap-1.5 transition-all shadow-sm cursor-pointer select-none ${hasCommitMessage && hasAnyChanges
+              disabled={!hasCommitMessage || !hasAnyChanges || committing || lintRunning || scopeAnalyzing || commitScopePending || (scopeSuggestion != null && !scopeDismissed)}
+              className={`h-7 px-3 rounded-mac text-3xs font-bold inline-flex items-center gap-1.5 transition-all shadow-sm cursor-pointer select-none ${hasCommitMessage && hasAnyChanges && !scopeAnalyzing && !commitScopePending && !(scopeSuggestion != null && !scopeDismissed)
                 ? "bg-[#30d158] text-[#07140a] hover:bg-[#30d158]/90 active:scale-[0.99]"
                 : "bg-surface-2-40 text-text-muted opacity-35 cursor-not-allowed shadow-none"
-                } ${committing || lintRunning ? "opacity-60" : ""}`}
+                } ${committing || lintRunning || scopeAnalyzing || commitScopePending ? "opacity-60" : ""}`}
               title={
-                !commitMessage.trim()
-                  ? "Enter a commit message"
-                  : staged.length === 0 && unstaged.length === 0
-                    ? "No changes to commit"
-                    : staged.length === 0
-                      ? "Commit all changes"
-                      : "Commit (⌘↵)"
+                scopeAnalyzing
+                  ? "Analyzing commit scope..."
+                  : commitScopePending
+                    ? "Processing scope analysis..."
+                    : scopeSuggestion != null && !scopeDismissed
+                      ? "Review the split suggestion above before committing"
+                      : !commitMessage.trim()
+                        ? "Enter a commit message"
+                        : staged.length === 0 && unstaged.length === 0
+                          ? "No changes to commit"
+                          : staged.length === 0
+                            ? "Commit all changes"
+                            : "Commit (⌘↵)"
               }
             >
-              {lintRunning ? (
+              {committing || lintRunning || scopeAnalyzing || commitScopePending ? (
                 <RefreshCw size={11} className="animate-spin" />
               ) : (
                 <Check size={11} />
               )}
-              <span>{committing ? "Committing..." : lintRunning ? "Linting..." : unstaged.length > 0 ? "Commit All" : "Commit"}</span>
+              <span>{committing ? "Committing..." : lintRunning ? "Linting..." : scopeAnalyzing ? "Analyzing..." : commitScopePending ? "Analyzing..." : unstaged.length > 0 ? "Commit All" : "Commit"}</span>
             </button>
           </div>
 
