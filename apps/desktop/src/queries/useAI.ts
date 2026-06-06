@@ -12,6 +12,7 @@ import {
   type CommitCoachResult,
   type FixPlanResult,
   type BranchCompareSummary,
+  type PRDraft,
   type GeneratedTagDescription,
   type GuardrailFinding,
   reviewLintIssuesWithAI,
@@ -35,6 +36,7 @@ import {
   generateFixPlan,
   runCommitCoach,
   summarizeBranchComparison,
+  generatePRDraft,
 } from "@/lib/ai";
 import type { CommitLintResult } from "@/lib/commit-lint";
 
@@ -316,6 +318,20 @@ export function useAICommitCoach(repoPath: string | null) {
     mutationFn: ({ staged, unstaged, commitMessage }) => {
       if (!repoPath) throw new Error("No repository selected");
       return runCommitCoach(repoPath, staged, unstaged, commitMessage);
+    },
+  });
+}
+
+export function useAIPRDraft(repoPath: string | null) {
+  return useMutation<PRDraft, Error, {
+    branchName: string;
+    staged: FileChange[];
+    commitMessage: string;
+  }>({
+    mutationKey: ["ai.pr-draft"],
+    mutationFn: ({ branchName, staged, commitMessage }) => {
+      if (!repoPath) throw new Error("No repository selected");
+      return generatePRDraft(repoPath, branchName, staged, commitMessage);
     },
   });
 }

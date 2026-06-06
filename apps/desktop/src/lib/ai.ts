@@ -2970,3 +2970,215 @@ function buildLocalBranchSummary(
     stats,
   };
 }
+
+// ─── AI PR/MR Draft Generator ───────────────────────────────────────────────
+
+export interface PRDraftSection {
+  title: string;
+  content: string;
+}
+
+export interface PRDraft {
+  title: string;
+  description: string;
+  checklist: string[];
+  testingNotes: string;
+  riskNotes: string;
+  linkedIssue: string;
+  rawMarkdown: string;
+}
+
+export async function generatePRDraft(
+  repoPath: string,
+  branchName: string,
+  staged: FileChange[],
+  commitMessage: string,
+): Promise<PRDraft> {
+  const settings = readAISettings();
+  if (!hasProvider(settings)) {
+    return buildLocalPRDraft(branchName, staged, commitMessage);
+  }
+
+  // Build a diff summary from staged files
+  let diffSnippet = "";
+  try {
+    const unstagedFiles = await api.changes.list(repoPath);
+    // Get actual diff for a few key files
+    const keyFiles = staged.slice(0, 8);
+    const diffs = await Promise.all(
+      keyFiles.map(async (f) => {
+        try {
+          const d = await api.changes.diff(repoPath, f.path, "staged");
+          return `### ${f.path}\n${d.slice(0, 1500)}`;
+        } catch {
+          return `### ${f.path}\n(diff not available)`;
+        }
+      }),
+    );
+    diffSnippet = diffs.join("\n\n");
+  } catch {
+    // Diff not available, proceed without
+  }
+
+  const fileSummary = staged
+    .map((f) => `- [${f.status}] ${f.path} (+${f.additions}/-${f.deletions})`)
+    .join("\n");
+
+  const conventionContext = await getConventionContext(repoPath);
+
+  const prompt = `You are a PR/MR description generator. Given branch info, staged changes, and commit message, generate a complete PR/MR draft.
+
+## Branch Info
+
+- Branch: ${branchName}
+- Commit message: ${commitMessage || "(no commit message yet)"}
+
+## Changed Files (${staged.length} files)
+
+${fileSummary}
+
+## Diff Snippets
+
+${diffSnippet || "(diff snippets not available)"}
+${conventionContext}
+
+## Instructions
+
+Generate a JSON object with the following structure:
+
+{
+  "title": "A concise, descriptive PR title (imperative mood, <72 chars)",
+  "description": "A detailed PR description in markdown format. Include: what changed, why, how it works, and any important context. 2-4 paragraphs.",
+  "checklist": [
+    "Checklist item 1",
+    "Checklist item 2",
+    "..."
+  ],
+  "testingNotes": "How to test these changes. Include specific steps, commands, or scenarios to verify. 2-4 sentences.",
+  "riskNotes": "Potential risks, breaking changes, or areas that need extra attention during review. 2-3 sentences.",
+  "linkedIssue": "Best guess at the linked issue based on the branch name (e.g., if branch is 'feat/user-auth', suggest 'Closes #___' format). If unclear, suggest an empty string."
+}
+
+## Guidelines
+
+- Title: Use conventional commit format if the branch name or commit message suggests it (e.g., "feat:", "fix:", "refactor:")
+- Description: Be specific about what changed and why. Mention affected areas.
+- Checklist: Include 3-6 practical items (types, tests, docs, lint, etc.)
+- Testing notes: Be concrete — mention URLs, commands, or test files
+- Risk notes: Highlight breaking changes, performance impacts, or security concerns
+- Linked issue: Extract issue number or feature area from branch name pattern (e.g., 'feat/PROJ-123-user-auth' → 'Closes PROJ-123')
+
+Return ONLY the JSON object, no markdown fences or extra text.`;
+
+  const raw = await requestAIText(prompt, settings);
+  const text = cleanAIText(raw);
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) {
+    return buildLocalPRDraft(branchName, staged, commitMessage);
+  }
+
+  try {
+    const parsed = JSON.parse(match[0]);
+    const title = String(parsed.title || `PR: ${branchName}`);
+    const description = String(parsed.description || "");
+    const checklist = Array.isArray(parsed.checklist)
+      ? parsed.checklist.map((c: any) => String(c))
+      : [];
+    const testingNotes = String(parsed.testingNotes || "");
+    const riskNotes = String(parsed.riskNotes || "");
+    const linkedIssue = String(parsed.linkedIssue || "");
+
+    const rawMarkdown = [
+      `# ${title}`,
+      "",
+      description,
+      "",
+      "## Checklist",
+      "",
+      ...checklist.map((c) => `- [ ] ${c}`),
+      "",
+      "## Testing Notes",
+      "",
+      testingNotes,
+      "",
+      "## Risk Notes",
+      "",
+      riskNotes,
+      "",
+      linkedIssue ? `## Linked Issue\n\n${linkedIssue}` : "",
+    ].filter(Boolean).join("\n");
+
+    return { title, description, checklist, testingNotes, riskNotes, linkedIssue, rawMarkdown };
+  } catch {
+    return buildLocalPRDraft(branchName, staged, commitMessage);
+  }
+}
+
+function buildLocalPRDraft(
+  branchName: string,
+  staged: FileChange[],
+  commitMessage: string,
+): PRDraft {
+  const added = staged.filter((f) => f.status.toUpperCase().startsWith("A"));
+  const deleted = staged.filter((f) => f.status.toUpperCase().startsWith("D"));
+  const modified = staged.filter((f) => !f.status.toUpperCase().startsWith("A") && !f.status.toUpperCase().startsWith("D"));
+
+  // Extract issue guess from branch name
+  const issueMatch = branchName.match(/(?:fix|feat|feature|bugfix|hotfix|chore|refactor)\/?(?:[A-Z]+-\d+)?[-/]?(.+)/i);
+  const issueGuess = issueMatch ? `Closes #___ (${issueMatch[1]?.replace(/[-_]/g, " ") || branchName})` : "";
+
+  // Derive type from branch prefix
+  const prefixMatch = branchName.match(/^(fix|feat|feature|bugfix|hotfix|chore|refactor|docs|test|ci|build|perf|style)\//i);
+  const typePrefix = prefixMatch ? `${prefixMatch[1].toLowerCase()}: ` : "";
+
+  const title = commitMessage.split("\n")[0] || `${typePrefix}${branchName.replace(/[/_-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}`;
+
+  const description = [
+    `## Summary\n\nThis PR ${commitMessage ? `implements: ${commitMessage.split("\n")[0]}` : `addresses changes from the \`${branchName}\` branch`}.`,
+    "",
+    `## Changes\n\n- **${added.length}** file(s) added\n- **${deleted.length}** file(s) deleted\n- **${modified.length}** file(s) modified`,
+    "",
+    "### Files Changed",
+    "",
+    ...staged.slice(0, 20).map((f) => `- \`${f.path}\` (+${f.additions}/-${f.deletions})`),
+  ].join("\n");
+
+  const checklist = [
+    "Code compiles without errors",
+    "No TypeScript/lint issues",
+    "Tests pass locally",
+    "New code has adequate test coverage",
+    "Documentation updated if needed",
+    "No hardcoded secrets or credentials",
+  ];
+
+  const testingNotes = `Verify the changes by:\n1. Pulling this branch\n2. Running the build: \`npm run build\`\n3. Running tests: \`npm test\`\n4. Manual testing of affected features`;
+
+  const riskNotes = staged.length > 20
+    ? `Large change with ${staged.length} files. Recommend thorough review of each affected area.`
+    : staged.some((f) => /^(package\.json|Cargo\.toml|tsconfig|vite\.config)/.test(f.path))
+      ? "Configuration files changed — verify build and deployment still work correctly."
+      : "Low risk — changes are contained to application code.";
+
+  const rawMarkdown = [
+    `# ${title}`,
+    "",
+    description,
+    "",
+    "## Checklist",
+    "",
+    ...checklist.map((c) => `- [ ] ${c}`),
+    "",
+    "## Testing Notes",
+    "",
+    testingNotes,
+    "",
+    "## Risk Notes",
+    "",
+    riskNotes,
+    "",
+    issueGuess ? `## Linked Issue\n\n${issueGuess}` : "",
+  ].filter(Boolean).join("\n");
+
+  return { title, description, checklist, testingNotes, riskNotes, linkedIssue: issueGuess, rawMarkdown };
+}

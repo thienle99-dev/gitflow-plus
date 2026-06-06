@@ -1,11 +1,11 @@
 import { useRef } from "react";
 import { type CommitGroupProgress, type FileChange } from "@/api/tauri";
-import { type CommitScopeSuggestion, type CommitGuardrailResult, type CommitReadinessResult, type FixPlanResult, type CommitCoachResult } from "@/lib/ai";
+import { type CommitScopeSuggestion, type CommitGuardrailResult, type CommitReadinessResult, type FixPlanResult, type CommitCoachResult, type PRDraft } from "@/lib/ai";
 import { type CommitLintResult, autoFixCommitMessage } from "@/lib/commit-lint";
 import UndoButton from "@/components/features/actions/UndoButton";
 import CommitTemplatePicker from "./CommitTemplatePicker";
 import { showToast } from "@/lib/toast";
-import { AlertCircle, ShieldAlert, ClipboardCheck, ListChecks, MessageCircle } from "lucide-react";
+import { AlertCircle, ShieldAlert, ClipboardCheck, ListChecks, MessageCircle, FileText } from "lucide-react";
 import {
   AlignLeft,
   Check,
@@ -165,6 +165,12 @@ export interface CommitBoxProps {
   coachResult: CommitCoachResult | null;
   coachOpen: boolean;
   setCoachOpen: (open: boolean) => void;
+  // PR Draft
+  onGeneratePRDraft: () => void;
+  prDraftPending: boolean;
+  prDraftResult: PRDraft | null;
+  prDraftOpen: boolean;
+  setPRDraftOpen: (open: boolean) => void;
   // Mutations
   generateCommitPending: boolean;
   commitScopePending: boolean;
@@ -230,6 +236,11 @@ export default function CommitBox({
   coachResult,
   coachOpen,
   setCoachOpen,
+  onGeneratePRDraft,
+  prDraftPending,
+  prDraftResult,
+  prDraftOpen,
+  setPRDraftOpen,
 }: CommitBoxProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -485,6 +496,26 @@ export default function CommitBox({
                     <ClipboardCheck size={10} />
                   )}
                   <span>Ready?</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-0.5 rounded-mac border border-border-20 bg-surface-1-35 p-0.5">
+                <button
+                  type="button"
+                  onClick={onGeneratePRDraft}
+                  disabled={prDraftPending || !hasAnyChanges}
+                  className={`${STATUS_BUTTON_BASE} ${prDraftResult
+                    ? "bg-[#0a84ff]/10 border-[#0a84ff]/30 text-[#0a84ff]"
+                    : "bg-transparent border-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40"
+                    } disabled:bg-transparent disabled:border-transparent disabled:text-text-muted ${prDraftPending ? "opacity-70" : ""}`}
+                  title="Generate PR/MR draft from staged changes"
+                >
+                  {prDraftPending ? (
+                    <RefreshCw size={10} className="animate-spin" />
+                  ) : (
+                    <FileText size={10} />
+                  )}
+                  <span>PR Draft</span>
                 </button>
               </div>
 
@@ -1080,6 +1111,107 @@ export default function CommitBox({
               {coachResult.tips.length === 0 && (
                 <p className="text-2xs text-text-muted">No coaching tips — your commit looks good!</p>
               )}
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {/* PR Draft Result Panel */}
+      {prDraftOpen && (
+        <div className={`border rounded-mac p-3 space-y-2 ${
+          prDraftResult
+            ? "border-[#0a84ff]/30 bg-[#0a84ff]/5"
+            : "border-border-40 bg-surface-2-30"
+        }`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              {prDraftPending ? (
+                <RefreshCw size={12} className="animate-spin text-[#0a84ff]" />
+              ) : (
+                <FileText size={12} className="text-[#0a84ff]" />
+              )}
+              <span className="text-xs font-semibold text-text-primary">PR/MR Draft</span>
+              {prDraftResult?.linkedIssue && (
+                <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-[#0a84ff]/15 text-[#0a84ff]">
+                  {prDraftResult.linkedIssue}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-0.5">
+              {prDraftResult && (
+                <CopyButton text={prDraftResult.rawMarkdown} label="Copy PR draft" hoverOnly={false} />
+              )}
+              <button
+                type="button"
+                onClick={() => setPRDraftOpen(false)}
+                className="h-5 w-5 inline-flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          </div>
+
+          {prDraftPending ? (
+            <div className="flex items-center gap-2 rounded-mac border border-border-40 bg-surface-2-30 px-3 py-2.5 text-text-secondary">
+              <RefreshCw size={12} className="animate-spin text-[#0a84ff]" />
+              <span className="text-2xs">Generating PR/MR draft from your changes...</span>
+            </div>
+          ) : prDraftResult ? (
+            <div className="space-y-3">
+              {/* Title */}
+              <div>
+                <span className="text-[9px] font-bold uppercase text-text-muted tracking-wider">Title</span>
+                <p className="text-xs font-semibold text-text-primary mt-0.5">{prDraftResult.title}</p>
+              </div>
+
+              {/* Description */}
+              <div>
+                <span className="text-[9px] font-bold uppercase text-text-muted tracking-wider">Description</span>
+                <div className="text-2xs text-text-secondary leading-relaxed mt-0.5 whitespace-pre-wrap max-h-32 overflow-y-auto rounded-mac border border-border-20 bg-surface-0-60 px-2.5 py-2">
+                  {prDraftResult.description}
+                </div>
+              </div>
+
+              {/* Checklist */}
+              {prDraftResult.checklist.length > 0 && (
+                <div>
+                  <span className="text-[9px] font-bold uppercase text-text-muted tracking-wider">Checklist</span>
+                  <div className="space-y-0.5 mt-0.5">
+                    {prDraftResult.checklist.map((item, i) => (
+                      <label key={i} className="flex items-start gap-1.5 text-2xs text-text-secondary cursor-pointer select-none">
+                        <input type="checkbox" className="mt-0.5 h-3 w-3 accent-[#0a84ff] cursor-pointer shrink-0" readOnly />
+                        <span>{item}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Testing Notes */}
+              {prDraftResult.testingNotes && (
+                <div>
+                  <span className="text-[9px] font-bold uppercase text-text-muted tracking-wider">Testing Notes</span>
+                  <p className="text-2xs text-text-secondary leading-relaxed mt-0.5 whitespace-pre-wrap">{prDraftResult.testingNotes}</p>
+                </div>
+              )}
+
+              {/* Risk Notes */}
+              {prDraftResult.riskNotes && (
+                <div className="rounded-mac border border-[#ff9f0a]/30 bg-[#ff9f0a]/5 p-2">
+                  <span className="text-[9px] font-bold uppercase text-[#ff9f0a] tracking-wider">Risk Notes</span>
+                  <p className="text-2xs text-text-secondary leading-relaxed mt-0.5 whitespace-pre-wrap">{prDraftResult.riskNotes}</p>
+                </div>
+              )}
+
+              {/* Raw Markdown Toggle */}
+              <details className="group">
+                <summary className="text-[9px] font-bold uppercase text-text-muted tracking-wider cursor-pointer hover:text-text-secondary select-none">
+                  Raw Markdown
+                </summary>
+                <div className="text-2xs text-text-muted leading-relaxed mt-1 whitespace-pre-wrap rounded-mac border border-border-20 bg-surface-0-60 px-2.5 py-2 max-h-40 overflow-y-auto font-mono">
+                  {prDraftResult.rawMarkdown}
+                </div>
+              </details>
             </div>
           ) : null}
         </div>

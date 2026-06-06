@@ -170,6 +170,11 @@ export function trackAIBranchCompareSummary(riskLevel = "safe") {
   if (a) logEvent(a, "ai_branch_compare_summary", { riskLevel });
 }
 
+export function trackAIPRDraft() {
+  const a = getA();
+  if (a) logEvent(a, "ai_pr_draft");
+}
+
 export function trackAIBranchSuggestion() {
   const a = getA();
   if (a) logEvent(a, "ai_branch_suggestion");

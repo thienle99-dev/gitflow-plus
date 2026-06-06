@@ -4,8 +4,8 @@ import { useUIStore } from "@/stores/ui";
 import { useGitDiff, useGitStatus } from "@/queries/useGitLog";
 import { api, type CommitGroupProgress, type FileChange, type LintDiagnostic } from "@/api/tauri";
 import { listen } from "@tauri-apps/api/event";
-import { useGenerateCommitMessage, useAICommitScope, useAIDiffReview, useImproveCommitMessage, useAddCommitBody, useAICommitGuardrail, useAICommitReadiness, useAILintReview, useAIFixPlan, useAICommitCoach } from "@/queries/useAI";
-import { generateLocalCommitMessage, shouldAnalyzeScope, type CommitScopeSuggestion, type CommitGuardrailResult, type CommitReadinessResult, type FixPlanResult, type CommitCoachResult } from "@/lib/ai";
+import { useGenerateCommitMessage, useAICommitScope, useAIDiffReview, useImproveCommitMessage, useAddCommitBody, useAICommitGuardrail, useAICommitReadiness, useAILintReview, useAIFixPlan, useAICommitCoach, useAIPRDraft } from "@/queries/useAI";
+import { generateLocalCommitMessage, shouldAnalyzeScope, type CommitScopeSuggestion, type CommitGuardrailResult, type CommitReadinessResult, type FixPlanResult, type CommitCoachResult, type PRDraft } from "@/lib/ai";
 import { useQueryClient } from "@tanstack/react-query";
 import { showToast } from "@/lib/toast";
 import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
@@ -13,7 +13,7 @@ import CommitSplitDialog from "@/components/features/dialogs/CommitSplitDialog";
 import { fileIcon, statusLabel, statusColor } from "@/components/ui/shared";
 import ContextMenu, { type ContextMenuItem } from "@/components/ui/overlay/ContextMenu";
 import LazyDiffViewer from "@/components/features/diff/LazyDiffViewer";
-import { trackCommit, trackAICommitMessage, trackAIReview, trackAIGuardrail, trackAIReadiness, trackAICommitScope, trackAIImproveMessage, trackAIAddBody, trackAILintReview, trackAIFixPlan, trackAICommitCoach } from "@/lib/analytics";
+import { trackCommit, trackAICommitMessage, trackAIReview, trackAIGuardrail, trackAIReadiness, trackAICommitScope, trackAIImproveMessage, trackAIAddBody, trackAILintReview, trackAIFixPlan, trackAICommitCoach, trackAIPRDraft } from "@/lib/analytics";
 import { AlertCircle, Clipboard, ShieldAlert, MessageSquare } from "lucide-react";
 import { Skeleton } from "@/components/ui/feedback/Skeleton";
 import { EmptyState } from "@/components/ui/feedback/EmptyState";
@@ -51,6 +51,7 @@ export default function WorkingTree() {
   const lintReview = useAILintReview(repoPath);
   const fixPlan = useAIFixPlan(repoPath);
   const commitCoach = useAICommitCoach(repoPath);
+  const prDraft = useAIPRDraft(repoPath);
   const [commitMessage, setCommitMessage] = useState("");
   const [lintResults, setLintResults] = useState<CommitLintResult[]>([]);
 
@@ -111,6 +112,8 @@ export default function WorkingTree() {
   const [coachOpen, setCoachOpen] = useState(false);
   const coachTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const coachHashRef = useRef<string>("");
+  const [prDraftResult, setPRDraftResult] = useState<PRDraft | null>(null);
+  const [prDraftOpen, setPRDraftOpen] = useState(false);
   const [splitDialogOpen, setSplitDialogOpen] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState<string | null>(null);
   const [confirmDiscardAll, setConfirmDiscardAll] = useState(false);
@@ -596,6 +599,25 @@ export default function WorkingTree() {
     }
   };
 
+  const handleGeneratePRDraft = async () => {
+    if (!repoPath || prDraft.isPending) return;
+    trackAIPRDraft();
+    prDraft.reset();
+    try {
+      const branches = await api.branches.list(repoPath);
+      const currentBranch = branches.find((b: any) => b.current)?.name || "";
+      const result = await prDraft.mutateAsync({
+        branchName: currentBranch,
+        staged,
+        commitMessage,
+      });
+      setPRDraftResult(result);
+      setPRDraftOpen(true);
+    } catch {
+      // PR draft failure is non-critical
+    }
+  };
+
   const handleUseGroup = async (group: { files: string[]; message: string }) => {
     try {
       await api.commit.unstageAll(repoPath!);
@@ -1031,6 +1053,11 @@ export default function WorkingTree() {
         coachResult={coachResult}
         coachOpen={coachOpen}
         setCoachOpen={setCoachOpen}
+        onGeneratePRDraft={handleGeneratePRDraft}
+        prDraftPending={prDraft.isPending}
+        prDraftResult={prDraftResult}
+        prDraftOpen={prDraftOpen}
+        setPRDraftOpen={setPRDraftOpen}
       />
 
       {reviewTarget && (
