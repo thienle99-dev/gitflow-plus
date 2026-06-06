@@ -207,7 +207,7 @@ export default function Toolbar() {
         ref={containerRef}
         role="toolbar"
         aria-label="Main toolbar"
-        className={`vibrancy relative z-[200] border-b border-border-60 bg-surface-1-40 backdrop-blur-md flex items-center justify-between px-4 select-none animate-in fade-in duration-200 ${
+        className={`vibrancy relative z-[200] border-b border-border-60 bg-surface-1-40 backdrop-blur-md flex items-center justify-between px-4 select-none anim-overlay-enter ${
           isMac ? "h-[52px]" : "h-[44px]"
         }`}
         data-tauri-drag-region

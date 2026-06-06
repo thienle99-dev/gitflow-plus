@@ -90,7 +90,7 @@ function DiffViewerPanel() {
   const content = (
     <div className={`flex flex-col bg-surface-0 ${
       isFullScreen
-        ? "w-[94%] h-[90%] rounded-mac border border-border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+        ? "w-[94%] h-[90%] rounded-mac border border-border shadow-2xl overflow-hidden anim-dialog-enter"
         : "h-full"
     }`}>
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-border shrink-0 bg-surface-1-40">
@@ -180,7 +180,7 @@ function DiffViewerPanel() {
 
   if (isFullScreen) {
     return (
-      <div className="fixed inset-0 bg-[#000000]/65 backdrop-blur-md z-[9998] flex items-center justify-center p-6 animate-in fade-in duration-200">
+      <div className="fixed inset-0 bg-[#000000]/65 backdrop-blur-md z-[9998] flex items-center justify-center p-6 anim-overlay-enter">
         {content}
       </div>
     );

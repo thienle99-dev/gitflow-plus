@@ -304,7 +304,7 @@ export default function BottomBar() {
           </button>
 
           {moreOpen && (
-            <div className="absolute bottom-full right-0 mb-1 w-48 bg-surface-1-95 backdrop-blur-xl border border-border-40 rounded-mac shadow-xl py-1 z-[999] animate-in fade-in slide-in-from-bottom-1 duration-100">
+            <div className="absolute bottom-full right-0 mb-1 w-48 bg-surface-1-95 backdrop-blur-xl border border-border-40 rounded-mac shadow-xl py-1 z-[999] anim-palette-enter">
               <button
                 onClick={() => handleMoreAction(() => openDialogState("diagnostics"))}
                 className="w-full flex items-center gap-2.5 px-3 py-1.5 text-left text-2xs text-text-secondary hover:bg-surface-2 hover:text-text-primary transition-colors cursor-default"
