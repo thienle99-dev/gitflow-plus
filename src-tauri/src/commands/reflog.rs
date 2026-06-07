@@ -157,6 +157,35 @@ pub async fn undo_last(
     git_undo(&path).await
 }
 
+/// Reset working tree to a commit with a given mode.
+/// mode: "soft", "mixed", or "hard"
+/// Uses `git reset --<mode> <hash>`.
+pub async fn git_reset(path: &str, hash: &str, mode: &str) -> Result<String, String> {
+    let mode_flag = format!("--{}", mode);
+    let output = Command::new("git")
+        .args(["--no-pager", "-C", path, "reset", &mode_flag, hash])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to reset: {}", e))?;
+
+    if output.status.success() {
+        Ok(format!("Reset {} ({})", mode, hash))
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).to_string())
+    }
+}
+
+#[tauri::command]
+pub async fn reset_to_commit(
+    locks: tauri::State<'_, RepoLocks>,
+    path: String,
+    hash: String,
+    mode: String,
+) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
+    git_reset(&path, &hash, &mode).await
+}
+
 /// Restore working tree + index to match a specific commit (hard reset).
 /// Uses `git reset --hard <hash>` — destructive to uncommitted changes.
 pub async fn git_restore_to_commit(path: &str, hash: &str) -> Result<String, String> {

@@ -11,6 +11,7 @@ function makeCommit(hash: string, parents: string[], opts?: { refs?: Ref[]; mess
     date: "2024-01-01T00:00:00Z",
     message: opts?.message ?? hash,
     refs: opts?.refs ?? [],
+    signature: "",
   };
 }
 
@@ -406,6 +407,7 @@ describe("computeGraphLayout", () => {
       date: "2024-06-15T10:30:00Z",
       message: "test commit",
       refs: [],
+      signature: "",
     }];
     const result = computeGraphLayout(commits);
     expect(result.commits[0].author).toBe("Jane Doe");

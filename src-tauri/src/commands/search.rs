@@ -20,7 +20,7 @@ pub async fn git_log_search(path: &str, opts: &SearchOptions) -> Result<Vec<Comm
         path,
         "log",
         "--all",
-        "--pretty=format:%H|%P|%an|%ae|%ai|%D|%s",
+        "--pretty=format:%H|%P|%an|%ae|%ai|%D|%s|%G?",
     ];
 
     if let Some(query) = &opts.query {
@@ -87,8 +87,8 @@ pub async fn git_log_search(path: &str, opts: &SearchOptions) -> Result<Vec<Comm
         .lines()
         .filter(|l| !l.is_empty())
         .filter_map(|line| {
-            let parts: Vec<&str> = line.splitn(7, '|').collect();
-            if parts.len() < 7 {
+            let parts: Vec<&str> = line.splitn(8, '|').collect();
+            if parts.len() < 8 {
                 return None;
             }
             let refs = crate::commands::log::parse_refs(parts[5]);
@@ -104,6 +104,7 @@ pub async fn git_log_search(path: &str, opts: &SearchOptions) -> Result<Vec<Comm
                 date: parts[4].to_string(),
                 message: parts[6].to_string(),
                 refs,
+                signature: parts[7].to_string(),
             })
         })
         .collect();

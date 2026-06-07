@@ -263,6 +263,10 @@ export default function DiffViewer({
     handleToggleAiReview();
   };
 
+  const handleScrollToLine = (line: number, side: "old" | "new") => {
+    window.dispatchEvent(new CustomEvent("gitflow-scroll-to-line", { detail: { filePath, line, side } }));
+  };
+
   return (
     <>
     <div className="flex-1 flex overflow-hidden bg-surface-0">
@@ -332,6 +336,7 @@ export default function DiffViewer({
         inlineCommentsError={inlineCommentsMutation.error instanceof Error ? inlineCommentsMutation.error : inlineCommentsMutation.error ? new Error(String(inlineCommentsMutation.error)) : null}
         onClose={() => setShowReview(false)}
         onRetry={handleRetryAiReview}
+        onScrollToLine={handleScrollToLine}
       />
     </div>
     <ConfirmDialog

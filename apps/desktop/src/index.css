@@ -619,21 +619,21 @@ body.tray-window #root {
 }
 
 [data-sonner-toast] {
-  background: color-mix(in srgb, var(--surface-1) 78%, transparent) !important;
+  background: color-mix(in srgb, var(--surface-1) 96%, var(--surface-0)) !important;
   color: var(--text-primary) !important;
-  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent) !important;
-  border-radius: 10px !important;
+  border: 1px solid color-mix(in srgb, var(--border) 92%, transparent) !important;
+  border-left-width: 3px !important;
+  border-radius: 8px !important;
   box-shadow:
-    0 14px 34px rgba(0, 0, 0, 0.2),
-    0 1px 0 color-mix(in srgb, var(--text-primary) 10%, transparent) inset !important;
-  backdrop-filter: blur(16px) saturate(1.28) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(1.28) !important;
-  opacity: 0.96 !important;
-  overflow: visible !important;
+    0 12px 26px rgba(0, 0, 0, 0.2),
+    0 1px 0 color-mix(in srgb, var(--text-primary) 6%, transparent) inset !important;
+  backdrop-filter: blur(8px) saturate(1.08) !important;
+  -webkit-backdrop-filter: blur(8px) saturate(1.08) !important;
+  overflow: hidden !important;
   min-height: 42px !important;
-  width: min(440px, calc(100vw - 32px)) !important;
-  padding: 9px 13px !important;
-  gap: 10px !important;
+  width: min(360px, calc(100vw - 32px)) !important;
+  padding: 10px 12px !important;
+  gap: 9px !important;
 }
 
 [data-sonner-toast] [data-icon],
@@ -643,15 +643,16 @@ body.tray-window #root {
 }
 
 [data-sonner-toast] [data-icon] {
-  opacity: 0.92 !important;
-  width: 18px !important;
-  height: 18px !important;
+  opacity: 1 !important;
+  width: 16px !important;
+  height: 16px !important;
+  margin-top: 1px !important;
 }
 
 [data-sonner-toast] [data-title] {
-  font-size: 11.5px !important;
+  font-size: 12px !important;
   font-weight: 650 !important;
-  line-height: 18px !important;
+  line-height: 17px !important;
   letter-spacing: 0 !important;
 }
 
@@ -676,44 +677,58 @@ body.tray-window #root {
 
 [data-sonner-toast].sonner-info {
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--info) 14%, transparent), transparent 42%),
-    color-mix(in srgb, var(--surface-1) 80%, transparent) !important;
+    linear-gradient(90deg, color-mix(in srgb, var(--info) 8%, transparent), transparent 46%),
+    color-mix(in srgb, var(--surface-1) 96%, var(--surface-0)) !important;
   color: var(--text-primary) !important;
-  border-color: color-mix(in srgb, var(--info) 78%, var(--border)) !important;
+  border-color: color-mix(in srgb, var(--info) 24%, var(--border)) !important;
+  border-left-color: var(--info) !important;
+}
+
+[data-sonner-toast].sonner-info [data-icon] {
+  color: var(--info) !important;
 }
 
 [data-sonner-toast].sonner-success {
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--success) 14%, transparent), transparent 42%),
-    color-mix(in srgb, var(--surface-1) 80%, transparent) !important;
+    linear-gradient(90deg, color-mix(in srgb, var(--success) 8%, transparent), transparent 46%),
+    color-mix(in srgb, var(--surface-1) 96%, var(--surface-0)) !important;
   color: var(--text-primary) !important;
-  border-color: color-mix(in srgb, var(--success) 72%, var(--border)) !important;
+  border-color: color-mix(in srgb, var(--success) 24%, var(--border)) !important;
+  border-left-color: var(--success) !important;
+}
+
+[data-sonner-toast].sonner-success [data-icon] {
+  color: var(--success) !important;
 }
 
 [data-sonner-toast].sonner-error {
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--danger) 14%, transparent), transparent 42%),
-    color-mix(in srgb, var(--surface-1) 80%, transparent) !important;
+    linear-gradient(90deg, color-mix(in srgb, var(--danger) 9%, transparent), transparent 46%),
+    color-mix(in srgb, var(--surface-1) 96%, var(--surface-0)) !important;
   color: var(--text-primary) !important;
-  border-color: color-mix(in srgb, var(--danger) 76%, var(--border)) !important;
+  border-color: color-mix(in srgb, var(--danger) 28%, var(--border)) !important;
+  border-left-color: var(--danger) !important;
+}
+
+[data-sonner-toast].sonner-error [data-icon] {
+  color: var(--danger) !important;
 }
 
 [data-sonner-toast] [data-close-button] {
-  background: color-mix(in srgb, var(--surface-2) 82%, transparent) !important;
+  background: color-mix(in srgb, var(--surface-2) 88%, var(--surface-1)) !important;
   color: var(--text-secondary) !important;
-  border-color: color-mix(in srgb, var(--border) 72%, transparent) !important;
-  width: 24px !important;
-  height: 24px !important;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.16) !important;
-  backdrop-filter: blur(10px) !important;
-  -webkit-backdrop-filter: blur(10px) !important;
+  border-color: color-mix(in srgb, var(--border) 86%, transparent) !important;
+  width: 20px !important;
+  height: 20px !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
   transition: background 150ms ease, color 150ms ease, transform 150ms ease !important;
 }
 
 [data-sonner-toast] [data-close-button]:hover {
-  background: color-mix(in srgb, var(--surface-3) 90%, transparent) !important;
+  background: var(--surface-3) !important;
   color: var(--text-primary) !important;
-  transform: scale(1.04) !important;
+  transform: scale(1.03) !important;
 }
 
 @keyframes toast-in {

@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { type CommitGroupProgress, type FileChange } from "@/api/tauri";
-import { type CommitScopeSuggestion, type CommitGuardrailResult, type CommitReadinessResult, type FixPlanResult, type CommitCoachResult, type PRDraft } from "@/lib/ai";
+import { type CommitScopeSuggestion, type CommitGuardrailResult, type CommitReadinessResult, type FixPlanResult, type CommitCoachResult, type PRDraft, type GuardrailFinding } from "@/lib/ai";
 import { type CommitLintResult, autoFixCommitMessage } from "@/lib/commit-lint";
 import UndoButton from "@/components/features/actions/UndoButton";
 import CommitTemplatePicker from "./CommitTemplatePicker";
@@ -18,6 +18,7 @@ import {
   Sparkles,
   Wand2,
   X,
+  AlertTriangle,
 } from "lucide-react";
 
 function formatGuardrailText(result: CommitGuardrailResult): string {
@@ -844,36 +845,59 @@ export default function CommitBox({
               <p className="text-2xs text-text-secondary leading-relaxed">{guardrailResult.summary}</p>
 
               {guardrailResult.findings.length > 0 && (
-                <div className="space-y-1">
-                  {guardrailResult.findings.map((finding, i) => {
-                    const findingText = `[${finding.severity.toUpperCase()}] ${finding.category}: ${finding.message}${finding.file ? ` (${finding.file})` : ""}${finding.action ? `\n  → ${finding.action}` : ""}`;
-                    return (
-                    <div key={i} className={`group flex items-start gap-2 p-2 rounded-mac text-2xs ${
-                      finding.severity === "critical"
-                        ? "bg-[#ff453a]/8 border-l-2 border-l-[#ff453a]"
-                        : finding.severity === "high"
-                          ? "bg-[#ff9f0a]/8 border-l-2 border-l-[#ff9f0a]"
-                          : finding.severity === "medium"
-                            ? "bg-[#0a84ff]/8 border-l-2 border-l-[#0a84ff]"
-                            : "bg-surface-2-30 border-l-2 border-l-border-40"
-                    }`}>
-                      <span className={`font-bold uppercase shrink-0 ${
-                        finding.severity === "critical" ? "text-[#ff453a]"
-                          : finding.severity === "high" ? "text-[#ff9f0a]"
-                            : finding.severity === "medium" ? "text-[#0a84ff]"
-                              : "text-text-muted"
-                      }`}>
-                        {finding.category}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <span className="text-text-primary">{finding.message}</span>
-                        {finding.file && <span className="text-text-muted ml-1">({finding.file})</span>}
-                        {finding.action && <span className="text-text-muted block mt-0.5 italic">{finding.action}</span>}
+                <div className="space-y-2">
+                  {/* Blockers */}
+                  {(["critical", "high"] as const).some((s) => guardrailResult!.findings.some((f) => f.severity === s)) && (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-2xs font-bold uppercase tracking-wider text-[#ff453a]">
+                        <ShieldAlert size={10} />
+                        Blockers
+                        <span className="text-text-muted font-normal normal-case">({guardrailResult!.findings.filter((f) => f.severity === "critical" || f.severity === "high").length})</span>
                       </div>
-                      <CopyButton text={findingText} label="Copy finding" />
+                      {guardrailResult.findings.filter((f) => f.severity === "critical" || f.severity === "high").map((finding, i) => (
+                        <FindingRow key={`b-${i}`} finding={finding} />
+                      ))}
                     </div>
-                    );
-                  })}
+                  )}
+                  {/* Warnings */}
+                  {guardrailResult!.findings.some((f) => f.severity === "medium") && (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-2xs font-bold uppercase tracking-wider text-[#ff9f0a]">
+                        <AlertTriangle size={10} />
+                        Warnings
+                        <span className="text-text-muted font-normal normal-case">({guardrailResult!.findings.filter((f) => f.severity === "medium").length})</span>
+                      </div>
+                      {guardrailResult.findings.filter((f) => f.severity === "medium").map((finding, i) => (
+                        <FindingRow key={`w-${i}`} finding={finding} />
+                      ))}
+                    </div>
+                  )}
+                  {/* Suggestions */}
+                  {guardrailResult!.findings.some((f) => f.severity === "low") && (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-2xs font-bold uppercase tracking-wider text-[#0a84ff]">
+                        <FileText size={10} />
+                        Suggestions
+                        <span className="text-text-muted font-normal normal-case">({guardrailResult!.findings.filter((f) => f.severity === "low").length})</span>
+                      </div>
+                      {guardrailResult.findings.filter((f) => f.severity === "low").map((finding, i) => (
+                        <FindingRow key={`s-${i}`} finding={finding} />
+                      ))}
+                    </div>
+                  )}
+                  {/* Info */}
+                  {guardrailResult!.findings.some((f) => f.severity === "info") && (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-2xs font-bold uppercase tracking-wider text-text-muted">
+                        <AlertCircle size={10} />
+                        Info
+                        <span className="text-text-muted font-normal normal-case">({guardrailResult!.findings.filter((f) => f.severity === "info").length})</span>
+                      </div>
+                      {guardrailResult.findings.filter((f) => f.severity === "info").map((finding, i) => (
+                        <FindingRow key={`i-${i}`} finding={finding} />
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1285,6 +1309,53 @@ export default function CommitBox({
         </div>
       )}
 
+    </div>
+  );
+}
+
+function FindingRow({ finding }: { finding: GuardrailFinding }) {
+  const findingText = `[${finding.severity.toUpperCase()}] ${finding.category}: ${finding.message}${finding.file ? ` (${finding.file})` : ""}${finding.action ? `\n  → ${finding.action}` : ""}`;
+  const borderColor = finding.severity === "critical" || finding.severity === "high"
+    ? "border-l-[#ff453a] bg-[#ff453a]/5"
+    : finding.severity === "medium"
+      ? "border-l-[#ff9f0a] bg-[#ff9f0a]/5"
+      : finding.severity === "low"
+        ? "border-l-[#0a84ff] bg-[#0a84ff]/5"
+        : "border-l-border-40 bg-surface-2-30";
+  const badgeColor = finding.severity === "critical" || finding.severity === "high"
+    ? "text-[#ff453a]"
+    : finding.severity === "medium"
+      ? "text-[#ff9f0a]"
+      : finding.severity === "low"
+        ? "text-[#0a84ff]"
+        : "text-text-muted";
+
+  return (
+    <div className={`group flex items-start gap-2 p-2 rounded-mac text-2xs border-l-2 ${borderColor}`}>
+      <span className={`font-bold uppercase shrink-0 ${badgeColor}`}>
+        {finding.category}
+      </span>
+      <div className="min-w-0 flex-1">
+        <span className="text-text-primary">{finding.message}</span>
+        {finding.file && (
+          <span className="inline-flex items-center gap-0.5 ml-1 px-1 py-0.5 rounded bg-surface-2 border border-border-40 text-[9px] font-mono text-text-muted max-w-[200px] truncate align-middle" title={finding.file}>
+            <FileText size={8} className="shrink-0" />
+            {finding.file}
+          </span>
+        )}
+        {finding.action && <span className="text-text-muted block mt-0.5 italic">{finding.action}</span>}
+      </div>
+      <button
+        type="button"
+        onClick={async () => {
+          await navigator.clipboard.writeText(findingText);
+          showToast("Copied to clipboard", "success");
+        }}
+        className="shrink-0 h-4 w-4 inline-flex items-center justify-center rounded text-text-muted hover:text-text-primary opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+        title="Copy finding"
+      >
+        <Clipboard size={9} />
+      </button>
     </div>
   );
 }

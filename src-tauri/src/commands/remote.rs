@@ -1,8 +1,15 @@
 use tokio::process::Command;
 use std::path::PathBuf;
+use serde::Serialize;
 use super::op_lock::RepoLocks;
 
-#[derive(serde::Serialize)]
+#[derive(Serialize)]
+pub struct RemoteInfo {
+    pub name: String,
+    pub url: String,
+}
+
+#[derive(Serialize)]
 pub struct SshKeyInfo {
     pub key_type: String,
     pub file_name: String,
@@ -309,6 +316,95 @@ pub async fn restore_remote_url(
     }
 
     Ok(())
+}
+
+// ─── Remote management (list, add, remove, rename, set-url) ─────────────
+
+#[tauri::command]
+pub async fn list_remotes(path: String) -> Result<Vec<RemoteInfo>, String> {
+    let output = Command::new("git")
+        .args(["--no-pager", "-C", &path, "remote", "-v"])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to list remotes: {}", e))?;
+
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut remotes: Vec<RemoteInfo> = vec![];
+    for line in stdout.lines() {
+        let parts: Vec<&str> = line.splitn(3, '\t').collect();
+        if parts.len() >= 2 {
+            let name = parts[0].to_string();
+            let url = parts[1].trim_end_matches(" (fetch)").trim_end_matches(" (push)").to_string();
+            if !remotes.iter().any(|r| r.name == name) {
+                remotes.push(RemoteInfo { name, url });
+            }
+        }
+    }
+    Ok(remotes)
+}
+
+#[tauri::command]
+pub async fn add_remote(path: String, name: String, url: String) -> Result<String, String> {
+    let output = Command::new("git")
+        .args(["-C", &path, "remote", "add", &name, &url])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to add remote: {}", e))?;
+
+    if output.status.success() {
+        Ok(format!("Added remote {} ({})", name, url))
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).to_string())
+    }
+}
+
+#[tauri::command]
+pub async fn remove_remote(path: String, name: String) -> Result<String, String> {
+    let output = Command::new("git")
+        .args(["-C", &path, "remote", "remove", &name])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to remove remote: {}", e))?;
+
+    if output.status.success() {
+        Ok(format!("Removed remote {}", name))
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).to_string())
+    }
+}
+
+#[tauri::command]
+pub async fn rename_remote(path: String, old_name: String, new_name: String) -> Result<String, String> {
+    let output = Command::new("git")
+        .args(["-C", &path, "remote", "rename", &old_name, &new_name])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to rename remote: {}", e))?;
+
+    if output.status.success() {
+        Ok(format!("Renamed remote {} -> {}", old_name, new_name))
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).to_string())
+    }
+}
+
+#[tauri::command]
+pub async fn set_remote_url(path: String, name: String, url: String) -> Result<String, String> {
+    let output = Command::new("git")
+        .args(["-C", &path, "remote", "set-url", &name, &url])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to set remote URL: {}", e))?;
+
+    if output.status.success() {
+        Ok(format!("Updated {} URL -> {}", name, url))
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).to_string())
+    }
 }
 
 #[cfg(test)]

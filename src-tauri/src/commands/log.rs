@@ -9,6 +9,7 @@ pub struct Commit {
     pub date: String,
     pub message: String,
     pub refs: Vec<Ref>,
+    pub signature: String,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
@@ -48,7 +49,7 @@ pub async fn git_log(
         "--topo-order".to_string(),
         format!("--skip={}", skip),
         format!("--max-count={}", limit),
-        "--pretty=format:%H|%P|%an|%ae|%ai|%D|%s".to_string(),
+        "--pretty=format:%H|%P|%an|%ae|%ai|%D|%s|%G?".to_string(),
     ];
 
     if let Some(ref_name) = ref_name.filter(|name| !name.trim().is_empty()) {
@@ -94,7 +95,7 @@ pub async fn git_log_since(
             "log",
             "--topo-order",
             &format!("--max-count={}", limit),
-            "--pretty=format:%H|%P|%an|%ae|%ai|%D|%s",
+            "--pretty=format:%H|%P|%an|%ae|%ai|%D|%s|%G?",
             &range,
         ])
         .output()
@@ -131,7 +132,7 @@ pub async fn git_log_stream(
         "--topo-order".to_string(),
         format!("--skip={}", skip),
         format!("--max-count={}", limit),
-        "--pretty=format:%H|%P|%an|%ae|%ai|%D|%s".to_string(),
+        "--pretty=format:%H|%P|%an|%ae|%ai|%D|%s|%G?".to_string(),
     ];
     if let Some(ref_name) = ref_name.filter(|name| !name.trim().is_empty()) {
         args.push(ref_name);
@@ -161,8 +162,8 @@ pub async fn git_log_stream(
             continue;
         }
 
-        let parts: Vec<&str> = line.splitn(7, '|').collect();
-        if parts.len() < 7 {
+        let parts: Vec<&str> = line.splitn(8, '|').collect();
+        if parts.len() < 8 {
             continue;
         }
 
@@ -178,6 +179,7 @@ pub async fn git_log_stream(
             date: parts[4].to_string(),
             refs: parse_refs(parts[5]),
             message: parts[6].to_string(),
+            signature: parts[7].to_string(),
         };
         batch.push(commit);
         total += 1;
@@ -226,7 +228,7 @@ pub async fn file_history(
             &path,
             "log",
             "--oneline",
-            "--pretty=format:%H|%P|%an|%ae|%ai|%D|%s",
+            "--pretty=format:%H|%P|%an|%ae|%ai|%D|%s|%G?",
             format!("--max-count={}", limit).as_str(),
             "--follow",
             "--",
@@ -299,8 +301,8 @@ fn parse_log_output(stdout: &str) -> Vec<Commit> {
         .lines()
         .filter(|line| !line.is_empty())
         .filter_map(|line| {
-            let parts: Vec<&str> = line.splitn(7, '|').collect();
-            if parts.len() < 7 {
+            let parts: Vec<&str> = line.splitn(8, '|').collect();
+            if parts.len() < 8 {
                 return None;
             }
 
@@ -316,6 +318,7 @@ fn parse_log_output(stdout: &str) -> Vec<Commit> {
                 date: parts[4].to_string(),
                 refs: parse_refs(parts[5]),
                 message: parts[6].to_string(),
+                signature: parts[7].to_string(),
             })
         })
         .collect()
