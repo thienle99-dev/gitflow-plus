@@ -3292,3 +3292,31 @@ function buildLocalPRDraft(
 
   return { title, description, checklist, testingNotes, riskNotes, linkedIssue: issueGuess, rawMarkdown };
 }
+
+// ─── Bisect Analysis ────────────────────────────────────────────────────
+
+export interface BisectAnalysis {
+  verdict: "likely" | "unlikely" | "needs-review";
+  reason: string;
+  confidence: "high" | "medium" | "low";
+}
+
+export async function analyzeBisectCandidate(
+  filePath: string,
+  diff: string,
+  commitHash: string,
+  repoPath?: string,
+): Promise<BisectAnalysis> {
+  const settings = readAISettings();
+  const systemPrompt = "You are a senior developer analyzing a git bisect candidate. Given the diff of a commit, determine if this change is likely the cause of the regression being bisected. Respond with JSON only: { \"verdict\": \"likely\" | \"unlikely\" | \"needs-review\", \"reason\": string, \"confidence\": \"high\" | \"medium\" | \"low\" }";
+  const userPrompt = `Commit: ${commitHash}\nFile: ${filePath}\n\nDiff:\n${diff.slice(0, 4000)}`;
+  const response = await requestAIText(
+    `${systemPrompt}\n\n${userPrompt}`,
+    settings,
+  );
+  try {
+    return JSON.parse(response);
+  } catch {
+    return { verdict: "needs-review", reason: response.slice(0, 200), confidence: "low" };
+  }
+}
