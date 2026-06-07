@@ -24,6 +24,7 @@ import { showToast } from "@/lib/toast";
 import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
 import AIMarkdown from "@/components/ui/feedback/AIMarkdown";
 import { StatusBadge, fileIcon, statusLabel, statusColor } from "@/components/ui/shared";
+import PRStatusBadge from "./PRStatusBadge";
 import { useCommitDateFormatter } from "@/lib/date";
 
 export default function CommitDetail() {
@@ -198,6 +199,7 @@ export default function CommitDetail() {
           <GitCommit size={10} />
           <span className="font-mono">{commit.hash.slice(0, 7)}</span>
           <SignatureBadge signature={commit.signature} />
+          <PRStatusBadge commitHash={commit.hash} />
         </div>
         <div className="flex items-center gap-1.5 text-2xs text-text-secondary">
           <GravatarImg email={commit.email} size={14} />
