@@ -504,6 +504,8 @@ export const api = {
       invoke<ReflogEntry[]>("reflog_list", { path, maxCount: maxCount ?? null }),
     undo: (path: string) =>
       invoke<string>("undo_last", { path }),
+    restoreToCommit: (path: string, hash: string) =>
+      invoke<string>("restore_to_commit", { path, hash }),
   },
 
   rebase: {
