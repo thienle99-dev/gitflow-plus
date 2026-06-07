@@ -306,6 +306,7 @@ export function AITab({
                 provider === "ollama" ? "http://localhost:11434"
                 : provider === "llamacpp" ? "http://localhost:8080"
                 : provider === "anthropic" ? "https://api.anthropic.com"
+                : provider === "9router" ? "https://your-9router-instance.com"
                 : "https://api.openai.com/v1 or local gateway address"
               }
               className="flex-1 h-8 px-2.5 text-xs bg-surface-1 border border-border rounded-mac text-text-primary placeholder:text-text-muted outline-none focus:border-accent transition-colors"

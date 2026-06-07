@@ -67,6 +67,8 @@ function defaultModelForProvider(provider: AIProviderType): string {
       return "llama3.1";
     case "llamacpp":
       return "local-model";
+    case "9router":
+      return "gpt-4o-mini";
     case "openai-compatible":
       return "gpt-4o-mini";
   }
