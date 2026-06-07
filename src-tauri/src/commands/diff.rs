@@ -32,7 +32,68 @@ pub async fn file_diff(
 
     if output.status.success() {
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        if stdout.is_empty() && is_untracked_file(&path, &file_path).await? {
+            return untracked_file_diff(path, file_path, context_arg).await;
+        }
         Ok(stdout)
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Diff failed: {}", stderr.trim()))
+    }
+}
+
+async fn is_untracked_file(path: &str, file_path: &str) -> Result<bool, String> {
+    let output = Command::new("git")
+        .args([
+            "--no-pager",
+            "-C",
+            path,
+            "ls-files",
+            "--others",
+            "--exclude-standard",
+            "--",
+            file_path,
+        ])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run git: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Untracked file check failed: {}", stderr.trim()));
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .any(|line| line == file_path))
+}
+
+async fn untracked_file_diff(
+    path: String,
+    file_path: String,
+    context_arg: String,
+) -> Result<String, String> {
+    let output = Command::new("git")
+        .args([
+            "--no-pager",
+            "-C",
+            &path,
+            "diff",
+            &context_arg,
+            "--no-color",
+            "--no-index",
+            "--",
+            "/dev/null",
+            &file_path,
+        ])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run git: {}", e))?;
+
+    // `git diff --no-index` exits with 1 when it successfully finds differences.
+    let code = output.status.code().unwrap_or(1);
+    if code == 0 || code == 1 {
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
         Err(format!("Diff failed: {}", stderr.trim()))
@@ -151,6 +212,9 @@ fn parse_name_status_line(line: &str) -> Option<CommitFileChange> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
+    use std::time::{SystemTime, UNIX_EPOCH};
+    use tokio::process::Command;
 
     #[test]
     fn parses_name_status_for_basic_file_changes() {
@@ -185,6 +249,47 @@ mod tests {
     fn rejects_malformed_name_status_lines() {
         assert!(parse_name_status_line("").is_none());
         assert!(parse_name_status_line("R100\told.rs").is_none());
+    }
+
+    #[tokio::test]
+    async fn returns_diff_for_untracked_nested_file() {
+        let repo_path = unique_temp_repo_path();
+        fs::create_dir_all(repo_path.join("src")).unwrap();
+
+        let init = Command::new("git")
+            .arg("init")
+            .current_dir(&repo_path)
+            .output()
+            .await
+            .unwrap();
+        assert!(init.status.success());
+
+        fs::write(repo_path.join("src/new.txt"), "hello\n").unwrap();
+
+        let diff = file_diff(
+            repo_path.to_string_lossy().to_string(),
+            "src/new.txt".to_string(),
+            None,
+        )
+        .await
+        .unwrap();
+
+        assert!(diff.contains("src/new.txt"));
+        assert!(diff.contains("+hello"));
+
+        let _ = fs::remove_dir_all(repo_path);
+    }
+
+    fn unique_temp_repo_path() -> std::path::PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        std::env::temp_dir().join(format!(
+            "gitflow-plus-diff-test-{}-{}",
+            std::process::id(),
+            nanos
+        ))
     }
 }
 
