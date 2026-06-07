@@ -259,6 +259,9 @@ export default function CommitBox({
 
   const hasAnyChanges = staged.length > 0 || unstaged.length > 0;
   const hasCommitMessage = commitMessage.trim().length > 0;
+  const commitBusy = committing || lintRunning || scopeAnalyzing || commitScopePending || coachPending;
+  const commitBlockedBySuggestion = scopeSuggestion != null && !scopeDismissed;
+  const canCommitNow = hasCommitMessage && hasAnyChanges && !commitBusy && !commitBlockedBySuggestion;
   const [aiChecksOpen, setAiChecksOpen] = useState(false);
 
   return (
@@ -565,11 +568,14 @@ export default function CommitBox({
               <button
                 type="button"
                 onClick={onCommit}
-                disabled={!hasCommitMessage || !hasAnyChanges || committing || lintRunning || scopeAnalyzing || commitScopePending || coachPending || (scopeSuggestion != null && !scopeDismissed)}
-                className={`h-6 px-2.5 rounded-mac text-[10px] font-bold inline-flex shrink-0 items-center gap-1 whitespace-nowrap transition-all cursor-pointer select-none ${hasCommitMessage && hasAnyChanges && !scopeAnalyzing && !commitScopePending && !coachPending && !(scopeSuggestion != null && !scopeDismissed)
-                  ? "bg-[#30d158] text-[#07140a] hover:bg-[#30d158]/90 active:scale-[0.99]"
-                  : "bg-surface-2-40 text-text-muted opacity-35 cursor-not-allowed"
-                  } ${committing || lintRunning || scopeAnalyzing || commitScopePending || coachPending ? "opacity-60" : ""}`}
+                disabled={!canCommitNow}
+                className={`h-6 px-2.5 rounded-mac border text-[10px] font-bold inline-flex shrink-0 items-center gap-1 whitespace-nowrap transition-all select-none ${
+                  commitBusy
+                    ? "cursor-wait bg-accent-10 border-accent-30 text-accent"
+                    : canCommitNow
+                      ? "bg-[#30d158] text-[#07140a] hover:bg-[#30d158]/90 active:scale-[0.99]"
+                      : "cursor-not-allowed bg-transparent border-transparent text-text-muted opacity-30"
+                  }`}
                 title={
                   coachPending
                     ? "Waiting for Commit Coach analysis..."
@@ -588,7 +594,7 @@ export default function CommitBox({
                                 : "Commit (⌘↵)"
                 }
               >
-                {committing || lintRunning || scopeAnalyzing || commitScopePending || coachPending ? (
+                {commitBusy ? (
                   <RefreshCw size={11} className="animate-spin" />
                 ) : (
                   <Check size={11} />
