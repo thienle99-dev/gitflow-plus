@@ -90,7 +90,7 @@ pub async fn unstage_file(
     file_path: String,
 ) -> Result<String, String> {
     let output = Command::new("git")
-        .args(["--no-pager", "-C", &path, "restore", "--staged", &file_path])
+        .args(["--no-pager", "-C", &path, "reset", "HEAD", "--", &file_path])
         .output()
         .await
         .map_err(|e| format!("Failed to run git: {}", e))?;
@@ -130,7 +130,7 @@ pub async fn unstage_all(
     path: String,
 ) -> Result<String, String> {
     let output = Command::new("git")
-        .args(["--no-pager", "-C", &path, "restore", "--staged", "."])
+        .args(["--no-pager", "-C", &path, "reset", "HEAD", "--", "."])
         .output()
         .await
         .map_err(|e| format!("Failed to run git: {}", e))?;
@@ -150,20 +150,17 @@ pub async fn discard_file(
     path: String,
     file_path: String,
 ) -> Result<String, String> {
-    let restore = Command::new("git")
-        .args([
-            "--no-pager",
-            "-C",
-            &path,
-            "restore",
-            "--staged",
-            "--worktree",
-            "--",
-            &file_path,
-        ])
+    let reset = Command::new("git")
+        .args(["--no-pager", "-C", &path, "reset", "HEAD", "--", &file_path])
         .output()
         .await
-        .map_err(|e| format!("Failed to run git restore: {}", e))?;
+        .map_err(|e| format!("Failed to run git reset: {}", e))?;
+
+    let checkout = Command::new("git")
+        .args(["--no-pager", "-C", &path, "checkout", "HEAD", "--", &file_path])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run git checkout: {}", e))?;
 
     let clean = Command::new("git")
         .args(["--no-pager", "-C", &path, "clean", "-fd", "--", &file_path])
@@ -171,15 +168,17 @@ pub async fn discard_file(
         .await
         .map_err(|e| format!("Failed to run git clean: {}", e))?;
 
-    if restore.status.success() || clean.status.success() {
+    if reset.status.success() || checkout.status.success() || clean.status.success() {
         clear_status_cache(&cache_state, &path);
         Ok(format!("Discarded '{}'", file_path))
     } else {
-        let restore_stderr = String::from_utf8_lossy(&restore.stderr);
+        let reset_stderr = String::from_utf8_lossy(&reset.stderr);
+        let checkout_stderr = String::from_utf8_lossy(&checkout.stderr);
         let clean_stderr = String::from_utf8_lossy(&clean.stderr);
         Err(format!(
-            "Failed to discard: {} {}",
-            restore_stderr.trim(),
+            "Failed to discard: {} {} {}",
+            reset_stderr.trim(),
+            checkout_stderr.trim(),
             clean_stderr.trim()
         ))
     }
@@ -190,19 +189,17 @@ pub async fn discard_all(
     cache_state: tauri::State<'_, crate::RepoCache>,
     path: String,
 ) -> Result<String, String> {
-    let restore = Command::new("git")
-        .args([
-            "--no-pager",
-            "-C",
-            &path,
-            "restore",
-            "--staged",
-            "--worktree",
-            ".",
-        ])
+    let reset = Command::new("git")
+        .args(["--no-pager", "-C", &path, "reset", "HEAD", "--", "."])
         .output()
         .await
-        .map_err(|e| format!("Failed to run git restore: {}", e))?;
+        .map_err(|e| format!("Failed to run git reset: {}", e))?;
+
+    let checkout = Command::new("git")
+        .args(["--no-pager", "-C", &path, "checkout", "HEAD", "--", "."])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run git checkout: {}", e))?;
 
     let clean = Command::new("git")
         .args(["--no-pager", "-C", &path, "clean", "-fd", "."])
@@ -210,15 +207,17 @@ pub async fn discard_all(
         .await
         .map_err(|e| format!("Failed to run git clean: {}", e))?;
 
-    if restore.status.success() || clean.status.success() {
+    if reset.status.success() || checkout.status.success() || clean.status.success() {
         clear_status_cache(&cache_state, &path);
         Ok("Discarded all changes".to_string())
     } else {
-        let restore_stderr = String::from_utf8_lossy(&restore.stderr);
+        let reset_stderr = String::from_utf8_lossy(&reset.stderr);
+        let checkout_stderr = String::from_utf8_lossy(&checkout.stderr);
         let clean_stderr = String::from_utf8_lossy(&clean.stderr);
         Err(format!(
-            "Failed to discard all: {} {}",
-            restore_stderr.trim(),
+            "Failed to discard all: {} {} {}",
+            reset_stderr.trim(),
+            checkout_stderr.trim(),
             clean_stderr.trim()
         ))
     }
@@ -307,7 +306,7 @@ pub async fn commit_file_groups(
             },
         );
 
-        run_git(&path, &["restore", "--staged", "."])
+        run_git(&path, &["reset", "HEAD", "--", "."])
             .await
             .map_err(|e| format!("Group {}/{} failed while unstaging: {}", current, total, e))?;
         clear_status_cache(&cache_state, &path);
