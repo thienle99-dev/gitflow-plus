@@ -8,11 +8,13 @@ export interface WorkspaceTab {
 interface WorkspaceState {
   tabs: WorkspaceTab[];
   activePath: string | null;
+  railCollapsed: boolean;
   addTab: (path: string) => void;
   removeTab: (path: string) => void;
   setActive: (path: string) => void;
   closeOthers: (path: string) => void;
   closeAll: () => void;
+  toggleRailCollapsed: () => void;
 }
 
 function repoName(path: string): string {
@@ -35,6 +37,9 @@ function saveTabs(tabs: WorkspaceTab[]) {
 export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   tabs: loadTabs(),
   activePath: null,
+  railCollapsed: false,
+
+  toggleRailCollapsed: () => set((s) => ({ railCollapsed: !s.railCollapsed })),
 
   addTab: (path) => {
     set((state) => {

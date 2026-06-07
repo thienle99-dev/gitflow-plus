@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useCommitDateFormatter } from "@/lib/date";
 import { useRepoStore } from "@/stores/repo";
+import { useUIStore } from "@/stores/ui";
 import { api } from "@/api/tauri";
 import { useTagList, useTagCreate, useTagDelete, useTagPush } from "@/queries/useGitTag";
 import { useGenerateTagDescription } from "@/queries/useAI";
 import { showToast } from "@/lib/toast";
-import { Tag, Plus, Trash2, Upload, GitCommit, User, Calendar, Sparkles } from "lucide-react";
+import { Tag, Plus, Trash2, Upload, GitCommit, User, Calendar, Sparkles, Rocket } from "lucide-react";
 import { Input } from "@/components/ui/form";
 import { EmptyStateInline, EmptyState, CreateTagAction } from "@/components/ui/feedback/EmptyState";
 import { SkeletonTagRow } from "@/components/ui/feedback/Skeleton";
@@ -106,6 +107,13 @@ export default function TagPanel({ onClose }: { onClose?: () => void }) {
         <span className="text-xs font-semibold text-text-primary flex-1">
           Tags ({tags?.length ?? 0})
         </span>
+        <button
+          onClick={() => useUIStore.getState().openDialog("create-release")}
+          className="ghost p-1 text-text-muted hover:text-accent"
+          title="New Release"
+        >
+          <Rocket size={14} />
+        </button>
         <button
           onClick={() => setShowCreate(!showCreate)}
           className="ghost p-1 text-text-muted hover:text-text-primary"

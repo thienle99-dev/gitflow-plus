@@ -13,7 +13,7 @@ import Sidebar from "@/components/features/sidebar/Sidebar";
 import CommitGraph from "@/components/features/graph/CommitGraph";
 import RightPanel from "@/components/layout/RightPanel";
 import BottomBar from "@/components/layout/BottomBar";
-import WorkspaceBar from "@/components/layout/WorkspaceBar";
+import WorkspaceRail from "@/components/layout/WorkspaceRail";
 import OperationCenter from "@/components/layout/OperationCenter";
 import LogCenter from "@/components/layout/LogCenter";
 import { useOperationObserver } from "@/hooks/useOperationObserver";
@@ -45,6 +45,7 @@ const GitFlowDialog = lazy(() => import("@/components/features/dialogs/GitFlowDi
 const ResetDialog = lazy(() => import("@/components/features/dialogs/ResetDialog"));
 const RemoteManager = lazy(() => import("@/components/features/dialogs/RemoteManager"));
 const BisectDialog = lazy(() => import("@/components/features/dialogs/BisectDialog"));
+const CreateReleaseDialog = lazy(() => import("@/components/features/dialogs/CreateReleaseDialog"));
 
 export default function MainLayout() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
@@ -361,7 +362,7 @@ export default function MainLayout() {
     }
   }, [rightPanelOpen]);
 
-  const overlayDialog = activeDialog && activeDialog !== "stash" && activeDialog !== "tag" && activeDialog !== "command-palette"
+  const overlayDialog = activeDialog && activeDialog !== "stash" && activeDialog !== "tag" && activeDialog !== "command-palette" && activeDialog !== "create-release"
     ? activeDialog
     : null;
 
@@ -409,6 +410,7 @@ export default function MainLayout() {
     "reset": <ResetDialog open={true} onClose={closeDialog} />,
     "remote-manager": <RemoteManager open={true} onClose={closeDialog} />,
     "bisect": <BisectDialog open={true} onClose={closeDialog} />,
+    "create-release": <CreateReleaseDialog open={true} onClose={closeDialog} />,
   }), [closeDialog, selectedCommit, mergeTargetBranch, compareBranchTarget, selectedRef, rebaseTargetCommit]);
 
   const dialogOverlay = overlayDialog ? (
@@ -476,8 +478,10 @@ function InlineErrorFallback({ name }: { name: string }) {
   return (
     <div className="h-full min-h-0 flex flex-col">
       <Toolbar />
-      {repoPath && <WorkspaceBar />}
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-row overflow-hidden">
+        {repoPath && <WorkspaceRail />}
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-hidden">
         <PanelGroup direction="horizontal" autoSaveId="main-layout" className="h-full min-h-0">
           <Panel
             ref={sidebarPanelRef}
@@ -530,15 +534,22 @@ function InlineErrorFallback({ name }: { name: string }) {
           </Panel>
         </PanelGroup>
       </div>
-      <OperationCenter />
-      <LogCenter />
-      <BottomBar />
+          <OperationCenter />
+          <LogCenter />
+          <BottomBar />
+        </div>
+      </div>
 
       {/* Dialog overlays */}
       {dialogOverlay}
       {activeDialog === "command-palette" && (
         <Suspense>
           <CommandPalette open={true} onClose={closeDialog} />
+        </Suspense>
+      )}
+      {activeDialog === "create-release" && (
+        <Suspense>
+          <CreateReleaseDialog open={true} onClose={closeDialog} />
         </Suspense>
       )}
       <Suspense>
