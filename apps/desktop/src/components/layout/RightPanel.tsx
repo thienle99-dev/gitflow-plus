@@ -3,15 +3,17 @@ import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
 import { useGitStatus, useGitDiff } from "@/queries/useGitLog";
 import { useQueryClient } from "@tanstack/react-query";
-import { Eye, History, Maximize2, Minimize2 } from "lucide-react";
+import { Eye, History, GitCommit, Maximize2, Minimize2, RotateCcw } from "lucide-react";
 import WorkingTree from "@/components/features/working-tree/WorkingTree";
 import CommitDetail from "@/components/features/commit-detail/CommitDetail";
 import LazyDiffViewer from "@/components/features/diff/LazyDiffViewer";
 import StashPanel from "@/components/features/stash/StashPanel";
 import TagPanel from "@/components/features/tags/TagPanel";
+import ReflogBrowser from "@/components/features/reflog/ReflogBrowser";
 import SubmoduleDetail from "@/components/features/submodules/SubmoduleDetail";
 import { useSubmoduleList } from "@/queries/useSubmoduleList";
 import FileHistoryPanel from "./FileHistoryPanel";
+import BlameView from "@/components/features/blame/BlameView";
 import { EmptyState } from "@/components/ui/feedback/EmptyState";
 import { Skeleton } from "@/components/ui/feedback/Skeleton";
 
@@ -28,6 +30,10 @@ export default function RightPanel() {
 
   if (activeDialog === "tag") {
     return <TagPanel />;
+  }
+
+  if (activeDialog === "reflog") {
+    return <ReflogBrowser />;
   }
 
   // Check if selected file is a submodule
@@ -54,6 +60,7 @@ function DiffViewerPanel() {
   const [showFullContext, setShowFullContext] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [showFileHistory, setShowFileHistory] = useState(false);
+  const [showBlame, setShowBlame] = useState(false);
   
   const { data: diff, isLoading } = useGitDiff(
     repoPath,
@@ -147,16 +154,26 @@ function DiffViewerPanel() {
           {!selectedCommit && (
             <button
               className={`ghost text-2xs px-2.5 py-1 hover:bg-surface-2 border border-border-40 rounded flex items-center gap-1 transition-colors ${showFileHistory ? "text-[#0a84ff]" : ""}`}
-              onClick={() => setShowFileHistory(!showFileHistory)}
+              onClick={() => { setShowFileHistory(!showFileHistory); setShowBlame(false); }}
               title="Show file history"
             >
               <History size={12} />
               <span>History</span>
             </button>
           )}
+          <button
+            className={`ghost text-2xs px-2.5 py-1 hover:bg-surface-2 border border-border-40 rounded flex items-center gap-1 transition-colors ${showBlame ? "text-accent" : ""}`}
+            onClick={() => { setShowBlame(!showBlame); setShowFileHistory(false); }}
+            title="Show blame annotation"
+          >
+            <GitCommit size={12} />
+            <span>Blame</span>
+          </button>
         </div>
       </div>
-      {showFileHistory && !selectedCommit ? (
+      {showBlame ? (
+        <BlameView filePath={selectedFile} onClose={() => setShowBlame(false)} />
+      ) : showFileHistory && !selectedCommit ? (
         <FileHistoryPanel />
       ) : isLoading ? (
         <div className="flex-1 flex flex-col p-4 gap-2">
