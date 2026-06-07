@@ -43,6 +43,7 @@ const CommitSummaryDialog = lazy(() => import("@/components/features/dialogs/Com
 const GitFlowDialog = lazy(() => import("@/components/features/dialogs/GitFlowDialog"));
 const ResetDialog = lazy(() => import("@/components/features/dialogs/ResetDialog"));
 const RemoteManager = lazy(() => import("@/components/features/dialogs/RemoteManager"));
+const BisectDialog = lazy(() => import("@/components/features/dialogs/BisectDialog"));
 
 export default function MainLayout() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
@@ -406,6 +407,7 @@ export default function MainLayout() {
     "gitflow-hotfix-start": <GitFlowDialog open={true} initialMode="hotfix-start" onClose={closeDialog} />,
     "reset": <ResetDialog open={true} onClose={closeDialog} />,
     "remote-manager": <RemoteManager open={true} onClose={closeDialog} />,
+    "bisect": <BisectDialog open={true} onClose={closeDialog} />,
   }), [closeDialog, selectedCommit, mergeTargetBranch, compareBranchTarget, selectedRef, rebaseTargetCommit]);
 
   const dialogOverlay = overlayDialog ? (
