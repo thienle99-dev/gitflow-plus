@@ -250,7 +250,7 @@ export default function TagPanel({ onClose }: { onClose?: () => void }) {
                 {confirmDelete === tag.name ? (
                   <div className="flex items-center gap-1">
                     <button
-                      className="h-5 px-1.5 bg-[#ff453a] hover:bg-[#ff3b30] text-white text-3xs font-semibold rounded-mac transition-all"
+                      className="h-5 px-1.5 bg-[#ff453a] hover:bg-[#ff3b30] text-white text-3xs font-semibold rounded-mac transition-all disabled:opacity-40"
                       onClick={() => handleDelete(tag.name)}
                     >
                       Confirm

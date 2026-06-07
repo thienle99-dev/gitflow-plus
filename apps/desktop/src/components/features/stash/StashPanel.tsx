@@ -125,7 +125,7 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
               <button
                 onClick={handlePush}
                 disabled={stashPush.isPending}
-                className="flex-1 px-2 py-1.5 text-xs bg-accent text-white rounded-mac disabled:opacity-50 hover:opacity-90 transition-opacity"
+                className="flex-1 px-2 py-1.5 text-xs bg-accent text-accent-fg rounded-mac disabled:opacity-50 hover:opacity-90 transition-opacity"
               >
                 {stashPush.isPending ? "Stashing..." : "Stash"}
               </button>
@@ -141,7 +141,7 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
           <div className="px-3 py-2 border-b border-border-40 bg-surface-1-40">
             <button
               onClick={() => setShowPushForm(true)}
-              className="w-full flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-accent text-white rounded-mac hover:opacity-90 transition-opacity"
+              className="w-full flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-accent text-accent-fg rounded-mac hover:opacity-90 transition-opacity"
             >
               <Upload size={12} />
               Stash Changes
@@ -196,21 +196,21 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
                 {repoPath && <StashPreview repoPath={repoPath} stashIndex={stash.index} />}
                 <div className="flex gap-1 mt-1.5">
                   <button
-                    className="px-1.5 py-0.5 text-[10px] rounded-mac text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
+                    className="px-1.5 py-0.5 text-[10px] rounded-mac text-text-muted hover:text-text-primary hover:bg-surface-2 border border-border-40 transition-colors"
                     title="Pop"
                     onClick={(e) => { e.stopPropagation(); handlePop(stash.index); }}
                   >
                     <Download size={10} />
                   </button>
                   <button
-                    className="px-1.5 py-0.5 text-[10px] rounded-mac text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
+                    className="px-1.5 py-0.5 text-[10px] rounded-mac text-text-muted hover:text-text-primary hover:bg-surface-2 border border-border-40 transition-colors"
                     title="Apply"
                     onClick={(e) => { e.stopPropagation(); handleApply(stash.index); }}
                   >
                     <Play size={10} />
                   </button>
                   <button
-                    className="px-1.5 py-0.5 text-[10px] rounded-mac text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
+                    className="px-1.5 py-0.5 text-[10px] rounded-mac text-text-muted hover:text-[#ff453a] hover:bg-[#ff453a]/10 transition-colors"
                     title="Drop"
                     onClick={(e) => { e.stopPropagation(); setDropTarget(stash.index); }}
                   >

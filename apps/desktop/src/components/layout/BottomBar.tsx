@@ -322,7 +322,7 @@ export default function BottomBar() {
             <div className="absolute bottom-full right-0 mb-1 w-48 bg-surface-1-95 backdrop-blur-xl border border-border-40 rounded-mac shadow-xl py-1 z-[999] anim-palette-enter">
               <button
                 onClick={() => handleMoreAction(() => openDialogState("diagnostics"))}
-                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-left text-2xs text-text-secondary hover:bg-surface-2 hover:text-text-primary transition-colors cursor-default"
+                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-left text-2xs text-text-secondary hover:bg-accent hover:text-accent-fg transition-colors cursor-default"
               >
                 <Stethoscope size={11} className="text-text-muted shrink-0" />
                 <span>Diagnostics</span>
@@ -330,14 +330,14 @@ export default function BottomBar() {
               </button>
               <button
                 onClick={() => handleMoreAction(() => openDialogState("commit-summary"))}
-                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-left text-2xs text-text-secondary hover:bg-surface-2 hover:text-text-primary transition-colors cursor-default"
+                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-left text-2xs text-text-secondary hover:bg-accent hover:text-accent-fg transition-colors cursor-default"
               >
                 <MessageSquareText size={11} className="text-text-muted shrink-0" />
                 <span>AI Commit Summary</span>
               </button>
               <button
                 onClick={() => handleMoreAction(() => openDialogState("feature-guide"))}
-                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-left text-2xs text-text-secondary hover:bg-surface-2 hover:text-text-primary transition-colors cursor-default"
+                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-left text-2xs text-text-secondary hover:bg-accent hover:text-accent-fg transition-colors cursor-default"
               >
                 <Book size={11} className="text-text-muted shrink-0" />
                 <span>Feature Guide</span>
