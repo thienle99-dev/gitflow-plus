@@ -18,6 +18,7 @@ import {
   ArrowDownToLine,
   RefreshCw,
   Search,
+  History,
   RotateCcw,
   ArrowLeftRight,
   Archive,
@@ -167,7 +168,7 @@ export default function Toolbar() {
       loading === action
         ? "bg-accent-10 text-accent"
         : loading
-          ? "text-text-muted-50 opacity-55"
+          ? "text-text-muted-50 opacity-40"
           : "text-text-secondary hover:text-text-primary hover:bg-surface-3"
     }`;
 
@@ -208,6 +209,11 @@ export default function Toolbar() {
       icon: <RotateCcw size={12} />,
       action: () => doAction("undo", () => undoLast.mutateAsync()),
       disabled: undoLast.isPending,
+    },
+    {
+      label: "Reflog Browser",
+      icon: <History size={12} />,
+      action: () => openDialog("reflog"),
     },
   ];
 
@@ -287,14 +293,14 @@ export default function Toolbar() {
               }}
               disabled={!!loading}
               aria-label={`Pull remote changes${syncStatus?.behind ? ` (${syncStatus.behind} behind)` : ""}`}
-              title="Pull remote changes"
+              title={loading === "pull" ? "Pulling…" : "Pull remote changes"}
             >
               {loading === "pull" ? (
-                <RefreshCw size={13} className={`${syncIconClass} animate-spin text-accent`} />
+                <RefreshCw size={13} className={`${syncIconClass} animate-spin`} />
               ) : (
                 <ArrowDownToLine size={13} className={`${syncIconClass} text-text-muted`} />
               )}
-              <span>Pull</span>
+              <span>{loading === "pull" ? "Pulling…" : "Pull"}</span>
               {!!syncStatus?.behind && (
                 <span className="ml-0.5 rounded bg-[#0a84ff]/15 px-1.5 py-0.5 text-[9px] font-bold text-[#0a84ff]">
                   {syncStatus.behind}
@@ -307,13 +313,14 @@ export default function Toolbar() {
               onClick={() => doAction("fetch", () => api.remote.fetch(repoPath!))}
               disabled={!!loading}
               aria-label="Fetch remote changes"
-              title="Fetch remote changes"
+              title={loading === "fetch" ? "Fetching…" : "Fetch remote changes"}
             >
-              <RefreshCw
-                size={13}
-                className={`${syncIconClass} ${loading === "fetch" ? "animate-spin text-accent" : "text-text-muted"}`}
-              />
-              <span>Fetch</span>
+              {loading === "fetch" ? (
+                <RefreshCw size={13} className={`${syncIconClass} animate-spin`} />
+              ) : (
+                <RefreshCw size={13} className={`${syncIconClass} text-text-muted`} />
+              )}
+              <span>{loading === "fetch" ? "Fetching…" : "Fetch"}</span>
             </button>
             <div className="w-[1px] h-3.5 bg-border-50" />
             <button
@@ -321,14 +328,14 @@ export default function Toolbar() {
               onClick={handlePush}
               disabled={!!loading}
               aria-label={`Push local commits${syncStatus?.ahead ? ` (${syncStatus.ahead} ahead)` : ""}`}
-              title="Push local commits (risk analysis runs first)"
+              title={loading === "push" ? "Pushing…" : "Push local commits (risk analysis runs first)"}
             >
               {loading === "push" ? (
-                <RefreshCw size={13} className={`${syncIconClass} animate-spin text-accent`} />
+                <RefreshCw size={13} className={`${syncIconClass} animate-spin`} />
               ) : (
                 <ArrowUpFromLine size={13} className={`${syncIconClass} text-text-muted`} />
               )}
-              <span>Push</span>
+              <span>{loading === "push" ? "Pushing…" : "Push"}</span>
               {!!syncStatus?.ahead && (
                 <span className="ml-0.5 rounded bg-[#30d158]/15 px-1.5 py-0.5 text-[9px] font-bold text-[#30d158]">
                   {syncStatus.ahead}
@@ -357,23 +364,31 @@ export default function Toolbar() {
               </div>
               <div className="w-[1px] h-3.5 bg-border-50" />
               <button
-                className="h-7 px-2.5 flex items-center gap-1.5 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded transition-all disabled:opacity-40 cursor-pointer"
+                className={`h-7 px-2.5 flex items-center gap-1.5 text-2xs font-semibold rounded transition-all cursor-pointer disabled:cursor-not-allowed ${loading === "lfs-pull" ? "bg-accent-10 text-accent" : loading ? "opacity-40" : "text-text-secondary hover:text-text-primary hover:bg-surface-3"}`}
                 onClick={() => doAction("lfs-pull", () => api.lfs.pull(repoPath!))}
                 disabled={!!loading}
-                title="Pull Git LFS objects"
+                title={loading === "lfs-pull" ? "Pulling LFS objects…" : "Pull Git LFS objects"}
               >
-                <ArrowDownToLine size={13} className={`${loading === "lfs-pull" ? "animate-spin text-accent" : "text-text-muted"}`} />
-                <span>Pull</span>
+                {loading === "lfs-pull" ? (
+                  <RefreshCw size={13} className="animate-spin" />
+                ) : (
+                  <ArrowDownToLine size={13} className="text-text-muted" />
+                )}
+                <span>{loading === "lfs-pull" ? "Pulling…" : "Pull"}</span>
               </button>
               <div className="w-[1px] h-3.5 bg-border-50" />
               <button
-                className="h-7 px-2.5 flex items-center gap-1.5 text-2xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-3 rounded transition-all disabled:opacity-40 cursor-pointer"
+                className={`h-7 px-2.5 flex items-center gap-1.5 text-2xs font-semibold rounded transition-all cursor-pointer disabled:cursor-not-allowed ${loading === "lfs-push" ? "bg-accent-10 text-accent" : loading ? "opacity-40" : "text-text-secondary hover:text-text-primary hover:bg-surface-3"}`}
                 onClick={() => doAction("lfs-push", () => api.lfs.push(repoPath!))}
                 disabled={!!loading}
-                title="Push Git LFS objects"
+                title={loading === "lfs-push" ? "Pushing LFS objects…" : "Push Git LFS objects"}
               >
-                <ArrowUpFromLine size={13} className={`${loading === "lfs-push" ? "animate-spin text-accent" : "text-text-muted"}`} />
-                <span>Push</span>
+                {loading === "lfs-push" ? (
+                  <RefreshCw size={13} className="animate-spin" />
+                ) : (
+                  <ArrowUpFromLine size={13} className="text-text-muted" />
+                )}
+                <span>{loading === "lfs-push" ? "Pushing…" : "Push"}</span>
               </button>
             </div>
           )}
