@@ -50,6 +50,43 @@ interface MergeRequestDialogProps {
   onClose: () => void;
 }
 
+function providerLabel(remoteInfo: ReturnType<typeof parseRemoteUrl> | null) {
+  if (remoteInfo?.provider === "gitlab") return remoteInfo.host || "https://gitlab.com";
+  if (remoteInfo?.provider === "github") return "GitHub";
+  return "remote host";
+}
+
+function formatMergeRequestError(error: string | null, remoteInfo: ReturnType<typeof parseRemoteUrl> | null) {
+  if (!error) return "";
+
+  const text = error.replace(/\s+/g, " ").trim();
+  const host = providerLabel(remoteInfo);
+
+  if (remoteInfo?.provider === "github" && /403|rate limit/i.test(text)) {
+    return "GitHub rate limit reached for unauthenticated requests. Add a GitHub token in Accounts, then retry.";
+  }
+
+  if (/error sending request for url/i.test(text)) {
+    return `Cannot reach ${host}. Check VPN/network access, host settings, or certificate trust, then retry.`;
+  }
+
+  if (/GitLab API Error \(401\)|\b401\b|unauthorized/i.test(text)) {
+    return "GitLab rejected the request. Check your Personal Access Token in Accounts.";
+  }
+
+  if (/GitLab API Error \(403\)|\b403\b|forbidden/i.test(text)) {
+    return "GitLab token does not have permission to read merge requests for this project.";
+  }
+
+  if (/GitLab API Error \(404\)|\b404\b|not found/i.test(text)) {
+    return "Project not found on GitLab. Check the repository remote URL and GitLab host setting.";
+  }
+
+  return text
+    .replace(/\s*for url \([^)]*\)/i, "")
+    .replace(/https?:\/\/[^\s)]+/g, host);
+}
+
 export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps) {
   const repoPath = useRepoStore((s) => s.repoPath);
   const { data: repoInfo } = useRepoInfo(repoPath);
@@ -526,9 +563,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
   }, [selectedMr, remoteInfo]);
 
   const isGithubRateLimitError = !!error && remoteInfo?.provider === "github" && /403|rate limit/i.test(error);
-  const errorMessage = isGithubRateLimitError
-    ? "GitHub rate limit reached for unauthenticated requests. Add a GitHub token in Accounts, then retry."
-    : error;
+  const errorMessage = formatMergeRequestError(error, remoteInfo);
 
   // Keep selection matching the filter
   useEffect(() => {
@@ -615,7 +650,7 @@ export default function MergeRequestDialog({ onClose }: MergeRequestDialogProps)
             <div className="h-full flex flex-col items-center justify-center p-4 text-center space-y-2 text-text-muted">
               <AlertCircle size={18} className="text-[#ff453a]" />
               <span className="text-3xs font-semibold text-text-primary">Could not load merge requests</span>
-              <span className="max-w-[220px] text-[10px] leading-relaxed">{errorMessage}</span>
+              <span title={error || undefined} className="max-w-[260px] text-[10px] leading-relaxed break-words">{errorMessage}</span>
               <div className="flex items-center gap-2 pt-1">
                 <button
                   onClick={loadMRs}
