@@ -7,7 +7,7 @@ import { useGenerateTagDescription } from "@/queries/useAI";
 import { showToast } from "@/lib/toast";
 import { Tag, Plus, Trash2, Upload, GitCommit, User, Calendar, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/form";
-import { EmptyStateInline } from "@/components/ui/feedback/EmptyState";
+import { EmptyStateInline, EmptyState, CreateTagAction } from "@/components/ui/feedback/EmptyState";
 import { SkeletonTagRow } from "@/components/ui/feedback/Skeleton";
 
 export default function TagPanel({ onClose }: { onClose?: () => void }) {
@@ -188,7 +188,16 @@ export default function TagPanel({ onClose }: { onClose?: () => void }) {
           </div>
         )}
         {!isLoading && (!tags || tags.length === 0) && (
-          <EmptyStateInline variant="tags" title="No tags found" />
+          <div className="py-6">
+            <EmptyState
+              variant="tags"
+              title="No tags found"
+              description="Tag important commits for release points or milestones"
+              action={
+                <CreateTagAction onClick={() => setShowCreate(true)} />
+              }
+            />
+          </div>
         )}
         {tags?.map((tag) => (
           <div

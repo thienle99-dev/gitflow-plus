@@ -8,7 +8,7 @@ import { parseDiffFiles, countDiffChanges } from "@/lib/parse-diff";
 import { GitBranch, Download, Upload, Trash2, Play, FileText, Plus, Minus } from "lucide-react";
 import StashDiffViewer from "./StashDiffViewer";
 import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
-import { EmptyStateInline } from "@/components/ui/feedback/EmptyState";
+import { EmptyState, EmptyStateInline, StashChangesAction } from "@/components/ui/feedback/EmptyState";
 import { Skeleton } from "@/components/ui/feedback/Skeleton";
 
 /** Inline preview of stash contents (file count + insertions/deletions) */
@@ -161,7 +161,16 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
             </div>
           )}
           {!isLoading && (!stashes || stashes.length === 0) && (
-            <EmptyStateInline variant="stash" title="No stashes" />
+            <div className="py-6">
+              <EmptyState
+                variant="stash"
+                title="No stashes"
+                description="Stash your working directory changes to cleanly switch branches"
+                action={
+                  <StashChangesAction onClick={() => setShowPushForm(true)} />
+                }
+              />
+            </div>
           )}
           {stashes?.map((stash) => {
             const { branch, label } = formatDate(stash.message);
