@@ -18,6 +18,12 @@ Frontend (run from `apps/desktop/`):
 
 Full desktop app (the only way to exercise Tauri commands, since `invoke` is a no-op in a plain browser): driven by the cargo tauri CLI from `src-tauri/` (`cargo tauri dev` / `cargo tauri build`). `tauri.conf.json` runs `npm run dev` / `npm run build` as its before-hooks and serves the frontend from `../apps/desktop/dist`. Rust-only build/check: `cargo build` in `src-tauri/`.
 
+Release (from repo root):
+
+- `python3 scripts/release.py` — bumps version in `Cargo.toml`, `tauri.conf.json`, and `apps/desktop/package.json`, commits, tags, and pushes. GitHub Actions builds cross-platform binaries on tag push.
+- `python3 scripts/release.py --force-update` — marks the release as a forced update
+- `python3 scripts/release.py --version 1.2.3 --no-force-update` — non-interactive
+
 The `@` import alias maps to `apps/desktop/src` (configured in both `vite.config.ts` and `tsconfig.json`).
 
 ## Architecture
@@ -31,9 +37,16 @@ Every backend command in `src-tauri/src/commands/*.rs` shells out to the system 
 ### Two-layer state: TanStack Query (server) + Zustand (client)
 
 - **TanStack Query** owns all git/server state. Query keys follow the convention `["git", repoPath, <resource>, ...]` (see `queries/useGitLog.ts`). This key shape is a contract — invalidation elsewhere relies on it.
-- **Zustand** owns client/UI state only: `stores/repo.ts` (current repoPath, recentRepos, theme — persisted to `localStorage`) and `stores/ui.ts` (sidebar, selected commit/file, diff view mode).
+- **Zustand** owns client/UI state only: `stores/repo.ts` (current repoPath, recentRepos, theme — persisted to `localStorage`), `stores/ui.ts` (sidebar, selected commit/file, diff view mode, active dialog), `stores/operations.ts` (in-flight git operations surfaced in OperationCenter), and `stores/logs.ts` (app-level log entries). `useOperationObserver` in `MainLayout.tsx` bridges React Query mutations into the operations store automatically — new mutations don't need manual wiring unless they need custom labels.
 
 Don't put git data in Zustand or UI selection in Query.
+
+### Component structure
+
+Components live under `apps/desktop/src/components/` in three subdirectories:
+- `features/` — feature-area components (`graph/`, `sidebar/`, `diff/`, `dialogs/`, `working-tree/`, etc.). New feature work goes here under the relevant area folder.
+- `layout/` — app shell components (`Toolbar`, `RightPanel`, `BottomBar`, `OperationCenter`, `LogCenter`).
+- `ui/` — shared primitives (`feedback/`, `form/`, `overlay/`, `shared/`, `theme/`).
 
 ### Realtime refresh loop (spans Rust → React)
 
@@ -56,14 +69,29 @@ Note Tauri's arg casing: Rust snake_case params (e.g. `base_ref`) are passed as 
 
 `apps/desktop/src/lib/graph-layout.ts` (`computeGraphLayout`) turns the flat newest-first commit list into lanes/colors/coordinates for `components/graph/CommitGraph.tsx`. It keeps a commit on its first parent's lane, allocating a new lane otherwise. It's a presentation-only transform — pure function over `Commit[]`.
 
+The computation runs off the main thread: `lib/graph-layout.worker.ts` wraps the same function as a Web Worker, invoked via `hooks/useGraphLayoutWorker.ts`. Don't call `computeGraphLayout` directly from a component — use the hook so large repos don't block the UI.
+
 ### AI integration
 
-All AI HTTP requests go through Tauri's `ai_http_request` command (`commands/ai.rs`) rather than direct browser `fetch` — this is required to bypass CORS in the WebView. The frontend AI logic lives entirely in `lib/ai.ts`. AI settings are stored in `localStorage` under these keys: `gitflowAiApiKey`, `gitflowAiModel`, `gitflowAiApiUrl`, `gitflowAiTokenLimit`, `gitflowAiDetailLevel`, `gitflowAiCustomRules`. Supported providers: Claude (Anthropic), OpenAI-compatible APIs, Ollama (`http://localhost:11434`), llama.cpp (`http://localhost:8080`).
+All AI HTTP requests go through Tauri's `ai_http_request` command (`commands/ai.rs`) rather than direct browser `fetch` — this is required to bypass CORS in the WebView. The frontend AI logic lives entirely in `lib/ai.ts`, which includes an in-memory response cache (10min TTL, 50 entries max) and a sliding-window rate limiter (10 req/min).
+
+AI provider configuration is managed as named profiles in `lib/ai-profiles.ts`. The active profile is loaded via `loadActiveProfile()`. Legacy single-provider `localStorage` keys (`gitflowAiApiKey`, `gitflowAiModel`, etc.) still exist for backwards compatibility but profiles are the current system. Supported providers: Claude (Anthropic), OpenAI-compatible APIs, Ollama (`http://localhost:11434`), llama.cpp (`http://localhost:8080`).
 
 ### Dialog system
 
-Dialogs are rendered as overlays in `MainLayout.tsx` via a string-keyed `dialogComponents` map. To add a new dialog: (1) create the component in `components/phase2/`, (2) add it to `dialogComponents` in `MainLayout.tsx`, (3) trigger it from anywhere with `useUIStore.openDialog("key")`. The `activeDialog` field in `useUIStore` is the single source of truth. Exception: `"stash"` and `"tag"` are treated as inline sidebar panels, not overlays — they're excluded from the overlay render path.
+Dialogs are rendered as overlays in `MainLayout.tsx` via a string-keyed `dialogComponents` map. To add a new dialog: (1) create the component in `components/features/dialogs/`, (2) import it with `React.lazy()` (all dialogs are lazy-loaded to keep the initial bundle small), (3) add it to the `dialogComponents` map in `MainLayout.tsx`, (4) trigger it from anywhere with `useUIStore.openDialog("key")`. The `activeDialog` field in `useUIStore` is the single source of truth. Exception: `"stash"` and `"tag"` are treated as inline sidebar panels, not overlays — they're excluded from the overlay render path.
 
 ### Theme system
 
 Themes are CSS classes applied to both `document.documentElement` and `document.body` by `applyTheme` in `stores/repo.ts`. Available themes: `dark`, `light`, `gruvbox-dark`, `gruvbox-dark-soft`, `gruvbox-dark-hard`, `gruvbox-light`, `gruvbox-light-soft`. All dark variants also get the `dark` class (for Tailwind's `dark:` utilities). Theme is persisted to `localStorage` under key `"theme"` and initialized before React mounts — avoid setting theme classes elsewhere.
+
+### Progressive disclosure for AI advanced actions
+
+AI actions like Guardrail, Readiness, AI Review, and Lint Review should use progressive disclosure patterns. Primary actions that are used most frequently should be directly accessible, while secondary actions can be placed in dropdown menus.
+
+Recommended patterns:
+- **"AI Checks" menu**: Group advanced AI validation actions together in a dedicated menu
+- **Segmented mini-toolbar**: Use a compact toolbar with dropdowns for less common actions
+- **Contextual visibility**: Show/hide AI actions based on current context (e.g., only show Guardrail when working with sensitive files)
+
+Keep the most commonly used AI action (determined by usage analytics) as the default visible button, with other actions accessible via dropdown or expansion.
