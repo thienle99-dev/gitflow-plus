@@ -14,13 +14,14 @@
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-export type AIProviderType = "openai-compatible" | "anthropic" | "ollama" | "llamacpp";
+export type AIProviderType = "openai-compatible" | "anthropic" | "ollama" | "llamacpp" | "9router";
 
 export const AI_PROVIDER_OPTIONS: { id: AIProviderType; label: string; description: string }[] = [
   { id: "openai-compatible", label: "OpenAI Compatible", description: "OpenAI, Azure, proxies, gateways" },
   { id: "anthropic", label: "Anthropic (Claude)", description: "Anthropic API for Claude models" },
   { id: "ollama", label: "Ollama (local)", description: "Local Ollama server (localhost:11434)" },
   { id: "llamacpp", label: "llama.cpp (local)", description: "Local llama.cpp server (localhost:8080)" },
+  { id: "9router", label: "9Router", description: "AI gateway with auto-fallback across providers" },
 ];
 
 export function defaultApiUrlForProvider(provider: AIProviderType): string {
@@ -28,12 +29,13 @@ export function defaultApiUrlForProvider(provider: AIProviderType): string {
     case "ollama": return "http://localhost:11434";
     case "llamacpp": return "http://localhost:8080";
     case "anthropic": return "https://api.anthropic.com/v1";
+    case "9router": return "";
     case "openai-compatible": return "";
   }
 }
 
 export function providerNeedsApiKey(provider: AIProviderType): boolean {
-  return provider === "openai-compatible" || provider === "anthropic";
+  return provider === "openai-compatible" || provider === "anthropic" || provider === "9router";
 }
 
 export interface AIProviderProfile {

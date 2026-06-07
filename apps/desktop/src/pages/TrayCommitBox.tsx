@@ -40,8 +40,12 @@ export function TrayCommitBox({
         <button
           onClick={onGenerateCommit}
           disabled={staged.length === 0 || generateCommitPending}
-          className="h-6 w-6 rounded border border-transparent text-accent transition-all hover:border-border-40 hover:bg-surface-3 disabled:opacity-40 flex items-center justify-center cursor-pointer"
-          title="Generate message using all changes"
+          className={`h-6 w-6 rounded border transition-all flex items-center justify-center cursor-pointer ${
+            generateCommitPending
+              ? "bg-accent-10 border-accent-30 text-accent"
+              : "border-transparent text-accent hover:border-border-40 hover:bg-surface-3 disabled:opacity-40"
+          }`}
+          title={generateCommitPending ? "Generating…" : "Generate message using all changes"}
         >
           {generateCommitPending ? (
             <Loader2 size={12} className="animate-spin" />
@@ -53,15 +57,19 @@ export function TrayCommitBox({
         <button
           onClick={onCommit}
           disabled={committing || lintRunning || !commitMessage.trim()}
-          className="h-7 px-2.5 bg-accent text-accent-fg text-[9px] font-bold rounded hover:opacity-95 disabled:opacity-40 transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
-          title="Commit changes"
+          className={`h-7 px-2.5 text-[9px] font-bold rounded transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer ${
+            committing || lintRunning
+              ? "bg-accent/20 text-accent"
+              : "bg-accent text-accent-fg hover:opacity-95 disabled:opacity-40"
+          }`}
+          title={committing ? "Committing…" : "Commit changes"}
         >
           {committing || lintRunning ? (
             <Loader2 size={12} className="animate-spin" />
           ) : (
             <Check size={12} />
           )}
-          <span>{committing ? "Committing..." : lintRunning ? "Linting..." : "Commit"}</span>
+          <span>{committing ? "Committing…" : lintRunning ? "Linting…" : "Commit"}</span>
         </button>
       </div>
     </div>
