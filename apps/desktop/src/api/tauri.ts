@@ -9,11 +9,17 @@ export interface Commit {
   date: string;
   message: string;
   refs: Ref[];
+  signature: string;
 }
 
 export interface Ref {
   name: string;
   ref_type: string;
+}
+
+export interface RemoteInfo {
+  name: string;
+  url: string;
 }
 
 export interface FileChange {
@@ -411,6 +417,16 @@ export const api = {
       invoke<string>("set_temp_credentials", { path, username, password, remote: remote ?? null }),
     restoreRemoteUrl: (path: string, originalUrl: string, remote?: string) =>
       invoke<void>("restore_remote_url", { path, originalUrl, remote: remote ?? null }),
+    listRemotes: (path: string) =>
+      invoke<RemoteInfo[]>("list_remotes", { path }),
+    addRemote: (path: string, name: string, url: string) =>
+      invoke<string>("add_remote", { path, name, url }),
+    removeRemote: (path: string, name: string) =>
+      invoke<string>("remove_remote", { path, name }),
+    renameRemote: (path: string, name: string, newName: string) =>
+      invoke<string>("rename_remote", { path, name, newName }),
+    setRemoteUrl: (path: string, name: string, url: string) =>
+      invoke<string>("set_remote_url", { path, name, url }),
   },
 
   lfs: {
@@ -506,6 +522,8 @@ export const api = {
       invoke<string>("undo_last", { path }),
     restoreToCommit: (path: string, hash: string) =>
       invoke<string>("restore_to_commit", { path, hash }),
+    resetToCommit: (path: string, hash: string, mode: string) =>
+      invoke<string>("reset_to_commit", { path, hash, mode }),
   },
 
   rebase: {

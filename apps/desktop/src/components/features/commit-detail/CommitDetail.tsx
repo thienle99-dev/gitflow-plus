@@ -197,6 +197,7 @@ export default function CommitDetail() {
         <div className="flex items-center gap-1.5 text-2xs text-text-muted">
           <GitCommit size={10} />
           <span className="font-mono">{commit.hash.slice(0, 7)}</span>
+          <SignatureBadge signature={commit.signature} />
         </div>
         <div className="flex items-center gap-1.5 text-2xs text-text-secondary">
           <GravatarImg email={commit.email} size={14} />
@@ -452,6 +453,37 @@ function getFolder(path: string) {
   return parts.join("/");
 }
 
+
+function SignatureBadge({ signature }: { signature: string }) {
+  if (!signature || signature === "N") return null;
+
+  if (signature === "G" || signature === "Y") {
+    return (
+      <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded-sm bg-[#30d158]/10 text-[#30d158] text-[10px] font-semibold leading-none">
+        <span>&#10003;</span>
+        <span>Signed</span>
+      </span>
+    );
+  }
+
+  if (signature === "B") {
+    return (
+      <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded-sm bg-[#ff453a]/10 text-[#ff453a] text-[10px] font-semibold leading-none">
+        <span>&#10007;</span>
+        <span>Bad</span>
+      </span>
+    );
+  }
+
+  // U, X, R — unknown/expired/revoked
+  const labels: Record<string, string> = { U: "Unknown", X: "Expired", R: "Revoked" };
+  return (
+    <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded-sm bg-[#ff9f0a]/10 text-[#ff9f0a] text-[10px] font-semibold leading-none">
+      <span>&#9888;</span>
+      <span>{labels[signature] || signature}</span>
+    </span>
+  );
+}
 
 interface CommitFileTreeNode {
   type: "file";
