@@ -314,6 +314,7 @@ pub fn run() {
             commands::search::search_commits,
             commands::reflog::reflog_list,
             commands::reflog::undo_last,
+            commands::reflog::restore_to_commit,
             commands::rebase::rebase_start,
             commands::rebase::rebase_continue,
             commands::rebase::rebase_skip,

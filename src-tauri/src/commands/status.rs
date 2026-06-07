@@ -28,7 +28,6 @@ pub async fn git_status(
             "status",
             "--porcelain",
             "--untracked-files=normal",
-            "--no-ahead-behind",
         ])
         .output()
         .await
