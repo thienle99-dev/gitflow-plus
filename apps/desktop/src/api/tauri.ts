@@ -235,6 +235,15 @@ export interface ReflogEntry {
   date: string;
 }
 
+export interface BisectStatus {
+  running: boolean;
+  current_commit: string | null;
+  remaining: number | null;
+  step: number | null;
+  log: string[];
+  first_bad: string | null;
+}
+
 export interface LintDiagnostic {
   file: string;
   line: number | null;
@@ -610,4 +619,21 @@ export const api = {
           versiontagPrefix,
         }),
     },
-  };
+
+  bisect: {
+    start: (path: string, bad: string, good?: string) =>
+      invoke<string>("bisect_start", { path, bad, good: good ?? null }),
+    good: (path: string) =>
+      invoke<BisectStatus>("bisect_good", { path }),
+    bad: (path: string) =>
+      invoke<BisectStatus>("bisect_bad", { path }),
+    skip: (path: string) =>
+      invoke<BisectStatus>("bisect_skip", { path }),
+    status: (path: string) =>
+      invoke<BisectStatus>("bisect_status", { path }),
+    reset: (path: string) =>
+      invoke<string>("bisect_reset", { path }),
+    candidateDiff: (path: string) =>
+      invoke<string>("bisect_candidate_diff", { path }),
+  },
+};
