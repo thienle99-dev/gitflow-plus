@@ -80,6 +80,9 @@ interface AITabProps {
   maskKey: (key: string) => string;
   fetchedModels: { id: string; label: string }[];
   fetchingModels: boolean;
+  onTestConnection?: () => void;
+  testingConnection?: boolean;
+  testConnectionResult?: { success: boolean; message: string } | null;
 }
 
 export function AITab({
@@ -108,6 +111,9 @@ export function AITab({
   maskKey,
   fetchedModels,
   fetchingModels,
+  onTestConnection,
+  testingConnection,
+  testConnectionResult,
 }: AITabProps) {
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
@@ -328,6 +334,31 @@ export function AITab({
                 ? "Default: http://localhost:8080. Override if your llama.cpp server runs on a different address."
                 : "Override default provider endpoints (e.g. for proxies, self-hosted gateways). Leave blank for default."}
           </p>
+
+          {/* Test Connection */}
+          {provider !== "ollama" && provider !== "llamacpp" && (
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={onTestConnection}
+                disabled={testingConnection || !apiKey}
+                className="px-3 h-7 text-2xs font-semibold rounded-mac transition-all flex items-center gap-1.5 bg-surface-2-40 border border-border-40 text-text-secondary hover:text-text-primary hover:bg-surface-2 disabled:opacity-40"
+              >
+                {testingConnection ? (
+                  <RefreshCw size={11} className="animate-spin" />
+                ) : (
+                  <RefreshCw size={11} />
+                )}
+                {testingConnection ? "Testing…" : "Test AI Connection"}
+              </button>
+              {testConnectionResult && (
+                <span className={`text-2xs flex items-center gap-1 ${testConnectionResult.success ? "text-[#30d158]" : "text-[#ff453a]"}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${testConnectionResult.success ? "bg-[#30d158]" : "bg-[#ff453a]"}`} />
+                  {testConnectionResult.message}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Model Selection */}

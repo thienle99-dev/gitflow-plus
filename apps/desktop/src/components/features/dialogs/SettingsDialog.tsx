@@ -325,6 +325,8 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
   const [tokenLimit, setTokenLimit] = useState(DEFAULT_TOKEN_LIMIT);
   const [fetchedModels, setFetchedModels] = useState<{ id: string; label: string }[]>([]);
   const [fetchingModels, setFetchingModels] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [testConnectionResult, setTestConnectionResult] = useState<{ success: boolean; message: string } | null>(null);
   const [aiDetailLevel, setAiDetailLevel] = useState<"minimal" | "medium" | "detailed">("medium");
   const [commitStyle, setCommitStyle] = useState<"conventional" | "plain" | "gitmoji" | "jira">("conventional");
   const [customRules, setCustomRules] = useState("");
@@ -692,6 +694,26 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
     }
   };
 
+  const handleTestConnection = async () => {
+    setTestingConnection(true);
+    setTestConnectionResult(null);
+    try {
+      const baseUrl = apiUrl.replace(/\/+$/, "");
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+      const res = await api.ai.request(`${baseUrl}/models`, "GET", headers);
+      if (res.status >= 200 && res.status < 300) {
+        setTestConnectionResult({ success: true, message: "Connected — API responds correctly" });
+      } else {
+        setTestConnectionResult({ success: false, message: `HTTP ${res.status}` });
+      }
+    } catch (e: any) {
+      setTestConnectionResult({ success: false, message: e.message || "Connection failed" });
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
   const toggleReviewChecklistItem = (id: Exclude<AIReviewMode, "all" | "custom">) => {
     setReviewChecklist((current) => {
       if (current.includes(id)) {
@@ -857,6 +879,15 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
   };
 
   const handleCancel = () => {
+    if (hasChanges) {
+      setConfirmCloseOpen(true);
+    } else {
+      onClose?.();
+    }
+  };
+
+  const handleForceClose = () => {
+    setConfirmCloseOpen(false);
     onClose?.();
   };
 
@@ -1152,6 +1183,9 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
               maskKey={maskKey}
               fetchedModels={fetchedModels}
               fetchingModels={fetchingModels}
+              onTestConnection={handleTestConnection}
+              testingConnection={testingConnection}
+              testConnectionResult={testConnectionResult}
             />
           )}
 
@@ -1192,6 +1226,22 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
             confirmLabel="Reset Settings"
             onConfirm={() => { setConfirmResetOpen(false); doResetSettings(); }}
             onCancel={() => setConfirmResetOpen(false)}
+          />
+          <ConfirmDialog
+            open={confirmCloseOpen}
+            title="Unsaved Changes"
+            message="You have unsaved settings changes. Do you want to discard them?"
+            impactItems={[
+              {
+                label: "All unsaved changes to settings will be lost",
+                severity: "warning",
+              },
+            ]}
+            confirmLabel="Discard Changes"
+            cancelLabel="Keep Editing"
+            variant="destructive"
+            onConfirm={handleForceClose}
+            onCancel={() => setConfirmCloseOpen(false)}
           />
         </div>
 

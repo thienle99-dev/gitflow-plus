@@ -30,6 +30,8 @@ export default function LogCenter() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [autoScroll, setAutoScroll] = useState(true);
 
   const refreshLogs = useCallback(async () => {
     setLoading(true);
@@ -64,13 +66,6 @@ export default function LogCenter() {
     await refreshLogs();
   };
 
-  if (!shouldRender) return null;
-
-  const isExiting = phase === "exit";
-
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [autoScroll, setAutoScroll] = useState(true);
-
   // Auto-scroll to bottom when new entries arrive
   useEffect(() => {
     if (autoScroll && scrollRef.current) {
@@ -84,6 +79,10 @@ export default function LogCenter() {
     const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 30;
     setAutoScroll(atBottom);
   }, []);
+
+  if (!shouldRender) return null;
+
+  const isExiting = phase === "exit";
 
   const errorCount = entries.filter((e) => e.level.toUpperCase() === "ERROR").length;
   const warnCount = entries.filter((e) => e.level.toUpperCase() === "WARN").length;
