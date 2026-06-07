@@ -13,6 +13,7 @@ import Sidebar from "@/components/features/sidebar/Sidebar";
 import CommitGraph from "@/components/features/graph/CommitGraph";
 import RightPanel from "@/components/layout/RightPanel";
 import BottomBar from "@/components/layout/BottomBar";
+import WorkspaceBar from "@/components/layout/WorkspaceBar";
 import OperationCenter from "@/components/layout/OperationCenter";
 import LogCenter from "@/components/layout/LogCenter";
 import { useOperationObserver } from "@/hooks/useOperationObserver";
@@ -475,6 +476,7 @@ function InlineErrorFallback({ name }: { name: string }) {
   return (
     <div className="h-full min-h-0 flex flex-col">
       <Toolbar />
+      {repoPath && <WorkspaceBar />}
       <div className="flex-1 min-h-0 overflow-hidden">
         <PanelGroup direction="horizontal" autoSaveId="main-layout" className="h-full min-h-0">
           <Panel
