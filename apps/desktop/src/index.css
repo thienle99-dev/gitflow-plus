@@ -632,7 +632,7 @@ body.tray-window #root {
   overflow: hidden !important;
   min-height: 42px !important;
   width: min(360px, calc(100vw - 32px)) !important;
-  padding: 10px 12px !important;
+  padding: 10px 38px 10px 12px !important;
   gap: 9px !important;
 }
 
@@ -715,6 +715,11 @@ body.tray-window #root {
 }
 
 [data-sonner-toast] [data-close-button] {
+  position: absolute !important;
+  top: 10px !important;
+  right: 10px !important;
+  left: auto !important;
+  transform: none !important;
   background: color-mix(in srgb, var(--surface-2) 88%, var(--surface-1)) !important;
   color: var(--text-secondary) !important;
   border-color: color-mix(in srgb, var(--border) 86%, transparent) !important;
@@ -728,7 +733,7 @@ body.tray-window #root {
 [data-sonner-toast] [data-close-button]:hover {
   background: var(--surface-3) !important;
   color: var(--text-primary) !important;
-  transform: scale(1.03) !important;
+  transform: none !important;
 }
 
 @keyframes toast-in {
