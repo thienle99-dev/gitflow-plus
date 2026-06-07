@@ -17,7 +17,7 @@ import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
 import { formatCommitDate } from "@/lib/date";
 import { usePreflightGate } from "@/hooks/usePreflightGate";
 import { useGitFlowDetect } from "@/queries/useGitFlow";
-import { Search, X } from "lucide-react";
+import { ChevronDown, Search, X } from "lucide-react";
 
 const ROW_HEIGHT = 38;
 const EDGE_BLOCK_SIZE = 128;
@@ -350,19 +350,22 @@ export default memo(function CommitGraph() {
           </span>
         </div>
         <div className="flex w-[min(380px,42vw)] min-w-[260px] items-center overflow-hidden rounded border border-border-40 bg-surface-1-30 focus-within:border-accent-60" role="search" aria-label="Filter commits">
-          <select
-            value={filterScope}
-            onChange={(e) => setFilterScope(e.target.value as CommitFilterScope)}
-            className="h-6 w-[86px] shrink-0 border-r border-border-30 bg-transparent px-2 text-[10px] font-bold uppercase tracking-wide text-text-secondary outline-none"
-            aria-label="Filter field"
-            title="Filter field"
-          >
-            {FILTER_SCOPE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          <div className="relative h-6 w-[88px] shrink-0 border-r border-border-30 bg-surface-2-30">
+            <select
+              value={filterScope}
+              onChange={(e) => setFilterScope(e.target.value as CommitFilterScope)}
+              className="h-full w-full appearance-none rounded-none bg-transparent py-0 pl-2 pr-6 text-[10px] font-bold uppercase tracking-wide text-text-secondary outline-none transition-colors hover:text-text-primary focus:text-text-primary"
+              aria-label="Filter field"
+              title="Filter field"
+            >
+              {FILTER_SCOPE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={12} className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-text-muted" />
+          </div>
           <div className="relative min-w-0 flex-1">
             <Search size={12} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-text-muted-70" />
             <input

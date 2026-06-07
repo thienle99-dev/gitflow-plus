@@ -62,7 +62,7 @@ function App() {
         {isTrayWindow ? <TrayPanelView /> : <RepoView />}
         <ForceUpdateGate enabled={!isTrayWindow} />
         <Toaster
-          position="bottom-center"
+          position="top-right"
           toastOptions={{
             style: {
               color: "var(--text-primary)",

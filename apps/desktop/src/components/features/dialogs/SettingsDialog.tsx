@@ -798,6 +798,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
 
   // confirmState used for ConfirmDialog (will be added later)
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
+  const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
 
   const handleResetSettings = () => {
     setConfirmResetOpen(true);
@@ -973,7 +974,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
                 <button
                   key={tabId}
                   onClick={() => setActiveTab(tabId as typeof activeTab)}
-                  className={`w-full px-2.5 py-1.5 text-xs font-medium rounded-mac flex items-center gap-2.5 transition-all ${
+                  className={`w-full px-2.5 py-1.5 text-xs font-medium rounded-mac flex items-center gap-2.5 transition-all relative ${
                     isActive
                       ? "tab-accent-active font-semibold text-text-primary"
                       : "text-text-secondary hover:text-text-primary hover:bg-surface-2"
@@ -983,6 +984,9 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
                     <TabIcon size={12} strokeWidth={2.2} />
                   </div>
                   {TAB_LABELS[tabId] || tabId}
+                  {hasChanges && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#ff9f0a] absolute right-2 top-1/2 -translate-y-1/2" />
+                  )}
                 </button>
               );
             })}
@@ -1193,6 +1197,12 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
 
         {/* Action Footer */}
         <div className="px-5 py-2.5 border-t border-border-60 bg-surface-1 flex items-center justify-end gap-2 shrink-0">
+          {hasChanges && (
+            <span className="flex items-center gap-1.5 text-2xs text-[#ff9f0a] font-medium mr-auto">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#ff9f0a] animate-pulse" />
+              Unsaved changes
+            </span>
+          )}
           <button
             onClick={handleCancel}
             className="px-4 py-1 text-xs text-text-secondary hover:text-text-primary hover:bg-surface-2 border border-border rounded-mac transition-colors min-w-[64px]"

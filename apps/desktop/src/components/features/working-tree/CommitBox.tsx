@@ -756,7 +756,11 @@ export default function CommitBox({
                 : "Commit all suggested"}
             </button>
             <label
-              className="shrink-0 inline-flex items-center gap-1.5 text-2xs text-text-muted hover:text-text-secondary cursor-pointer select-none"
+              className={`shrink-0 inline-flex items-center gap-1.5 rounded-mac border px-2 py-1 text-2xs font-semibold select-none ${
+                committingGroupKey || committing
+                  ? "cursor-not-allowed border-transparent bg-transparent text-text-muted opacity-30"
+                  : "cursor-pointer border-border-40 bg-surface-2-40 text-text-secondary hover:bg-surface-2 hover:text-text-primary"
+              }`}
               title="Skip Git pre-commit hooks for suggested commits (--no-verify)"
             >
               <input
@@ -771,7 +775,7 @@ export default function CommitBox({
             <button
               onClick={() => setScopeDismissed(true)}
               disabled={!!committingGroupKey || committing}
-              className="flex-1 text-2xs text-text-muted hover:text-text-primary py-1.5 cursor-pointer bg-surface-2-30 hover:bg-surface-2 rounded-mac border border-border-30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 rounded-mac border border-border-40 bg-surface-2-40 py-1.5 text-2xs font-semibold text-text-secondary transition-colors hover:border-border-60 hover:bg-surface-2 hover:text-text-primary disabled:cursor-not-allowed disabled:border-transparent disabled:bg-transparent disabled:text-text-muted disabled:opacity-30"
             >
               Commit all as one
             </button>
