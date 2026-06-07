@@ -1,6 +1,9 @@
-import { useState, useRef, useEffect } from "react";
-import { ChevronDown, ShieldAlert, Plus, Trash2, GripVertical, X, RotateCcw } from "lucide-react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { ChevronDown, ShieldAlert, Plus, Trash2, GripVertical, X, RotateCcw, Check, AlertTriangle, Bug, Code, FileText } from "lucide-react";
 import { Switch } from "@/components/ui/form";
+import { useRepoStore } from "@/stores/repo";
+import { api } from "@/api/tauri";
+import { useQuery } from "@tanstack/react-query";
 
 const PRESET_COLORS = [
   "#0a84ff",
@@ -168,7 +171,39 @@ export function CodeQualityTab({
             </div>
           </div>
         </div>
+
+        {/* Strictness Preview */}
+        {(commitLintEnabled || codeLintEnabled) && (
+          <div className="border-t border-border-40 pt-3 space-y-2">
+            <span className="text-2xs font-semibold text-text-muted uppercase tracking-wider">Commit Gate Preview</span>
+            <div className="flex items-center gap-3 text-2xs">
+              <span className={`px-2 py-1 rounded font-bold ${lintStrictness === "block_all" ? "bg-[#ff453a]/15 text-[#ff453a]" : lintStrictness === "error" ? "bg-[#ff9f0a]/15 text-[#ff9f0a]" : "bg-[#30d158]/15 text-[#30d158]"}`}>
+                {lintStrictness === "block_all" ? "Blocking" : lintStrictness === "error" ? "Block on Errors" : "Warn Only"}
+              </span>
+              <span className="text-text-muted">
+                {lintStrictness === "block_all"
+                  ? "All errors and warnings block commits"
+                  : lintStrictness === "error"
+                    ? "Errors block, warnings allow proceed"
+                    : "All issues are warnings"}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Sample Commit Message Validation */}
+        {(commitLintEnabled || codeLintEnabled) && (
+          <div className="border-t border-border-40 pt-3 space-y-2">
+            <span className="text-2xs font-semibold text-text-muted uppercase tracking-wider">Sample Validation</span>
+            <div className="space-y-1">
+              <SamplePreview />
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Detected Linters */}
+      <LinterStatusCard />
 
       {/* Quick Commit Types */}
       <div id="quick-commit-types" className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-3">
@@ -366,6 +401,92 @@ export function CodeQualityTab({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function SamplePreview() {
+  const [sampleMsg, setSampleMsg] = useState("feat: add login");
+  const { lintCommitMessage } = require("@/lib/commit-lint") as typeof import("@/lib/commit-lint");
+  const results = useMemo(() => {
+    try {
+      return lintCommitMessage ? lintCommitMessage(sampleMsg, { noTrailingPeriod: true }) : [];
+    } catch {
+      return [];
+    }
+  }, [sampleMsg]);
+
+  return (
+    <div className="bg-surface-2 border border-border-40 rounded-mac p-2.5 space-y-1.5">
+      <input
+        value={sampleMsg}
+        onChange={(e) => setSampleMsg(e.target.value)}
+        placeholder="Type a commit message..."
+        className="w-full h-7 px-2 text-xs bg-surface-1 border border-border rounded-mac text-text-primary outline-none focus:border-accent font-mono"
+      />
+      <div className="space-y-0.5">
+        {results.length > 0 ? results.map((r, i) => (
+          <div key={i} className="flex items-center gap-1.5 text-2xs">
+            {r.severity === "error" ? (
+              <X size={10} className="text-[#ff453a] shrink-0" />
+            ) : (
+              <AlertTriangle size={10} className="text-[#ff9f0a] shrink-0" />
+            )}
+            <span className="text-text-muted">{r.message}</span>
+          </div>
+        )) : (
+          <div className="flex items-center gap-1.5 text-2xs">
+            <Check size={10} className="text-[#30d158] shrink-0" />
+            <span className="text-text-muted">Message passes all lint rules</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function LinterStatusCard() {
+  const repoPath = useRepoStore((s) => s.repoPath);
+  const { data, isLoading } = useQuery({
+    queryKey: ["git", repoPath, "detect-linters"],
+    queryFn: () => api.lint.run(repoPath!),
+    enabled: !!repoPath,
+    staleTime: 60_000,
+  });
+
+  const linters = data?.linters_run ?? [];
+
+  return (
+    <div className="bg-surface-1-30 border border-border-40 rounded-mac p-3.5 space-y-2.5">
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
+        <Code size={13} className="text-accent" />
+        Detected Linters
+      </div>
+      {!repoPath ? (
+        <div className="text-2xs text-text-muted">Open a repository to detect available linters</div>
+      ) : isLoading ? (
+        <div className="flex items-center gap-1.5 text-2xs text-text-muted">
+          <RotateCcw size={10} className="animate-spin" />
+          Scanning project files...
+        </div>
+      ) : linters.length === 0 ? (
+        <div className="text-2xs text-text-muted">No supported linter configurations detected in this project</div>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {linters.map((linter) => (
+            <span
+              key={linter}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded border text-2xs font-medium bg-accent-5 border-accent-20 text-accent"
+            >
+              <Check size={9} />
+              {linter}
+            </span>
+          ))}
+        </div>
+      )}
+      <p className="text-2xs text-text-muted">
+        Detected by scanning project root for config files (.eslintrc, biome.json, Cargo.toml, etc.)
+      </p>
     </div>
   );
 }
