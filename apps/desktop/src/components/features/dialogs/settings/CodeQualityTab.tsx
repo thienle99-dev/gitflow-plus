@@ -29,6 +29,8 @@ interface CodeQualityTabProps {
   setCommitLintEnabled: (v: boolean) => void;
   codeLintEnabled: boolean;
   setCodeLintEnabled: (v: boolean) => void;
+  commitCoachEnabled: boolean;
+  setCommitCoachEnabled: (v: boolean) => void;
   lintStrictness: "warning" | "error" | "block_all";
   setLintStrictness: (v: "warning" | "error" | "block_all") => void;
   quickCommitTypes: { label: string; prefix: string; color: string }[];
@@ -40,6 +42,8 @@ export function CodeQualityTab({
   setCommitLintEnabled,
   codeLintEnabled,
   setCodeLintEnabled,
+  commitCoachEnabled,
+  setCommitCoachEnabled,
   lintStrictness,
   setLintStrictness,
   quickCommitTypes,
@@ -131,6 +135,15 @@ export function CodeQualityTab({
             onChange={setCodeLintEnabled}
             label="Enable Code Quality Linting"
             description="Run project linters (ESLint, Biome, Ruff, golangci-lint, Cargo Clippy) on staged files."
+          />
+        </div>
+
+        <div className="border-t border-border-40 pt-2.5">
+          <Switch
+            checked={commitCoachEnabled}
+            onChange={setCommitCoachEnabled}
+            label="Enable Commit Coach (AI)"
+            description="Auto-analyze staged files and commit message with AI before committing. Shows tips and suggestions."
           />
         </div>
 

@@ -83,6 +83,7 @@ const LS_KEY_GITLAB_TOKEN = "gitflowGitlabToken";
 const LS_KEY_GITLAB_HOST = "gitflowGitlabHost";
 const LS_KEY_COMMIT_LINT_ENABLED = "gitflowCommitLintEnabled";
 const LS_KEY_CODE_LINT_ENABLED = "gitflowCodeLintEnabled";
+const LS_KEY_COMMIT_COACH_ENABLED = "gitflowCommitCoachEnabled";
 const LS_KEY_LINT_STRICTNESS = "gitflowLintStrictness";
 const LS_KEY_DATE_FORMAT = "gitflowDateFormat";
 const LS_KEY_CUSTOM_DATE_FORMAT = "gitflowCustomDateFormat";
@@ -128,6 +129,7 @@ const SETTINGS_KEYS = [
   LS_KEY_GITLAB_HOST,
   LS_KEY_COMMIT_LINT_ENABLED,
   LS_KEY_CODE_LINT_ENABLED,
+  LS_KEY_COMMIT_COACH_ENABLED,
   LS_KEY_LINT_STRICTNESS,
   LS_KEY_DATE_FORMAT,
   LS_KEY_CUSTOM_DATE_FORMAT,
@@ -298,6 +300,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
   const [recentRepoLimit, setRecentRepoLimit] = useState(10);
   const [commitLintEnabled, setCommitLintEnabled] = useState(true);
   const [codeLintEnabled, setCodeLintEnabled] = useState(true);
+  const [commitCoachEnabled, setCommitCoachEnabled] = useState(false);
   const [lintStrictness, setLintStrictness] = useState<"warning" | "error" | "block_all">("error");
 
   // Quick Commit Types
@@ -378,6 +381,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       const savedRecentRepoLimit = localStorage.getItem(LS_KEY_RECENT_REPO_LIMIT);
       const savedCommitLint = localStorage.getItem(LS_KEY_COMMIT_LINT_ENABLED);
       const savedCodeLint = localStorage.getItem(LS_KEY_CODE_LINT_ENABLED);
+      const savedCommitCoach = localStorage.getItem(LS_KEY_COMMIT_COACH_ENABLED);
       const savedLintStrictness = localStorage.getItem(LS_KEY_LINT_STRICTNESS) as "warning" | "error" | "block_all";
       const savedGraphDensity = localStorage.getItem(LS_KEY_GRAPH_DENSITY) as "comfortable" | "compact";
       const savedGraphShowHash = localStorage.getItem(LS_KEY_GRAPH_SHOW_HASH);
@@ -403,6 +407,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       if (savedRecentRepoLimit) setRecentRepoLimit(Number(savedRecentRepoLimit));
       if (savedCommitLint !== null) setCommitLintEnabled(savedCommitLint === "true");
       if (savedCodeLint !== null) setCodeLintEnabled(savedCodeLint === "true");
+      if (savedCommitCoach !== null) setCommitCoachEnabled(savedCommitCoach === "true");
       if (savedLintStrictness) setLintStrictness(savedLintStrictness);
       if (savedGraphDensity) setGraphDensity(savedGraphDensity);
       if (savedGraphShowHash !== null) setGraphShowHash(savedGraphShowHash === "true");
@@ -492,6 +497,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       recentRepoLimit,
       commitLintEnabled,
       codeLintEnabled,
+      commitCoachEnabled,
       lintStrictness,
       graphDensity,
       graphShowHash,
@@ -527,7 +533,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
   }, [
     theme, defaultDiffMode, autoFetch, fetchInterval, autoPrune,
     confirmDangerous, reopenLastRepo, recentRepoLimit,
-    commitLintEnabled, codeLintEnabled, lintStrictness,
+    commitLintEnabled, codeLintEnabled, commitCoachEnabled, lintStrictness,
     graphDensity, graphShowHash, graphShowAuthor, graphShowDate,
     diffContext, diffLineWrap, largeDiffMode, reducedMotion, petEnabled, petType,
     provider, apiKey, apiUrl, commitModel, reviewModel, tokenLimit, fetchedModels,
@@ -709,6 +715,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       localStorage.setItem(LS_KEY_RECENT_REPO_LIMIT, String(recentRepoLimit));
       localStorage.setItem(LS_KEY_COMMIT_LINT_ENABLED, String(commitLintEnabled));
       localStorage.setItem(LS_KEY_CODE_LINT_ENABLED, String(codeLintEnabled));
+      localStorage.setItem(LS_KEY_COMMIT_COACH_ENABLED, String(commitCoachEnabled));
       localStorage.setItem(LS_KEY_LINT_STRICTNESS, lintStrictness);
       localStorage.setItem(LS_KEY_GRAPH_DENSITY, graphDensity);
       localStorage.setItem(LS_KEY_GRAPH_SHOW_HASH, String(graphShowHash));
@@ -1094,6 +1101,8 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
               setCommitLintEnabled={setCommitLintEnabled}
               codeLintEnabled={codeLintEnabled}
               setCodeLintEnabled={setCodeLintEnabled}
+              commitCoachEnabled={commitCoachEnabled}
+              setCommitCoachEnabled={setCommitCoachEnabled}
               lintStrictness={lintStrictness}
               setLintStrictness={setLintStrictness}
               quickCommitTypes={quickCommitTypes}

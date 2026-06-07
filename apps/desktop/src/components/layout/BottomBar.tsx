@@ -11,6 +11,7 @@ import { useOperationsStore } from "@/stores/operations";
 import { useLogsPanelStore } from "@/stores/logs";
 import { GitPet } from "@/components/features/git-pet";
 import { LS_KEY_PET_ENABLED } from "@/components/features/git-pet/pet-types";
+import { AIStatusChip } from "@/components/features/ai-status/AIStatusChip";
 
 /** Stable predicate — avoids recreating function on every render */
 const isBackgroundQuery = (query: any) => {
@@ -178,6 +179,11 @@ export default function BottomBar() {
 
       {/* Connection / State Indicator — isolated in its own memoized component */}
       <LoadingIndicator />
+
+      {/* AI Status Chip */}
+      <div className="border-l border-border-20 pl-3 ml-3">
+        <AIStatusChip />
+      </div>
 
       {/* Contextual Git Metrics */}
       {repoPath && (

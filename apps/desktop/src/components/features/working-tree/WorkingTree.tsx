@@ -402,6 +402,12 @@ export default function WorkingTree() {
   const handleCommit = async () => {
     if (!commitMessage.trim()) return;
 
+    // Block commit while Commit Coach is analyzing
+    if (commitCoach.isPending) {
+      showToast("Commit Coach is still analyzing... please wait", "info");
+      return;
+    }
+
     const commitLintEnabled = localStorage.getItem("gitflowCommitLintEnabled") !== "false";
     const codeLintEnabled = localStorage.getItem("gitflowCodeLintEnabled") === "true";
     const strictness = (localStorage.getItem("gitflowLintStrictness") || "warn") as "strict" | "warn";
@@ -814,7 +820,7 @@ export default function WorkingTree() {
 
   // Auto-trigger commit coach when message or staged files change (debounced 2s)
   useEffect(() => {
-    if (staged.length === 0 || !commitMessage.trim()) {
+    if (staged.length === 0 || !commitMessage.trim() || localStorage.getItem("gitflowCommitCoachEnabled") !== "true") {
       setCoachResult(null);
       setCoachOpen(false);
       return;

@@ -3,6 +3,7 @@ import type { MergeRequest, MergeRequestFileChange } from "@/api/gitHost";
 import type { CommitLintResult } from "@/lib/commit-lint";
 import { scanForRisks, type RiskReport } from "./risk-scanner";
 import { loadActiveProfile, type AIProviderProfile, type AIProviderType } from "./ai-profiles";
+import { recordAIError, clearAIError } from "./ai-status-store";
 
 const DEFAULT_MODEL = "claude-sonnet-4-20250514";
 
@@ -597,6 +598,98 @@ ${languageInstruction}${conventionInstruction}`;
       oursChanged: "",
       theirsChanged: "",
       recommendation: "",
+    };
+  }
+}
+
+export interface ConflictResolution {
+  /** AI-suggested resolved lines for this conflict block */
+  suggestedLines: string[];
+  /** Brief explanation of why this resolution was chosen */
+  explanation: string;
+  /** AI confidence in this resolution */
+  confidence: "high" | "medium" | "low";
+}
+
+/**
+ * Resolve a single conflict block via AI — returns suggested merged lines, explanation, and confidence.
+ */
+export async function resolveConflictBlockWithAI(
+  filePath: string,
+  ours: string[],
+  theirs: string[],
+  contextBefore: string[],
+  contextAfter: string[],
+  repoPath?: string,
+): Promise<ConflictResolution> {
+  const settings = readAISettings();
+  if (!hasProvider(settings)) {
+    throw new Error("Configure an AI API key or local model in settings");
+  }
+
+  const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
+  const conventionInstruction = repoPath ? await getConventionContext(repoPath) : "";
+
+  const oursCode = ours.length > 0 ? ours.join("\n") : "(no changes — this side deleted the lines)";
+  const theirsCode = theirs.length > 0 ? theirs.join("\n") : "(no changes — this side deleted the lines)";
+  const ctxBefore = contextBefore.length > 0 ? contextBefore.slice(-8).join("\n") : "";
+  const ctxAfter = contextAfter.length > 0 ? contextAfter.slice(0, 8).join("\n") : "";
+
+  const prompt = `You are an elite, highly experienced lead software engineer. Resolve a single Git merge conflict block.
+
+FILE: "${filePath}"
+
+${ctxBefore ? `--- Surrounding context (before conflict):\n${ctxBefore}\n` : ""}
+--- OURS (current branch):
+${oursCode}
+
+--- THEIRS (incoming branch):
+${theirsCode}
+${ctxAfter ? `\n--- Surrounding context (after conflict):\n${ctxAfter}` : ""}
+
+TASK: Resolve this conflict block by merging both versions intelligently. Return a JSON object with these exact fields:
+- "suggestedLines": an array of strings, each being one line of the resolved code. Merge both sides logically — keep meaningful changes from both branches, resolve naming/type conflicts, and ensure correct syntax. If one side deleted lines and the other modified them, prefer the modification unless deletion was intentional.
+- "explanation": 1-2 sentences explaining WHY you chose this resolution. Be specific about what was kept from each side.
+- "confidence": one of "high", "medium", or "low". High = clear correct resolution. Medium = reasonable but developer should verify. Low = ambiguous, developer must review carefully.
+
+CRITICAL RULES:
+1. Return ONLY the JSON object. No markdown code fences, no wrapping, no explanation outside JSON.
+2. The suggestedLines array must contain the complete resolved code for this block — do not omit any lines.
+3. Preserve exact indentation from the original code.
+4. If both sides made incompatible changes, pick the safer option and note low confidence.
+${languageInstruction}${conventionInstruction}`;
+
+  const raw = cleanAIText(await requestAIText(prompt, withReviewModel(settings)));
+  if (!raw) throw new Error("Empty response from AI");
+
+  // Parse JSON — handle markdown fences and fallback
+  let jsonStr = raw.trim();
+  const fenceMatch = jsonStr.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
+  if (fenceMatch) jsonStr = fenceMatch[1].trim();
+  const objMatch = jsonStr.match(/\{[\s\S]*\}/);
+  if (objMatch) jsonStr = objMatch[0];
+
+  try {
+    const parsed = JSON.parse(jsonStr);
+    const suggestedLines = Array.isArray(parsed.suggestedLines)
+      ? parsed.suggestedLines.map((l: any) => String(l))
+      : [];
+    // Fallback: if suggestedLines is empty or missing, use ours as safe default
+    if (suggestedLines.length === 0) {
+      suggestedLines.push(...ours);
+    }
+    return {
+      suggestedLines,
+      explanation: String(parsed.explanation || "AI merged both sides, preserving key logic from each."),
+      confidence: ["high", "medium", "low"].includes(parsed.confidence) ? parsed.confidence : "medium",
+    };
+  } catch {
+    // Fallback: return raw text split into lines as suggested resolution
+    const fallbackLines = raw.split("\n").filter((l) => !l.startsWith("```"));
+    return {
+      suggestedLines: fallbackLines.length > 0 ? fallbackLines : ours,
+      explanation: "AI provided a resolution but it could not be parsed as structured JSON. Review the suggestion carefully.",
+      confidence: "low" as const,
     };
   }
 }
@@ -1278,61 +1371,79 @@ async function requestAIText(prompt: string, settings: AISettings) {
 
   let result: string;
 
-  if (settings.provider === "anthropic") {
-    let endpoint = settings.customUrl.trim() || "https://api.anthropic.com/v1/messages";
-    if (settings.customUrl && !endpoint.endsWith("/messages")) {
-      endpoint = endpoint.replace(/\/+$/, "") + "/messages";
-    }
-    const res = await api.ai.request(
-      endpoint,
-      "POST",
-      {
-        "Content-Type": "application/json",
-        "x-api-key": settings.apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      JSON.stringify({
-        model: settings.model,
-        max_tokens: settings.tokenLimit,
-        messages: [{ role: "user", content: prompt }],
-        stream: false,
-      }),
-    );
-    assertSuccess(res.status);
-    result = parseAnthropicResponse(res.body);
-  } else {
-    // OpenAI-compatible, Ollama, llama.cpp all use the same /chat/completions protocol
-    const defaultEndpoints: Record<string, string> = {
-      "ollama": "http://localhost:11434/v1/chat/completions",
-      "llamacpp": "http://localhost:8080/v1/chat/completions",
-    };
-    let endpoint = settings.customUrl.trim();
-    if (!endpoint) {
-      endpoint = defaultEndpoints[settings.provider] || "https://api.openai.com/v1/chat/completions";
-    }
-    if (settings.customUrl && !endpoint.endsWith("/chat/completions") && !endpoint.endsWith("/completions")) {
-      endpoint = endpoint.replace(/\/+$/, "") + "/chat/completions";
-    }
+  try {
+    if (settings.provider === "anthropic") {
+      let endpoint = settings.customUrl.trim() || "https://api.anthropic.com/v1/messages";
+      if (settings.customUrl && !endpoint.endsWith("/messages")) {
+        endpoint = endpoint.replace(/\/+$/, "") + "/messages";
+      }
+      const res = await api.ai.request(
+        endpoint,
+        "POST",
+        {
+          "Content-Type": "application/json",
+          "x-api-key": settings.apiKey,
+          "anthropic-version": "2023-06-01",
+        },
+        JSON.stringify({
+          model: settings.model,
+          max_tokens: settings.tokenLimit,
+          messages: [{ role: "user", content: prompt }],
+          stream: false,
+        }),
+      );
+      assertSuccess(res.status);
+      result = parseAnthropicResponse(res.body);
+    } else {
+      // OpenAI-compatible, Ollama, llama.cpp all use the same /chat/completions protocol
+      const defaultEndpoints: Record<string, string> = {
+        "ollama": "http://localhost:11434/v1/chat/completions",
+        "llamacpp": "http://localhost:8080/v1/chat/completions",
+      };
+      let endpoint = settings.customUrl.trim();
+      if (!endpoint) {
+        endpoint = defaultEndpoints[settings.provider] || "https://api.openai.com/v1/chat/completions";
+      }
+      if (settings.customUrl && !endpoint.endsWith("/chat/completions") && !endpoint.endsWith("/completions")) {
+        endpoint = endpoint.replace(/\/+$/, "") + "/chat/completions";
+      }
 
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (settings.apiKey) {
-      headers.Authorization = `Bearer ${settings.apiKey}`;
-    }
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (settings.apiKey) {
+        headers.Authorization = `Bearer ${settings.apiKey}`;
+      }
 
-    const res = await api.ai.request(
-      endpoint,
-      "POST",
-      headers,
-      JSON.stringify({
-        model: settings.model,
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: settings.tokenLimit,
-        stream: false,
-      }),
-    );
-    assertSuccess(res.status);
-    result = parseOpenAIResponse(res.body);
+      const res = await api.ai.request(
+        endpoint,
+        "POST",
+        headers,
+        JSON.stringify({
+          model: settings.model,
+          messages: [{ role: "user", content: prompt }],
+          max_tokens: settings.tokenLimit,
+          stream: false,
+        }),
+      );
+      assertSuccess(res.status);
+      result = parseOpenAIResponse(res.body);
+    }
+  } catch (err: any) {
+    // Record the error for the AI status chip
+    const msg = err?.message || "Unknown AI error";
+    if (msg.includes("API Error:")) {
+      recordAIError(`API Error: ${msg.replace("API Error: ", "").trim()}`);
+    } else if (msg.includes("ECONNREFUSED") || msg.includes("fetch")) {
+      recordAIError("Connection refused — server may not be running");
+    } else if (msg.includes("timeout")) {
+      recordAIError("Request timed out");
+    } else {
+      recordAIError(msg.length > 80 ? msg.slice(0, 80) + "…" : msg);
+    }
+    throw err; // Re-throw so callers still get the error
   }
+
+  // ── Clear any previous error on success ──
+  clearAIError();
 
   // ── Store in cache ──
   cacheSet(key, result);
@@ -3002,13 +3113,12 @@ export async function generatePRDraft(
   // Build a diff summary from staged files
   let diffSnippet = "";
   try {
-    const unstagedFiles = await api.changes.list(repoPath);
     // Get actual diff for a few key files
     const keyFiles = staged.slice(0, 8);
     const diffs = await Promise.all(
       keyFiles.map(async (f) => {
         try {
-          const d = await api.changes.diff(repoPath, f.path, "staged");
+          const d = await api.diff.staged(repoPath, f.path);
           return `### ${f.path}\n${d.slice(0, 1500)}`;
         } catch {
           return `### ${f.path}\n(diff not available)`;
@@ -3021,7 +3131,7 @@ export async function generatePRDraft(
   }
 
   const fileSummary = staged
-    .map((f) => `- [${f.status}] ${f.path} (+${f.additions}/-${f.deletions})`)
+    .map((f) => `- [${f.status}] ${f.path}`)
     .join("\n");
 
   const conventionContext = await getConventionContext(repoPath);
@@ -3095,7 +3205,7 @@ Return ONLY the JSON object, no markdown fences or extra text.`;
       "",
       "## Checklist",
       "",
-      ...checklist.map((c) => `- [ ] ${c}`),
+      ...checklist.map((c: string) => `- [ ] ${c}`),
       "",
       "## Testing Notes",
       "",
@@ -3140,7 +3250,7 @@ function buildLocalPRDraft(
     "",
     "### Files Changed",
     "",
-    ...staged.slice(0, 20).map((f) => `- \`${f.path}\` (+${f.additions}/-${f.deletions})`),
+    ...staged.slice(0, 20).map((f) => `- \`${f.path}\` [${f.status}]`),
   ].join("\n");
 
   const checklist = [

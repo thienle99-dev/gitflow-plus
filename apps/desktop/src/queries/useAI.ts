@@ -5,6 +5,7 @@ import {
   type AIReviewMode,
   type BranchNameSuggestion,
   type ConflictExplanation,
+  type ConflictResolution,
   type MergeStrategyAdvice,
   type CommitSummaryResult,
   type CommitGuardrailResult,
@@ -22,6 +23,7 @@ import {
   generateInlineReviewComments,
   explainCommitWithAI,
   explainConflictWithAI,
+  resolveConflictBlockWithAI,
   reviewCommitWithAI,
   analyzeCommitScope,
   explainMergeRequestWithAI,
@@ -141,6 +143,28 @@ export function useAIConflictExplain() {
       repoPath?: string;
     }): Promise<ConflictExplanation> =>
       explainConflictWithAI(filePath, ours, theirs, contextBefore, contextAfter, repoPath),
+  });
+}
+
+export function useAIConflictResolve() {
+  return useMutation({
+    mutationKey: ["ai.conflict-resolve"],
+    mutationFn: ({
+      filePath,
+      ours,
+      theirs,
+      contextBefore,
+      contextAfter,
+      repoPath,
+    }: {
+      filePath: string;
+      ours: string[];
+      theirs: string[];
+      contextBefore: string[];
+      contextAfter: string[];
+      repoPath?: string;
+    }): Promise<ConflictResolution> =>
+      resolveConflictBlockWithAI(filePath, ours, theirs, contextBefore, contextAfter, repoPath),
   });
 }
 

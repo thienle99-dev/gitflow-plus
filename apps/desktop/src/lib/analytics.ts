@@ -110,6 +110,11 @@ export function trackAIConflictExplain() {
   if (a) logEvent(a, "ai_conflict_explain");
 }
 
+export function trackAIConflictResolve() {
+  const a = getA();
+  if (a) logEvent(a, "ai_conflict_resolve");
+}
+
 export function trackAICommitExplain() {
   const a = getA();
   if (a) logEvent(a, "ai_commit_explain");

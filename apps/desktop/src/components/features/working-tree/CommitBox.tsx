@@ -323,222 +323,266 @@ export default function CommitBox({
           );
         })()}
 
-        <div className="border-t border-border-60 pt-2.5 mt-2 select-none shrink-0 space-y-2">
-          <div className="flex items-center justify-end gap-1.5 flex-wrap">
-            {staged.length >= 3 && (
-              <>
-                <button
-                  type="button"
-                  className={`${MUTED_BUTTON_CLASS} border-border-30 bg-surface-1-50 ${scopeAnalyzing || commitScopePending ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
-                  onClick={onAnalyzeScope}
-                  disabled={scopeAnalyzing || commitScopePending}
-                  title={scopeAnalyzing ? "Analyzing scope..." : "Analyze commit scope (suggest splitting)"}
-                >
-                  {scopeAnalyzing || commitScopePending ? (
-                    <RefreshCw size={11} className="animate-spin" />
-                  ) : (
-                    <Layers size={11} />
-                  )}
-                  <span>Split Scope</span>
-                </button>
-                <button
-                  type="button"
-                  className={`${MUTED_BUTTON_CLASS} border-accent-30 bg-accent-5 text-accent ${commitScopePending ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
-                  onClick={onOpenSplitDialog}
-                  disabled={commitScopePending}
-                  title="AI-powered commit split dialog"
-                >
+        <div className="border-t border-border-60 pt-2.5 mt-2 select-none shrink-0">
+          {/* 3-cluster button layout: Message → Safety → Commit */}
+          <div className="flex items-stretch gap-1.5">
+
+            {/* ── Message Cluster ── */}
+            <div className="flex items-center gap-0.5 rounded-mac border border-border-20 bg-surface-1-35 p-0.5 min-w-0 flex-1">
+              <span className="text-[9px] text-text-muted px-1.5 select-none shrink-0 font-semibold uppercase tracking-wider">Msg</span>
+              <div className="w-px h-3 bg-border-30 mx-0.5 shrink-0" />
+
+              {/* Generate (primary) */}
+              <button
+                type="button"
+                className={`h-6 px-2 rounded-mac text-[10px] font-bold inline-flex items-center gap-1 transition-all bg-accent text-accent-fg hover:opacity-95 active:scale-[0.99] cursor-pointer ${generateCommitPending ? "opacity-50 cursor-not-allowed" : ""}`}
+                onClick={handleGenerateCommit}
+                disabled={generateCommitPending}
+                title={generateCommitPending ? "Generating..." : "Generate commit message (AI)"}
+              >
+                {generateCommitPending ? (
+                  <RefreshCw size={11} className="animate-spin text-accent-fg" />
+                ) : (
                   <Sparkles size={11} />
-                  <span>AI Split</span>
-                </button>
-              </>
-            )}
-            {commitMessage.trim() && staged.length > 0 && (
-              <>
-                <button
-                  type="button"
-                  onClick={onImproveMessage}
-                  disabled={committing || improveMessagePending}
-                  className={MUTED_BUTTON_CLASS}
-                  title={improveMessagePending ? "Improving..." : "Improve commit message with AI"}
-                >
-                  {improveMessagePending ? (
-                    <RefreshCw size={11} className="animate-spin" />
-                  ) : (
-                    <Wand2 size={11} />
-                  )}
-                  <span>Improve</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={onAddBody}
-                  disabled={committing || addBodyPending}
-                  className={MUTED_BUTTON_CLASS}
-                  title={addBodyPending ? "Adding body..." : "Add detailed commit body with AI"}
-                >
-                  {addBodyPending ? (
-                    <RefreshCw size={11} className="animate-spin" />
-                  ) : (
-                    <AlignLeft size={11} />
-                  )}
-                  <span>Add Body</span>
-                </button>
-              </>
-            )}
-            <button
-              type="button"
-              className={`h-7 px-3 rounded-mac text-3xs font-bold flex items-center gap-1.5 transition-all bg-accent text-accent-fg hover:opacity-95 active:scale-[0.99] cursor-pointer shadow-sm shadow-accent-15 ${generateCommitPending ? "opacity-50 cursor-not-allowed" : ""
-                }`}
-              onClick={handleGenerateCommit}
-              disabled={generateCommitPending}
-              title={generateCommitPending ? "Generating..." : "Generate commit message (AI)"}
-            >
-              {generateCommitPending ? (
-                <RefreshCw size={11} className="animate-spin text-accent-fg" />
-              ) : (
-                <Sparkles size={11} />
+                )}
+                <span>Generate</span>
+              </button>
+
+              {/* Improve */}
+              <button
+                type="button"
+                onClick={onImproveMessage}
+                disabled={committing || improveMessagePending || !commitMessage.trim() || staged.length === 0}
+                className={MUTED_BUTTON_CLASS}
+                title={improveMessagePending ? "Improving..." : "Improve commit message with AI"}
+              >
+                {improveMessagePending ? (
+                  <RefreshCw size={11} className="animate-spin" />
+                ) : (
+                  <Wand2 size={11} />
+                )}
+                <span>Improve</span>
+              </button>
+
+              {/* Add Body */}
+              <button
+                type="button"
+                onClick={onAddBody}
+                disabled={committing || addBodyPending || !commitMessage.trim() || staged.length === 0}
+                className={MUTED_BUTTON_CLASS}
+                title={addBodyPending ? "Adding body..." : "Add detailed commit body with AI"}
+              >
+                {addBodyPending ? (
+                  <RefreshCw size={11} className="animate-spin" />
+                ) : (
+                  <AlignLeft size={11} />
+                )}
+                <span>Add Body</span>
+              </button>
+
+              {/* Template */}
+              <CommitTemplatePicker
+                onSelect={(msg) => setCommitMessage(msg)}
+              />
+
+              {/* Split Scope (conditional) */}
+              {staged.length >= 3 && (
+                <>
+                  <div className="w-px h-3 bg-border-30 mx-0.5 shrink-0" />
+                  <button
+                    type="button"
+                    className={`${MUTED_BUTTON_CLASS} border-border-30 bg-surface-1-50 ${scopeAnalyzing || commitScopePending ? "opacity-50 cursor-not-allowed" : ""}`}
+                    onClick={onAnalyzeScope}
+                    disabled={scopeAnalyzing || commitScopePending}
+                    title={scopeAnalyzing ? "Analyzing scope..." : "Analyze commit scope (suggest splitting)"}
+                  >
+                    {scopeAnalyzing || commitScopePending ? (
+                      <RefreshCw size={11} className="animate-spin" />
+                    ) : (
+                      <Layers size={11} />
+                    )}
+                    <span>Split</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`${MUTED_BUTTON_CLASS} border-accent-30 bg-accent-5 text-accent ${commitScopePending ? "opacity-50 cursor-not-allowed" : ""}`}
+                    onClick={onOpenSplitDialog}
+                    disabled={commitScopePending}
+                    title="AI-powered commit split dialog"
+                  >
+                    <Sparkles size={11} />
+                    <span>AI Split</span>
+                  </button>
+                </>
               )}
-              <span>Generate with AI</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={onCommit}
-              disabled={!hasCommitMessage || !hasAnyChanges || committing || lintRunning || scopeAnalyzing || commitScopePending || (scopeSuggestion != null && !scopeDismissed)}
-              className={`h-7 px-3 rounded-mac text-3xs font-bold inline-flex items-center gap-1.5 transition-all shadow-sm cursor-pointer select-none ${hasCommitMessage && hasAnyChanges && !scopeAnalyzing && !commitScopePending && !(scopeSuggestion != null && !scopeDismissed)
-                ? "bg-[#30d158] text-[#07140a] hover:bg-[#30d158]/90 active:scale-[0.99]"
-                : "bg-surface-2-40 text-text-muted opacity-35 cursor-not-allowed shadow-none"
-                } ${committing || lintRunning || scopeAnalyzing || commitScopePending ? "opacity-60" : ""}`}
-              title={
-                scopeAnalyzing
-                  ? "Analyzing commit scope..."
-                  : commitScopePending
-                    ? "Processing scope analysis..."
-                    : scopeSuggestion != null && !scopeDismissed
-                      ? "Review the split suggestion above before committing"
-                      : !commitMessage.trim()
-                        ? "Enter a commit message"
-                        : staged.length === 0 && unstaged.length === 0
-                          ? "No changes to commit"
-                          : staged.length === 0
-                            ? "Commit all changes"
-                            : "Commit (⌘↵)"
-              }
-            >
-              {committing || lintRunning || scopeAnalyzing || commitScopePending ? (
-                <RefreshCw size={11} className="animate-spin" />
-              ) : (
-                <Check size={11} />
-              )}
-              <span>{committing ? "Committing..." : lintRunning ? "Linting..." : scopeAnalyzing ? "Analyzing..." : commitScopePending ? "Analyzing..." : unstaged.length > 0 ? "Commit All" : "Commit"}</span>
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-1 flex-wrap min-w-0">
-              <div className="flex items-center gap-0.5 rounded-mac border border-border-20 bg-surface-1-35 p-0.5">
-                <button
-                  type="button"
-                  onClick={onAIReview}
-                  disabled={committing || aiReviewPending || !hasAnyChanges}
-                  className={`${STATUS_BUTTON_BASE} bg-accent-10 border-transparent text-accent hover:bg-accent-15 hover:border-accent-30 disabled:bg-transparent disabled:border-transparent disabled:text-text-muted ${aiReviewPending ? "opacity-70" : ""}`}
-                  title="Run AI review with custom checklist"
-                >
-                  {aiReviewPending ? (
-                    <RefreshCw size={10} className="animate-spin text-accent" />
-                  ) : (
-                    <Sparkles size={10} className="text-accent" />
-                  )}
-                  <span>AI Review</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onGuardrail}
-                  disabled={committing || guardrailPending || !hasAnyChanges}
-                  className={`${STATUS_BUTTON_BASE} ${guardrailResult?.verdict === "needs-attention"
-                    ? "bg-[#ff453a]/10 border-[#ff453a]/30 text-[#ff453a]"
-                    : guardrailResult?.verdict === "warning"
-                      ? "bg-[#ff9f0a]/10 border-[#ff9f0a]/30 text-[#ff9f0a]"
-                      : guardrailResult?.verdict === "ready"
-                        ? "bg-[#30d158]/10 border-[#30d158]/30 text-[#30d158]"
-                        : "bg-transparent border-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40"
-                    } disabled:bg-transparent disabled:border-transparent disabled:text-text-muted ${guardrailPending ? "opacity-70" : ""}`}
-                  title="Run AI pre-commit safety check"
-                >
-                  {guardrailPending ? (
-                    <RefreshCw size={10} className="animate-spin" />
-                  ) : (
-                    <ShieldCheck size={10} />
-                  )}
-                  <span>Guardrail</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onReadiness}
-                  disabled={committing || readinessPending || !hasAnyChanges}
-                  className={`${STATUS_BUTTON_BASE} ${readinessResult?.verdict === "ready"
-                    ? "bg-[#30d158]/10 border-[#30d158]/30 text-[#30d158]"
-                    : readinessResult?.verdict === "not-ready"
-                      ? "bg-[#ff453a]/10 border-[#ff453a]/30 text-[#ff453a]"
-                      : readinessResult?.verdict === "needs-work"
-                        ? "bg-[#ff9f0a]/10 border-[#ff9f0a]/30 text-[#ff9f0a]"
-                        : "bg-transparent border-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40"
-                    } disabled:bg-transparent disabled:border-transparent disabled:text-text-muted ${readinessPending ? "opacity-70" : ""}`}
-                  title="Check if your staging area is ready to commit"
-                >
-                  {readinessPending ? (
-                    <RefreshCw size={10} className="animate-spin" />
-                  ) : (
-                    <ClipboardCheck size={10} />
-                  )}
-                  <span>Ready?</span>
-                </button>
-              </div>
-
-              <div className="flex items-center gap-0.5 rounded-mac border border-border-20 bg-surface-1-35 p-0.5">
-                <button
-                  type="button"
-                  onClick={onGeneratePRDraft}
-                  disabled={prDraftPending || !hasAnyChanges}
-                  className={`${STATUS_BUTTON_BASE} ${prDraftResult
-                    ? "bg-[#0a84ff]/10 border-[#0a84ff]/30 text-[#0a84ff]"
-                    : "bg-transparent border-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40"
-                    } disabled:bg-transparent disabled:border-transparent disabled:text-text-muted ${prDraftPending ? "opacity-70" : ""}`}
-                  title="Generate PR/MR draft from staged changes"
-                >
-                  {prDraftPending ? (
-                    <RefreshCw size={10} className="animate-spin" />
-                  ) : (
-                    <FileText size={10} />
-                  )}
-                  <span>PR Draft</span>
-                </button>
-              </div>
-
-              <div className="flex items-center gap-0.5 rounded-mac border border-border-20 bg-surface-1-35 p-0.5">
-                <UndoButton compact onUndoComplete={onUndoComplete} />
-
-                <button
-                  type="button"
-                  onClick={() => setAmend(!amend)}
-                  className={`${STATUS_BUTTON_BASE} ${amend
-                    ? "bg-[#ff9f0a]/10 border-[#ff9f0a]/30 text-[#ff9f0a]"
-                    : "bg-transparent border-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40"
-                    }`}
-                  title="Amend last commit"
-                >
-                  <GitCommit size={10} className={amend ? "text-[#ff9f0a]" : "text-text-muted"} />
-                  <span>Amend</span>
-                </button>
-                <CommitTemplatePicker
-                  onSelect={(msg) => setCommitMessage(msg)}
-                />
-              </div>
             </div>
+
+            {/* Separator */}
+            <div className="w-px self-stretch bg-border-30 shrink-0" />
+
+            {/* ── Safety Cluster ── */}
+            <div className="flex items-center gap-0.5 rounded-mac border border-border-20 bg-surface-1-35 p-0.5 shrink-0">
+              <span className="text-[9px] text-text-muted px-1.5 select-none shrink-0 font-semibold uppercase tracking-wider">Safe</span>
+              <div className="w-px h-3 bg-border-30 mx-0.5 shrink-0" />
+
+              {/* Ready */}
+              <button
+                type="button"
+                onClick={onReadiness}
+                disabled={committing || readinessPending || !hasAnyChanges}
+                className={`${STATUS_BUTTON_BASE} ${readinessResult?.verdict === "ready"
+                  ? "bg-[#30d158]/10 border-[#30d158]/30 text-[#30d158]"
+                  : readinessResult?.verdict === "not-ready"
+                    ? "bg-[#ff453a]/10 border-[#ff453a]/30 text-[#ff453a]"
+                    : readinessResult?.verdict === "needs-work"
+                      ? "bg-[#ff9f0a]/10 border-[#ff9f0a]/30 text-[#ff9f0a]"
+                      : "bg-transparent border-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40"
+                  } disabled:bg-transparent disabled:border-transparent disabled:text-text-muted ${readinessPending ? "opacity-70" : ""}`}
+                title="Check if your staging area is ready to commit"
+              >
+                {readinessPending ? (
+                  <RefreshCw size={10} className="animate-spin" />
+                ) : (
+                  <ClipboardCheck size={10} />
+                )}
+                <span>Ready?</span>
+              </button>
+
+              {/* Guardrail */}
+              <button
+                type="button"
+                onClick={onGuardrail}
+                disabled={committing || guardrailPending || !hasAnyChanges}
+                className={`${STATUS_BUTTON_BASE} ${guardrailResult?.verdict === "needs-attention"
+                  ? "bg-[#ff453a]/10 border-[#ff453a]/30 text-[#ff453a]"
+                  : guardrailResult?.verdict === "warning"
+                    ? "bg-[#ff9f0a]/10 border-[#ff9f0a]/30 text-[#ff9f0a]"
+                    : guardrailResult?.verdict === "ready"
+                      ? "bg-[#30d158]/10 border-[#30d158]/30 text-[#30d158]"
+                      : "bg-transparent border-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40"
+                  } disabled:bg-transparent disabled:border-transparent disabled:text-text-muted ${guardrailPending ? "opacity-70" : ""}`}
+                title="Run AI pre-commit safety check"
+              >
+                {guardrailPending ? (
+                  <RefreshCw size={10} className="animate-spin" />
+                ) : (
+                  <ShieldCheck size={10} />
+                )}
+                <span>Guardrail</span>
+              </button>
+
+              {/* AI Review */}
+              <button
+                type="button"
+                onClick={onAIReview}
+                disabled={committing || aiReviewPending || !hasAnyChanges}
+                className={`${STATUS_BUTTON_BASE} bg-accent-10 border-transparent text-accent hover:bg-accent-15 hover:border-accent-30 disabled:bg-transparent disabled:border-transparent disabled:text-text-muted ${aiReviewPending ? "opacity-70" : ""}`}
+                title="Run AI review with custom checklist"
+              >
+                {aiReviewPending ? (
+                  <RefreshCw size={10} className="animate-spin text-accent" />
+                ) : (
+                  <Sparkles size={10} className="text-accent" />
+                )}
+                <span>Review</span>
+              </button>
+
+              {/* Lint AI */}
+              {localStorage.getItem("gitflowCommitLintEnabled") !== "false" && (
+                <button
+                  type="button"
+                  onClick={onLintReview}
+                  disabled={committing || lintReviewPending || !hasAnyChanges}
+                  className={`${STATUS_BUTTON_BASE} ${lintReviewPending ? "opacity-70" : ""} bg-transparent border-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40 disabled:bg-transparent disabled:border-transparent disabled:text-text-muted`}
+                  title="Review lint issues with AI"
+                >
+                  {lintReviewPending ? (
+                    <RefreshCw size={10} className="animate-spin" />
+                  ) : (
+                    <ListChecks size={10} />
+                  )}
+                  <span>Lint</span>
+                </button>
+              )}
+
+              {/* PR Draft */}
+              <div className="w-px h-3 bg-border-30 mx-0.5 shrink-0" />
+              <button
+                type="button"
+                onClick={onGeneratePRDraft}
+                disabled={prDraftPending || !hasAnyChanges}
+                className={`${STATUS_BUTTON_BASE} ${prDraftResult
+                  ? "bg-[#0a84ff]/10 border-[#0a84ff]/30 text-[#0a84ff]"
+                  : "bg-transparent border-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40"
+                  } disabled:bg-transparent disabled:border-transparent disabled:text-text-muted ${prDraftPending ? "opacity-70" : ""}`}
+                title="Generate PR/MR draft from staged changes"
+              >
+                {prDraftPending ? (
+                  <RefreshCw size={10} className="animate-spin" />
+                ) : (
+                  <FileText size={10} />
+                )}
+                <span>PR Draft</span>
+              </button>
+            </div>
+
+            {/* Separator */}
+            <div className="w-px self-stretch bg-border-30 shrink-0" />
+
+            {/* ── Commit Cluster ── */}
+            <div className="flex items-center gap-0.5 rounded-mac border border-border-20 bg-surface-1-35 p-0.5 shrink-0">
+              <UndoButton compact onUndoComplete={onUndoComplete} />
+
+              {/* Amend */}
+              <button
+                type="button"
+                onClick={() => setAmend(!amend)}
+                className={`${STATUS_BUTTON_BASE} ${amend
+                  ? "bg-[#ff9f0a]/10 border-[#ff9f0a]/30 text-[#ff9f0a]"
+                  : "bg-transparent border-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40"
+                  }`}
+                title="Amend last commit"
+              >
+                <GitCommit size={10} className={amend ? "text-[#ff9f0a]" : "text-text-muted"} />
+                <span>Amend</span>
+              </button>
+
+              {/* Commit (primary) */}
+              <button
+                type="button"
+                onClick={onCommit}
+                disabled={!hasCommitMessage || !hasAnyChanges || committing || lintRunning || scopeAnalyzing || commitScopePending || coachPending || (scopeSuggestion != null && !scopeDismissed)}
+                className={`h-6 px-2.5 rounded-mac text-[10px] font-bold inline-flex items-center gap-1 transition-all cursor-pointer select-none ${hasCommitMessage && hasAnyChanges && !scopeAnalyzing && !commitScopePending && !coachPending && !(scopeSuggestion != null && !scopeDismissed)
+                  ? "bg-[#30d158] text-[#07140a] hover:bg-[#30d158]/90 active:scale-[0.99]"
+                  : "bg-surface-2-40 text-text-muted opacity-35 cursor-not-allowed"
+                  } ${committing || lintRunning || scopeAnalyzing || commitScopePending || coachPending ? "opacity-60" : ""}`}
+                title={
+                  coachPending
+                    ? "Waiting for Commit Coach analysis..."
+                    : scopeAnalyzing
+                      ? "Analyzing commit scope..."
+                      : commitScopePending
+                        ? "Processing scope analysis..."
+                        : scopeSuggestion != null && !scopeDismissed
+                          ? "Review the split suggestion above before committing"
+                          : !commitMessage.trim()
+                            ? "Enter a commit message"
+                            : staged.length === 0 && unstaged.length === 0
+                              ? "No changes to commit"
+                              : staged.length === 0
+                                ? "Commit all changes"
+                                : "Commit (⌘↵)"
+                }
+              >
+                {committing || lintRunning || scopeAnalyzing || commitScopePending || coachPending ? (
+                  <RefreshCw size={11} className="animate-spin" />
+                ) : (
+                  <Check size={11} />
+                )}
+                <span>{committing ? "Committing..." : lintRunning ? "Linting..." : scopeAnalyzing ? "Analyzing..." : commitScopePending ? "Analyzing..." : coachPending ? "Coaching..." : unstaged.length > 0 ? "Commit All" : "Commit"}</span>
+              </button>
+            </div>
+
           </div>
         </div>
       </div>

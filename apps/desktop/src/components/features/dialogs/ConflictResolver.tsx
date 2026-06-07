@@ -2,10 +2,11 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { api } from "@/api/tauri";
 import { showToast } from "@/lib/toast";
-import { Check, Combine, ArrowLeft, Sparkles, RefreshCw, X, ChevronDown, ChevronRight, Lightbulb, Loader2 } from "lucide-react";
+import { Check, Combine, ArrowLeft, Sparkles, RefreshCw, X, ChevronDown, ChevronRight, Lightbulb, Loader2, Wand2, ShieldCheck, ShieldAlert, ShieldQuestion, Eye, EyeOff } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAIConflictExplain } from "@/queries/useAI";
-import type { ConflictExplanation } from "@/lib/ai";
+import { useAIConflictExplain, useAIConflictResolve } from "@/queries/useAI";
+import { trackAIConflictResolve } from "@/lib/analytics";
+import type { ConflictExplanation, ConflictResolution } from "@/lib/ai";
 import AIMarkdown from "@/components/ui/feedback/AIMarkdown";
 
 interface ConflictResolverProps {
@@ -118,6 +119,12 @@ export default function ConflictResolver({ filePath, onComplete, onCancel }: Con
   const [explainingBlocks, setExplainingBlocks] = useState<Set<number>>(new Set());
   const [expandedExplanations, setExpandedExplanations] = useState<Set<number>>(new Set());
   const conflictExplain = useAIConflictExplain();
+
+  // AI Conflict Resolution state (per-block suggestions with preview)
+  const [aiSuggestions, setAiSuggestions] = useState<Record<number, ConflictResolution>>({});
+  const [suggestingBlocks, setSuggestingBlocks] = useState<Set<number>>(new Set());
+  const [previewBlocks, setPreviewBlocks] = useState<Set<number>>(new Set());
+  const conflictResolve = useAIConflictResolve();
 
   // Fetch conflicted file content
   useEffect(() => {
@@ -256,172 +263,6 @@ export default function ConflictResolver({ filePath, onComplete, onCancel }: Con
     );
   }, []);
 
-  const handleAiResolveConflict = async () => {
-    setLoadingAi(true);
-    showToast("AI is resolving conflict...");
-    try {
-      const apiKey = localStorage.getItem("gitflowAiApiKey") || "";
-      const model = localStorage.getItem("gitflowAiModel") || "claude-sonnet-4-20250514";
-      const customUrl = localStorage.getItem("gitflowAiApiUrl") || "";
-      const limit = Number(localStorage.getItem("gitflowAiTokenLimit") || "4096");
-
-      // Build ours/theirs content from all blocks
-      const allOurs = conflictBlocks.map((b) => b.ours.join("\n")).join("\n\n");
-      const allTheirs = conflictBlocks.map((b) => b.theirs.join("\n")).join("\n\n");
-
-      const prompt = `You are an elite, highly experienced lead software engineer. We have a merge conflict in the file "${filePath}".
-Please merge the following two versions of code changes intelligently. Solve all conflicts, preserve key logic from both branches where applicable, and ensure correct syntax with no compiler errors.
-
-==================================================
-OURS VERSION (Your current active working branch changes):
-${allOurs}
-
-==================================================
-THEIRS VERSION (Incoming changes from target branch):
-${allTheirs}
-
-==================================================
-CRITICAL INSTRUCTIONS:
-1. Return ONLY the resolved, syntactically correct code that merges both versions.
-2. ABSOLUTELY NO introductory text, no "Here is the merged code...", no explanations, and no markdown code blocks (do NOT wrap in \`\`\`).
-3. Return the exact, raw merged code text.`;
-
-      let endpoint = "";
-      let message = "";
-
-      if (model.startsWith("claude-")) {
-        endpoint = customUrl ? customUrl.trim() : "https://api.anthropic.com/v1/messages";
-        if (customUrl && !endpoint.endsWith("/messages")) {
-          endpoint = endpoint.replace(/\/+$/, "") + "/messages";
-        }
-        const headers: Record<string, string> = {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01"
-        };
-        const body = JSON.stringify({
-          model: model,
-          max_tokens: limit,
-          messages: [{ role: "user", content: prompt }],
-          stream: false
-        });
-
-        const res = await api.ai.request(endpoint, "POST", headers, body);
-        if (res.status < 200 || res.status >= 300) {
-          throw new Error(`API Error: ${res.status}`);
-        }
-        let data: any;
-        const trimmedBody = res.body.trim();
-        if (trimmedBody.startsWith("data:")) {
-          let contentAccumulator = "";
-          const lines = trimmedBody.split("\n");
-          for (const line of lines) {
-            const cleaned = line.trim();
-            if (cleaned.startsWith("data:") && cleaned !== "data: [DONE]") {
-              try {
-                const chunkStr = cleaned.slice(5).trim();
-                const chunkJson = JSON.parse(chunkStr);
-                contentAccumulator += chunkJson.choices?.[0]?.delta?.content || chunkJson.delta?.content || "";
-              } catch {}
-            }
-          }
-          data = { content: [{ text: contentAccumulator }] };
-        } else {
-          data = JSON.parse(res.body);
-        }
-        message = data.content?.[0]?.text || "";
-      } else {
-        if (model === "ollama") {
-          endpoint = customUrl ? customUrl.trim() : "http://localhost:11434/v1/chat/completions";
-        } else if (model === "llama.cpp") {
-          endpoint = customUrl ? customUrl.trim() : "http://localhost:8080/v1/chat/completions";
-        } else {
-          endpoint = customUrl ? customUrl.trim() : "https://api.openai.com/v1/chat/completions";
-        }
-
-        if (customUrl && !endpoint.endsWith("/chat/completions") && !endpoint.endsWith("/completions")) {
-          endpoint = endpoint.replace(/\/+$/, "") + "/chat/completions";
-        }
-
-        const headers: Record<string, string> = {
-          "Content-Type": "application/json"
-        };
-        if (apiKey) {
-          headers["Authorization"] = `Bearer ${apiKey}`;
-        }
-        const body = JSON.stringify({
-          model: model === "ollama" ? "llama3" : model === "llama.cpp" ? "local-model" : model,
-          messages: [{ role: "user", content: prompt }],
-          max_tokens: limit,
-          stream: false
-        });
-
-        const res = await api.ai.request(endpoint, "POST", headers, body);
-        if (res.status < 200 || res.status >= 300) {
-          throw new Error(`API Error: ${res.status}`);
-        }
-        let data: any;
-        const trimmedBody = res.body.trim();
-        if (trimmedBody.startsWith("data:")) {
-          let contentAccumulator = "";
-          const lines = trimmedBody.split("\n");
-          for (const line of lines) {
-            const cleaned = line.trim();
-            if (cleaned.startsWith("data:") && cleaned !== "data: [DONE]") {
-              try {
-                const chunkStr = cleaned.slice(5).trim();
-                const chunkJson = JSON.parse(chunkStr);
-                contentAccumulator += chunkJson.choices?.[0]?.delta?.content || chunkJson.choices?.[0]?.text || "";
-              } catch {}
-            }
-          }
-          data = { choices: [{ message: { content: contentAccumulator } }] };
-        } else {
-          data = JSON.parse(res.body);
-        }
-        message = data.choices?.[0]?.message?.content || "";
-      }
-
-      if (message.trim()) {
-        let resolved = message.trim();
-        if (resolved.startsWith("```")) {
-          const lines = resolved.split("\n");
-          if (lines[0].startsWith("```")) {
-            lines.shift();
-          }
-          if (lines[lines.length - 1] === "```") {
-            lines.pop();
-          }
-          resolved = lines.join("\n");
-        }
-        // Apply AI result to all conflict blocks as "custom"
-        const aiLines = resolved.split("\n");
-        // Distribute AI result evenly across blocks (simple approach)
-        const linesPerBlock = Math.ceil(aiLines.length / conflictBlocks.length);
-        setSegments((prev) => {
-          let offset = 0;
-          return prev.map((seg) => {
-            if (seg.type !== "conflict") return seg;
-            const blockLines = aiLines.slice(offset, offset + linesPerBlock);
-            offset += linesPerBlock;
-            return {
-              type: "conflict" as const,
-              block: { ...seg.block, resolvedLines: blockLines, resolution: "custom" as const },
-            };
-          });
-        });
-        showToast("AI resolved conflict successfully!");
-      } else {
-        throw new Error("AI returned empty resolution code.");
-      }
-    } catch (e: any) {
-      console.error(e);
-      showToast(`AI Resolve Failed: ${e.message || e}`);
-    } finally {
-      setLoadingAi(false);
-    }
-  };
-
   // Get context lines (surrounding non-conflict segments) for a specific block
   const getContextForBlock = useCallback(
     (blockId: number): { before: string[]; after: string[] } => {
@@ -500,6 +341,118 @@ CRITICAL INSTRUCTIONS:
     [conflictBlocks, repoPath, filePath, explanations, expandedExplanations, getContextForBlock, conflictExplain],
   );
 
+  // Per-block AI suggest: get AI suggestion for a single conflict block
+  const handleSuggestForBlock = useCallback(
+    async (blockId: number) => {
+      const block = conflictBlocks.find((b) => b.id === blockId);
+      if (!block || !repoPath) return;
+
+      // Toggle off if already showing preview
+      if (previewBlocks.has(blockId) && aiSuggestions[blockId]) {
+        setPreviewBlocks((prev) => {
+          const next = new Set(prev);
+          next.delete(blockId);
+          return next;
+        });
+        return;
+      }
+
+      // Show if already loaded
+      if (aiSuggestions[blockId]) {
+        setPreviewBlocks((prev) => new Set(prev).add(blockId));
+        return;
+      }
+
+      setSuggestingBlocks((prev) => new Set(prev).add(blockId));
+      setPreviewBlocks((prev) => new Set(prev).add(blockId));
+
+      try {
+        const { before, after } = getContextForBlock(blockId);
+        const result = await conflictResolve.mutateAsync({
+          filePath,
+          ours: block.ours,
+          theirs: block.theirs,
+          contextBefore: before,
+          contextAfter: after,
+          repoPath: repoPath ?? undefined,
+        });
+        setAiSuggestions((prev) => ({ ...prev, [blockId]: result }));
+        trackAIConflictResolve();
+      } catch (e: any) {
+        showToast(`AI Resolve failed: ${e.message || e}`, "error");
+        setPreviewBlocks((prev) => {
+          const next = new Set(prev);
+          next.delete(blockId);
+          return next;
+        });
+      } finally {
+        setSuggestingBlocks((prev) => {
+          const next = new Set(prev);
+          next.delete(blockId);
+          return next;
+        });
+      }
+    },
+    [conflictBlocks, repoPath, filePath, aiSuggestions, previewBlocks, getContextForBlock, conflictResolve],
+  );
+
+  // Apply AI suggestion to a specific block (user must confirm)
+  const handleApplySuggestion = useCallback(
+    (blockId: number) => {
+      const suggestion = aiSuggestions[blockId];
+      if (!suggestion) return;
+      updateBlock(blockId, {
+        resolvedLines: [...suggestion.suggestedLines],
+        resolution: "custom" as const,
+      });
+      // Hide preview after applying
+      setPreviewBlocks((prev) => {
+        const next = new Set(prev);
+        next.delete(blockId);
+        return next;
+      });
+      showToast(`Applied AI suggestion for Conflict #${blockId + 1}`);
+    },
+    [aiSuggestions, updateBlock],
+  );
+
+  // Bulk AI resolve: resolve each block individually via AI
+  const handleBulkAiResolve = async () => {
+    if (!repoPath) return;
+    setLoadingAi(true);
+    showToast("AI is resolving all conflicts individually...");
+    try {
+      for (const block of conflictBlocks) {
+        if (suggestingBlocks.has(block.id)) continue;
+        try {
+          const { before, after } = getContextForBlock(block.id);
+          const result = await conflictResolve.mutateAsync({
+            filePath,
+            ours: block.ours,
+            theirs: block.theirs,
+            contextBefore: before,
+            contextAfter: after,
+            repoPath: repoPath ?? undefined,
+          });
+          setAiSuggestions((prev) => ({ ...prev, [block.id]: result }));
+          // Auto-apply for bulk resolve
+          updateBlock(block.id, {
+            resolvedLines: [...result.suggestedLines],
+            resolution: "custom" as const,
+          });
+        } catch {
+          // Continue with next block even if one fails
+        }
+      }
+      trackAIConflictResolve();
+      showToast("AI resolved all conflicts! Review each block before completing.");
+    } catch (e: any) {
+      showToast(`AI Bulk Resolve failed: ${e.message || e}`, "error");
+    } finally {
+      setLoadingAi(false);
+    }
+  };
+
   const handleComplete = async () => {
     if (!repoPath) return;
     setResolving(true);
@@ -566,15 +519,16 @@ CRITICAL INSTRUCTIONS:
         <div className="flex-1" />
         <button
           className="h-6 px-3 bg-accent text-accent-fg hover:opacity-90 disabled:opacity-40 text-3xs font-semibold rounded flex items-center gap-1 transition-all shadow-sm"
-          onClick={handleAiResolveConflict}
+          onClick={handleBulkAiResolve}
           disabled={loadingAi}
+          title="AI resolves each conflict block individually with preview"
         >
           {loadingAi ? (
             <RefreshCw size={10} className="animate-spin text-accent-fg" />
           ) : (
-            <Sparkles size={10} className="text-accent-fg" />
+            <Wand2 size={10} className="text-accent-fg" />
           )}
-          <span>AI Auto Resolve</span>
+          <span>AI Resolve All</span>
         </button>
       </div>
 
@@ -670,6 +624,26 @@ CRITICAL INSTRUCTIONS:
                       <Lightbulb size={9} />
                     )}
                     <span>{explainingBlocks.has(block.id) ? "Analyzing..." : "Explain"}</span>
+                  </button>
+                  <div className="w-px h-3 bg-border-40 mx-0.5" />
+                  <button
+                    className={`conflict-block-btn flex items-center gap-0.5 px-1.5 py-0.5 rounded text-3xs font-medium transition-all ${
+                      previewBlocks.has(block.id) && aiSuggestions[block.id]
+                        ? "bg-accent/15 text-accent border border-accent/30"
+                        : suggestingBlocks.has(block.id)
+                          ? "bg-accent/10 text-accent border border-accent/20"
+                          : "text-text-muted hover:text-accent hover:bg-accent/10 border border-transparent"
+                    }`}
+                    onClick={() => handleSuggestForBlock(block.id)}
+                    disabled={suggestingBlocks.has(block.id)}
+                    title="AI Suggest: get an AI-suggested resolution for this block"
+                  >
+                    {suggestingBlocks.has(block.id) ? (
+                      <Loader2 size={9} className="animate-spin" />
+                    ) : (
+                      <Wand2 size={9} />
+                    )}
+                    <span>{suggestingBlocks.has(block.id) ? "Resolving..." : "AI Suggest"}</span>
                   </button>
                 </div>
               </div>
@@ -808,6 +782,88 @@ CRITICAL INSTRUCTIONS:
                           </div>
                         </div>
                       )}
+                    </div>
+                  ) : null}
+                </div>
+              )}
+
+              {/* AI Suggestion Preview Panel */}
+              {previewBlocks.has(block.id) && (
+                <div className="border-t border-accent/20 bg-accent/5">
+                  {suggestingBlocks.has(block.id) ? (
+                    <div className="flex items-center gap-2 px-4 py-3 text-3xs text-text-muted">
+                      <Loader2 size={12} className="animate-spin text-accent" />
+                      <span>AI is generating a suggested resolution for this conflict...</span>
+                    </div>
+                  ) : aiSuggestions[block.id] ? (
+                    <div className="px-4 py-3 space-y-3">
+                      {/* Header with confidence badge */}
+                      <div className="flex items-center gap-2">
+                        <Wand2 size={11} className="text-accent" />
+                        <span className="text-3xs font-bold text-accent uppercase tracking-wider">AI Suggested Resolution</span>
+                        <div className="flex-1" />
+                        <span className={`flex items-center gap-1 text-3xs font-semibold px-1.5 py-0.5 rounded-full border ${
+                          aiSuggestions[block.id].confidence === "high"
+                            ? "text-[#30d158] bg-[#30d158]/10 border-[#30d158]/30"
+                            : aiSuggestions[block.id].confidence === "medium"
+                              ? "text-[#ff9f0a] bg-[#ff9f0a]/10 border-[#ff9f0a]/30"
+                              : "text-[#ff453a] bg-[#ff453a]/10 border-[#ff453a]/30"
+                        }`}>
+                          {aiSuggestions[block.id].confidence === "high" ? (
+                            <ShieldCheck size={9} />
+                          ) : aiSuggestions[block.id].confidence === "medium" ? (
+                            <ShieldQuestion size={9} />
+                          ) : (
+                            <ShieldAlert size={9} />
+                          )}
+                          {aiSuggestions[block.id].confidence} confidence
+                        </span>
+                      </div>
+
+                      {/* Explanation */}
+                      <div className="text-2xs text-text-primary leading-relaxed bg-surface-1-30 rounded px-2.5 py-2 border border-border-40">
+                        <AIMarkdown content={aiSuggestions[block.id].explanation} />
+                      </div>
+
+                      {/* Suggested lines preview */}
+                      <div className="bg-surface-1-30 border border-border-40 rounded overflow-hidden">
+                        <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-border-40 bg-surface-1-40">
+                          <span className="text-3xs font-semibold text-text-secondary uppercase tracking-wider">Suggested Lines</span>
+                          <span className="text-3xs text-text-muted">{aiSuggestions[block.id].suggestedLines.length} lines</span>
+                        </div>
+                        <div className="max-h-40 overflow-y-auto">
+                          {aiSuggestions[block.id].suggestedLines.map((line, li) => (
+                            <div key={li} className="flex items-center px-2.5 py-0.5 text-2xs font-mono text-text-primary hover:bg-accent/5">
+                              <span className="w-5 text-right text-text-muted mr-2 select-none text-3xs">{li + 1}</span>
+                              <span className="flex-1 whitespace-pre">{line || "\u00A0"}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          onClick={() => handleApplySuggestion(block.id)}
+                          className="h-6 px-3 bg-accent text-accent-fg hover:opacity-90 text-3xs font-semibold rounded flex items-center gap-1 transition-all shadow-sm"
+                          title="Apply this AI suggestion to the conflict block"
+                        >
+                          <Check size={9} />
+                          <span>Apply Suggestion</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setPreviewBlocks((prev) => {
+                              const next = new Set(prev);
+                              next.delete(block.id);
+                              return next;
+                            });
+                          }}
+                          className="h-6 px-3 text-3xs font-medium text-text-muted hover:text-text-primary border border-border hover:bg-surface-2 rounded transition-all"
+                        >
+                          Dismiss
+                        </button>
+                      </div>
                     </div>
                   ) : null}
                 </div>
