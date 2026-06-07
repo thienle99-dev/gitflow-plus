@@ -21,3 +21,15 @@ export function useUndoLast(repoPath: string | null) {
     },
   });
 }
+
+export function useRestoreToCommit(repoPath: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation<string, Error, string>({
+    mutationKey: ["git.reflog-restore"],
+    mutationFn: (hash: string) => api.reflog.restoreToCommit(repoPath!, hash),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
+    },
+  });
+}
