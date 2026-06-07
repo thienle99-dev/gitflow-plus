@@ -104,11 +104,11 @@ export default function CommitTemplatePicker({ onSelect }: CommitTemplatePickerP
   const isFormOpen = adding || editing !== null;
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative shrink-0">
       <button
         type="button"
         onClick={() => { setOpen((v) => !v); setEditing(null); setAdding(false); }}
-        className="h-6 px-1.5 rounded-mac border border-transparent text-[10px] font-semibold inline-flex items-center gap-1 transition-all cursor-pointer bg-transparent text-text-muted hover:text-text-primary hover:bg-surface-2 hover:border-border-40"
+        className="h-6 px-1.5 rounded-mac border border-border-40 text-[10px] font-semibold inline-flex items-center gap-1 whitespace-nowrap transition-all cursor-pointer bg-surface-2-40 text-text-secondary hover:text-text-primary hover:bg-surface-2 hover:border-border-60"
         title="Commit message templates"
       >
         <FileText size={10} />

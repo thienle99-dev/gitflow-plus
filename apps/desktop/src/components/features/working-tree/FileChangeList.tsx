@@ -1,6 +1,7 @@
 import { useState, useMemo, memo } from "react";
 import { type FileChange } from "@/api/tauri";
 import { StatusBadge, fileIcon } from "@/components/ui/shared";
+import { EmptyStateInline } from "@/components/ui/feedback/EmptyState";
 import {
   Check,
   ChevronDown,
@@ -441,7 +442,7 @@ function ChangeSection({
       {open && (
         <div className="flex-1 overflow-y-auto py-1.5">
           {files.length === 0 ? (
-            <div className="px-5 py-4 text-xs text-text-muted-80">{empty}</div>
+            <EmptyStateInline variant={stage === "staged" ? "changes" : "changes"} title={empty} />
           ) : isTreeView && treeRoot ? (
             <FileTreeRenderer
               node={treeRoot}

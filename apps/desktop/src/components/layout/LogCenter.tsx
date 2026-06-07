@@ -137,8 +137,12 @@ export default function LogCenter() {
           <button
             onClick={refreshLogs}
             disabled={loading}
-            className="flex items-center gap-1 text-2xs text-text-muted hover:text-text-secondary transition-colors px-1.5 py-0.5 rounded disabled:opacity-50 cursor-pointer"
-            title="Refresh logs"
+            className={`flex items-center gap-1 text-2xs transition-colors px-1.5 py-0.5 rounded cursor-pointer ${
+              loading
+                ? "bg-accent-10 text-accent"
+                : "text-text-muted hover:text-text-secondary disabled:opacity-40"
+            }`}
+            title={loading ? "Loading logs…" : "Refresh logs"}
           >
             <RefreshCw size={10} className={loading ? "animate-spin" : ""} />
           </button>

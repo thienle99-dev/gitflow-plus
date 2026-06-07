@@ -16,7 +16,7 @@ import LazyDiffViewer from "@/components/features/diff/LazyDiffViewer";
 import { trackCommit, trackAICommitMessage, trackAIReview, trackAIGuardrail, trackAIReadiness, trackAICommitScope, trackAIImproveMessage, trackAIAddBody, trackAILintReview, trackAIFixPlan, trackAICommitCoach, trackAIPRDraft } from "@/lib/analytics";
 import { AlertCircle, Clipboard, ShieldAlert, MessageSquare } from "lucide-react";
 import { Skeleton } from "@/components/ui/feedback/Skeleton";
-import { EmptyState } from "@/components/ui/feedback/EmptyState";
+import { EmptyState, FetchAction, OpenRepoAction } from "@/components/ui/feedback/EmptyState";
 import { lintCommitMessage, autoFixCommitMessage, type CommitLintResult } from "@/lib/commit-lint";
 import { LintWarningDialog } from "@/components/features/dialogs";
 import {
@@ -39,7 +39,8 @@ export default function WorkingTree() {
   const selectedFile = useUIStore((s) => s.selectedFile);
   const selectedFileStage = useUIStore((s) => s.selectedFileStage);
   const selectFile = useUIStore((s) => s.selectFile);
-  const { data: changes } = useGitStatus(repoPath);
+  const statusQuery = useGitStatus(repoPath);
+  const { data: changes } = statusQuery;
   const queryClient = useQueryClient();
   const generateCommit = useGenerateCommitMessage(repoPath);
   const commitScope = useAICommitScope();
@@ -159,6 +160,17 @@ export default function WorkingTree() {
 
   const staged = changes?.filter((c) => c.staged) || [];
   const unstaged = changes?.filter((c) => !c.staged) || [];
+  const hasLoadedStatus = Array.isArray(changes);
+  const hasChanges = staged.length > 0 || unstaged.length > 0;
+  const showStatusLoading = !hasLoadedStatus && statusQuery.isLoading;
+  const showStatusError = !hasLoadedStatus && statusQuery.isError;
+  const showCleanState = hasLoadedStatus && !hasChanges && !aiReviewOpen;
+  const statusErrorMessage =
+    statusQuery.error instanceof Error
+      ? statusQuery.error.message
+      : statusQuery.error
+        ? String(statusQuery.error)
+        : "Git status failed. Try refreshing changes.";
 
   const reviewFiles: DiffReviewTarget[] = useMemo(
     () => [
@@ -887,35 +899,81 @@ export default function WorkingTree() {
 
   return (
     <div className="h-full flex flex-col bg-surface-0">
-      <FileChangeList
-        staged={staged}
-        unstaged={unstaged}
-        selectedFile={selectedFile}
-        selectedFileStage={selectedFileStage}
-        selectedFiles={selectedFiles}
-        isTreeView={isTreeView}
-        stagedOpen={stagedOpen}
-        unstagedOpen={unstagedOpen}
-        reviewTargetPath={reviewTarget?.path}
-        reviewTargetStage={reviewTarget?.stage}
-        onStage={handleStage}
-        onUnstage={handleUnstage}
-        onStageAll={handleStageAll}
-        onUnstageAll={handleUnstageAll}
-        onSelectFile={(path, stage) => openDiffReview(path, stage)}
-        onAIInlineReview={(path, stage) => openInlineReview(path, stage)}
-        onContextMenu={(x, y, file, stage) => setCtxMenu({ x, y, file, stage })}
-        onFileMultiClick={handleFileClick}
-        onRefresh={invalidate}
-        onToggleTreeView={toggleTreeView}
-        onToggleAllSections={handleToggleAllSections}
-        onToggleStagedOpen={() => setStagedOpen((open) => !open)}
-        onToggleUnstagedOpen={() => setUnstagedOpen((open) => !open)}
-        onSetConfirmDiscardAll={setConfirmDiscardAll}
-        onBatchStage={handleBatchStage}
-        onBatchUnstage={handleBatchUnstage}
-        onClearSelected={() => setSelectedFiles(new Set())}
-      />
+      {(hasChanges || aiReviewOpen) && (
+        <FileChangeList
+          staged={staged}
+          unstaged={unstaged}
+          selectedFile={selectedFile}
+          selectedFileStage={selectedFileStage}
+          selectedFiles={selectedFiles}
+          isTreeView={isTreeView}
+          stagedOpen={stagedOpen}
+          unstagedOpen={unstagedOpen}
+          reviewTargetPath={reviewTarget?.path}
+          reviewTargetStage={reviewTarget?.stage}
+          onStage={handleStage}
+          onUnstage={handleUnstage}
+          onStageAll={handleStageAll}
+          onUnstageAll={handleUnstageAll}
+          onSelectFile={(path, stage) => openDiffReview(path, stage)}
+          onAIInlineReview={(path, stage) => openInlineReview(path, stage)}
+          onContextMenu={(x, y, file, stage) => setCtxMenu({ x, y, file, stage })}
+          onFileMultiClick={handleFileClick}
+          onRefresh={invalidate}
+          onToggleTreeView={toggleTreeView}
+          onToggleAllSections={handleToggleAllSections}
+          onToggleStagedOpen={() => setStagedOpen((open) => !open)}
+          onToggleUnstagedOpen={() => setUnstagedOpen((open) => !open)}
+          onSetConfirmDiscardAll={setConfirmDiscardAll}
+          onBatchStage={handleBatchStage}
+          onBatchUnstage={handleBatchUnstage}
+          onClearSelected={() => setSelectedFiles(new Set())}
+        />
+      )}
+
+      {showStatusLoading && (
+        <div className="border-t border-border-60 flex-1 p-3 space-y-2">
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-6 w-2/3" />
+          <Skeleton className="h-6 w-1/2" />
+        </div>
+      )}
+
+      {showStatusError && (
+        <div className="border-t border-border-60 flex-1 flex items-center justify-center px-4">
+          <EmptyState
+            variant="changes"
+            title="Could not load changes"
+            description={`${statusErrorMessage}${repoPath ? ` (${repoPath})` : ""}`}
+            action={
+              <button
+                type="button"
+                onClick={() => statusQuery.refetch()}
+                className="h-7 px-3 rounded-mac text-[10px] font-semibold inline-flex items-center gap-1.5 bg-accent-10 text-accent hover:bg-accent-15 transition-all cursor-pointer"
+              >
+                <RefreshCw size={11} />
+                <span>Refresh Changes</span>
+              </button>
+            }
+          />
+        </div>
+      )}
+
+      {showCleanState && (
+        <div className="border-t border-border-60 flex-1 flex items-center justify-center">
+          <EmptyState
+            variant="changes"
+            title="No changes"
+            description="Working directory is clean. Fetch remote changes or open the repo folder."
+            action={
+              <div className="flex items-center gap-2">
+                <FetchAction onClick={async () => { await api.remote.fetch(repoPath!); invalidate(); }} />
+                <OpenRepoAction onClick={() => { if (repoPath) useRepoStore.getState().openRepo(repoPath); }} />
+              </div>
+            }
+          />
+        </div>
+      )}
 
       {aiReviewOpen && (
         <div className={`${aiReviewCollapsed ? "shrink-0 px-3 py-2" : "flex-1 min-h-0 px-3 py-2"} border-t border-border-60`}>
