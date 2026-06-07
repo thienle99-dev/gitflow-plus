@@ -118,32 +118,38 @@ export default function DiffToolbar({
         <button
           onClick={onToggleAiReview}
           disabled={reviewLoading}
-          className={`flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-surface-2 transition-all text-accent hover:text-accent-hover ${
-            reviewLoading ? "opacity-60 cursor-not-allowed" : ""
+          className={`flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-surface-2 transition-all ${
+            reviewLoading
+              ? "bg-accent-10 text-accent"
+              : "text-accent hover:text-accent-hover"
           }`}
-          title="Analyze and explain code changes with AI"
+          title={reviewLoading ? "Analyzing changes…" : "Analyze and explain code changes with AI"}
         >
           {reviewLoading ? (
-            <RefreshCw size={11} className="animate-spin text-accent" />
+            <RefreshCw size={11} className="animate-spin" />
           ) : (
             <Sparkles size={11} />
           )}
-          <span>AI Explain & Review</span>
+          <span>{reviewLoading ? "Analyzing…" : "AI Explain & Review"}</span>
         </button>
         <button
           onClick={onToggleInlineComments}
           disabled={inlineCommentsLoading}
           className={`flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-surface-2 transition-all ${
-            showInlineComments ? "text-[#ff9f0a] bg-[#ff9f0a]/10" : "text-text-muted hover:text-text-secondary"
-          } ${inlineCommentsLoading ? "opacity-60 cursor-not-allowed" : ""}`}
-          title="Generate AI inline review comments on diff lines"
+            inlineCommentsLoading
+              ? "bg-accent-10 text-accent"
+              : showInlineComments
+                ? "text-[#ff9f0a] bg-[#ff9f0a]/10"
+                : "text-text-muted hover:text-text-secondary"
+          }`}
+          title={inlineCommentsLoading ? "Generating inline comments…" : "Generate AI inline review comments on diff lines"}
         >
           {inlineCommentsLoading ? (
-            <RefreshCw size={11} className="animate-spin text-[#ff9f0a]" />
+            <RefreshCw size={11} className="animate-spin" />
           ) : (
             <MessageSquare size={11} />
           )}
-          <span>Inline Comments</span>
+          <span>{inlineCommentsLoading ? "Generating…" : "Inline Comments"}</span>
           {inlineCommentsCount > 0 && (
             <span className="ml-0.5 rounded bg-[#ff9f0a]/20 px-1 text-[9px] font-bold text-[#ff9f0a]">
               {inlineCommentsCount}
@@ -169,30 +175,36 @@ export default function DiffToolbar({
                 {source === "working" ? (
                   <>
                     <button
-                      className="ghost text-2xs px-2 text-[#30d158] hover:bg-[#30d158]/10"
+                      className={`ghost text-2xs px-2 ${applying === index ? "opacity-60" : "text-[#30d158] hover:bg-[#30d158]/10"}`}
                       onClick={() => onApplyHunk(hunk, index, "stage")}
                       disabled={applying !== null || batchingAll}
-                      title="Accept all changes in this hunk (stage)"
+                      title={applying === index ? "Applying hunk…" : "Accept all changes in this hunk (stage)"}
                     >
-                      {applying === index ? "Applying..." : "✓ Accept Hunk"}
+                      {applying === index ? (
+                        <><RefreshCw size={10} className="animate-spin inline" /> Applying…</>
+                      ) : "✓ Accept Hunk"}
                     </button>
                     <button
-                      className="ghost text-2xs px-2 text-[#ff375f] hover:bg-[#ff375f]/10"
+                      className={`ghost text-2xs px-2 ${applying === index ? "opacity-60" : "text-[#ff375f] hover:bg-[#ff375f]/10"}`}
                       onClick={() => onApplyHunk(hunk, index, "discard")}
                       disabled={applying !== null || batchingAll}
-                      title="Reject and discard all changes in this hunk"
+                      title={applying === index ? "Applying hunk…" : "Reject and discard all changes in this hunk"}
                     >
-                      {applying === index ? "Applying..." : "✗ Reject Hunk"}
+                      {applying === index ? (
+                        <><RefreshCw size={10} className="animate-spin inline" /> Applying…</>
+                      ) : "✗ Reject Hunk"}
                     </button>
                   </>
                 ) : (
                   <button
-                    className="ghost text-2xs px-2 hover:text-[#ff9f0a]"
+                    className={`ghost text-2xs px-2 ${applying === index ? "opacity-60" : "hover:text-[#ff9f0a]"}`}
                     onClick={() => onApplyHunk(hunk, index, "unstage")}
                     disabled={applying !== null || batchingAll}
-                    title="Unstage this hunk"
+                    title={applying === index ? "Applying hunk…" : "Unstage this hunk"}
                   >
-                    {applying === index ? "Applying..." : "↩ Unstage Hunk"}
+                    {applying === index ? (
+                      <><RefreshCw size={10} className="animate-spin inline" /> Applying…</>
+                    ) : "↩ Unstage Hunk"}
                   </button>
                 )}
               </div>
@@ -201,20 +213,24 @@ export default function DiffToolbar({
           {source === "working" && hunks.length > 1 && (
             <div className="flex items-center gap-2 px-3 py-1.5 border-t border-border-60 bg-surface-1-20">
               <button
-                className="ghost text-2xs px-2 text-[#30d158] hover:bg-[#30d158]/10 font-medium"
+                className={`ghost text-2xs px-2 font-medium ${batchingAll ? "opacity-60" : "text-[#30d158] hover:bg-[#30d158]/10"}`}
                 onClick={() => onAcceptAll?.()}
                 disabled={applying !== null || batchingAll}
-                title="Accept all hunks at once (stage)"
+                title={batchingAll ? "Accepting all hunks…" : "Accept all hunks at once (stage)"}
               >
-                {batchingAll ? "Accepting..." : `✓ Accept All (${hunks.length})`}
+                {batchingAll ? (
+                  <><RefreshCw size={10} className="animate-spin inline" /> Accepting…</>
+                ) : `✓ Accept All (${hunks.length})`}
               </button>
               <button
-                className="ghost text-2xs px-2 text-[#ff375f] hover:bg-[#ff375f]/10 font-medium"
+                className={`ghost text-2xs px-2 font-medium ${batchingAll ? "opacity-60" : "text-[#ff375f] hover:bg-[#ff375f]/10"}`}
                 onClick={() => onRejectAll?.()}
                 disabled={applying !== null || batchingAll}
-                title="Reject all hunks at once (discard)"
+                title={batchingAll ? "Rejecting all hunks…" : "Reject all hunks at once (discard)"}
               >
-                {batchingAll ? "Rejecting..." : `✗ Reject All (${hunks.length})`}
+                {batchingAll ? (
+                  <><RefreshCw size={10} className="animate-spin inline" /> Rejecting…</>
+                ) : `✗ Reject All (${hunks.length})`}
               </button>
             </div>
           )}
