@@ -9,7 +9,7 @@ import { lintCommitMessage, autoFixCommitMessage, type CommitLintResult } from "
 import { LintWarningDialog } from "@/components/features/dialogs";
 import { showToast } from "@/lib/toast";
 import { trackRemoteOp } from "@/stores/operations";
-import { listen } from "@tauri-apps/api/event";
+import { useRepoAutoRefresh } from "@/hooks/useRepoAutoRefresh";
 import { TrayCommitBox } from "./TrayCommitBox";
 import { TrayFileChanges } from "./TrayFileChanges";
 import { TrayActions } from "./TrayActions";
@@ -79,66 +79,10 @@ export default function TrayPanelView() {
     };
   }, [runLint]);
 
-  // Auto-refresh: listen for file watcher events from Rust backend
-  const invalidateTimersRef = useRef<Map<string, number>>(new Map());
-  const lastFocusRefreshRef = useRef(0);
-
-  const scheduleInvalidate = useCallback((queryKey: unknown[], delay = 250) => {
-    const key = JSON.stringify(queryKey);
-    const existing = invalidateTimersRef.current.get(key);
-    if (existing !== undefined) window.clearTimeout(existing);
-    const timer = window.setTimeout(() => {
-      invalidateTimersRef.current.delete(key);
-      queryClient.invalidateQueries({ queryKey });
-    }, delay);
-    invalidateTimersRef.current.set(key, timer);
-  }, [queryClient]);
-
-  useEffect(() => {
-    return () => {
-      invalidateTimersRef.current.forEach((timer) => window.clearTimeout(timer));
-      invalidateTimersRef.current.clear();
-    };
-  }, []);
-
-  useEffect(() => {
-    const unlisten = listen<{ event_type: string }>("repo:changed", (event) => {
-      if (!repoPath) return;
-      const type = event.payload.event_type;
-      if (type === "worktree") {
-        scheduleInvalidate(["git", repoPath, "status"]);
-        scheduleInvalidate(["git", repoPath, "diff"]);
-      } else if (type === "refs") {
-        scheduleInvalidate(["git", repoPath, "branches"]);
-        scheduleInvalidate(["git", repoPath, "recent-commits"]);
-        scheduleInvalidate(["git", repoPath, "sync-status"]);
-        scheduleInvalidate(["git", repoPath, "stash-list"]);
-      } else if (type === "head") {
-        scheduleInvalidate(["git", repoPath, "branches"]);
-        scheduleInvalidate(["git", repoPath, "recent-commits"]);
-        scheduleInvalidate(["git", repoPath, "sync-status"]);
-        scheduleInvalidate(["git", repoPath, "stash-list"]);
-      }
-    });
-    return () => { unlisten.then((f) => f()); };
-  }, [repoPath, scheduleInvalidate]);
-
-  // Auto-refresh git state when tray window gains focus
-  useEffect(() => {
-    const handleFocus = () => {
-      if (repoPath) {
-        const now = Date.now();
-        if (now - lastFocusRefreshRef.current < 5_000) return;
-        lastFocusRefreshRef.current = now;
-        scheduleInvalidate(["git", repoPath, "status"]);
-        scheduleInvalidate(["git", repoPath, "sync-status"]);
-        scheduleInvalidate(["git", repoPath, "branches"]);
-        scheduleInvalidate(["git", repoPath, "recent-commits"]);
-      }
-    };
-    window.addEventListener("focus", handleFocus);
-    return () => window.removeEventListener("focus", handleFocus);
-  }, [repoPath, scheduleInvalidate]);
+  // Auto-refresh git state on file-watcher events and window focus
+  useRepoAutoRefresh(repoPath, {
+    includeStash: true,
+  });
 
   // Pre-Commit Gate States
   const [lintWarningOpen, setLintWarningOpen] = useState(false);
