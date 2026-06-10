@@ -17,6 +17,7 @@ import WorkspaceRail from "@/components/layout/WorkspaceRail";
 import OperationCenter from "@/components/layout/OperationCenter";
 import LogCenter from "@/components/layout/LogCenter";
 import { useOperationObserver } from "@/hooks/useOperationObserver";
+import { useRepoAutoRefresh } from "@/hooks/useRepoAutoRefresh";
 import { isOnboardingComplete } from "@/components/features/dialogs";
 import ErrorBoundary from "@/components/ui/feedback/ErrorBoundary";
 import { AlertOctagon, RefreshCw, Trash2, FolderOpen, GitBranch, Clock } from "lucide-react";
@@ -66,14 +67,21 @@ export default function MainLayout() {
   const toggleTheme = useRepoStore((s) => s.toggleTheme);
   const openDialogState = useUIStore((s) => s.openDialog);
   const queryClient = useQueryClient();
-  const invalidateTimersRef = useRef<Map<string, number>>(new Map());
-  const lastFocusRefreshRef = useRef(0);
   const sidebarPanelRef = useRef<ImperativePanelHandle>(null);
   const rightPanelRef = useRef<ImperativePanelHandle>(null);
   const [showOnboarding, setShowOnboarding] = useState(() => !isOnboardingComplete());
 
   // Observe all React Query mutations → operations store
   useOperationObserver();
+
+  // Auto-refresh git state on file-watcher events and window focus
+  useRepoAutoRefresh(repoPath, {
+    includeLog: true,
+    includeInfo: true,
+    includeStash: false,
+    includeSubmodules: true,
+    includeLfs: true,
+  });
 
   // Sync onboarding from activeDialog ("onboarding" opened from BottomBar etc.)
   useEffect(() => {
@@ -82,26 +90,6 @@ export default function MainLayout() {
       closeDialog();
     }
   }, [activeDialog, closeDialog]);
-
-  const scheduleInvalidate = useCallback((queryKey: unknown[], delay = 250) => {
-    const key = JSON.stringify(queryKey);
-    const existing = invalidateTimersRef.current.get(key);
-    if (existing !== undefined) {
-      window.clearTimeout(existing);
-    }
-    const timer = window.setTimeout(() => {
-      invalidateTimersRef.current.delete(key);
-      queryClient.invalidateQueries({ queryKey });
-    }, delay);
-    invalidateTimersRef.current.set(key, timer);
-  }, [queryClient]);
-
-  useEffect(() => {
-    return () => {
-      invalidateTimersRef.current.forEach((timer) => window.clearTimeout(timer));
-      invalidateTimersRef.current.clear();
-    };
-  }, []);
 
   // Start/stop file watcher when repo changes
   useEffect(() => {
@@ -145,29 +133,6 @@ export default function MainLayout() {
     });
   }, [repoPath, queryClient]);
 
-  // Listen for file watcher events and invalidate queries
-  useEffect(() => {
-    const unlisten = listen<{ event_type: string }>("repo:changed", (event) => {
-      if (!repoPath) return;
-      const type = event.payload.event_type;
-      if (type === "worktree") {
-        scheduleInvalidate(["git", repoPath, "status"]);
-        scheduleInvalidate(["git", repoPath, "submodules"]);
-        scheduleInvalidate(["git", repoPath, "lfs"]);
-        scheduleInvalidate(["git", repoPath, "diff"]);
-      } else if (type === "refs") {
-        scheduleInvalidate(["git", repoPath, "branches"]);
-        scheduleInvalidate(["git", repoPath, "log"]);
-        scheduleInvalidate(["git", repoPath, "sync-status"]);
-      } else if (type === "head") {
-        scheduleInvalidate(["git", repoPath, "info"]);
-        scheduleInvalidate(["git", repoPath, "branches"]);
-        scheduleInvalidate(["git", repoPath, "log"]);
-        scheduleInvalidate(["git", repoPath, "sync-status"]);
-      }
-    });
-    return () => { unlisten.then((f) => f()); };
-  }, [repoPath, scheduleInvalidate]);
 
   // Auto-fetch: periodically run git fetch in background
   useEffect(() => {
@@ -182,8 +147,8 @@ export default function MainLayout() {
 
     const runFetch = () => {
       trackRemoteOp("fetch", () => api.remote.fetch(repoPath)).then(() => {
-        scheduleInvalidate(["git", repoPath, "sync-status"]);
-        scheduleInvalidate(["git", repoPath, "branches"]);
+        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "sync-status"] });
+        queryClient.invalidateQueries({ queryKey: ["git", repoPath, "branches"] });
       }).catch(() => {
         // Silently ignore — network errors are transient
       });
@@ -198,7 +163,7 @@ export default function MainLayout() {
       window.clearTimeout(initialTimer);
       window.clearInterval(interval);
     };
-  }, [repoPath, scheduleInvalidate]);
+  }, [repoPath, queryClient]);
 
   // Listen for open-dialog requests from other windows (e.g. tray popover)
   useEffect(() => {
@@ -256,23 +221,6 @@ export default function MainLayout() {
       unlisten.then((f) => f());
     }
   }, [repoPath, queryClient, closeRepo, toggleSidebar, toggleTheme, openDialogState]);
-
-  // Auto-refresh Git state when the app window gains focus
-  useEffect(() => {
-    const handleFocus = () => {
-      if (repoPath) {
-        const now = Date.now();
-        if (now - lastFocusRefreshRef.current < 5_000) return;
-        lastFocusRefreshRef.current = now;
-        scheduleInvalidate(["git", repoPath, "status"]);
-        scheduleInvalidate(["git", repoPath, "sync-status"]);
-        scheduleInvalidate(["git", repoPath, "branches"]);
-        scheduleInvalidate(["git", repoPath, "lfs"]);
-      }
-    };
-    window.addEventListener("focus", handleFocus);
-    return () => window.removeEventListener("focus", handleFocus);
-  }, [repoPath, scheduleInvalidate]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {

@@ -9,6 +9,7 @@ import { lintCommitMessage, autoFixCommitMessage, type CommitLintResult } from "
 import { LintWarningDialog } from "@/components/features/dialogs";
 import { showToast } from "@/lib/toast";
 import { trackRemoteOp } from "@/stores/operations";
+import { useRepoAutoRefresh } from "@/hooks/useRepoAutoRefresh";
 import { TrayCommitBox } from "./TrayCommitBox";
 import { TrayFileChanges } from "./TrayFileChanges";
 import { TrayActions } from "./TrayActions";
@@ -77,6 +78,11 @@ export default function TrayPanelView() {
       window.removeEventListener("gitflow-settings-updated", runLint);
     };
   }, [runLint]);
+
+  // Auto-refresh git state on file-watcher events and window focus
+  useRepoAutoRefresh(repoPath, {
+    includeStash: true,
+  });
 
   // Pre-Commit Gate States
   const [lintWarningOpen, setLintWarningOpen] = useState(false);
