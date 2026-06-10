@@ -16,7 +16,7 @@ Frontend (run from `apps/desktop/`):
 - `pnpm test:watch` — Vitest watch mode
 - Single test: `pnpm vitest run path/to/file.test.ts` or `pnpm vitest -t "test name"`
 
-Full desktop app (the only way to exercise Tauri commands, since `invoke` is a no-op in a plain browser): driven by the cargo tauri CLI from `src-tauri/` (`cargo tauri dev` / `cargo tauri build`). `tauri.conf.json` runs `npm run dev` / `npm run build` as its before-hooks and serves the frontend from `../apps/desktop/dist`. Rust-only build/check: `cargo build` in `src-tauri/`.
+Full desktop app (the only way to exercise Tauri commands, since `invoke` is a no-op in a plain browser): driven by the cargo tauri CLI from `src-tauri/` (`cargo tauri dev` / `cargo tauri build`). `tauri.conf.json` runs `npm run dev` / `npm run build` as its before-hooks and serves the frontend from `../apps/desktop/dist`. Rust-only build/check: `cargo build` or `cargo check` in `src-tauri/`.
 
 Release (from repo root):
 
@@ -84,6 +84,19 @@ Dialogs are rendered as overlays in `MainLayout.tsx` via a string-keyed `dialogC
 ### Theme system
 
 Themes are CSS classes applied to both `document.documentElement` and `document.body` by `applyTheme` in `stores/repo.ts`. Available themes: `dark`, `light`, `gruvbox-dark`, `gruvbox-dark-soft`, `gruvbox-dark-hard`, `gruvbox-light`, `gruvbox-light-soft`. All dark variants also get the `dark` class (for Tailwind's `dark:` utilities). Theme is persisted to `localStorage` under key `"theme"` and initialized before React mounts — avoid setting theme classes elsewhere.
+
+### Tauri plugins
+
+The Rust backend initializes these plugins (see `lib.rs`):
+- `tauri-plugin-dialog` — native file/folder dialogs
+- `tauri-plugin-log` — file logging with rotation (5MB max, kept all)
+- `tauri-plugin-process` — process exit control
+- `tauri-plugin-updater` — auto-update on new releases
+- `tauri-plugin-window-state` — remembers window geometry across sessions
+
+### Tray window
+
+The app has a tray icon (top-right on macOS). Left-click shows a floating mini-window positioned below the icon. The window auto-hides when it loses focus (blur event). Main window hides to tray on close.
 
 ### Progressive disclosure for AI advanced actions
 
