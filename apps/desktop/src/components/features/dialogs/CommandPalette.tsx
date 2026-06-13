@@ -151,34 +151,34 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
     return {
       "git-fetch": async () => {
         try { await trackRemoteOp("fetch", () => api.remote.fetch(repoPath)); showToast("Fetched"); invalidate(); }
-        catch (e: any) { showToast(`Fetch failed: ${e}`, "error"); }
+        catch (e: unknown) { showToast(`Fetch failed: ${String(e)}`, "error"); }
       },
       "git-pull": async () => {
         try { await trackRemoteOp("pull", () => api.remote.pull(repoPath)); showToast("Pulled"); invalidate(); }
-        catch (e: any) { showToast(`Pull failed: ${e}`, "error"); }
+        catch (e: unknown) { showToast(`Pull failed: ${String(e)}`, "error"); }
       },
       "git-push": async () => {
         try { await trackRemoteOp("push", () => api.remote.push(repoPath)); showToast("Pushed"); invalidate(); }
-        catch (e: any) { showToast(`Push failed: ${e}`, "error"); }
+        catch (e: unknown) { showToast(`Push failed: ${String(e)}`, "error"); }
       },
       "git-create-branch": () => openDialog("create-branch"),
       "git-stash": async () => {
         try { await api.stash.push(repoPath); showToast("Changes stashed"); invalidate(); }
-        catch (e: any) { showToast(`Stash failed: ${e}`, "error"); }
+        catch (e: unknown) { showToast(`Stash failed: ${String(e)}`, "error"); }
       },
       "git-stash-pop": async () => {
         try { await api.stash.pop(repoPath); showToast("Stash popped"); invalidate(); }
-        catch (e: any) { showToast(`Stash pop failed: ${e}`, "error"); }
+        catch (e: unknown) { showToast(`Stash pop failed: ${String(e)}`, "error"); }
       },
       "git-merge": () => openDialog("merge"),
       "git-tag": () => openDialog("tag"),
       "git-stage-all": async () => {
         try { await api.commit.stageAll(repoPath); showToast("All changes staged"); invalidate(); }
-        catch (e: any) { showToast(`Stage failed: ${e}`, "error"); }
+        catch (e: unknown) { showToast(`Stage failed: ${String(e)}`, "error"); }
       },
       "git-unstage-all": async () => {
         try { await api.commit.unstageAll(repoPath); showToast("All changes unstaged"); invalidate(); }
-        catch (e: any) { showToast(`Unstage failed: ${e}`, "error"); }
+        catch (e: unknown) { showToast(`Unstage failed: ${String(e)}`, "error"); }
       },
       "git-refresh": () => { invalidate(); showToast("Refreshed"); },
       "nav-search": () => openDialog("search"),
@@ -338,7 +338,7 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
               await api.branches.checkout(repoPath, branch.name);
               showToast(`Checked out ${branch.name}`);
               queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
-            } catch (e: any) { showToast(`Checkout failed: ${e}`, "error"); }
+            } catch (e: unknown) { showToast(`Checkout failed: ${String(e)}`, "error"); }
             onClose();
           },
         });

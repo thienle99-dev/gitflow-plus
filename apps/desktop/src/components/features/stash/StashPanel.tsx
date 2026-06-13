@@ -56,8 +56,8 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
       setIncludeUntracked(false);
       setShowPushForm(false);
       showToast("Changes stashed");
-    } catch (e: any) {
-      showToast(`Error: ${e}`, "error");
+    } catch (e: unknown) {
+      showToast(`Error: ${String(e)}`, "error");
     }
   };
 
@@ -65,8 +65,8 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
     try {
       await stashPop.mutateAsync({ index });
       showToast(`Stash@${index} popped`);
-    } catch (e: any) {
-      showToast(`Error: ${e}`, "error");
+    } catch (e: unknown) {
+      showToast(`Error: ${String(e)}`, "error");
     }
   };
 
@@ -74,8 +74,8 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
     try {
       await stashApply.mutateAsync({ index });
       showToast(`Stash@${index} applied`);
-    } catch (e: any) {
-      showToast(`Error: ${e}`, "error");
+    } catch (e: unknown) {
+      showToast(`Error: ${String(e)}`, "error");
     }
   };
 
@@ -86,8 +86,8 @@ export default function StashPanel({ onClose }: { onClose?: () => void }) {
       if (selectedStashIndex === index) {
         setSelectedStashIndex(null);
       }
-    } catch (e: any) {
-      showToast(`Error: ${e}`, "error");
+    } catch (e: unknown) {
+      showToast(`Error: ${String(e)}`, "error");
     }
   };
 
