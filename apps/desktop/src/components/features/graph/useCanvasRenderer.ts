@@ -46,6 +46,7 @@ interface RenderParams {
   containerHeight: number;
   containerWidth: number;
   selectedCommit: string | null;
+  focusedHash: string | null;
   hoveredLane: number | null;
   totalLanes: number;
   theme: Theme;
@@ -389,6 +390,7 @@ export function useCanvasRenderer({
   containerHeight,
   containerWidth,
   selectedCommit,
+  focusedHash,
   hoveredLane,
   totalLanes,
   theme,
@@ -529,6 +531,20 @@ export function useCanvasRenderer({
       // Left accent bar
       ctx.fillStyle = withAlpha(accent, 0.6);
       ctx.fillRect(0, cy - ROW_HEIGHT / 2 + 2, 3, ROW_HEIGHT - 4);
+    }
+
+    // Focus indicator (keyboard nav) — dashed outline, distinct from selection glow
+    const focused = focusedHash
+      ? visible.find((commit) => commit.hash === focusedHash)
+      : null;
+    if (focused && focused.hash !== selectedCommit) {
+      const cy = focused.y + offsetY;
+      ctx.save();
+      ctx.strokeStyle = withAlpha(textPrimary, 0.35);
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.strokeRect(0, cy - ROW_HEIGHT / 2, width, ROW_HEIGHT);
+      ctx.restore();
     }
 
     // Edges + nodes are clipped to the graph column so deep trees never cover text columns.
@@ -677,7 +693,7 @@ export function useCanvasRenderer({
       width,
       height,
     });
-  }, [canvasRef, layout, graphIndex, scrollTop, containerHeight, containerWidth, selectedCommit, hoveredLane, totalLanes, theme, formatCommitDateHook, gitflowConfig]);
+  }, [canvasRef, layout, graphIndex, scrollTop, containerHeight, containerWidth, selectedCommit, focusedHash, hoveredLane, totalLanes, theme, formatCommitDateHook, gitflowConfig]);
 }
 
 function getColumns(width: number) {

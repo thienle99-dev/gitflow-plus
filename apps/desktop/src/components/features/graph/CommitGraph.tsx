@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo, useState, memo } from "react";
+import { useRef, useEffect, useMemo, useState, useCallback, memo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
@@ -69,6 +69,7 @@ export default memo(function CommitGraph() {
   const cherryPickGate = usePreflightGate("cherry-pick");
   const revertGate = usePreflightGate("revert");
   const [filterQuery, setFilterQuery] = useState("");
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
 
   // Graph layout + render index computed off the main thread via Web Worker
   const { layout, graphIndex } = useGraphLayoutWorker(data, repoPath);
@@ -143,10 +144,11 @@ export default memo(function CommitGraph() {
   }, []);
 
   // Hit-test hook — hover state + event handlers
-  const { hover, handleMouseMove, handleMouseLeave, handleClick, handleContextMenu } =
+  const { hover, handleMouseMove, handleMouseLeave, handleClick, handleContextMenu, commitAtRow } =
     useHitTest(visibleLayout, scrollTop);
 
   // Canvas renderer — redraws whenever deps change
+  const focusedHash = focusedIndex !== null ? commits[focusedIndex]?.hash ?? null : null;
   useCanvasRenderer({
     canvasRef,
     layout: visibleLayout,
@@ -155,6 +157,7 @@ export default memo(function CommitGraph() {
     containerHeight,
     containerWidth,
     selectedCommit,
+    focusedHash,
     hoveredLane: hover.lane,
     totalLanes,
     theme: appliedTheme,
@@ -169,6 +172,73 @@ export default memo(function CommitGraph() {
       fetchNextPage();
     }
   }, [virtualItems, hasNextPage, isFetchingNextPage, fetchNextPage, commits.length, isFiltering]);
+
+  // Keyboard navigation
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!commits.length) return;
+
+    const pageSize = Math.max(1, Math.floor(containerHeight / ROW_HEIGHT) - 1);
+
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setFocusedIndex((prev) => {
+          const next = prev !== null ? Math.min(prev + 1, commits.length - 1) : 0;
+          virtualizer.scrollToIndex(next, { align: "auto" });
+          return next;
+        });
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setFocusedIndex((prev) => {
+          const next = prev !== null ? Math.max(prev - 1, 0) : 0;
+          virtualizer.scrollToIndex(next, { align: "auto" });
+          return next;
+        });
+        break;
+      case "Enter":
+        e.preventDefault();
+        if (focusedIndex !== null) {
+          const commit = commits[focusedIndex];
+          if (commit) selectCommit(commit.hash);
+        }
+        break;
+      case "PageDown":
+        e.preventDefault();
+        setFocusedIndex((prev) => {
+          const next = prev !== null ? Math.min(prev + pageSize, commits.length - 1) : pageSize;
+          virtualizer.scrollToIndex(next, { align: "auto" });
+          return next;
+        });
+        break;
+      case "PageUp":
+        e.preventDefault();
+        setFocusedIndex((prev) => {
+          const next = prev !== null ? Math.max(prev - pageSize, 0) : 0;
+          virtualizer.scrollToIndex(next, { align: "auto" });
+          return next;
+        });
+        break;
+      case "Home":
+        e.preventDefault();
+        setFocusedIndex(0);
+        virtualizer.scrollToIndex(0, { align: "start" });
+        break;
+      case "End":
+        e.preventDefault();
+        setFocusedIndex(commits.length - 1);
+        virtualizer.scrollToIndex(commits.length - 1, { align: "end" });
+        break;
+      case "c":
+      case "C":
+        if (e.metaKey || e.ctrlKey) {
+          e.preventDefault();
+          const commit = focusedIndex !== null ? commits[focusedIndex] : null;
+          if (commit) copyHash(commit.hash);
+        }
+        break;
+    }
+  }, [commits, focusedIndex, containerHeight, virtualizer, selectCommit]);
 
   const copyHash = async (hash: string) => {
     try {
@@ -406,7 +476,9 @@ export default memo(function CommitGraph() {
       {/* Scrollable graph area — managed by TanStack Virtual */}
       <div
         ref={containerRef}
-        className="flex-1 min-h-0 w-full overflow-y-auto overflow-x-hidden"
+        tabIndex={0}
+        className="flex-1 min-h-0 w-full overflow-y-auto overflow-x-hidden focus:outline-none"
+        onKeyDown={handleKeyDown}
       >
         {isFiltering && commits.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-xs text-text-muted">
@@ -429,7 +501,14 @@ export default memo(function CommitGraph() {
               style={{ position: "sticky", top: 0, display: "block", cursor: "pointer" }}
               onMouseMove={handleMouseMove}
               onMouseLeave={handleMouseLeave}
-              onClick={(e) => handleClick(e, selectCommit)}
+              onClick={(e) => {
+                handleClick(e, (hash) => {
+                  selectCommit(hash);
+                  // sync keyboard focus to clicked row
+                  const idx = commits.findIndex((c) => c.hash === hash);
+                  if (idx !== -1) setFocusedIndex(idx);
+                });
+              }}
               onContextMenu={(e) =>
                 handleContextMenu(e, (x, y, hash) => setCtxMenu({ x, y, hash }))
               }
