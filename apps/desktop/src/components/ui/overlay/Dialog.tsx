@@ -98,7 +98,7 @@ export default function Dialog({
         aria-modal="true"
         aria-labelledby={title ? "dialog-title" : undefined}
         tabIndex={-1}
-        className={`relative w-full mx-4 rounded-xl border border-border bg-surface-1 shadow-2xl outline-none ${isExiting ? "anim-dialog-exit" : "anim-dialog-enter"}`}
+        className={`relative w-full mx-4 rounded-mac border border-border bg-surface-1 shadow-2xl outline-none ${isExiting ? "anim-dialog-exit" : "anim-dialog-enter"}`}
         style={{ maxWidth }}
         onKeyDown={(e) => {
           // Trap focus within dialog

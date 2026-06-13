@@ -439,7 +439,7 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
   return (
     <div className={`fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] ${isExiting ? "anim-overlay-exit" : "anim-overlay-enter"}`} onClick={onClose}>
       <div
-        className={`w-[min(560px,90vw)] bg-surface-0 rounded-xl shadow-2xl border border-border-60 overflow-hidden ${isExiting ? "anim-palette-exit" : "anim-palette-enter"}`}
+        className={`w-[min(560px,90vw)] bg-surface-0 rounded-mac shadow-2xl border border-border-60 overflow-hidden ${isExiting ? "anim-palette-exit" : "anim-palette-enter"}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search input */}

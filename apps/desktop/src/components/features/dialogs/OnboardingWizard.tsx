@@ -238,7 +238,7 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-surface-0 rounded-xl shadow-2xl border border-border w-[min(680px,94vw)] max-h-[min(740px,92vh)] flex flex-col overflow-hidden">
+      <div className="bg-surface-0 rounded-mac shadow-2xl border border-border w-[min(680px,94vw)] max-h-[min(740px,92vh)] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-0">
           <div className="flex items-center gap-2.5">
