@@ -13,7 +13,6 @@ import Sidebar from "@/components/features/sidebar/Sidebar";
 import CommitGraph from "@/components/features/graph/CommitGraph";
 import RightPanel from "@/components/layout/RightPanel";
 import BottomBar from "@/components/layout/BottomBar";
-import WorkspaceRail from "@/components/layout/WorkspaceRail";
 import RepoTabBar from "@/components/layout/RepoTabBar";
 import OperationCenter from "@/components/layout/OperationCenter";
 import LogCenter from "@/components/layout/LogCenter";
@@ -55,6 +54,7 @@ const GitCommandAssistant = lazy(() => import("@/components/features/dialogs/Git
 const GitConfigEditor = lazy(() => import("@/components/features/dialogs/GitConfigEditor"));
 const UpdateChecker = lazy(() => import("@/components/features/dialogs/UpdateChecker"));
 const AddWorktreeDialog = lazy(() => import("@/components/features/dialogs/AddWorktreeDialog"));
+const SigningSetupWizard = lazy(() => import("@/components/features/dialogs/SigningSetupWizard"));
 
 export default function MainLayout() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
@@ -373,6 +373,7 @@ export default function MainLayout() {
     "git-command-assistant": <GitCommandAssistant open={true} onClose={closeDialog} />,
     "add-worktree": <AddWorktreeDialog open={true} onClose={closeDialog} />,
     "update-checker": <UpdateChecker onClose={closeDialog} />,
+    "signing-setup": <SigningSetupWizard />,
   }), [closeDialog, selectedCommit, mergeTargetBranch, compareBranchTarget, selectedRef, rebaseTargetCommit]);
 
   const dialogOverlay = overlayDialog ? (
@@ -442,7 +443,6 @@ function InlineErrorFallback({ name }: { name: string }) {
       <RepoTabBar />
       <Toolbar />
       <div className="flex-1 min-h-0 flex flex-row overflow-hidden">
-        {repoPath && <WorkspaceRail />}
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
         <div className="flex-1 min-h-0 overflow-hidden">
         <PanelGroup direction="horizontal" autoSaveId="main-layout" className="h-full min-h-0">
