@@ -285,45 +285,45 @@ export default function TrayPanelView() {
     <div className="h-[520px] w-[400px] bg-transparent p-0 rounded-[16px] overflow-hidden font-sans">
       <div className="flex h-full w-full flex-col bg-surface-0 border border-border-60 rounded-[14px] overflow-hidden select-none shadow-2xl relative">
 
-        {/* Header */}
-        <div className="h-10 border-b border-border-60 bg-surface-1 flex items-center justify-between px-3 shrink-0">
+        {/* Header — h-9 = 36px */}
+        <div className="h-9 border-b border-border-60 bg-surface-1 flex items-center justify-between px-3 shrink-0">
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setRepoDropdownOpen(!repoDropdownOpen)}
-              className="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-surface-2 text-[12px] font-semibold text-text-primary transition-all max-w-[220px]"
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-surface-2 text-[11px] font-semibold text-text-primary transition-all max-w-[220px]"
             >
-              <FolderOpen size={13} className="text-accent shrink-0" />
+              <FolderOpen size={12} className="text-accent shrink-0" />
               <span className="truncate">{getRepoName(repoPath)}</span>
-              <ChevronDown size={10} className={`text-text-muted transition-transform ${repoDropdownOpen ? "rotate-180" : ""}`} />
+              <ChevronDown size={9} className={`text-text-muted transition-transform ${repoDropdownOpen ? "rotate-180" : ""}`} />
             </button>
 
             {repoDropdownOpen && (
-              <div className="absolute left-0 mt-1 w-60 bg-surface-1 border border-border-60 rounded-xl shadow-xl z-50 py-1.5">
-                <div className="px-2.5 pb-1.5 border-b border-border-40 flex items-center gap-1.5">
-                  <Search size={11} className="text-text-muted" />
+              <div className="absolute left-0 mt-0.5 w-60 bg-surface-1 border border-border-60 rounded-xl shadow-xl z-50 py-1">
+                <div className="px-2.5 pb-1 border-b border-border-40 flex items-center gap-1.5">
+                  <Search size={10} className="text-text-muted" />
                   <input
                     type="text"
                     placeholder="Search repos..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-transparent text-[11px] text-text-primary outline-none"
+                    className="w-full bg-transparent text-[10px] text-text-primary outline-none"
                     autoFocus
                   />
                 </div>
                 <button
                   onClick={handleOpenRepo}
-                  className="w-full flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-accent hover:bg-accent-10 transition-colors border-b border-border-40"
+                  className="w-full flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-semibold text-accent hover:bg-accent-10 transition-colors border-b border-border-40"
                 >
-                  <span>Open Repo...</span>
+                  Open Repo...
                 </button>
-                <div className="max-h-44 overflow-y-auto mt-1">
+                <div className="max-h-40 overflow-y-auto mt-0.5">
                   {filteredRepos.length === 0 ? (
-                    <div className="px-2.5 py-2 text-[11px] text-text-muted italic">No repositories found</div>
+                    <div className="px-2.5 py-1.5 text-[10px] text-text-muted italic">No repositories found</div>
                   ) : (
                     <>
                       {groupedRepos.remote.length > 0 && (
                         <div className="py-0.5">
-                          <div className="px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-text-muted flex items-center justify-between">
+                          <div className="px-2.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-text-muted flex items-center justify-between">
                             <span>Remote</span>
                             <span>{groupedRepos.remote.length}</span>
                           </div>
@@ -331,17 +331,17 @@ export default function TrayPanelView() {
                             <button
                               key={path}
                               onClick={() => selectRepo(path)}
-                              className={`w-full text-left px-2.5 py-1.5 text-[11px] hover:bg-accent hover:text-accent-fg transition-colors flex flex-col ${repoPath === path ? "bg-surface-2 font-semibold" : "text-text-secondary"}`}
+                              className={`w-full text-left px-2.5 py-1 text-[10px] hover:bg-accent hover:text-accent-fg transition-colors flex flex-col ${repoPath === path ? "bg-surface-2 font-semibold" : "text-text-secondary"}`}
                             >
                               <span className="font-medium truncate">{path.split("/").pop()}</span>
-                              <span className="text-[9px] opacity-75 truncate">{repoInfoByPath.get(path)?.remote || path}</span>
+                              <span className="text-[8px] opacity-75 truncate">{repoInfoByPath.get(path)?.remote || path}</span>
                             </button>
                           ))}
                         </div>
                       )}
                       {groupedRepos.local.length > 0 && (
                         <div className="py-0.5">
-                          <div className="px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-text-muted flex items-center justify-between">
+                          <div className="px-2.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-text-muted flex items-center justify-between">
                             <span>Local</span>
                             <span>{groupedRepos.local.length}</span>
                           </div>
@@ -349,10 +349,10 @@ export default function TrayPanelView() {
                             <button
                               key={path}
                               onClick={() => selectRepo(path)}
-                              className={`w-full text-left px-2.5 py-1.5 text-[11px] hover:bg-accent hover:text-accent-fg transition-colors flex flex-col ${repoPath === path ? "bg-surface-2 font-semibold" : "text-text-secondary"}`}
+                              className={`w-full text-left px-2.5 py-1 text-[10px] hover:bg-accent hover:text-accent-fg transition-colors flex flex-col ${repoPath === path ? "bg-surface-2 font-semibold" : "text-text-secondary"}`}
                             >
                               <span className="font-medium truncate">{path.split("/").pop()}</span>
-                              <span className="text-[9px] opacity-75 truncate">{path}</span>
+                              <span className="text-[8px] opacity-75 truncate">{path}</span>
                             </button>
                           ))}
                         </div>
@@ -365,41 +365,33 @@ export default function TrayPanelView() {
           </div>
 
           <div className="flex items-center gap-0.5">
-            <button
-              onClick={handleOpenSettings}
-              className="p-1.5 rounded-lg hover:bg-surface-2 text-text-muted hover:text-text-primary transition-all"
-              title="Settings"
-            >
-              <Settings size={13} />
+            <button onClick={handleOpenSettings} className="p-1 rounded hover:bg-surface-2 text-text-muted hover:text-text-primary transition-all" title="Settings">
+              <Settings size={12} />
             </button>
-            <button
-              onClick={handleOpenMainApp}
-              className="p-1.5 rounded-lg hover:bg-surface-2 text-text-muted hover:text-text-primary transition-all"
-              title="Open Full App"
-            >
-              <ExternalLink size={13} />
+            <button onClick={handleOpenMainApp} className="p-1 rounded hover:bg-surface-2 text-text-muted hover:text-text-primary transition-all" title="Open Full App">
+              <ExternalLink size={12} />
             </button>
           </div>
         </div>
 
-        {/* Tabs */}
+        {/* Tabs — compact */}
         {repoPath && (
-          <div className="px-3 pt-2 pb-1.5 shrink-0 bg-surface-0">
-            <div className="flex bg-surface-1 p-0.5 rounded-lg border border-border-40">
+          <div className="px-2.5 pt-1.5 pb-1 shrink-0 bg-surface-0">
+            <div className="flex bg-surface-1 p-0.5 rounded-md border border-border-40">
               {([
-                { mode: "commit" as const, icon: <GitCommitHorizontal size={10} />, label: "Commit", badge: changeCount },
-                { mode: "recent" as const, icon: <Clock size={10} />, label: "Recent", badge: null },
-                { mode: "actions" as const, icon: <Wrench size={10} />, label: "Actions", badge: null },
+                { mode: "commit" as const, icon: <GitCommitHorizontal size={9} />, label: "Commit", badge: changeCount },
+                { mode: "recent" as const, icon: <Clock size={9} />, label: "Recent", badge: null },
+                { mode: "actions" as const, icon: <Wrench size={9} />, label: "Actions", badge: null },
               ]).map((tab) => (
                 <button
                   key={tab.mode}
                   onClick={() => setViewMode(tab.mode)}
-                  className={`flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all flex items-center justify-center gap-1 ${viewMode === tab.mode ? "bg-surface-2 text-accent shadow-sm" : "text-text-muted hover:text-text-primary"}`}
+                  className={`flex-1 py-1 text-[9px] font-bold rounded transition-all flex items-center justify-center gap-0.5 ${viewMode === tab.mode ? "bg-surface-2 text-accent shadow-sm" : "text-text-muted hover:text-text-primary"}`}
                 >
                   {tab.icon}
                   {tab.label}
                   {tab.badge !== null && tab.badge > 0 && (
-                    <span className="ml-0.5 min-w-[14px] h-3.5 px-1 rounded-full bg-accent text-accent-fg text-[7px] font-bold leading-[14px]">{tab.badge}</span>
+                    <span className="ml-0.5 min-w-[13px] h-3 px-0.5 rounded-full bg-accent text-accent-fg text-[7px] font-bold leading-[12px]">{tab.badge}</span>
                   )}
                 </button>
               ))}
@@ -408,13 +400,12 @@ export default function TrayPanelView() {
         )}
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-3 py-2 flex flex-col gap-2">
+        <div className="flex-1 overflow-y-auto px-2.5 py-1.5 flex flex-col gap-1.5">
           {repoPath ? (
             <>
-              {/* Commit Tab: Stage + Commit together */}
+              {/* Commit Tab */}
               {viewMode === "commit" && (
                 <>
-                  {/* File list */}
                   <TrayFileChanges
                     staged={staged}
                     unstaged={unstaged}
@@ -433,7 +424,6 @@ export default function TrayPanelView() {
                     isLoading={isLoadingStatus}
                   />
 
-                  {/* Commit box */}
                   <TrayCommitBox
                     commitMessage={commitMessage}
                     setCommitMessage={setCommitMessage}
@@ -446,24 +436,22 @@ export default function TrayPanelView() {
                     generateCommitPending={generateCommit.isPending}
                   />
 
-                  {/* Stash row */}
-                  <div className="flex gap-1.5">
+                  {/* Stash — inline with stash row */}
+                  <div className="flex gap-1">
                     <button
                       onClick={handleStashPush}
                       disabled={changes?.length === 0}
-                      className="flex-1 h-8 text-[10px] font-semibold rounded-lg border border-border-40 bg-surface-1 hover:bg-surface-2 text-text-primary transition-all disabled:opacity-40 flex items-center justify-center gap-1"
+                      className="flex-1 h-7 text-[9px] font-semibold rounded-md border border-border-40 bg-surface-1 hover:bg-surface-2 text-text-primary transition-all disabled:opacity-40 flex items-center justify-center"
                     >
                       Stash All
                     </button>
                     {stashes && stashes.length > 0 && (
                       <button
                         onClick={handleStashPop}
-                        className="flex-1 h-8 text-[10px] font-semibold rounded-lg border border-border-40 bg-surface-1 hover:bg-surface-2 text-text-primary transition-all relative flex items-center justify-center gap-1"
+                        className="flex-1 h-7 text-[9px] font-semibold rounded-md border border-border-40 bg-surface-1 hover:bg-surface-2 text-text-primary transition-all relative flex items-center justify-center"
                       >
                         Pop Stash
-                        <span className="absolute -top-1 -right-1 min-w-[14px] rounded-full bg-accent px-1 py-0.5 text-[7px] font-bold leading-none text-accent-fg">
-                          {stashes.length}
-                        </span>
+                        <span className="absolute -top-1 -right-1 min-w-[13px] rounded-full bg-accent px-0.5 text-[6px] font-bold leading-[10px] text-accent-fg">{stashes.length}</span>
                       </button>
                     )}
                   </div>
@@ -472,7 +460,7 @@ export default function TrayPanelView() {
 
               {/* Recent Tab */}
               {viewMode === "recent" && (
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-0.5">
                   {recentCommits && recentCommits.length > 0 ? (
                     recentCommits.map((commit) => (
                       <button
@@ -481,21 +469,21 @@ export default function TrayPanelView() {
                           await navigator.clipboard.writeText(commit.hash);
                           showToast("Hash copied");
                         }}
-                        className="w-full text-left px-2.5 py-2 hover:bg-surface-2 rounded-lg transition-colors border border-transparent hover:border-border-40"
+                        className="w-full text-left px-2 py-1.5 hover:bg-surface-2 rounded transition-colors border border-transparent hover:border-border-40"
                       >
-                        <p className="text-[11px] text-text-primary font-medium truncate">{commit.message.split("\n")[0]}</p>
-                        <p className="text-[9px] text-text-muted mt-0.5 flex items-center gap-1.5">
+                        <p className="text-[10px] text-text-primary font-medium truncate">{commit.message.split("\n")[0]}</p>
+                        <p className="text-[8px] text-text-muted mt-0.5 flex items-center gap-1">
                           <span>{commit.author}</span>
                           <span>·</span>
                           <span>{formatCommitDate(commit.date)}</span>
-                          <span className="font-mono bg-accent-10 border border-accent-20 px-1 py-0.5 rounded text-accent">{commit.hash.slice(0, 7)}</span>
+                          <span className="font-mono bg-accent-10 border border-accent-20 px-1 rounded text-accent">{commit.hash.slice(0, 7)}</span>
                         </p>
                       </button>
                     ))
                   ) : (
-                    <div className="flex flex-col items-center justify-center py-10 text-text-muted gap-2">
-                      <Clock size={18} className="text-text-muted" />
-                      <span className="text-[11px]">No commits found</span>
+                    <div className="flex flex-col items-center justify-center py-8 text-text-muted gap-1.5">
+                      <Clock size={16} />
+                      <span className="text-[10px]">No commits found</span>
                     </div>
                   )}
                 </div>
@@ -517,42 +505,24 @@ export default function TrayPanelView() {
               )}
             </>
           ) : (
-            /* No Repo State */
-            <div className="flex-1 flex flex-col items-center justify-center text-center text-text-muted gap-3 px-5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full border border-border-40 bg-surface-1">
-                <FolderOpen size={18} className="text-accent" />
+            <div className="flex-1 flex flex-col items-center justify-center text-center text-text-muted gap-2 px-5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full border border-border-40 bg-surface-1">
+                <FolderOpen size={16} className="text-accent" />
               </div>
-              <div className="space-y-1">
-                <div className="text-[12px] font-semibold text-text-primary">No repository open</div>
-                <div className="text-[10px] leading-relaxed text-text-muted">
-                  Open the main app or pick a recent repository.
-                </div>
+              <div>
+                <div className="text-[11px] font-semibold text-text-primary">No repository open</div>
+                <div className="text-[9px] text-text-muted">Open the main app or pick a recent repo.</div>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleOpenRepo}
-                  className="h-8 px-3 rounded-lg bg-accent text-accent-fg text-[10px] font-bold transition-all hover:opacity-95"
-                >
-                  Open Repo
-                </button>
-                <button
-                  onClick={handleOpenMainApp}
-                  className="h-8 px-3 rounded-lg border border-border-40 bg-surface-1 text-[10px] font-bold text-text-primary transition-all hover:bg-surface-2"
-                >
-                  Open App
-                </button>
+              <div className="flex items-center gap-1.5">
+                <button onClick={handleOpenRepo} className="h-7 px-2.5 rounded-md bg-accent text-accent-fg text-[9px] font-bold transition-all hover:opacity-95">Open Repo</button>
+                <button onClick={handleOpenMainApp} className="h-7 px-2.5 rounded-md border border-border-40 bg-surface-1 text-[9px] font-bold text-text-primary transition-all hover:bg-surface-2">Open App</button>
               </div>
               {recentRepos.length > 0 && (
-                <div className="mt-1 w-full max-w-[240px] overflow-hidden rounded-lg border border-border-40 bg-surface-1 text-left">
+                <div className="mt-1 w-full max-w-[220px] overflow-hidden rounded-md border border-border-40 bg-surface-1 text-left">
                   {recentRepos.slice(0, 4).map((path) => (
-                    <button
-                      key={path}
-                      onClick={() => selectRepo(path)}
-                      className="flex w-full flex-col gap-0.5 border-b border-border-40 px-2.5 py-1.5 text-left last:border-b-0 hover:bg-surface-2"
-                      title={path}
-                    >
-                      <span className="truncate text-[10px] font-semibold text-text-primary">{path.split("/").pop() || path}</span>
-                      <span className="truncate text-[8px] text-text-muted">{path}</span>
+                    <button key={path} onClick={() => selectRepo(path)} className="flex w-full flex-col gap-0 border-b border-border-40 px-2 py-1 text-left last:border-b-0 hover:bg-surface-2" title={path}>
+                      <span className="truncate text-[9px] font-semibold text-text-primary">{path.split("/").pop() || path}</span>
+                      <span className="truncate text-[7px] text-text-muted">{path}</span>
                     </button>
                   ))}
                 </div>
@@ -561,13 +531,13 @@ export default function TrayPanelView() {
           )}
         </div>
 
-        {/* Footer */}
+        {/* Footer — h-9 = 36px */}
         {repoPath && (
-          <div className="h-10 border-t border-border-60 bg-surface-1 flex items-center justify-between px-3 shrink-0">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-[10px] font-semibold text-text-primary truncate max-w-[110px]">{currentBranch}</span>
+          <div className="h-9 border-t border-border-60 bg-surface-1 flex items-center justify-between px-3 shrink-0">
+            <div className="flex items-center gap-1 min-w-0">
+              <span className="text-[9px] font-semibold text-text-primary truncate max-w-[100px]">{currentBranch}</span>
               {syncStatus && (syncStatus.ahead > 0 || syncStatus.behind > 0) && (
-                <span className="flex items-center gap-1 text-[8px] text-text-muted">
+                <span className="flex items-center gap-0.5 text-[8px]">
                   {syncStatus.ahead > 0 && <span className="text-[#30d158]">↑{syncStatus.ahead}</span>}
                   {syncStatus.behind > 0 && <span className="text-[#ff453a]">↓{syncStatus.behind}</span>}
                 </span>
@@ -577,16 +547,16 @@ export default function TrayPanelView() {
               <button
                 onClick={() => handleGitAction("pull")}
                 disabled={syncLoading !== null}
-                className="h-7 px-2.5 text-[9px] font-semibold rounded-md border border-border-40 bg-surface-2 hover:bg-surface-3 text-text-primary transition-all disabled:opacity-50 flex items-center gap-1"
+                className="h-6 px-2 text-[8px] font-semibold rounded border border-border-40 bg-surface-2 hover:bg-surface-3 text-text-primary transition-all disabled:opacity-50 flex items-center gap-0.5"
               >
-                {syncLoading === "pull" ? <Loader2 size={9} className="animate-spin" /> : "↓ Pull"}
+                {syncLoading === "pull" ? <Loader2 size={8} className="animate-spin" /> : "↓ Pull"}
               </button>
               <button
                 onClick={() => handleGitAction("push")}
                 disabled={syncLoading !== null}
-                className="h-7 px-2.5 text-[9px] font-semibold rounded-md border border-border-40 bg-surface-2 hover:bg-surface-3 text-text-primary transition-all disabled:opacity-50 flex items-center gap-1"
+                className="h-6 px-2 text-[8px] font-semibold rounded border border-border-40 bg-surface-2 hover:bg-surface-3 text-text-primary transition-all disabled:opacity-50 flex items-center gap-0.5"
               >
-                {syncLoading === "push" ? <Loader2 size={9} className="animate-spin" /> : "↑ Push"}
+                {syncLoading === "push" ? <Loader2 size={8} className="animate-spin" /> : "↑ Push"}
               </button>
             </div>
           </div>
