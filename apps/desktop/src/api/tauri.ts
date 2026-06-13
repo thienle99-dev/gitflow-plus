@@ -290,6 +290,12 @@ export interface GitFlowResult {
   message: string;
 }
 
+export interface CloneProgress {
+  phase: string;
+  percent: number;
+  message: string;
+}
+
 // Typed invoke wrappers
 export const api = {
   repo: {
@@ -299,6 +305,8 @@ export const api = {
       invoke<RepoInfo>("get_repo_info", { path }),
     clone: (url: string, destination: string) =>
       invoke<string>("git_clone", { url, destination }),
+    cancelClone: () =>
+      invoke<string>("cancel_clone"),
   },
 
   window: {
