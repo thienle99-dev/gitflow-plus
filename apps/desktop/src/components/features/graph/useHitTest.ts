@@ -14,6 +14,7 @@ export function useHitTest(layout: LayoutState | null, scrollTop: number) {
   const [hover, setHover] = useState<HoverState>({ commit: null, lane: null, x: 0, y: 0 });
   const hoverRef = useRef(hover);
   const frameRef = useRef<number | null>(null);
+  const selectedIndexRef = useRef<number | null>(null);
 
   useEffect(() => {
     return () => {
@@ -49,6 +50,11 @@ export function useHitTest(layout: LayoutState | null, scrollTop: number) {
     return layout.commits[row] ?? null;
   }, [layout, scrollTop]);
 
+  const commitAtRow = useCallback((row: number): LayoutCommit | null => {
+    if (!layout) return null;
+    return layout.commits[row] ?? null;
+  }, [layout]);
+
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const commit = commitAtY(e.nativeEvent.offsetY);
     updateHover({
@@ -80,5 +86,12 @@ export function useHitTest(layout: LayoutState | null, scrollTop: number) {
     if (commit) onMenu(e.clientX, e.clientY, commit.hash);
   }, [commitAtY]);
 
-  return { hover, handleMouseMove, handleMouseLeave, handleClick, handleContextMenu };
+  return {
+    hover,
+    handleMouseMove,
+    handleMouseLeave,
+    handleClick,
+    handleContextMenu,
+    commitAtRow,
+  };
 }

@@ -20,6 +20,7 @@ interface UIState {
   rebaseTargetCommit: string | null;
   prefilledRebaseTodos: RebaseTodoItem[] | null;
   amendTargetHash: string | null;
+  multiCherryPickHashes: string[];
   squashNState: { open: boolean; commitHash: string | null };
   pendingUpdateVersion: string | null;
   setPendingUpdateVersion: (version: string | null) => void;
@@ -38,6 +39,8 @@ interface UIState {
   setRebaseTargetCommit: (hash: string | null) => void;
   setPrefilledRebaseTodos: (todos: RebaseTodoItem[] | null) => void;
   setAmendTargetHash: (hash: string | null) => void;
+  toggleMultiCherryPick: (hash: string) => void;
+  clearMultiCherryPick: () => void;
   openSquashDialog: (commitHash: string) => void;
   closeSquashDialog: () => void;
 }
@@ -58,6 +61,7 @@ export const useUIStore = create<UIState>((set) => ({
   amendTargetHash: null,
   squashNState: { open: false, commitHash: null },
   pendingUpdateVersion: null,
+  multiCherryPickHashes: [],
   setPendingUpdateVersion: (version) => set({ pendingUpdateVersion: version }),
 
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
@@ -84,6 +88,13 @@ export const useUIStore = create<UIState>((set) => ({
   setRebaseTargetCommit: (hash) => set({ rebaseTargetCommit: hash }),
   setPrefilledRebaseTodos: (todos) => set({ prefilledRebaseTodos: todos }),
   setAmendTargetHash: (hash) => set({ amendTargetHash: hash }),
+  toggleMultiCherryPick: (hash) => set((s) => {
+    const next = s.multiCherryPickHashes.includes(hash)
+      ? s.multiCherryPickHashes.filter((h) => h !== hash)
+      : [...s.multiCherryPickHashes, hash];
+    return { multiCherryPickHashes: next };
+  }),
+  clearMultiCherryPick: () => set({ multiCherryPickHashes: [] }),
   openSquashDialog: (commitHash) => set({ squashNState: { open: true, commitHash } }),
   closeSquashDialog: () => set({ squashNState: { open: false, commitHash: null } }),
 }));

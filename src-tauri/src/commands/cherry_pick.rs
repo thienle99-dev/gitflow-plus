@@ -84,6 +84,47 @@ pub async fn cherry_pick(
 }
 
 #[tauri::command]
+pub async fn cherry_pick_multi(
+    locks: tauri::State<'_, RepoLocks>,
+    path: String,
+    commit_hashes: Vec<String>,
+    no_commit: Option<bool>,
+) -> Result<CherryPickResult, String> {
+    let _guard = locks.acquire(&path).await;
+    let mut args = vec!["--no-pager", "-C", &path, "cherry-pick"];
+
+    if no_commit.unwrap_or(false) {
+        args.push("--no-commit");
+    }
+    for hash in &commit_hashes {
+        args.push(hash);
+    }
+
+    let output = Command::new("git")
+        .args(&args)
+        .output()
+        .await
+        .map_err(|e| format!("Failed to cherry-pick: {}", e))?;
+
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
+    if output.status.success() {
+        Ok(CherryPickResult {
+            success: true,
+            message: String::from_utf8_lossy(&output.stdout).trim().to_string(),
+            conflicted_files: vec![],
+        })
+    } else {
+        let conflicted = parse_cherry_pick_conflicts(&stderr);
+        Ok(CherryPickResult {
+            success: false,
+            message: stderr,
+            conflicted_files: conflicted,
+        })
+    }
+}
+
+#[tauri::command]
 pub async fn cherry_pick_abort(
     locks: tauri::State<'_, RepoLocks>,
     path: String,

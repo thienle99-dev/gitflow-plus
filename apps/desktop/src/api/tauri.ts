@@ -613,6 +613,8 @@ export const api = {
   cherryPick: {
     pick: (path: string, commitHash: string, noCommit?: boolean) =>
       invoke<CherryPickResult>("cherry_pick", { path, commitHash, noCommit: noCommit ?? false }),
+    pickMulti: (path: string, commitHashes: string[], noCommit?: boolean) =>
+      invoke<CherryPickResult>("cherry_pick_multi", { path, commitHashes, noCommit: noCommit ?? false }),
     abort: (path: string) =>
       invoke<string>("cherry_pick_abort", { path }),
   },

@@ -340,6 +340,7 @@ pub fn run() {
             commands::tag::tag_delete,
             commands::tag::tag_push,
             commands::cherry_pick::cherry_pick,
+            commands::cherry_pick::cherry_pick_multi,
             commands::cherry_pick::cherry_pick_abort,
             commands::blame::file_blame,
             commands::search::search_commits,
