@@ -95,6 +95,7 @@ export default function WorkingTree() {
   const [committing, setCommitting] = useState(false);
   const [committingGroupKey, setCommittingGroupKey] = useState<string | null>(null);
   const [commitGroupProgress, setCommitGroupProgress] = useState<CommitGroupProgress | null>(null);
+  const [skipHooks, setSkipHooks] = useState(false);
   const [skipSuggestedCommitHooks, setSkipSuggestedCommitHooks] = useState(false);
   const [scopeAnalyzing, setScopeAnalyzing] = useState(false);
   const [aiReviewOpen, setAiReviewOpen] = useState(false);
@@ -398,7 +399,7 @@ export default function WorkingTree() {
       if (staged.length === 0 && unstaged.length > 0) {
         await api.commit.stageAll(repoPath!);
       }
-      const result = await api.commit.commit(repoPath!, msg, isAmend);
+      const result = await api.commit.commit(repoPath!, msg, isAmend, skipHooks);
       trackCommit(staged.length || unstaged.length);
       showToast(result);
       setCommitMessage("");
@@ -1069,6 +1070,8 @@ export default function WorkingTree() {
         lintRunning={lintRunning}
         amend={amend}
         setAmend={setAmend}
+        skipHooks={skipHooks}
+        setSkipHooks={setSkipHooks}
         scopeSuggestion={scopeSuggestion}
         scopeDismissed={scopeDismissed}
         setScopeDismissed={setScopeDismissed}

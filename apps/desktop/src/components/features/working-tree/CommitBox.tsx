@@ -5,7 +5,7 @@ import { type CommitLintResult, autoFixCommitMessage } from "@/lib/commit-lint";
 import UndoButton from "@/components/features/actions/UndoButton";
 import CommitTemplatePicker from "./CommitTemplatePicker";
 import { showToast } from "@/lib/toast";
-import { AlertCircle, ShieldAlert, ClipboardCheck, ListChecks, MessageCircle, FileText } from "lucide-react";
+import { AlertCircle, ShieldAlert, ShieldOff, ClipboardCheck, ListChecks, MessageCircle, FileText } from "lucide-react";
 import {
   AlignLeft,
   Check,
@@ -118,6 +118,8 @@ export interface CommitBoxProps {
   lintRunning: boolean;
   amend: boolean;
   setAmend: (v: boolean) => void;
+  skipHooks: boolean;
+  setSkipHooks: (v: boolean) => void;
   scopeSuggestion: CommitScopeSuggestion | null;
   scopeDismissed: boolean;
   setScopeDismissed: (v: boolean) => void;
@@ -193,6 +195,8 @@ export default function CommitBox({
   lintRunning,
   amend,
   setAmend,
+  skipHooks,
+  setSkipHooks,
   scopeSuggestion,
   scopeDismissed,
   setScopeDismissed,
@@ -563,6 +567,20 @@ export default function CommitBox({
               >
                 <GitCommit size={10} className={amend ? "text-[#ff9f0a]" : "text-text-secondary"} />
                 <span>Amend</span>
+              </button>
+
+              {/* Skip hooks (--no-verify) */}
+              <button
+                type="button"
+                onClick={() => setSkipHooks(!skipHooks)}
+                className={`${STATUS_BUTTON_BASE} ${skipHooks
+                  ? "bg-[#ff9f0a]/10 border-[#ff9f0a]/30 text-[#ff9f0a]"
+                  : "bg-surface-2-40 border-border-40 text-text-secondary hover:text-text-primary hover:bg-surface-2 hover:border-border-60"
+                  }`}
+                title="Skip Git pre-commit hooks (--no-verify)"
+              >
+                <ShieldOff size={10} className={skipHooks ? "text-[#ff9f0a]" : "text-text-secondary"} />
+                <span>No verify</span>
               </button>
 
               {/* Commit (primary) */}

@@ -46,6 +46,20 @@ export default function CommitTooltip({ commit, x, y, gitflowConfig }: CommitToo
         >
           {shortHash}
         </span>
+        {/* Signing badge */}
+        {commit.signature && commit.signature !== "N" && (
+          <span
+            className={`text-[10px] px-1 py-0.5 rounded leading-none ${
+              commit.signature === "G" || commit.signature === "Y"
+                ? "bg-[#30d158]/10 text-[#30d158]"
+                : commit.signature === "B"
+                  ? "bg-[#ff453a]/10 text-[#ff453a]"
+                  : "bg-[#ff9f0a]/10 text-[#ff9f0a]"
+            }`}
+          >
+            {commit.signature === "G" || commit.signature === "Y" ? "✓" : "⚠"} {getSignatureLabel(commit.signature)}
+          </span>
+        )}
         {commit.refs.length > 0 && (
           <div className="flex items-center gap-1 flex-wrap">
             {commit.refs.map((ref, i) => {
@@ -88,4 +102,17 @@ export default function CommitTooltip({ commit, x, y, gitflowConfig }: CommitToo
       <p className="text-text-primary leading-snug break-words">{commit.message}</p>
     </div>
   );
+}
+
+function getSignatureLabel(signature: string): string {
+  const labels: Record<string, string> = {
+    G: "Signed",
+    Y: "Signed",
+    N: "None",
+    B: "Bad",
+    U: "Unknown",
+    X: "Expired",
+    R: "Revoked",
+  };
+  return labels[signature] || signature;
 }

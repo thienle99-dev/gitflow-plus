@@ -27,6 +27,7 @@ interface SerializedLayoutCommit {
   email: string;
   date: string;
   refs: { name: string; ref_type: string }[];
+  signature: string;
   lane: number;
   y: number;
   x: number;

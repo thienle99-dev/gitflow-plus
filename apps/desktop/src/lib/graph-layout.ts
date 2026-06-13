@@ -15,6 +15,7 @@ export interface LayoutCommit {
   email: string;
   date: string;
   refs: Ref[];
+  signature: string;  // "G" = GPG good, "Y" = SSH good, "N" = none, "B" = bad, etc.
   lane: number;
   y: number;
   x: number;
@@ -75,6 +76,7 @@ export function computeGraphLayout(
       email: commit.email || "",
       date: commit.date,
       refs: commit.refs || [],
+      signature: commit.signature,
       lane,
       y,
       x: lane * LANE_WIDTH + GRAPH_LEFT_PADDING,

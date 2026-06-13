@@ -72,6 +72,8 @@ export interface RepoInfo {
   path: string;
   current_branch: string;
   remote: string | null;
+  commit_signing: string;
+  signing_key: string | null;
 }
 
 export interface SyncStatus {
@@ -413,8 +415,8 @@ export const api = {
       invoke<string>("discard_file", { path, filePath }),
     discardAll: (path: string) =>
       invoke<string>("discard_all", { path }),
-    commit: (path: string, message: string, amend?: boolean) =>
-      invoke<string>("commit_changes", { path, message, amend: amend ?? false }),
+    commit: (path: string, message: string, amend?: boolean, noVerify?: boolean) =>
+      invoke<string>("commit_changes", { path, message, amend: amend ?? false, noVerify: noVerify ?? false }),
     commitGroups: (path: string, groups: CommitFileGroupInput[], noVerify?: boolean) =>
       invoke<CommitGroupsResult>("commit_file_groups", { path, groups, noVerify: noVerify ?? false }),
     revert: (path: string, commitHash: string) =>
