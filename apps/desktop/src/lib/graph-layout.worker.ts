@@ -34,6 +34,8 @@ interface SerializedLayoutCommit {
   parents: string[];
   parentLanes: number[];
   color: string;
+  additions: number;
+  deletions: number;
 }
 
 interface SerializedLayout {

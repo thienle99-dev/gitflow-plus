@@ -10,6 +10,8 @@ export interface Commit {
   message: string;
   refs: Ref[];
   signature: string;
+  additions: number;
+  deletions: number;
 }
 
 export interface Ref {
@@ -525,6 +527,8 @@ export const api = {
       invoke<string>("apply_diff_hunk", { path, patch, action }),
     writeContent: (path: string, filePath: string, content: string) =>
       invoke<string>("write_file_content", { path, filePath, content }),
+    readTextFile: (path: string, filePath: string) =>
+      invoke<string | null>("read_text_file", { path, filePath }),
     readWorkingFileBase64: (path: string, filePath: string) =>
       invoke<ImageContent | null>("read_working_file_base64", { path, filePath }),
     readGitObjectBase64: (path: string, rev: string, filePath: string) =>

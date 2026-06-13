@@ -15,8 +15,9 @@ const BUFFER_ROWS = 10;
 const GRAPH_LEFT_PADDING = 18;
 const BADGE_GAP = 8;
 const HASH_COLUMN_WIDTH = 72;
-const AUTHOR_COLUMN_WIDTH = 150;
+const AUTHOR_COLUMN_WIDTH = 130;
 const DATE_COLUMN_WIDTH = 116;
+const STATS_COLUMN_WIDTH = 80;
 const COLUMN_GAP = 16;
 const RIGHT_PADDING = 18;
 const AVATAR_SIZE = 22;
@@ -700,6 +701,25 @@ export function useCanvasRenderer({
       ctx.fillStyle = textSecondary;
       ctx.fillText(truncateText(ctx, commit.author || "Unknown", AUTHOR_COLUMN_WIDTH - 8), columns.authorX, cy);
       ctx.fillText(truncateText(ctx, formatCommitDateHook(commit.date), DATE_COLUMN_WIDTH - 8), columns.dateX, cy);
+
+      // Diff stats
+      if (commit.additions > 0 || commit.deletions > 0) {
+        const addText = `+${commit.additions}`;
+        const delText = `-${commit.deletions}`;
+        ctx.font = "bold 11px -apple-system, BlinkMacSystemFont, system-ui, sans-serif";
+        const addWidth = ctx.measureText(addText).width;
+        const totalWidth = addWidth + ctx.measureText(delText).width + 4;
+        const statsX = columns.statsX + Math.max(0, (STATS_COLUMN_WIDTH - totalWidth) / 2);
+
+        if (commit.additions > 0) {
+          ctx.fillStyle = "#30d158";
+          ctx.fillText(addText, statsX, cy);
+        }
+        if (commit.deletions > 0) {
+          ctx.fillStyle = "#ff375f";
+          ctx.fillText(delText, statsX + (commit.additions > 0 ? addWidth + 4 : 0), cy);
+        }
+      }
     }
 
     logPerformance("graph_canvas_render", performance.now() - startedAt, {
@@ -713,14 +733,18 @@ export function useCanvasRenderer({
 }
 
 function getColumns(width: number) {
+  // Fixed columns right-to-left: HASH | STATS | AUTHOR | DATE
+  const totalFixed = HASH_COLUMN_WIDTH + STATS_COLUMN_WIDTH + AUTHOR_COLUMN_WIDTH + DATE_COLUMN_WIDTH + COLUMN_GAP * 3;
+  const padding = RIGHT_PADDING;
   const dateX = Math.max(
-    HASH_COLUMN_WIDTH + AUTHOR_COLUMN_WIDTH + COLUMN_GAP * 2 + RIGHT_PADDING,
-    width - DATE_COLUMN_WIDTH - RIGHT_PADDING,
+    HASH_COLUMN_WIDTH + STATS_COLUMN_WIDTH + AUTHOR_COLUMN_WIDTH + COLUMN_GAP * 3 + padding,
+    width - DATE_COLUMN_WIDTH - padding,
   );
   const authorX = dateX - AUTHOR_COLUMN_WIDTH - COLUMN_GAP;
-  const hashX = authorX - HASH_COLUMN_WIDTH - COLUMN_GAP;
+  const statsX = authorX - STATS_COLUMN_WIDTH - COLUMN_GAP;
+  const hashX = statsX - HASH_COLUMN_WIDTH - COLUMN_GAP;
 
-  return { hashX, authorX, dateX };
+  return { hashX, statsX, authorX, dateX };
 }
 
 function getGraphColumnWidth(metadataLeft: number) {

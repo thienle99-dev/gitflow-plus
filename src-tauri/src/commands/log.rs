@@ -10,6 +10,8 @@ pub struct Commit {
     pub message: String,
     pub refs: Vec<Ref>,
     pub signature: String,
+    pub additions: u32,
+    pub deletions: u32,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
@@ -47,6 +49,7 @@ pub async fn git_log(
         path,
         "log".to_string(),
         "--topo-order".to_string(),
+        "--numstat".to_string(),
         format!("--skip={}", skip),
         format!("--max-count={}", limit),
         "--pretty=format:%H|%P|%an|%ae|%ai|%D|%s|%G?".to_string(),
@@ -94,6 +97,7 @@ pub async fn git_log_since(
             &path,
             "log",
             "--topo-order",
+            "--numstat",
             &format!("--max-count={}", limit),
             "--pretty=format:%H|%P|%an|%ae|%ai|%D|%s|%G?",
             &range,
@@ -130,6 +134,7 @@ pub async fn git_log_stream(
         path.clone(),
         "log".to_string(),
         "--topo-order".to_string(),
+        "--numstat".to_string(),
         format!("--skip={}", skip),
         format!("--max-count={}", limit),
         "--pretty=format:%H|%P|%an|%ae|%ai|%D|%s|%G?".to_string(),
@@ -180,6 +185,8 @@ pub async fn git_log_stream(
             refs: parse_refs(parts[5]),
             message: parts[6].to_string(),
             signature: parts[7].to_string(),
+            additions: 0,
+            deletions: 0,
         };
         batch.push(commit);
         total += 1;
@@ -297,16 +304,34 @@ pub async fn git_activity(
 }
 
 fn parse_log_output(stdout: &str) -> Vec<Commit> {
-    stdout
-        .lines()
-        .filter(|line| !line.is_empty())
-        .filter_map(|line| {
+    let mut commits: Vec<Commit> = Vec::new();
+    let mut current_additions: u32 = 0;
+    let mut current_deletions: u32 = 0;
+
+    fn save_stats(commits: &mut Vec<Commit>, add: u32, del: u32) {
+        if let Some(last) = commits.last_mut() {
+            last.additions = add;
+            last.deletions = del;
+        }
+    }
+
+    for line in stdout.lines() {
+        if line.is_empty() {
+            continue;
+        }
+
+        // Commit header line — pipe-delimited
+        if line.contains('|') {
+            save_stats(&mut commits, current_additions, current_deletions);
+            current_additions = 0;
+            current_deletions = 0;
+
             let parts: Vec<&str> = line.splitn(8, '|').collect();
             if parts.len() < 8 {
-                return None;
+                continue;
             }
 
-            Some(Commit {
+            commits.push(Commit {
                 hash: parts[0].to_string(),
                 parents: if parts[1].is_empty() {
                     vec![]
@@ -319,9 +344,25 @@ fn parse_log_output(stdout: &str) -> Vec<Commit> {
                 refs: parse_refs(parts[5]),
                 message: parts[6].to_string(),
                 signature: parts[7].to_string(),
-            })
-        })
-        .collect()
+                additions: 0,
+                deletions: 0,
+            });
+            continue;
+        }
+
+        // Numstat line: "additions\tdeletions\tpath"
+        if let Some((rest, _path)) = line.rsplit_once('\t') {
+            if let Some((add_str, del_str)) = rest.split_once('\t') {
+                if let (Ok(add), Ok(del)) = (add_str.parse::<u32>(), del_str.parse::<u32>()) {
+                    current_additions += add;
+                    current_deletions += del;
+                }
+            }
+        }
+    }
+
+    save_stats(&mut commits, current_additions, current_deletions);
+    commits
 }
 
 pub fn parse_refs(refs_str: &str) -> Vec<Ref> {
@@ -375,7 +416,7 @@ mod tests {
     #[test]
     fn parses_git_log_output_with_parents_refs_and_subject() {
         let commits = parse_log_output(
-            "abc123|parent1 parent2|Alice|alice@example.com|2026-06-01 09:00:00 +0700|HEAD -> main, origin/main|feat: add parser tests\ndef456||Bob|bob@example.com|2026-05-31 08:00:00 +0700|tag: v1.0.0|initial commit\n",
+            "abc123|parent1 parent2|Alice|alice@example.com|2026-06-01 09:00:00 +0700|HEAD -> main, origin/main|feat: add parser tests|\n2\t1\tsrc/main.rs\ndef456||Bob|bob@example.com|2026-05-31 08:00:00 +0700|tag: v1.0.0|initial commit|\n1\t0\tsrc/lib.rs\n",
         );
 
         assert_eq!(commits.len(), 2);
@@ -386,14 +427,42 @@ mod tests {
         assert_eq!(commits[0].date, "2026-06-01 09:00:00 +0700");
         assert_eq!(commits[0].message, "feat: add parser tests");
         assert_eq!(commits[0].refs.len(), 2);
+        assert_eq!(commits[0].additions, 2);
+        assert_eq!(commits[0].deletions, 1);
         assert_eq!(commits[1].parents.len(), 0);
         assert_eq!(commits[1].refs[0].ref_type, "tag");
+        assert_eq!(commits[1].additions, 1);
+        assert_eq!(commits[1].deletions, 0);
+    }
+
+    #[test]
+    fn parses_numstat_multiple_files() {
+        let commits = parse_log_output(
+            "aaa||Alice|a@e|2026-06-01||msg|\n5\t3\tsrc/a.rs\n2\t4\tsrc/b.rs\n\nbbb||Bob|b@e|2026-06-02||msg2|\n0\t1\tsrc/c.rs\n",
+        );
+        assert_eq!(commits.len(), 2);
+        assert_eq!(commits[0].additions, 7);
+        assert_eq!(commits[0].deletions, 7);
+        assert_eq!(commits[1].additions, 0);
+        assert_eq!(commits[1].deletions, 1);
+    }
+
+    #[test]
+    fn handles_empty_numstat() {
+        let commits = parse_log_output(
+            "aaa||Alice|a@e|2026-06-01||empty diff commit|\n\nbbb||Bob|b@e|2026-06-02||msg|\n1\t1\tsrc/f.rs\n",
+        );
+        assert_eq!(commits.len(), 2);
+        assert_eq!(commits[0].additions, 0);
+        assert_eq!(commits[0].deletions, 0);
+        assert_eq!(commits[1].additions, 1);
+        assert_eq!(commits[1].deletions, 1);
     }
 
     #[test]
     fn skips_malformed_log_lines() {
         let commits = parse_log_output(
-            "too|few|fields\nabc123||Alice|alice@example.com|2026-06-01 09:00:00 +0700||valid subject\n",
+            "too|few|fields\nabc123||Alice|alice@example.com|2026-06-01 09:00:00 +0700||valid subject|\n",
         );
 
         assert_eq!(commits.len(), 1);

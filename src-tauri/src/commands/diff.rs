@@ -403,6 +403,22 @@ pub async fn write_file_content(
     Ok(format!("Wrote {} bytes to {}", content.len(), file_path))
 }
 
+/// Read a text file from the working tree. Returns null if file doesn't exist.
+#[tauri::command]
+pub async fn read_text_file(
+    path: String,
+    file_path: String,
+) -> Result<Option<String>, String> {
+    let full_path = std::path::Path::new(&path).join(&file_path);
+    if !full_path.exists() {
+        return Ok(None);
+    }
+    let content = tokio::fs::read_to_string(&full_path)
+        .await
+        .map_err(|e| format!("Failed to read file: {}", e))?;
+    Ok(Some(content))
+}
+
 /// Read a file from the working tree as base64. Returns MIME type + base64 content.
 #[tauri::command]
 pub async fn read_working_file_base64(

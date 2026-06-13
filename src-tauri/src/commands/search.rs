@@ -105,6 +105,8 @@ pub async fn git_log_search(path: &str, opts: &SearchOptions) -> Result<Vec<Comm
                 message: parts[6].to_string(),
                 refs,
                 signature: parts[7].to_string(),
+                additions: 0,
+                deletions: 0,
             })
         })
         .collect();

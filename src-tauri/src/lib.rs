@@ -302,6 +302,7 @@ pub fn run() {
             commands::diff::commit_changed_files,
             commands::diff::apply_diff_hunk,
             commands::diff::write_file_content,
+            commands::diff::read_text_file,
             commands::diff::read_working_file_base64,
             commands::diff::read_git_object_base64,
             commands::diff::binary_file_info,

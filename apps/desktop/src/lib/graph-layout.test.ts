@@ -12,6 +12,8 @@ function makeCommit(hash: string, parents: string[], opts?: { refs?: Ref[]; mess
     message: opts?.message ?? hash,
     refs: opts?.refs ?? [],
     signature: "",
+    additions: 0,
+    deletions: 0,
   };
 }
 
@@ -408,6 +410,8 @@ describe("computeGraphLayout", () => {
       message: "test commit",
       refs: [],
       signature: "",
+      additions: 0,
+      deletions: 0,
     }];
     const result = computeGraphLayout(commits);
     expect(result.commits[0].author).toBe("Jane Doe");
