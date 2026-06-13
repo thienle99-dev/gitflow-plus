@@ -356,6 +356,8 @@ export const api = {
       invoke<void>("open_settings_window"),
     openRepoFromTray: () =>
       invoke<void>("open_repo_from_tray"),
+    setTraySyncStatus: (path: string) =>
+      invoke<void>("set_tray_sync_status", { path }),
   },
 
   logs: {
