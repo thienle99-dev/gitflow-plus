@@ -14,6 +14,7 @@ import CommitGraph from "@/components/features/graph/CommitGraph";
 import RightPanel from "@/components/layout/RightPanel";
 import BottomBar from "@/components/layout/BottomBar";
 import WorkspaceRail from "@/components/layout/WorkspaceRail";
+import RepoTabBar from "@/components/layout/RepoTabBar";
 import OperationCenter from "@/components/layout/OperationCenter";
 import LogCenter from "@/components/layout/LogCenter";
 import { useOperationObserver } from "@/hooks/useOperationObserver";
@@ -38,6 +39,7 @@ const FeatureGuideDialog = lazy(() => import("@/components/features/dialogs/Feat
 const OnboardingWizard = lazy(() => import("@/components/features/dialogs/OnboardingWizard"));
 const BranchCompareDialog = lazy(() => import("@/components/features/dialogs/BranchCompareDialog"));
 const HealthCheckDialog = lazy(() => import("@/components/features/dialogs/HealthCheckDialog"));
+const AuthSetupWizard = lazy(() => import("@/components/features/dialogs/AuthSetupWizard"));
 const DiagnosticDialog = lazy(() => import("@/components/features/dialogs/DiagnosticDialog"));
 const CommandPalette = lazy(() => import("@/components/features/dialogs/CommandPalette"));
 const InteractiveRebaseDialog = lazy(() => import("@/components/features/dialogs/InteractiveRebaseDialog"));
@@ -50,6 +52,7 @@ const BisectDialog = lazy(() => import("@/components/features/dialogs/BisectDial
 const CreateReleaseDialog = lazy(() => import("@/components/features/dialogs/CreateReleaseDialog"));
 const GitHooksManager = lazy(() => import("@/components/features/dialogs/GitHooksManager"));
 const GitCommandAssistant = lazy(() => import("@/components/features/dialogs/GitCommandAssistant"));
+const GitConfigEditor = lazy(() => import("@/components/features/dialogs/GitConfigEditor"));
 const AddWorktreeDialog = lazy(() => import("@/components/features/dialogs/AddWorktreeDialog"));
 
 export default function MainLayout() {
@@ -362,6 +365,8 @@ export default function MainLayout() {
     "reset": <ResetDialog open={true} onClose={closeDialog} />,
     "remote-manager": <RemoteManager open={true} onClose={closeDialog} />,
     "bisect": <BisectDialog open={true} onClose={closeDialog} />,
+    "auth-setup": <AuthSetupWizard />,
+    "git-config": <GitConfigEditor />,
     "create-release": <CreateReleaseDialog open={true} onClose={closeDialog} />,
     "git-hooks": <GitHooksManager open={true} onClose={closeDialog} />,
     "git-command-assistant": <GitCommandAssistant open={true} onClose={closeDialog} />,
@@ -432,6 +437,7 @@ function InlineErrorFallback({ name }: { name: string }) {
 
   return (
     <div className="h-full min-h-0 flex flex-col">
+      <RepoTabBar />
       <Toolbar />
       <div className="flex-1 min-h-0 flex flex-row overflow-hidden">
         {repoPath && <WorkspaceRail />}

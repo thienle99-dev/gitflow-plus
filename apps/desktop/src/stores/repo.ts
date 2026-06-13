@@ -115,13 +115,29 @@ export function applyTheme(theme: Theme) {
 const initialTheme = readStoredTheme();
 applyTheme(initialTheme);
 
+interface RepoTab {
+  id: string;
+  repoPath: string | null;
+  selectedRef: string | null;
+}
+
+let tabCounter = 0;
+function nextTabId(): string {
+  return `tab_${++tabCounter}`;
+}
+
 interface RepoState {
   repoPath: string | null;
   selectedRef: string | null;
   recentRepos: string[];
   theme: Theme;
+  repos: RepoTab[];
+  activeRepoId: string | null;
   openRepo: (path: string) => void;
   closeRepo: () => void;
+  switchRepo: (id: string) => void;
+  closeTab: (id: string) => void;
+  openRepoDialog: () => void;
   selectRef: (ref: string | null) => void;
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
@@ -129,30 +145,91 @@ interface RepoState {
   removeRecentRepo: (path: string) => void;
 }
 
-export const useRepoStore = create<RepoState>((set) => ({
-  repoPath: localStorage.getItem("repoPath") || null,
+const initialPath = localStorage.getItem("repoPath") || null;
+const initialId = nextTabId();
+const initialRepos = initialPath
+  ? [{ id: initialId, repoPath: initialPath, selectedRef: null }]
+  : [];
+
+export const useRepoStore = create<RepoState>((set, get) => ({
+  repoPath: initialPath,
   selectedRef: null,
   recentRepos: JSON.parse(localStorage.getItem("recentRepos") || "[]"),
   theme: initialTheme,
+  repos: initialRepos,
+  activeRepoId: initialPath ? initialId : null,
 
   openRepo: (path) =>
     set((state) => {
       startRepoOpenMeasurement(path);
-      const recent = [
-        path,
-        ...state.recentRepos.filter((r) => r !== path),
-      ].slice(0, 10);
+      const recent = [path, ...state.recentRepos.filter((r) => r !== path)].slice(0, 10);
       localStorage.setItem("recentRepos", JSON.stringify(recent));
       localStorage.setItem("repoPath", path);
-      return { repoPath: path, selectedRef: null, recentRepos: recent };
+
+      const existing = state.repos.find((r) => r.repoPath === path);
+      if (existing) {
+        return { repoPath: path, selectedRef: null, recentRepos: recent, activeRepoId: existing.id };
+      }
+
+      const id = nextTabId();
+      const tab: RepoTab = { id, repoPath: path, selectedRef: null };
+
+      return {
+        repoPath: path,
+        selectedRef: null,
+        recentRepos: recent,
+        repos: [...state.repos, tab],
+        activeRepoId: id,
+      };
     }),
 
   closeRepo: () => {
     localStorage.removeItem("repoPath");
-    set({ repoPath: null, selectedRef: null });
+    set({ repoPath: null, selectedRef: null, repos: [], activeRepoId: null });
   },
 
-  selectRef: (ref) => set({ selectedRef: ref }),
+  switchRepo: (id) =>
+    set((state) => {
+      const tab = state.repos.find((r) => r.id === id);
+      if (!tab) return state;
+      localStorage.setItem("repoPath", tab.repoPath || "");
+      return { repoPath: tab.repoPath, selectedRef: tab.selectedRef, activeRepoId: id };
+    }),
+
+  closeTab: (id) =>
+    set((state) => {
+      const remaining = state.repos.filter((r) => r.id !== id);
+      if (remaining.length === 0) {
+        localStorage.removeItem("repoPath");
+        return { repos: [], activeRepoId: null, repoPath: null, selectedRef: null };
+      }
+      // If closing active tab, switch to first remaining
+      const wasActive = state.activeRepoId === id;
+      const nextActive = wasActive ? remaining[0] : state.repos.find((r) => r.id === state.activeRepoId);
+      const activeTab = nextActive || remaining[0];
+      localStorage.setItem("repoPath", activeTab.repoPath || "");
+      return {
+        repos: remaining,
+        activeRepoId: activeTab!.id,
+        repoPath: activeTab!.repoPath,
+        selectedRef: activeTab!.selectedRef,
+      };
+    }),
+
+  openRepoDialog: () => {
+    // Lazy import to avoid circular dep
+    import("@/stores/ui").then(({ useUIStore }) => {
+      useUIStore.getState().openDialog("clone");
+    });
+  },
+
+  selectRef: (ref) =>
+    set((state) => {
+      const repos = state.repos.map((r) =>
+        r.id === state.activeRepoId ? { ...r, selectedRef: ref } : r,
+      );
+      return { selectedRef: ref, repos };
+    }),
 
   toggleTheme: () =>
     set((state) => {
