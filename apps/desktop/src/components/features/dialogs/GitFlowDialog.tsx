@@ -156,10 +156,8 @@ export default function GitFlowDialog({ open, onClose, initialMode }: GitFlowDia
     setError(null);
     setLoading(true);
     try {
-      const fullName = gitflowConfig.feature_prefix + toKebabCase(branchName);
-      await api.branches.create(repoPath, fullName, gitflowConfig.develop);
-      await api.branches.checkout(repoPath, fullName);
-      showToast(`Feature branch "${fullName}" created`);
+      await api.gitflow.featureStart(repoPath, toKebabCase(branchName));
+      showToast(`Feature branch created`);
       queryClient.invalidateQueries({ queryKey: ["branches", repoPath] });
       queryClient.invalidateQueries({ queryKey: ["git-log", repoPath] });
       onClose();
@@ -176,13 +174,7 @@ export default function GitFlowDialog({ open, onClose, initialMode }: GitFlowDia
     setError(null);
     setLoading(true);
     try {
-      const fullName = gitflowConfig.feature_prefix + branchName;
-      await api.branches.checkout(repoPath, gitflowConfig.develop);
-      const squash = mergeStrategy === "squash";
-      await api.merge.start(repoPath, fullName, squash);
-      if (deleteAfterFinish) {
-        await api.branches.delete(repoPath, fullName);
-      }
+      await api.gitflow.featureFinish(repoPath, branchName, mergeStrategy, deleteAfterFinish);
       showToast(`Feature "${branchName}" merged into ${gitflowConfig.develop}`);
       queryClient.invalidateQueries({ queryKey: ["branches", repoPath] });
       queryClient.invalidateQueries({ queryKey: ["git-log", repoPath] });
@@ -206,10 +198,8 @@ export default function GitFlowDialog({ open, onClose, initialMode }: GitFlowDia
     setError(null);
     setLoading(true);
     try {
-      const fullName = gitflowConfig.release_prefix + branchName;
-      await api.branches.create(repoPath, fullName, gitflowConfig.develop);
-      await api.branches.checkout(repoPath, fullName);
-      showToast(`Release branch "${fullName}" created`);
+      await api.gitflow.releaseStart(repoPath, branchName);
+      showToast(`Release branch created`);
       queryClient.invalidateQueries({ queryKey: ["branches", repoPath] });
       queryClient.invalidateQueries({ queryKey: ["git-log", repoPath] });
       onClose();
@@ -226,20 +216,7 @@ export default function GitFlowDialog({ open, onClose, initialMode }: GitFlowDia
     setError(null);
     setLoading(true);
     try {
-      const fullName = gitflowConfig.release_prefix + branchName;
-      // Merge into main
-      await api.branches.checkout(repoPath, gitflowConfig.master);
-      await api.merge.start(repoPath, fullName, mergeStrategy === "squash");
-      // Merge back into develop
-      await api.branches.checkout(repoPath, gitflowConfig.develop);
-      await api.merge.start(repoPath, fullName, mergeStrategy === "squash");
-      // Create tag
-      if (createTag) {
-        const tagName = gitflowConfig.versiontag_prefix + branchName;
-        await api.tag.create(repoPath, tagName, gitflowConfig.master, tagMessage || `Release ${branchName}`);
-      }
-      // Delete release branch
-      await api.branches.delete(repoPath, fullName);
+      await api.gitflow.releaseFinish(repoPath, branchName, mergeStrategy, createTag, tagMessage || undefined);
       showToast(`Release "${branchName}" completed`);
       queryClient.invalidateQueries({ queryKey: ["branches", repoPath] });
       queryClient.invalidateQueries({ queryKey: ["git-log", repoPath] });
@@ -263,10 +240,8 @@ export default function GitFlowDialog({ open, onClose, initialMode }: GitFlowDia
     setError(null);
     setLoading(true);
     try {
-      const fullName = gitflowConfig.hotfix_prefix + branchName;
-      await api.branches.create(repoPath, fullName, gitflowConfig.master);
-      await api.branches.checkout(repoPath, fullName);
-      showToast(`Hotfix branch "${fullName}" created from ${gitflowConfig.master}`);
+      await api.gitflow.hotfixStart(repoPath, branchName);
+      showToast(`Hotfix branch created from ${gitflowConfig.master}`);
       queryClient.invalidateQueries({ queryKey: ["branches", repoPath] });
       queryClient.invalidateQueries({ queryKey: ["git-log", repoPath] });
       onClose();
@@ -283,20 +258,7 @@ export default function GitFlowDialog({ open, onClose, initialMode }: GitFlowDia
     setError(null);
     setLoading(true);
     try {
-      const fullName = gitflowConfig.hotfix_prefix + branchName;
-      // Merge into main
-      await api.branches.checkout(repoPath, gitflowConfig.master);
-      await api.merge.start(repoPath, fullName, mergeStrategy === "squash");
-      // Merge back into develop
-      await api.branches.checkout(repoPath, gitflowConfig.develop);
-      await api.merge.start(repoPath, fullName, mergeStrategy === "squash");
-      // Create tag
-      if (createTag) {
-        const tagName = gitflowConfig.versiontag_prefix + branchName;
-        await api.tag.create(repoPath, tagName, gitflowConfig.master, tagMessage || `Hotfix ${branchName}`);
-      }
-      // Delete hotfix branch
-      await api.branches.delete(repoPath, fullName);
+      await api.gitflow.hotfixFinish(repoPath, branchName, mergeStrategy, createTag, tagMessage || undefined);
       showToast(`Hotfix "${branchName}" completed`);
       queryClient.invalidateQueries({ queryKey: ["branches", repoPath] });
       queryClient.invalidateQueries({ queryKey: ["git-log", repoPath] });
