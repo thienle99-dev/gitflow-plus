@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import {
   loadActiveProfile,
+  getCachedApiKey,
   providerNeedsApiKey,
   type AIProviderType,
 } from "@/lib/ai-profiles";
@@ -97,7 +98,7 @@ function computeStatus(): AIStatus {
   }
 
   // Cloud providers need an API key
-  if (providerNeedsApiKey(provider) && !profile.apiKey) {
+  if (providerNeedsApiKey(provider) && !getCachedApiKey(profile.id, profile.apiKey)) {
     return {
       kind: "missing-key",
       label: "API Key Missing",

@@ -40,6 +40,8 @@ import {
   getActiveProfileId,
   setActiveProfileId,
   saveProfiles,
+  getCachedApiKey,
+  setCachedApiKey,
   addProfile,
   duplicateProfile,
   deleteProfile,
@@ -354,7 +356,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
   // ─── Load profiles and fill form from active profile ──────────────────────
   const fillFormFromProfile = useCallback((profile: AIProviderProfile) => {
     setProvider(profile.provider || "openai-compatible");
-    setApiKey(profile.apiKey);
+    setApiKey(getCachedApiKey(profile.id, profile.apiKey));
     setApiUrl(profile.apiUrl);
     setCommitModel(profile.commitModel);
     setReviewModel(profile.reviewModel);
@@ -767,11 +769,12 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
           : p,
       );
       saveProfiles(updatedProfiles, activeProfileId);
+      setCachedApiKey(activeProfileId, apiKey);
       setProfiles(updatedProfiles);
 
       // Also write to legacy keys so existing call sites that haven't migrated still work
       const active = updatedProfiles.find((p) => p.id === activeProfileId)!;
-      localStorage.setItem(LS_KEY_API_KEY, active.apiKey);
+      // Note: apiKey intentionally NOT written to localStorage — stored in OS keychain only
       localStorage.setItem(LS_KEY_API_URL, active.apiUrl);
       localStorage.setItem(LS_KEY_MODEL, active.commitModel);
       localStorage.setItem(LS_KEY_REVIEW_MODEL, active.reviewModel);

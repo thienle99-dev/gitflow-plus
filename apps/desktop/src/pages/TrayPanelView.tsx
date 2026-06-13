@@ -678,7 +678,7 @@ export default function TrayPanelView() {
                   onRebaseContinue={async () => {
                     if (!repoPath) return;
                     try {
-                      await api.rebase.continue(repoPath);
+                      await trackRemoteOp("Rebase: Continue", (opId) => api.rebase.continue(repoPath, opId));
                       invalidate();
                       showToast("Rebase continued");
                     } catch (e: any) {
@@ -688,7 +688,7 @@ export default function TrayPanelView() {
                   onRebaseSkip={async () => {
                     if (!repoPath) return;
                     try {
-                      await api.rebase.skip(repoPath);
+                      await trackRemoteOp("Rebase: Skip", (opId) => api.rebase.skip(repoPath, opId));
                       invalidate();
                       showToast("Rebase skipped");
                     } catch (e: any) {

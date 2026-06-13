@@ -26,6 +26,7 @@ import {
   loadProfiles,
   providerNeedsApiKey,
   saveProfiles,
+  setCachedApiKey,
   type AIProviderType,
 } from "@/lib/ai-profiles";
 
@@ -172,13 +173,12 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
       : [profile, ...profiles];
 
     saveProfiles(nextProfiles, profile.id);
+    setCachedApiKey(profile.id, aiApiKey);
   };
 
   const persistSettings = () => {
     // AI
     persistAIProfile();
-    if (aiApiKey) localStorage.setItem(LS_KEY_AI_API_KEY, aiApiKey);
-    else localStorage.removeItem(LS_KEY_AI_API_KEY);
     localStorage.setItem(LS_KEY_AI_API_URL, aiApiUrl);
     localStorage.setItem(LS_KEY_AI_MODEL, aiModel);
     localStorage.setItem(LS_KEY_AI_REVIEW_MODEL, aiReviewModel);
