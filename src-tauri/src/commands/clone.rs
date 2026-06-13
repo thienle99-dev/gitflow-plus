@@ -60,11 +60,25 @@ pub async fn git_clone(
     app: tauri::AppHandle,
     url: String,
     destination: String,
+    depth: Option<u32>,
+    filter: Option<String>,
 ) -> Result<String, String> {
     cancel_clone_inner();
 
+    let mut args = vec!["clone", "--progress", &url, &destination];
+    let depth_str: String;
+    if let Some(d) = depth {
+        depth_str = d.to_string();
+        args.push("--depth");
+        args.push(&depth_str);
+    }
+    if let Some(ref f) = filter {
+        args.push("--filter");
+        args.push(f);
+    }
+
     let mut child = std::process::Command::new("git")
-        .args(["clone", "--progress", &url, &destination])
+        .args(&args)
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .spawn()
