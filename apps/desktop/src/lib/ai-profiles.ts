@@ -13,6 +13,44 @@
 
 import { secureSetKey, secureGetKey, secureDeleteKey, migrateApiKeysToKeychain } from "./ai-secure";
 
+// ─── In-memory API key cache ────────────────────────────────────────────────
+// Populated from keychain at startup so sync readAISettings() can access keys
+// without async calls. Falls back to profile.apiKey / localStorage legacy key.
+const _apiKeyCache = new Map<string, string>();
+let _cacheInitialized = false;
+
+/**
+ * Populate the in-memory API key cache from the OS keychain.
+ * Call once at app startup (fire-and-forget; sync reads use cache after await).
+ */
+export async function initApiKeyCache(): Promise<void> {
+  try {
+    const profiles = readProfilesRaw();
+    await migrateApiKeysToKeychain(profiles);
+    for (const p of profiles) {
+      const key = await secureGetKey(p.id);
+      if (key) _apiKeyCache.set(p.id, key);
+    }
+  } catch {
+    // Keychain unavailable — sync path will fall back to localStorage
+  }
+  _cacheInitialized = true;
+}
+
+/**
+ * Synchronous API key lookup. Returns keychain cache > profile.apiKey > "".
+ * Only reliable after initApiKeyCache() has resolved.
+ */
+export function getCachedApiKey(profileId: string, fallbackKey?: string): string {
+  return _apiKeyCache.get(profileId) || fallbackKey || "";
+}
+
+/** Write a key into the in-memory cache (call after saveProfiles). */
+export function setCachedApiKey(profileId: string, apiKey: string): void {
+  if (apiKey) _apiKeyCache.set(profileId, apiKey);
+  else _apiKeyCache.delete(profileId);
+}
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 export type AIProviderType = "openai-compatible" | "anthropic" | "ollama" | "llamacpp" | "9router";
@@ -278,6 +316,7 @@ export function saveProfiles(profiles: AIProviderProfile[], activeId: string): v
   for (const profile of profiles) {
     if (profile.apiKey !== undefined) {
       secureSetKey(profile.id, profile.apiKey).catch(console.warn);
+      setCachedApiKey(profile.id, profile.apiKey);
     }
   }
   writeProfilesRaw(profiles);
@@ -296,6 +335,11 @@ export async function saveProfilesSecure(profiles: AIProviderProfile[], activeId
       : secureDeleteKey(profile.id)
   );
   await Promise.allSettled(keyPromises);
+
+  // Update in-memory cache
+  for (const profile of profiles) {
+    setCachedApiKey(profile.id, profile.apiKey);
+  }
 
   // Save to localStorage (including API keys for backward compat)
   writeProfilesRaw(profiles);
