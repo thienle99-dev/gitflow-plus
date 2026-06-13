@@ -1097,7 +1097,7 @@ function generateLocalTagDescription(tagName: string, commits: Commit[], previou
 export function readAISettings(): AISettings {
   // Read from active profile; use in-memory cache for API key (populated from keychain at startup)
   const profile = loadActiveProfile();
-  const apiKey = getCachedApiKey(profile.id, profile.apiKey) || localStorage.getItem("gitflowAiApiKey") || "";
+  const apiKey = getCachedApiKey(profile.id, profile.apiKey) || "";
   return {
     profileId: profile.id,
     provider: profile.provider || "openai-compatible",

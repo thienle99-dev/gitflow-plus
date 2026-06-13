@@ -70,6 +70,8 @@ export async function migrateApiKeysToKeychain(profiles: { id: string; apiKey: s
 
   if (migrated) {
     localStorage.setItem(MIGRATION_KEY, "true");
+    // Clear legacy plaintext API key from localStorage
+    localStorage.removeItem("gitflowAiApiKey");
   }
 
   return migrated;

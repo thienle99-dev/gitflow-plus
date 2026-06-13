@@ -31,6 +31,8 @@ export async function initApiKeyCache(): Promise<void> {
       const key = await secureGetKey(p.id);
       if (key) _apiKeyCache.set(p.id, key);
     }
+    // After keys are safely in keychain, clear legacy plaintext from localStorage
+    localStorage.removeItem("gitflowAiApiKey");
   } catch {
     // Keychain unavailable — sync path will fall back to localStorage
   }
