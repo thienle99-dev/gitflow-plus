@@ -22,6 +22,7 @@ import { isOnboardingComplete } from "@/components/features/dialogs";
 import ErrorBoundary from "@/components/ui/feedback/ErrorBoundary";
 import { AlertOctagon, RefreshCw, Trash2, FolderOpen, GitBranch, Clock } from "lucide-react";
 import { trackRepoOpen } from "@/lib/analytics";
+import { logger } from "@/lib/logger";
 
 /* Lazy-loaded dialog components — only downloaded when opened */
 const SearchDialog = lazy(() => import("@/components/features/dialogs/SearchDialog"));
@@ -96,9 +97,9 @@ export default function MainLayout() {
   // Start/stop file watcher when repo changes
   useEffect(() => {
     if (!repoPath) return;
-    api.watcher.start(repoPath).catch(console.error);
+    api.watcher.start(repoPath).catch((e) => logger.error("Failed to start watcher", e));
     return () => {
-      api.watcher.stop().catch(console.error);
+      api.watcher.stop().catch((e) => logger.error("Failed to stop watcher", e));
     };
   }, [repoPath]);
 
@@ -131,7 +132,7 @@ export default function MainLayout() {
         staleTime: 5_000,
       }),
     ]).catch((err) => {
-      console.debug("[prefetch] startup queries failed", err);
+      logger.debug("startup queries failed", err);
     });
   }, [repoPath, queryClient]);
 
@@ -209,7 +210,7 @@ export default function MainLayout() {
       } else if (action === "refresh") {
         if (repoPath) {
           queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
-          trackRemoteOp("fetch", () => api.remote.fetch(repoPath)).catch(console.error);
+          trackRemoteOp("fetch", () => api.remote.fetch(repoPath)).catch((e) => logger.error("Fetch failed", e));
         }
       } else if (action === "toggle-theme") {
         toggleTheme();
@@ -232,21 +233,21 @@ export default function MainLayout() {
           e.preventDefault();
           api.commit.stageAll(repoPath!).then(() =>
             queryClient.invalidateQueries({ queryKey: ["git", repoPath] })
-          ).catch(console.error);
+          ).catch((e) => logger.error("Stage all failed", e));
           return;
         }
         if ((e.metaKey || e.ctrlKey) && !e.shiftKey && (e.key === "s" || e.key === "S")) {
           e.preventDefault();
           api.commit.stageAll(repoPath!).then(() =>
             queryClient.invalidateQueries({ queryKey: ["git", repoPath] })
-          ).catch(console.error);
+          ).catch((e) => logger.error("Stage all failed", e));
           return;
         }
         if ((e.metaKey || e.ctrlKey) && !e.shiftKey && (e.key === "u" || e.key === "U")) {
           e.preventDefault();
           api.commit.unstageAll(repoPath!).then(() =>
             queryClient.invalidateQueries({ queryKey: ["git", repoPath] })
-          ).catch(console.error);
+          ).catch((e) => logger.error("Unstage all failed", e));
           return;
         }
       }
