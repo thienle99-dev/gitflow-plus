@@ -202,6 +202,14 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
       "gitflow-feature-start": () => openDialog("gitflow-feature-start"),
       "gitflow-release-start": () => openDialog("gitflow-release-start"),
       "gitflow-hotfix-start": () => openDialog("gitflow-hotfix-start"),
+      "git-squash": () => {
+        const selectedCommit = useUIStore.getState().selectedCommit;
+        if (selectedCommit) {
+          useUIStore.getState().openSquashDialog(selectedCommit);
+        } else {
+          showToast("Select a commit first to squash from", "error");
+        }
+      },
       // Context-aware — file actions
       "file-review": () => selectedFile && selectFile(selectedFile),
       "file-blame": () => selectedFile && showToast("Open the diff viewer and click Blame"),
@@ -241,6 +249,7 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
     { id: "gitflow-feature-start", label: "GitFlow: Start Feature", description: "New feature branch from develop", category: "git", icon: <Rocket size={13} />, action: () => {}, requiresRepo: true },
     { id: "gitflow-release-start", label: "GitFlow: Start Release", description: "New release branch from develop", category: "git", icon: <Tag size={13} />, action: () => {}, requiresRepo: true },
     { id: "gitflow-hotfix-start", label: "GitFlow: Start Hotfix", description: "New hotfix branch from main", category: "git", icon: <Zap size={13} />, action: () => {}, requiresRepo: true },
+    { id: "git-squash", label: "Squash Commits", description: "Squash last N commits into one", category: "git", icon: <Layers size={13} />, action: () => {}, requiresRepo: true },
     // Reflog
     { id: "nav-reflog", label: "Reflog Browser", description: "View reflog history", category: "navigation", icon: <History size={13} />, action: () => {}, requiresRepo: true },
     { id: "nav-undo", label: "Undo Last Commit", description: "Soft reset last commit", category: "git", icon: <Undo size={13} />, action: () => {}, requiresRepo: true },
