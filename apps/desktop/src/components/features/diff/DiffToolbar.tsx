@@ -1,4 +1,4 @@
-import { Sparkles, RefreshCw, MessageSquare } from "lucide-react";
+import { Sparkles, RefreshCw, MessageSquare, Undo2 } from "lucide-react";
 import { AI_REVIEW_MODE_OPTIONS, type AIReviewMode, type InlineReviewComment } from "@/lib/ai";
 import type { DiffHunk } from "@/lib/parse-diff";
 
@@ -32,6 +32,11 @@ export interface DiffToolbarProps {
   error: string | null;
   inlineCommentsError: string | null;
   onRetryInlineComments: () => void;
+  // Undo and applied state
+  canUndo: boolean;
+  onUndo: () => void;
+  appliedHunks: Set<number>;
+  appliedLines: Set<string>;
 }
 
 export default function DiffToolbar({
@@ -62,6 +67,10 @@ export default function DiffToolbar({
   error,
   inlineCommentsError,
   onRetryInlineComments,
+  canUndo,
+  onUndo,
+  appliedHunks,
+  appliedLines,
 }: DiffToolbarProps) {
   return (
     <>
@@ -73,6 +82,16 @@ export default function DiffToolbar({
           <span className="capitalize">{source} diff</span>
         )}
         <div className="ml-auto flex items-center gap-1">
+          {canUndo && (
+            <button
+              onClick={onUndo}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs text-[#ff9f0a] hover:bg-[#ff9f0a]/10 transition-colors"
+              title="Undo last staging action"
+            >
+              <Undo2 size={10} />
+              <span>Undo</span>
+            </button>
+          )}
           <button
             onClick={() => setDiffViewMode("split")}
             className={`px-1.5 py-0.5 rounded text-2xs transition-colors ${
@@ -162,23 +181,29 @@ export default function DiffToolbar({
           {hunks.map((hunk, index) => {
             const add = hunk.lines.filter((line) => line.type === "add").length;
             const del = hunk.lines.filter((line) => line.type === "delete").length;
+            const isApplied = appliedHunks.has(index);
             return (
               <div
                 key={`${hunk.header}:${index}`}
-                className="min-h-7 px-3 py-1 flex items-center gap-2 border-b border-border-60 last:border-b-0"
+                className={`min-h-7 px-3 py-1 flex items-center gap-2 border-b border-border-60 last:border-b-0 ${isApplied ? "bg-[#30d158]/5" : ""}`}
               >
                 <span className="min-w-0 flex-1 truncate font-mono text-2xs text-text-muted">
                   {hunk.header}
                 </span>
+                {isApplied && (
+                  <span className="text-[9px] font-semibold text-[#30d158] bg-[#30d158]/10 border border-[#30d158]/20 rounded px-1 py-0.5 leading-none">
+                    Applied
+                  </span>
+                )}
                 <span className="text-2xs text-[#ff375f]">-{del}</span>
                 <span className="text-2xs text-[#30d158]">+{add}</span>
                 {source === "working" ? (
                   <>
                     <button
-                      className={`ghost text-2xs px-2 ${applying === index ? "opacity-60" : "text-[#30d158] hover:bg-[#30d158]/10"}`}
+                      className={`ghost text-2xs px-2 ${applying === index ? "opacity-60" : isApplied ? "opacity-50" : "text-[#30d158] hover:bg-[#30d158]/10"}`}
                       onClick={() => onApplyHunk(hunk, index, "stage")}
                       disabled={applying !== null || batchingAll}
-                      title={applying === index ? "Applying hunk…" : "Accept all changes in this hunk (stage)"}
+                      title={applying === index ? "Applying hunk…" : isApplied ? "Hunk already applied" : "Accept all changes in this hunk (stage)"}
                     >
                       {applying === index ? (
                         <><RefreshCw size={10} className="animate-spin inline" /> Applying…</>
@@ -197,10 +222,10 @@ export default function DiffToolbar({
                   </>
                 ) : (
                   <button
-                    className={`ghost text-2xs px-2 ${applying === index ? "opacity-60" : "hover:text-[#ff9f0a]"}`}
+                    className={`ghost text-2xs px-2 ${applying === index ? "opacity-60" : isApplied ? "opacity-50" : "hover:text-[#ff9f0a]"}`}
                     onClick={() => onApplyHunk(hunk, index, "unstage")}
                     disabled={applying !== null || batchingAll}
-                    title={applying === index ? "Applying hunk…" : "Unstage this hunk"}
+                    title={applying === index ? "Applying hunk…" : isApplied ? "Hunk already applied" : "Unstage this hunk"}
                   >
                     {applying === index ? (
                       <><RefreshCw size={10} className="animate-spin inline" /> Applying…</>

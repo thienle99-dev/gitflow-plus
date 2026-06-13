@@ -12,6 +12,16 @@ import DiffSplitView from "./DiffSplitView";
 import DiffUnifiedView from "./DiffUnifiedView";
 import DiffAIReview from "./DiffAIReview";
 import { trackDiffOpen, trackDiffHunkAction, trackAIReview, trackAIInlineComments } from "@/lib/analytics";
+import { showToast } from "@/lib/toast";
+import { Undo2 } from "lucide-react";
+
+interface UndoEntry {
+  type: "hunk" | "line";
+  action: "stage" | "unstage" | "discard";
+  hunkIndex: number;
+  lineIndex?: number;
+  timestamp: number;
+}
 
 interface DiffViewerProps {
   diff: string;
@@ -38,6 +48,9 @@ export default function DiffViewer({
   const [confirmDiscardHunk, setConfirmDiscardHunk] = useState<{ hunk: DiffHunk; index: number } | null>(null);
   const [confirmDiscardLine, setConfirmDiscardLine] = useState<{ hunk: DiffHunk; lineIndex: number } | null>(null);
   const [confirmRejectAll, setConfirmRejectAll] = useState(false);
+  const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);
+  const [appliedHunks, setAppliedHunks] = useState<Set<number>>(new Set());
+  const [appliedLines, setAppliedLines] = useState<Set<string>>(new Set());
 
   const [showReview, setShowReview] = useState(false);
   const [reviewResult, setReviewResult] = useState<string>("");
@@ -146,9 +159,21 @@ export default function DiffViewer({
     try {
       await api.diff.applyHunk(repoPath, buildHunkPatch(patchPrefix, hunk), action);
       trackDiffHunkAction(action);
+      setAppliedHunks((prev) => new Set(prev).add(index));
+      setUndoStack((prev) => [
+        { type: "hunk", action, hunkIndex: index, timestamp: Date.now() },
+        ...prev.slice(0, 9),
+      ]);
       onPatchApplied?.();
     } catch (e: any) {
-      setError(String(e));
+      const errorStr = String(e);
+      if (errorStr.includes("patch does not apply")) {
+        setError(`Patch failed: The hunk context doesn't match the current file state. Try refreshing the diff or manually editing the file.`);
+      } else if (errorStr.includes("corrupt patch")) {
+        setError(`Patch failed: The patch is malformed. This may be due to binary content or encoding issues.`);
+      } else {
+        setError(`Patch failed: ${errorStr}`);
+      }
     } finally {
       setApplying(null);
     }
@@ -162,9 +187,19 @@ export default function DiffViewer({
     try {
       await api.diff.applyHunk(repoPath, buildHunkPatch(patchPrefix, hunk), "discard");
       trackDiffHunkAction("discard");
+      setAppliedHunks((prev) => new Set(prev).add(index));
+      setUndoStack((prev) => [
+        { type: "hunk", action: "discard", hunkIndex: index, timestamp: Date.now() },
+        ...prev.slice(0, 9),
+      ]);
       onPatchApplied?.();
     } catch (e: any) {
-      setError(String(e));
+      const errorStr = String(e);
+      if (errorStr.includes("patch does not apply")) {
+        setError(`Discard failed: The hunk context doesn't match the current file state. The file may have been modified since the diff was generated.`);
+      } else {
+        setError(`Discard failed: ${errorStr}`);
+      }
     } finally {
       setApplying(null);
     }
@@ -188,13 +223,26 @@ export default function DiffViewer({
       const patch = buildSingleLinePatch(patchPrefix, hunk, line);
       await api.diff.applyHunk(repoPath, patch, action);
       trackDiffHunkAction(action);
+      const lineKey = `${hunk.header}:${lineIndex}`;
+      setAppliedLines((prev) => new Set(prev).add(lineKey));
+      setUndoStack((prev) => [
+        { type: "line", action, hunkIndex: hunks.indexOf(hunk), lineIndex, timestamp: Date.now() },
+        ...prev.slice(0, 9),
+      ]);
       onPatchApplied?.();
     } catch (e: any) {
-      setError(String(e));
+      const errorStr = String(e);
+      if (errorStr.includes("patch does not apply")) {
+        setError(`Line patch failed: The line context doesn't match. This can happen when surrounding lines have changed.`);
+      } else if (errorStr.includes("corrupt patch")) {
+        setError(`Line patch failed: Could not create a valid patch for this single line. Try staging the entire hunk instead.`);
+      } else {
+        setError(`Line patch failed: ${errorStr}`);
+      }
     } finally {
       setApplying(null);
     }
-  }, [repoPath, patchPrefix, onPatchApplied]);
+  }, [repoPath, patchPrefix, hunks, onPatchApplied]);
 
   const doDiscardLine = async (hunk: DiffHunk, lineIndex: number) => {
     setConfirmDiscardLine(null);
@@ -206,9 +254,20 @@ export default function DiffViewer({
       const patch = buildSingleLinePatch(patchPrefix, hunk, line);
       await api.diff.applyHunk(repoPath, patch, "discard");
       trackDiffHunkAction("discard");
+      const lineKey = `${hunk.header}:${lineIndex}`;
+      setAppliedLines((prev) => new Set(prev).add(lineKey));
+      setUndoStack((prev) => [
+        { type: "line", action: "discard", hunkIndex: hunks.indexOf(hunk), lineIndex, timestamp: Date.now() },
+        ...prev.slice(0, 9),
+      ]);
       onPatchApplied?.();
     } catch (e: any) {
-      setError(String(e));
+      const errorStr = String(e);
+      if (errorStr.includes("patch does not apply")) {
+        setError(`Line discard failed: The line context doesn't match. The file may have been modified since the diff was generated.`);
+      } else {
+        setError(`Line discard failed: ${errorStr}`);
+      }
     } finally {
       setApplying(null);
     }
@@ -267,6 +326,67 @@ export default function DiffViewer({
     window.dispatchEvent(new CustomEvent("gitflow-scroll-to-line", { detail: { filePath, line, side } }));
   };
 
+  const handleUndo = useCallback(async () => {
+    if (undoStack.length === 0 || !repoPath) return;
+    
+    const lastEntry = undoStack[0];
+    const reverseAction = lastEntry.action === "stage" ? "unstage" : lastEntry.action === "unstage" ? "stage" : null;
+    
+    if (!reverseAction) {
+      showToast("Cannot undo discard actions", "info");
+      return;
+    }
+
+    setApplying(lastEntry.hunkIndex);
+    setError(null);
+    try {
+      const hunk = hunks[lastEntry.hunkIndex];
+      if (!hunk) {
+        showToast("Hunk no longer available", "error");
+        return;
+      }
+
+      let patch: string;
+      if (lastEntry.type === "line" && lastEntry.lineIndex !== undefined) {
+        const line = hunk.lines[lastEntry.lineIndex];
+        if (!line) {
+          showToast("Line no longer available", "error");
+          return;
+        }
+        patch = buildSingleLinePatch(patchPrefix, hunk, line);
+      } else {
+        patch = buildHunkPatch(patchPrefix, hunk);
+      }
+
+      await api.diff.applyHunk(repoPath, patch, reverseAction);
+      trackDiffHunkAction(reverseAction);
+      
+      setUndoStack((prev) => prev.slice(1));
+      
+      if (lastEntry.type === "hunk") {
+        setAppliedHunks((prev) => {
+          const next = new Set(prev);
+          next.delete(lastEntry.hunkIndex);
+          return next;
+        });
+      } else {
+        const lineKey = `${hunk.header}:${lastEntry.lineIndex}`;
+        setAppliedLines((prev) => {
+          const next = new Set(prev);
+          next.delete(lineKey);
+          return next;
+        });
+      }
+      
+      showToast(`Undid ${reverseAction} action`, "success");
+      onPatchApplied?.();
+    } catch (e: any) {
+      setError(`Undo failed: ${String(e)}`);
+    } finally {
+      setApplying(null);
+    }
+  }, [undoStack, repoPath, hunks, patchPrefix, onPatchApplied]);
+
   return (
     <>
     <div className="flex-1 flex overflow-hidden bg-surface-0">
@@ -299,6 +419,10 @@ export default function DiffViewer({
           error={error}
           inlineCommentsError={inlineCommentsMutation.isError ? (inlineCommentsMutation.error instanceof Error ? inlineCommentsMutation.error.message : "Unknown error") : null}
           onRetryInlineComments={handleRetryInlineComments}
+          canUndo={undoStack.length > 0}
+          onUndo={handleUndo}
+          appliedHunks={appliedHunks}
+          appliedLines={appliedLines}
         />
         {diffViewMode === "split" ? (
           <DiffSplitView

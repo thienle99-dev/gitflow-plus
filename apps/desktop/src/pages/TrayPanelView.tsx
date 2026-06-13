@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useGitStatus, useGitBranches, useGitSyncStatus } from "@/queries/useGitLog";
 import { api, type FileChange, type Commit, type RepoInfo } from "@/api/tauri";
@@ -18,12 +18,12 @@ import {
   Loader2,
   ExternalLink,
   Settings,
-  MessageSquare,
-  Plus,
   GitCommitHorizontal,
+  Clock,
+  Wrench,
 } from "lucide-react";
 
-type ViewMode = "status" | "changes" | "actions";
+type ViewMode = "commit" | "recent" | "actions";
 
 export default function TrayPanelView() {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -39,17 +39,13 @@ export default function TrayPanelView() {
 
   const currentBranch = branches?.find((b) => b.current)?.name || "";
 
-  const [viewMode, setViewMode] = useState<ViewMode>("status");
+  const [viewMode, setViewMode] = useState<ViewMode>("commit");
   const [repoDropdownOpen, setRepoDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [commitMessage, setCommitMessage] = useState("");
   const [committing, setCommitting] = useState(false);
   const [syncLoading, setSyncLoading] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
-
   const [fileSearchQuery, setFileSearchQuery] = useState("");
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
-  const [selectedFileStage, setSelectedFileStage] = useState<"staged" | "unstaged" | null>(null);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -72,9 +68,9 @@ export default function TrayPanelView() {
     staleTime: 10_000,
   });
 
-  const { data: recentCommits, isLoading: isLoadingCommits } = useQuery<Commit[]>({
+  const { data: recentCommits } = useQuery<Commit[]>({
     queryKey: ["git", repoPath, "recent-commits"],
-    queryFn: () => api.log(repoPath!, 0, 3),
+    queryFn: () => api.log(repoPath!, 0, 10),
     enabled: !!repoPath,
     staleTime: 10_000,
   });
@@ -88,12 +84,23 @@ export default function TrayPanelView() {
     })),
   });
 
+  const invalidate = (path?: string) => {
+    const targetPath = path || repoPath;
+    if (targetPath) {
+      queryClient.invalidateQueries({ queryKey: ["git", targetPath] });
+      queryClient.invalidateQueries({ queryKey: ["repo", targetPath] });
+    }
+  };
+
+  const staged = changes?.filter((c) => c.staged) || [];
+  const unstaged = changes?.filter((c) => !c.staged) || [];
+
   const handleCheckoutBranch = async (branchName: string) => {
     if (!repoPath) return;
     try {
       await api.branches.checkout(repoPath, branchName);
       invalidate();
-      showToast(`Switched to branch: ${branchName}`);
+      showToast(`Switched to: ${branchName}`);
     } catch (e: any) {
       showToast(e.message || `Failed to checkout ${branchName}`, "error");
     }
@@ -102,7 +109,7 @@ export default function TrayPanelView() {
   const handleStashPush = async () => {
     if (!repoPath) return;
     try {
-      await api.stash.push(repoPath, `Stash from Tray - ${new Date().toLocaleTimeString()}`, true);
+      await api.stash.push(repoPath, `Tray stash - ${new Date().toLocaleTimeString()}`, true);
       invalidate();
       showToast("Stashed changes");
     } catch (e: any) {
@@ -120,17 +127,6 @@ export default function TrayPanelView() {
       showToast(e.message || String(e), "error");
     }
   };
-
-  const invalidate = (path?: string) => {
-    const targetPath = path || repoPath;
-    if (targetPath) {
-      queryClient.invalidateQueries({ queryKey: ["git", targetPath] });
-      queryClient.invalidateQueries({ queryKey: ["repo", targetPath] });
-    }
-  };
-
-  const staged = changes?.filter((c) => c.staged) || [];
-  const unstaged = changes?.filter((c) => !c.staged) || [];
 
   const handleToggleStage = async (file: FileChange) => {
     if (!repoPath) return;
@@ -233,7 +229,7 @@ export default function TrayPanelView() {
     try {
       await api.window.showMain();
     } catch (e) {
-      console.error("[Tray] Error opening full app:", e);
+      console.error("[Tray] Error:", e);
     }
   };
 
@@ -241,7 +237,7 @@ export default function TrayPanelView() {
     try {
       await api.window.openSettings();
     } catch (e) {
-      console.error("[Tray] Error opening settings:", e);
+      console.error("[Tray] Error:", e);
     }
   };
 
@@ -283,10 +279,10 @@ export default function TrayPanelView() {
     invalidate(path);
   };
 
-  const lastCommit = recentCommits?.[0];
+  const changeCount = changes?.length || 0;
 
   return (
-    <div className="h-[420px] w-[340px] bg-transparent p-0 rounded-[16px] overflow-hidden font-sans">
+    <div className="h-[520px] w-[400px] bg-transparent p-0 rounded-[16px] overflow-hidden font-sans">
       <div className="flex h-full w-full flex-col bg-surface-0 border border-border-60 rounded-[14px] overflow-hidden select-none shadow-2xl relative">
 
         {/* Header */}
@@ -294,41 +290,40 @@ export default function TrayPanelView() {
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setRepoDropdownOpen(!repoDropdownOpen)}
-              className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-surface-2 text-[11px] font-semibold text-text-primary transition-all max-w-[200px]"
+              className="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-surface-2 text-[12px] font-semibold text-text-primary transition-all max-w-[220px]"
             >
-              <FolderOpen size={12} className="text-accent shrink-0" />
+              <FolderOpen size={13} className="text-accent shrink-0" />
               <span className="truncate">{getRepoName(repoPath)}</span>
               <ChevronDown size={10} className={`text-text-muted transition-transform ${repoDropdownOpen ? "rotate-180" : ""}`} />
             </button>
 
             {repoDropdownOpen && (
-              <div className="absolute left-0 mt-1 w-56 bg-surface-1 border border-border-60 rounded-lg shadow-xl z-50 py-1.5">
-                <div className="px-2 pb-1.5 border-b border-border-40 flex items-center gap-1.5">
-                  <Search size={10} className="text-text-muted" />
+              <div className="absolute left-0 mt-1 w-60 bg-surface-1 border border-border-60 rounded-xl shadow-xl z-50 py-1.5">
+                <div className="px-2.5 pb-1.5 border-b border-border-40 flex items-center gap-1.5">
+                  <Search size={11} className="text-text-muted" />
                   <input
                     type="text"
                     placeholder="Search repos..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-transparent text-[10px] text-text-primary outline-none"
+                    className="w-full bg-transparent text-[11px] text-text-primary outline-none"
                     autoFocus
                   />
                 </div>
                 <button
                   onClick={handleOpenRepo}
-                  className="w-full flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-semibold text-accent hover:bg-accent-10 transition-colors border-b border-border-40"
+                  className="w-full flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-accent hover:bg-accent-10 transition-colors border-b border-border-40"
                 >
-                  <Plus size={9} />
                   <span>Open Repo...</span>
                 </button>
-                <div className="max-h-40 overflow-y-auto mt-1">
+                <div className="max-h-44 overflow-y-auto mt-1">
                   {filteredRepos.length === 0 ? (
-                    <div className="px-3 py-2 text-[10px] text-text-muted italic">No repositories found</div>
+                    <div className="px-2.5 py-2 text-[11px] text-text-muted italic">No repositories found</div>
                   ) : (
                     <>
                       {groupedRepos.remote.length > 0 && (
-                        <div className="py-1">
-                          <div className="px-3 py-1 text-[8px] font-bold uppercase tracking-wider text-text-muted flex items-center justify-between">
+                        <div className="py-0.5">
+                          <div className="px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-text-muted flex items-center justify-between">
                             <span>Remote</span>
                             <span>{groupedRepos.remote.length}</span>
                           </div>
@@ -336,17 +331,17 @@ export default function TrayPanelView() {
                             <button
                               key={path}
                               onClick={() => selectRepo(path)}
-                              className={`w-full text-left px-3 py-1.5 text-[10px] hover:bg-accent hover:text-accent-fg transition-colors flex flex-col gap-0.5 ${repoPath === path ? "bg-surface-2 font-semibold" : "text-text-secondary"}`}
+                              className={`w-full text-left px-2.5 py-1.5 text-[11px] hover:bg-accent hover:text-accent-fg transition-colors flex flex-col ${repoPath === path ? "bg-surface-2 font-semibold" : "text-text-secondary"}`}
                             >
                               <span className="font-medium truncate">{path.split("/").pop()}</span>
-                              <span className="text-[8px] opacity-75 truncate">{repoInfoByPath.get(path)?.remote || path}</span>
+                              <span className="text-[9px] opacity-75 truncate">{repoInfoByPath.get(path)?.remote || path}</span>
                             </button>
                           ))}
                         </div>
                       )}
                       {groupedRepos.local.length > 0 && (
-                        <div className="py-1">
-                          <div className="px-3 py-1 text-[8px] font-bold uppercase tracking-wider text-text-muted flex items-center justify-between">
+                        <div className="py-0.5">
+                          <div className="px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-text-muted flex items-center justify-between">
                             <span>Local</span>
                             <span>{groupedRepos.local.length}</span>
                           </div>
@@ -354,10 +349,10 @@ export default function TrayPanelView() {
                             <button
                               key={path}
                               onClick={() => selectRepo(path)}
-                              className={`w-full text-left px-3 py-1.5 text-[10px] hover:bg-accent hover:text-accent-fg transition-colors flex flex-col gap-0.5 ${repoPath === path ? "bg-surface-2 font-semibold" : "text-text-secondary"}`}
+                              className={`w-full text-left px-2.5 py-1.5 text-[11px] hover:bg-accent hover:text-accent-fg transition-colors flex flex-col ${repoPath === path ? "bg-surface-2 font-semibold" : "text-text-secondary"}`}
                             >
                               <span className="font-medium truncate">{path.split("/").pop()}</span>
-                              <span className="text-[8px] opacity-75 truncate">{path}</span>
+                              <span className="text-[9px] opacity-75 truncate">{path}</span>
                             </button>
                           ))}
                         </div>
@@ -372,32 +367,40 @@ export default function TrayPanelView() {
           <div className="flex items-center gap-0.5">
             <button
               onClick={handleOpenSettings}
-              className="p-1.5 rounded hover:bg-surface-2 text-text-muted hover:text-text-primary transition-all"
+              className="p-1.5 rounded-lg hover:bg-surface-2 text-text-muted hover:text-text-primary transition-all"
               title="Settings"
             >
-              <Settings size={12} />
+              <Settings size={13} />
             </button>
             <button
               onClick={handleOpenMainApp}
-              className="p-1.5 rounded hover:bg-surface-2 text-text-muted hover:text-text-primary transition-all"
+              className="p-1.5 rounded-lg hover:bg-surface-2 text-text-muted hover:text-text-primary transition-all"
               title="Open Full App"
             >
-              <ExternalLink size={12} />
+              <ExternalLink size={13} />
             </button>
           </div>
         </div>
 
-        {/* View Mode Tabs */}
+        {/* Tabs */}
         {repoPath && (
-          <div className="px-3 pt-2 pb-1 shrink-0 bg-surface-0">
-            <div className="flex bg-surface-1 p-0.5 rounded border border-border-40">
-              {(["status", "changes", "actions"] as const).map((mode) => (
+          <div className="px-3 pt-2 pb-1.5 shrink-0 bg-surface-0">
+            <div className="flex bg-surface-1 p-0.5 rounded-lg border border-border-40">
+              {([
+                { mode: "commit" as const, icon: <GitCommitHorizontal size={10} />, label: "Commit", badge: changeCount },
+                { mode: "recent" as const, icon: <Clock size={10} />, label: "Recent", badge: null },
+                { mode: "actions" as const, icon: <Wrench size={10} />, label: "Actions", badge: null },
+              ]).map((tab) => (
                 <button
-                  key={mode}
-                  onClick={() => setViewMode(mode)}
-                  className={`flex-1 py-1 text-[10px] font-bold rounded transition-all ${viewMode === mode ? "bg-surface-2 text-accent shadow-sm" : "text-text-muted hover:text-text-primary"}`}
+                  key={tab.mode}
+                  onClick={() => setViewMode(tab.mode)}
+                  className={`flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all flex items-center justify-center gap-1 ${viewMode === tab.mode ? "bg-surface-2 text-accent shadow-sm" : "text-text-muted hover:text-text-primary"}`}
                 >
-                  {mode === "status" ? "Status" : mode === "changes" ? `Changes (${changes?.length || 0})` : "Actions"}
+                  {tab.icon}
+                  {tab.label}
+                  {tab.badge !== null && tab.badge > 0 && (
+                    <span className="ml-0.5 min-w-[14px] h-3.5 px-1 rounded-full bg-accent text-accent-fg text-[7px] font-bold leading-[14px]">{tab.badge}</span>
+                  )}
                 </button>
               ))}
             </div>
@@ -408,187 +411,109 @@ export default function TrayPanelView() {
         <div className="flex-1 overflow-y-auto px-3 py-2 flex flex-col gap-2">
           {repoPath ? (
             <>
-              {/* Status Mode */}
-              {viewMode === "status" && (
-                <div className="flex flex-col gap-2.5">
-                  {/* Branch + Sync Status */}
-                  <div className="flex items-center justify-between px-2.5 py-2 bg-surface-1 rounded border border-border-40">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="text-[11px] font-semibold text-text-primary truncate">{currentBranch || "no branch"}</span>
-                      {syncStatus && (syncStatus.ahead > 0 || syncStatus.behind > 0) && (
-                        <span className="flex items-center gap-1 rounded bg-accent-10 px-1.5 py-0.5 text-[9px] font-bold text-accent">
-                          {syncStatus.ahead > 0 && <span>↑{syncStatus.ahead}</span>}
-                          {syncStatus.behind > 0 && <span>↓{syncStatus.behind}</span>}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[9px] text-text-muted">
-                      {isLoadingStatus ? "..." : `${staged.length} staged · ${unstaged.length} unstaged`}
-                    </span>
-                  </div>
+              {/* Commit Tab: Stage + Commit together */}
+              {viewMode === "commit" && (
+                <>
+                  {/* File list */}
+                  <TrayFileChanges
+                    staged={staged}
+                    unstaged={unstaged}
+                    searchQuery={fileSearchQuery}
+                    setSearchQuery={setFileSearchQuery}
+                    onStage={(path) => {
+                      const file = changes?.find((c) => c.path === path && !c.staged);
+                      if (file) handleToggleStage(file);
+                    }}
+                    onUnstage={(path) => {
+                      const file = changes?.find((c) => c.path === path && c.staged);
+                      if (file) handleToggleStage(file);
+                    }}
+                    onStageAll={handleStageAll}
+                    onUnstageAll={handleUnstageAll}
+                    isLoading={isLoadingStatus}
+                  />
 
-                  {/* Last Commit */}
-                  {lastCommit && (
-                    <div className="px-2.5 py-2 bg-surface-1 rounded border border-border-40">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <GitCommitHorizontal size={10} className="text-text-muted shrink-0" />
-                        <span className="text-[9px] text-text-muted uppercase tracking-wider font-semibold">Last Commit</span>
-                      </div>
-                      <p className="text-[11px] text-text-primary font-medium truncate">{lastCommit.message.split("\n")[0]}</p>
-                      <p className="text-[9px] text-text-muted mt-0.5">
-                        {lastCommit.author} · {formatCommitDate(lastCommit.date)}
-                      </p>
-                    </div>
-                  )}
+                  {/* Commit box */}
+                  <TrayCommitBox
+                    commitMessage={commitMessage}
+                    setCommitMessage={setCommitMessage}
+                    committing={committing}
+                    lintRunning={false}
+                    staged={staged}
+                    unstaged={unstaged}
+                    onCommit={handleCommit}
+                    onGenerateCommit={handleAICommitMessage}
+                    generateCommitPending={generateCommit.isPending}
+                  />
 
-                  {/* Quick Actions */}
+                  {/* Stash row */}
                   <div className="flex gap-1.5">
-                    <button
-                      onClick={handleStageAll}
-                      disabled={unstaged.length === 0}
-                      className="flex-1 h-8 px-2 text-[10px] font-semibold rounded border border-border-40 bg-surface-1 hover:bg-surface-2 text-text-primary transition-all disabled:opacity-40"
-                    >
-                      Stage All
-                    </button>
-                    <button
-                      onClick={handleCommit}
-                      disabled={committing || staged.length === 0 || !commitMessage.trim()}
-                      className="flex-1 h-8 px-2 text-[10px] font-semibold rounded bg-accent text-accent-fg hover:opacity-95 transition-all disabled:opacity-40"
-                    >
-                      {committing ? "Committing..." : "Commit"}
-                    </button>
-                    <button
-                      onClick={() => handleGitAction("push")}
-                      disabled={syncLoading !== null || !syncStatus || syncStatus.ahead === 0}
-                      className="flex-1 h-8 px-2 text-[10px] font-semibold rounded border border-border-40 bg-surface-1 hover:bg-surface-2 text-text-primary transition-all disabled:opacity-40"
-                    >
-                      {syncLoading === "push" ? "..." : "Push"}
-                    </button>
-                  </div>
-
-                  {/* AI + Stash Row */}
-                  <div className="flex gap-1.5">
-                    <button
-                      onClick={handleAICommitMessage}
-                      disabled={staged.length === 0 || generateCommit.isPending}
-                      className="flex-1 h-8 px-2 text-[10px] font-semibold rounded border border-accent/30 bg-accent/5 text-accent hover:bg-accent/10 transition-all disabled:opacity-40 flex items-center justify-center gap-1"
-                    >
-                      {generateCommit.isPending ? (
-                        <Loader2 size={10} className="animate-spin" />
-                      ) : (
-                        <MessageSquare size={10} />
-                      )}
-                      AI Message
-                    </button>
                     <button
                       onClick={handleStashPush}
-                      disabled={stashes !== undefined && stashes.length > 0 ? false : changes?.length === 0}
-                      className="flex-1 h-8 px-2 text-[10px] font-semibold rounded border border-border-40 bg-surface-1 hover:bg-surface-2 text-text-primary transition-all disabled:opacity-40"
+                      disabled={changes?.length === 0}
+                      className="flex-1 h-8 text-[10px] font-semibold rounded-lg border border-border-40 bg-surface-1 hover:bg-surface-2 text-text-primary transition-all disabled:opacity-40 flex items-center justify-center gap-1"
                     >
                       Stash All
                     </button>
                     {stashes && stashes.length > 0 && (
                       <button
                         onClick={handleStashPop}
-                        className="flex-1 h-8 px-2 text-[10px] font-semibold rounded border border-border-40 bg-surface-1 hover:bg-surface-2 text-text-primary transition-all relative"
+                        className="flex-1 h-8 text-[10px] font-semibold rounded-lg border border-border-40 bg-surface-1 hover:bg-surface-2 text-text-primary transition-all relative flex items-center justify-center gap-1"
                       >
                         Pop Stash
-                        <span className="absolute -top-1 -right-1 min-w-[14px] rounded bg-accent px-1 py-0.5 text-[7px] font-bold leading-none text-accent-fg">
+                        <span className="absolute -top-1 -right-1 min-w-[14px] rounded-full bg-accent px-1 py-0.5 text-[7px] font-bold leading-none text-accent-fg">
                           {stashes.length}
                         </span>
                       </button>
                     )}
                   </div>
+                </>
+              )}
 
-                  {/* Commit box — only show when staged + message started */}
-                  {staged.length > 0 && (
-                    <TrayCommitBox
-                      commitMessage={commitMessage}
-                      setCommitMessage={setCommitMessage}
-                      committing={committing}
-                      lintRunning={false}
-                      staged={staged}
-                      unstaged={unstaged}
-                      onCommit={handleCommit}
-                      onGenerateCommit={handleAICommitMessage}
-                      generateCommitPending={generateCommit.isPending}
-                    />
-                  )}
-
-                  {/* Recent commits */}
-                  {recentCommits && recentCommits.length > 0 && (
-                    <div className="rounded border border-border-40 bg-surface-1 overflow-hidden">
-                      <div className="px-2.5 py-1.5 border-b border-border-40 flex items-center justify-between">
-                        <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider">Recent</span>
-                        <span className="text-[8px] text-text-muted">Click to copy hash</span>
-                      </div>
-                      <div className="divide-y divide-border-40">
-                        {recentCommits.map((commit) => (
-                          <button
-                            key={commit.hash}
-                            onClick={async () => {
-                              await navigator.clipboard.writeText(commit.hash);
-                              showToast("Hash copied");
-                            }}
-                            className="w-full text-left px-2.5 py-1.5 hover:bg-surface-2 transition-colors"
-                          >
-                            <p className="text-[10px] text-text-primary font-medium truncate">{commit.message.split("\n")[0]}</p>
-                            <p className="text-[8px] text-text-muted mt-0.5 flex items-center gap-1.5">
-                              <span>{commit.author}</span>
-                              <span>·</span>
-                              <span>{formatCommitDate(commit.date)}</span>
-                              <span className="font-mono bg-accent-10 border border-accent-20 px-1 rounded text-accent">{commit.hash.slice(0, 7)}</span>
-                            </p>
-                          </button>
-                        ))}
-                      </div>
+              {/* Recent Tab */}
+              {viewMode === "recent" && (
+                <div className="flex flex-col gap-1">
+                  {recentCommits && recentCommits.length > 0 ? (
+                    recentCommits.map((commit) => (
+                      <button
+                        key={commit.hash}
+                        onClick={async () => {
+                          await navigator.clipboard.writeText(commit.hash);
+                          showToast("Hash copied");
+                        }}
+                        className="w-full text-left px-2.5 py-2 hover:bg-surface-2 rounded-lg transition-colors border border-transparent hover:border-border-40"
+                      >
+                        <p className="text-[11px] text-text-primary font-medium truncate">{commit.message.split("\n")[0]}</p>
+                        <p className="text-[9px] text-text-muted mt-0.5 flex items-center gap-1.5">
+                          <span>{commit.author}</span>
+                          <span>·</span>
+                          <span>{formatCommitDate(commit.date)}</span>
+                          <span className="font-mono bg-accent-10 border border-accent-20 px-1 py-0.5 rounded text-accent">{commit.hash.slice(0, 7)}</span>
+                        </p>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-10 text-text-muted gap-2">
+                      <Clock size={18} className="text-text-muted" />
+                      <span className="text-[11px]">No commits found</span>
                     </div>
                   )}
                 </div>
               )}
 
-              {/* Changes Mode */}
-              {viewMode === "changes" && (
-                <TrayFileChanges
-                  staged={staged}
-                  unstaged={unstaged}
-                  searchQuery={fileSearchQuery}
-                  setSearchQuery={setFileSearchQuery}
-                  onStage={(path) => {
-                    const file = changes?.find((c) => c.path === path && !c.staged);
-                    if (file) handleToggleStage(file);
-                  }}
-                  onUnstage={(path) => {
-                    const file = changes?.find((c) => c.path === path && c.staged);
-                    if (file) handleToggleStage(file);
-                  }}
-                  onStageAll={handleStageAll}
-                  onUnstageAll={handleUnstageAll}
-                  selectedFile={selectedFile}
-                  selectedFileStage={selectedFileStage}
-                  onSelectFile={(path, stage) => {
-                    setSelectedFile(path);
-                    setSelectedFileStage(stage);
-                  }}
-                  isLoading={isLoadingStatus}
-                />
-              )}
-
-              {/* Actions Mode */}
+              {/* Actions Tab */}
               {viewMode === "actions" && (
-                <div className="flex flex-col gap-2">
-                  <TrayActions
-                    currentBranch={currentBranch}
-                    branches={branches || []}
-                    syncStatus={syncStatus}
-                    syncLoading={syncLoading}
-                    refreshing={refreshing}
-                    onFetch={() => handleGitAction("fetch")}
-                    onPull={() => handleGitAction("pull")}
-                    onPush={() => handleGitAction("push")}
-                    onCheckoutBranch={handleCheckoutBranch}
-                  />
-                </div>
+                <TrayActions
+                  currentBranch={currentBranch}
+                  branches={branches || []}
+                  syncStatus={syncStatus}
+                  syncLoading={syncLoading}
+                  refreshing={false}
+                  onFetch={() => handleGitAction("fetch")}
+                  onPull={() => handleGitAction("pull")}
+                  onPush={() => handleGitAction("push")}
+                  onCheckoutBranch={handleCheckoutBranch}
+                />
               )}
             </>
           ) : (
@@ -598,7 +523,7 @@ export default function TrayPanelView() {
                 <FolderOpen size={18} className="text-accent" />
               </div>
               <div className="space-y-1">
-                <div className="text-[11px] font-semibold text-text-primary">No repository open</div>
+                <div className="text-[12px] font-semibold text-text-primary">No repository open</div>
                 <div className="text-[10px] leading-relaxed text-text-muted">
                   Open the main app or pick a recent repository.
                 </div>
@@ -606,19 +531,19 @@ export default function TrayPanelView() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleOpenRepo}
-                  className="h-7 px-3 rounded bg-accent text-accent-fg text-[10px] font-bold transition-all hover:opacity-95"
+                  className="h-8 px-3 rounded-lg bg-accent text-accent-fg text-[10px] font-bold transition-all hover:opacity-95"
                 >
                   Open Repo
                 </button>
                 <button
                   onClick={handleOpenMainApp}
-                  className="h-7 px-3 rounded border border-border-40 bg-surface-1 text-[10px] font-bold text-text-primary transition-all hover:bg-surface-2"
+                  className="h-8 px-3 rounded-lg border border-border-40 bg-surface-1 text-[10px] font-bold text-text-primary transition-all hover:bg-surface-2"
                 >
                   Open App
                 </button>
               </div>
               {recentRepos.length > 0 && (
-                <div className="mt-1 w-full max-w-[220px] overflow-hidden rounded border border-border-40 bg-surface-1 text-left">
+                <div className="mt-1 w-full max-w-[240px] overflow-hidden rounded-lg border border-border-40 bg-surface-1 text-left">
                   {recentRepos.slice(0, 4).map((path) => (
                     <button
                       key={path}
@@ -640,7 +565,7 @@ export default function TrayPanelView() {
         {repoPath && (
           <div className="h-10 border-t border-border-60 bg-surface-1 flex items-center justify-between px-3 shrink-0">
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-[10px] font-semibold text-text-primary truncate max-w-[100px]">{currentBranch}</span>
+              <span className="text-[10px] font-semibold text-text-primary truncate max-w-[110px]">{currentBranch}</span>
               {syncStatus && (syncStatus.ahead > 0 || syncStatus.behind > 0) && (
                 <span className="flex items-center gap-1 text-[8px] text-text-muted">
                   {syncStatus.ahead > 0 && <span className="text-[#30d158]">↑{syncStatus.ahead}</span>}
@@ -652,16 +577,16 @@ export default function TrayPanelView() {
               <button
                 onClick={() => handleGitAction("pull")}
                 disabled={syncLoading !== null}
-                className="h-7 px-2.5 text-[9px] font-semibold rounded border border-border-40 bg-surface-2 hover:bg-surface-3 text-text-primary transition-all disabled:opacity-50 flex items-center gap-1"
+                className="h-7 px-2.5 text-[9px] font-semibold rounded-md border border-border-40 bg-surface-2 hover:bg-surface-3 text-text-primary transition-all disabled:opacity-50 flex items-center gap-1"
               >
-                {syncLoading === "pull" ? <Loader2 size={10} className="animate-spin" /> : "↓ Pull"}
+                {syncLoading === "pull" ? <Loader2 size={9} className="animate-spin" /> : "↓ Pull"}
               </button>
               <button
                 onClick={() => handleGitAction("push")}
                 disabled={syncLoading !== null}
-                className="h-7 px-2.5 text-[9px] font-semibold rounded border border-border-40 bg-surface-2 hover:bg-surface-3 text-text-primary transition-all disabled:opacity-50 flex items-center gap-1"
+                className="h-7 px-2.5 text-[9px] font-semibold rounded-md border border-border-40 bg-surface-2 hover:bg-surface-3 text-text-primary transition-all disabled:opacity-50 flex items-center gap-1"
               >
-                {syncLoading === "push" ? <Loader2 size={10} className="animate-spin" /> : "↑ Push"}
+                {syncLoading === "push" ? <Loader2 size={9} className="animate-spin" /> : "↑ Push"}
               </button>
             </div>
           </div>

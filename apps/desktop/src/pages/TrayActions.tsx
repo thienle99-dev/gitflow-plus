@@ -1,12 +1,11 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import {
   GitBranch,
-  ChevronUp,
+  ChevronDown,
   RefreshCw,
   Download,
   Upload,
   Loader2,
-  Check,
   Search,
 } from "lucide-react";
 import type { Branch, SyncStatus } from "@/api/tauri";
@@ -28,7 +27,6 @@ export function TrayActions({
   branches,
   syncStatus,
   syncLoading,
-  refreshing,
   onFetch,
   onPull,
   onPush,
@@ -39,7 +37,6 @@ export function TrayActions({
   const [checkingOutBranch, setCheckingOutBranch] = useState<string | null>(null);
   const branchDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown on click outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (branchDropdownRef.current && !branchDropdownRef.current.contains(event.target as Node)) {
@@ -68,10 +65,7 @@ export function TrayActions({
         }
         return groups;
       },
-      {
-        local: [] as Branch[],
-        remote: [] as Branch[],
-      }
+      { local: [] as Branch[], remote: [] as Branch[] }
     );
   }, [filteredBranches]);
 
@@ -86,138 +80,149 @@ export function TrayActions({
     }
   };
 
-  const renderBranchItem = (branchItem: Branch) => (
-    <button
-      key={`${branchItem.remote || "local"}:${branchItem.name}`}
-      onClick={() => handleCheckout(branchItem.name)}
-      disabled={checkingOutBranch !== null}
-      className={`w-full text-left px-3 py-1.5 text-[9px] hover:bg-accent hover:text-accent-fg transition-colors flex items-center justify-between gap-1.5 ${
-        branchItem.current
-          ? "bg-surface-2 font-semibold text-accent"
-          : "text-text-secondary"
-      }`}
-    >
-      <span className="truncate flex-1">{branchItem.name}</span>
-      {checkingOutBranch === branchItem.name ? (
-        <Loader2 size={9} className="animate-spin text-accent" />
-      ) : branchItem.current ? (
-        <Check size={9} className="text-accent" />
-      ) : null}
-    </button>
-  );
-
-  const renderBranchGroup = (label: string, branchItems: Branch[]) => {
-    if (branchItems.length === 0) return null;
-    return (
-      <div className="py-1">
-        <div className="px-3 py-1 text-[8px] font-bold uppercase tracking-wider text-text-muted-80 flex items-center justify-between">
-          <span>{label}</span>
-          <span>{branchItems.length}</span>
-        </div>
-        {branchItems.map(renderBranchItem)}
-      </div>
-    );
-  };
+  const localBranches = groupedBranches.local.filter((b) => !b.current);
 
   return (
-    <div className="h-12 border-t border-border-60 bg-surface-1 flex items-center justify-between px-3.5 shrink-0 relative">
+    <div className="flex flex-col gap-2">
       {/* Branch Switcher */}
-      <div className="relative min-w-0" ref={branchDropdownRef}>
-        <button
-          onClick={() => setBranchDropdownOpen(!branchDropdownOpen)}
-          className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-surface-2 text-[10px] font-semibold text-text-primary transition-all max-w-[145px]"
-        >
-          <GitBranch size={11} className="text-accent shrink-0" />
-          <span className="truncate">{currentBranch || "no branch"}</span>
-          {syncStatus && (syncStatus.ahead > 0 || syncStatus.behind > 0) && (
-            <span
-              className="flex items-center gap-1 rounded bg-accent-10 px-1 py-0.5 text-[8px] font-bold text-accent shrink-0"
-              title={`${syncStatus.ahead} ahead, ${syncStatus.behind} behind`}
-            >
-              {syncStatus.ahead > 0 && <span>↑{syncStatus.ahead}</span>}
-              {syncStatus.behind > 0 && <span>↓{syncStatus.behind}</span>}
-            </span>
-          )}
-          <ChevronUp size={10} className="text-text-muted shrink-0" />
-        </button>
-
-        {branchDropdownOpen && (
-          <div className="absolute left-0 bottom-full mb-1 w-56 bg-surface-1 border border-border-60 rounded-mac shadow-xl z-50 py-1.5 anim-palette-enter">
-            <div className="px-2 pb-1.5 border-b border-border-40 flex items-center gap-1.5">
-              <Search size={10} className="text-text-muted" />
-              <input
-                type="text"
-                placeholder="Search branches..."
-                value={branchSearchQuery}
-                onChange={(e) => setBranchSearchQuery(e.target.value)}
-                className="w-full bg-transparent text-[9px] text-text-primary outline-none"
-                autoFocus
-              />
-            </div>
-            <div className="max-h-40 overflow-y-auto mt-1">
-              {filteredBranches.length === 0 ? (
-                <div className="px-3 py-2 text-[9px] text-text-muted italic">
-                  No branches found
-                </div>
-              ) : (
-                <>
-                  {renderBranchGroup("Local", groupedBranches.local)}
-                  {renderBranchGroup("Remote", groupedBranches.remote)}
-                </>
+      <div className="border border-border-40 bg-surface-1 rounded-lg overflow-hidden">
+        <div className="px-2.5 py-1.5 border-b border-border-40">
+          <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider">Branch</span>
+        </div>
+        <div className="relative" ref={branchDropdownRef}>
+          <button
+            onClick={() => setBranchDropdownOpen(!branchDropdownOpen)}
+            className="w-full flex items-center justify-between gap-1.5 px-2.5 py-2 text-[11px] font-semibold text-text-primary hover:bg-surface-2 transition-colors"
+          >
+            <div className="flex items-center gap-1.5 min-w-0">
+              <GitBranch size={12} className="text-accent shrink-0" />
+              <span className="truncate">{currentBranch || "no branch"}</span>
+              {syncStatus && (syncStatus.ahead > 0 || syncStatus.behind > 0) && (
+                <span className="flex items-center gap-1 rounded-md bg-accent-10 px-1.5 py-0.5 text-[8px] font-bold text-accent">
+                  {syncStatus.ahead > 0 && <span>↑{syncStatus.ahead}</span>}
+                  {syncStatus.behind > 0 && <span>↓{syncStatus.behind}</span>}
+                </span>
               )}
             </div>
-          </div>
-        )}
+            <ChevronDown size={10} className={`text-text-muted transition-transform ${branchDropdownOpen ? "rotate-180" : ""}`} />
+          </button>
+
+          {branchDropdownOpen && (
+            <div className="border-t border-border-40">
+              <div className="px-2.5 py-1.5 border-b border-border-40 flex items-center gap-1.5">
+                <Search size={10} className="text-text-muted" />
+                <input
+                  type="text"
+                  placeholder="Search branches..."
+                  value={branchSearchQuery}
+                  onChange={(e) => setBranchSearchQuery(e.target.value)}
+                  className="w-full bg-transparent text-[10px] text-text-primary outline-none"
+                  autoFocus
+                />
+              </div>
+              <div className="max-h-40 overflow-y-auto">
+                {localBranches.length > 0 && (
+                  <div className="py-0.5">
+                    <div className="px-2.5 py-1 text-[8px] font-bold uppercase tracking-wider text-text-muted">
+                      Local ({localBranches.length})
+                    </div>
+                    {localBranches.map((branchItem) => (
+                      <button
+                        key={branchItem.name}
+                        onClick={() => handleCheckout(branchItem.name)}
+                        disabled={checkingOutBranch !== null}
+                        className="w-full text-left px-2.5 py-1.5 text-[10px] hover:bg-accent hover:text-accent-fg transition-colors flex items-center justify-between"
+                      >
+                        <span className="truncate">{branchItem.name}</span>
+                        {checkingOutBranch === branchItem.name && (
+                          <Loader2 size={9} className="animate-spin text-accent" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {groupedBranches.remote.length > 0 && (
+                  <div className="py-0.5 border-t border-border-40">
+                    <div className="px-2.5 py-1 text-[8px] font-bold uppercase tracking-wider text-text-muted">
+                      Remote ({groupedBranches.remote.length})
+                    </div>
+                    {groupedBranches.remote.slice(0, 5).map((branchItem) => (
+                      <button
+                        key={branchItem.name}
+                        onClick={() => handleCheckout(branchItem.name)}
+                        disabled={checkingOutBranch !== null}
+                        className="w-full text-left px-2.5 py-1.5 text-[10px] hover:bg-accent hover:text-accent-fg transition-colors flex items-center justify-between text-text-secondary"
+                      >
+                        <span className="truncate">{branchItem.name.replace("origin/", "")}</span>
+                        {checkingOutBranch === branchItem.name && (
+                          <Loader2 size={9} className="animate-spin text-accent" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {filteredBranches.length === 0 && (
+                  <div className="px-2.5 py-2 text-[10px] text-text-muted italic">No branches found</div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Fetch / Pull / Push */}
-      <div className="flex items-center gap-1.5">
-        <button
-          onClick={onFetch}
-          disabled={syncLoading !== null}
-          className="h-8 w-8 bg-surface-2 hover:bg-surface-3 text-text-primary rounded border border-border-40 transition-all flex items-center justify-center cursor-pointer disabled:opacity-50"
-          title="Fetch remote changes"
-        >
-          {syncLoading === "fetch" ? (
-            <Loader2 size={13} className="animate-spin" />
-          ) : (
-            <RefreshCw size={13} />
-          )}
-        </button>
-        <button
-          onClick={onPull}
-          disabled={syncLoading !== null}
-          className="relative h-8 w-8 bg-surface-2 hover:bg-surface-3 text-text-primary rounded border border-border-40 transition-all flex items-center justify-center cursor-pointer disabled:opacity-50"
-          title="Pull remote changes"
-        >
-          {syncLoading === "pull" ? (
-            <Loader2 size={13} className="animate-spin" />
-          ) : (
-            <Download size={13} />
-          )}
-          {!!syncStatus?.behind && (
-            <span className="absolute -right-1 -top-1 min-w-[15px] rounded bg-[#0a84ff] px-1 py-0.5 text-[8px] font-bold leading-none text-white shadow-sm">
-              {syncStatus.behind}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={onPush}
-          disabled={syncLoading !== null}
-          className="relative h-8 w-8 bg-surface-2 hover:bg-surface-3 text-text-primary rounded border border-border-40 transition-all flex items-center justify-center cursor-pointer disabled:opacity-50"
-          title="Push local commits"
-        >
-          {syncLoading === "push" ? (
-            <Loader2 size={13} className="animate-spin" />
-          ) : (
-            <Upload size={13} />
-          )}
-          {!!syncStatus?.ahead && (
-            <span className="absolute -right-1 -top-1 min-w-[15px] rounded bg-[#30d158] px-1 py-0.5 text-[8px] font-bold leading-none text-white shadow-sm">
-              {syncStatus.ahead}
-            </span>
-          )}
-        </button>
+      {/* Sync Actions */}
+      <div className="border border-border-40 bg-surface-1 rounded-lg overflow-hidden">
+        <div className="px-2.5 py-1.5 border-b border-border-40">
+          <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider">Sync</span>
+        </div>
+        <div className="grid grid-cols-3 gap-1.5 p-2">
+          <button
+            onClick={onFetch}
+            disabled={syncLoading !== null}
+            className="h-10 flex flex-col items-center justify-center gap-0.5 rounded-lg border border-border-40 bg-surface-2 hover:bg-surface-3 text-text-primary transition-all disabled:opacity-50"
+          >
+            {syncLoading === "fetch" ? (
+              <Loader2 size={12} className="animate-spin" />
+            ) : (
+              <RefreshCw size={12} />
+            )}
+            <span className="text-[8px] font-semibold">Fetch</span>
+          </button>
+          <button
+            onClick={onPull}
+            disabled={syncLoading !== null}
+            className="h-10 flex flex-col items-center justify-center gap-0.5 rounded-lg border border-border-40 bg-surface-2 hover:bg-surface-3 text-text-primary transition-all disabled:opacity-50 relative"
+          >
+            {syncLoading === "pull" ? (
+              <Loader2 size={12} className="animate-spin" />
+            ) : (
+              <Download size={12} />
+            )}
+            <span className="text-[8px] font-semibold">Pull</span>
+            {!!syncStatus?.behind && (
+              <span className="absolute -right-1 -top-1 min-w-[14px] rounded-full bg-[#0a84ff] px-1 py-0.5 text-[7px] font-bold leading-none text-white shadow-sm">
+                {syncStatus.behind}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={onPush}
+            disabled={syncLoading !== null}
+            className="h-10 flex flex-col items-center justify-center gap-0.5 rounded-lg border border-border-40 bg-surface-2 hover:bg-surface-3 text-text-primary transition-all disabled:opacity-50 relative"
+          >
+            {syncLoading === "push" ? (
+              <Loader2 size={12} className="animate-spin" />
+            ) : (
+              <Upload size={12} />
+            )}
+            <span className="text-[8px] font-semibold">Push</span>
+            {!!syncStatus?.ahead && (
+              <span className="absolute -right-1 -top-1 min-w-[14px] rounded-full bg-[#30d158] px-1 py-0.5 text-[7px] font-bold leading-none text-white shadow-sm">
+                {syncStatus.ahead}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

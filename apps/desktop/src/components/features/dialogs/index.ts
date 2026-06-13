@@ -16,5 +16,7 @@ export { default as RiskSummaryDialog } from "./RiskSummaryDialog";
 export { default as BranchCompareDialog } from "./BranchCompareDialog";
 export { default as HealthCheckDialog } from "./HealthCheckDialog";
 export { default as DiagnosticDialog } from "./DiagnosticDialog";
+export { default as GitHooksManager } from "./GitHooksManager";
+export { default as GitCommandAssistant } from "./GitCommandAssistant";
 export { isOnboardingComplete, resetOnboarding } from "./OnboardingWizard";
 export { default as CommandPalette } from "./CommandPalette";

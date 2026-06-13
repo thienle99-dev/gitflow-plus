@@ -10,6 +10,7 @@ pub mod commit;
 pub mod diff;
 pub mod gitflow;
 pub mod health;
+pub mod hooks;
 pub mod lfs;
 pub mod lint;
 pub mod log;

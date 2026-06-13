@@ -236,12 +236,21 @@ export interface ReflogEntry {
 }
 
 export interface BisectStatus {
-  running: boolean;
-  current_commit: string | null;
-  remaining: number | null;
-  step: number | null;
-  log: string[];
-  first_bad: string | null;
+  status: string;
+  current?: string;
+  bad?: string;
+  good?: string;
+  skip?: string;
+  steps_left?: number;
+  diff?: string;
+}
+
+export interface GitHook {
+  name: string;
+  path: string;
+  exists: boolean;
+  executable: boolean;
+  content: string | null;
 }
 
 export interface LintDiagnostic {
@@ -656,5 +665,18 @@ export const api = {
       invoke<string>("bisect_reset", { path }),
     candidateDiff: (path: string) =>
       invoke<string>("bisect_candidate_diff", { path }),
+  },
+
+  hooks: {
+    list: (path: string) =>
+      invoke<GitHook[]>("list_hooks", { repo_path: path }),
+    enable: (path: string, hookName: string) =>
+      invoke<void>("enable_hook", { repo_path: path, hook_name: hookName }),
+    disable: (path: string, hookName: string) =>
+      invoke<void>("disable_hook", { repo_path: path, hook_name: hookName }),
+    save: (path: string, hookName: string, content: string) =>
+      invoke<void>("save_hook", { repo_path: path, hook_name: hookName, content }),
+    delete: (path: string, hookName: string) =>
+      invoke<void>("delete_hook", { repo_path: path, hook_name: hookName }),
   },
 };

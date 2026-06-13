@@ -187,8 +187,8 @@ pub fn run() {
                                     tauri::Size::Logical(l) => (l.width, l.height),
                                 };
 
-                                let window_width = 340.0;
-                                let window_height = 420.0;
+                                let window_width = 400.0;
+                                let window_height = 520.0;
                                 let x = pos_x + (size_w / 2.0) - (window_width / 2.0);
                                 let y = if pos_y > 500.0 {
                                     pos_y - window_height
@@ -354,6 +354,11 @@ pub fn run() {
             commands::gitflow::gitflow_release_finish,
             commands::gitflow::gitflow_hotfix_start,
             commands::gitflow::gitflow_hotfix_finish,
+            commands::hooks::list_hooks,
+            commands::hooks::enable_hook,
+            commands::hooks::disable_hook,
+            commands::hooks::save_hook,
+            commands::hooks::delete_hook,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

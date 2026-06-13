@@ -3320,3 +3320,236 @@ export async function analyzeBisectCandidate(
     return { verdict: "needs-review", reason: response.slice(0, 200), confidence: "low" };
   }
 }
+
+// ─── AI Release Notes ─────────────────────────────────────────────────────
+
+export interface ReleaseNoteSection {
+  title: string;
+  items: string[];
+}
+
+export interface ReleaseNotesResult {
+  title: string;
+  sections: ReleaseNoteSection[];
+  breakingChanges: string[];
+  summary: string;
+}
+
+/**
+ * Generate release notes from a list of commits and optional tags.
+ * Groups commits by type (feat, fix, etc.) and identifies breaking changes.
+ */
+export async function generateReleaseNotes(
+  repoPath: string,
+  commits: Array<{ hash: string; message: string; author: string; date: string }>,
+  fromTag?: string,
+  toTag?: string,
+): Promise<ReleaseNotesResult> {
+  const settings = readAISettings();
+  if (!hasProvider(settings)) {
+    return generateLocalReleaseNotes(commits, fromTag, toTag);
+  }
+
+  const conventionContext = await getConventionContext(repoPath);
+  const languageInstruction = buildReviewLanguageInstruction(settings.reviewLanguage);
+
+  const commitList = commits.map((c) => {
+    const shortHash = c.hash.slice(0, 7);
+    return `- ${shortHash} ${c.message} (${c.author})`;
+  }).join("\n");
+
+  const versionRange = fromTag && toTag
+    ? `${fromTag} → ${toTag}`
+    : toTag || fromTag || "latest";
+
+  const prompt = `You are a release notes generator. Analyze the commits below and generate structured release notes.
+
+RULES:
+1. Group commits by type: Features, Bug Fixes, Performance, Refactoring, Documentation, Tests, CI/CD, Breaking Changes
+2. Only include sections that have commits
+3. Identify breaking changes from commit messages (BREAKING CHANGE, !, or major version bumps)
+4. Write a brief summary of the release
+5. Use bullet points for each change
+6. Reference commit hashes where relevant
+7. Be concise but informative
+
+VERSION RANGE: ${versionRange}
+TOTAL COMMITS: ${commits.length}
+
+COMMITS:
+${commitList}
+${languageInstruction}${conventionContext}
+
+Return ONLY valid JSON. No markdown fences, no wrapping.
+Example:
+{
+  "title": "Release v1.2.0",
+  "sections": [
+    { "title": "Features", "items": ["Added user authentication (abc1234)", "Implemented dark mode (def5678)"] },
+    { "title": "Bug Fixes", "items": ["Fixed login redirect loop (ghi9012)"] }
+  ],
+  "breakingChanges": ["Changed API response format"],
+  "summary": "This release adds authentication and dark mode while fixing critical login issues."
+}`;
+
+  const raw = cleanAIText(await requestAIText(prompt, withReviewModel(settings)));
+  if (!raw) {
+    return generateLocalReleaseNotes(commits, fromTag, toTag);
+  }
+
+  let jsonStr = raw;
+  const fenceMatch = jsonStr.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
+  if (fenceMatch) jsonStr = fenceMatch[1].trim();
+  const objMatch = jsonStr.match(/\{[\s\S]*\}/);
+  if (objMatch) jsonStr = objMatch[0];
+
+  try {
+    const parsed = JSON.parse(jsonStr);
+    if (parsed.title && Array.isArray(parsed.sections)) {
+      return {
+        title: String(parsed.title),
+        sections: parsed.sections
+          .filter((s: any) => s.title && Array.isArray(s.items))
+          .map((s: any) => ({
+            title: String(s.title),
+            items: s.items.map((i: any) => String(i)),
+          })),
+        breakingChanges: Array.isArray(parsed.breakingChanges)
+          ? parsed.breakingChanges.map((b: any) => String(b))
+          : [],
+        summary: String(parsed.summary || ""),
+      };
+    }
+  } catch {
+    // JSON parse failed
+  }
+
+  return generateLocalReleaseNotes(commits, fromTag, toTag);
+}
+
+function generateLocalReleaseNotes(
+  commits: Array<{ hash: string; message: string; author: string }>,
+  fromTag?: string,
+  toTag?: string,
+): ReleaseNotesResult {
+  const sections: ReleaseNoteSection[] = [];
+  const breakingChanges: string[] = [];
+
+  const featCommits: string[] = [];
+  const fixCommits: string[] = [];
+  const otherCommits: string[] = [];
+
+  for (const commit of commits) {
+    const shortHash = commit.hash.slice(0, 7);
+    const msg = commit.message;
+    const bullet = `${msg} (${shortHash})`;
+
+    if (/^(feat|feature)[\s:(]/i.test(msg)) {
+      featCommits.push(bullet);
+    } else if (/^fix[\s:(]/i.test(msg)) {
+      fixCommits.push(bullet);
+    } else if (/BREAKING[ -]CHANGE|!:/i.test(msg)) {
+      breakingChanges.push(bullet);
+    } else {
+      otherCommits.push(bullet);
+    }
+  }
+
+  if (featCommits.length > 0) {
+    sections.push({ title: "Features", items: featCommits });
+  }
+  if (fixCommits.length > 0) {
+    sections.push({ title: "Bug Fixes", items: fixCommits });
+  }
+  if (otherCommits.length > 0) {
+    sections.push({ title: "Other Changes", items: otherCommits });
+  }
+
+  const versionRange = fromTag && toTag ? `${fromTag} → ${toTag}` : toTag || fromTag || "latest";
+
+  return {
+    title: `Release ${versionRange}`,
+    sections,
+    breakingChanges,
+    summary: `${commits.length} commits in this release.`,
+  };
+}
+
+// ─── AI Git Command Assistant ──────────────────────────────────────────────
+
+export interface GitCommandSuggestion {
+  command: string;
+  description: string;
+  safety: "safe" | "caution" | "dangerous";
+  warning?: string;
+}
+
+/**
+ * Convert natural language intent into safe git command suggestions.
+ */
+export async function suggestGitCommand(
+  repoPath: string,
+  intent: string,
+): Promise<GitCommandSuggestion[]> {
+  const settings = readAISettings();
+  if (!hasProvider(settings)) {
+    return [{ command: "", description: "Configure AI API key to use this feature", safety: "safe" }];
+  }
+
+  const branchName = await getCurrentBranchName(repoPath);
+  const branchContext = branchName ? `Current branch: ${branchName}\n` : "";
+
+  const prompt = `You are a Git command expert. Convert the user's natural language intent into safe git commands.
+
+RULES:
+1. Return a JSON array of 1-3 command suggestions, ordered from most to least relevant
+2. Each suggestion must have "command", "description", "safety", and optionally "warning"
+3. Safety levels:
+   - "safe": read-only or easily reversible (status, log, diff, fetch, branch -a)
+   - "caution": modifies local state but reversible (commit, checkout, stash, merge)
+   - "dangerous": modifies remote or hard to reverse (push, force-push, reset --hard, clean, rebase)
+4. For dangerous commands, include a "warning" explaining the risk
+5. Use proper git syntax with correct flags
+6. If the intent is ambiguous, provide the most common interpretation
+7. Always prefer safe alternatives when possible
+
+USER INTENT: ${intent}
+${branchContext}
+
+Return ONLY valid JSON array. No markdown fences, no wrapping.
+Example:
+[
+  {"command": "git status", "description": "Shows working tree status", "safety": "safe"},
+  {"command": "git log --oneline -10", "description": "Shows last 10 commits", "safety": "safe"}
+]`;
+
+  const raw = cleanAIText(await requestAIText(prompt, withReviewModel(settings)));
+  if (!raw) {
+    return [{ command: "git status", description: "Shows working tree status (fallback)", safety: "safe" }];
+  }
+
+  let jsonStr = raw;
+  const fenceMatch = jsonStr.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
+  if (fenceMatch) jsonStr = fenceMatch[1].trim();
+  const arrayMatch = jsonStr.match(/\[[\s\S]*\]/);
+  if (arrayMatch) jsonStr = arrayMatch[0];
+
+  try {
+    const parsed = JSON.parse(jsonStr);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed
+        .filter((item: any) => typeof item.command === "string" && typeof item.description === "string")
+        .slice(0, 3)
+        .map((item: any) => ({
+          command: String(item.command),
+          description: String(item.description),
+          safety: ["safe", "caution", "dangerous"].includes(item.safety) ? item.safety : "safe",
+          warning: item.warning ? String(item.warning) : undefined,
+        }));
+    }
+  } catch {
+    // JSON parse failed
+  }
+
+  return [{ command: "git status", description: "Shows working tree status (fallback)", safety: "safe" }];
+}

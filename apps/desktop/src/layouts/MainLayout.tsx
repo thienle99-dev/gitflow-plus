@@ -47,6 +47,8 @@ const ResetDialog = lazy(() => import("@/components/features/dialogs/ResetDialog
 const RemoteManager = lazy(() => import("@/components/features/dialogs/RemoteManager"));
 const BisectDialog = lazy(() => import("@/components/features/dialogs/BisectDialog"));
 const CreateReleaseDialog = lazy(() => import("@/components/features/dialogs/CreateReleaseDialog"));
+const GitHooksManager = lazy(() => import("@/components/features/dialogs/GitHooksManager"));
+const GitCommandAssistant = lazy(() => import("@/components/features/dialogs/GitCommandAssistant"));
 
 export default function MainLayout() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
@@ -359,6 +361,8 @@ export default function MainLayout() {
     "remote-manager": <RemoteManager open={true} onClose={closeDialog} />,
     "bisect": <BisectDialog open={true} onClose={closeDialog} />,
     "create-release": <CreateReleaseDialog open={true} onClose={closeDialog} />,
+    "git-hooks": <GitHooksManager open={true} onClose={closeDialog} />,
+    "git-command-assistant": <GitCommandAssistant open={true} onClose={closeDialog} />,
   }), [closeDialog, selectedCommit, mergeTargetBranch, compareBranchTarget, selectedRef, rebaseTargetCommit]);
 
   const dialogOverlay = overlayDialog ? (

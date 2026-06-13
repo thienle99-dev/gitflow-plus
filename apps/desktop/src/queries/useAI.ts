@@ -16,6 +16,8 @@ import {
   type PRDraft,
   type GeneratedTagDescription,
   type GuardrailFinding,
+  type ReleaseNotesResult,
+  type GitCommandSuggestion,
   reviewLintIssuesWithAI,
   generateCommitMessageWithAI,
   generateTagDescriptionWithAI,
@@ -39,6 +41,8 @@ import {
   runCommitCoach,
   summarizeBranchComparison,
   generatePRDraft,
+  generateReleaseNotes,
+  suggestGitCommand,
 } from "@/lib/ai";
 import type { CommitLintResult } from "@/lib/commit-lint";
 
@@ -356,6 +360,30 @@ export function useAIPRDraft(repoPath: string | null) {
     mutationFn: ({ branchName, staged, commitMessage }) => {
       if (!repoPath) throw new Error("No repository selected");
       return generatePRDraft(repoPath, branchName, staged, commitMessage);
+    },
+  });
+}
+
+export function useAIReleaseNotes(repoPath: string | null) {
+  return useMutation<ReleaseNotesResult, Error, {
+    commits: Array<{ hash: string; message: string; author: string; date: string }>;
+    fromTag?: string;
+    toTag?: string;
+  }>({
+    mutationKey: ["ai.release-notes"],
+    mutationFn: ({ commits, fromTag, toTag }) => {
+      if (!repoPath) throw new Error("No repository selected");
+      return generateReleaseNotes(repoPath, commits, fromTag, toTag);
+    },
+  });
+}
+
+export function useAIGitCommandAssistant(repoPath: string | null) {
+  return useMutation<GitCommandSuggestion[], Error, { intent: string }>({
+    mutationKey: ["ai.git-command"],
+    mutationFn: ({ intent }) => {
+      if (!repoPath) throw new Error("No repository selected");
+      return suggestGitCommand(repoPath, intent);
     },
   });
 }

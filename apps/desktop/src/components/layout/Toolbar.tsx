@@ -215,6 +215,16 @@ export default function Toolbar() {
       icon: <History size={12} />,
       action: () => openDialog("reflog"),
     },
+    {
+      label: "Git Hooks Manager",
+      icon: <Zap size={12} />,
+      action: () => openDialog("git-hooks"),
+    },
+    {
+      label: "AI Command Assistant",
+      icon: <Zap size={12} />,
+      action: () => openDialog("git-command-assistant"),
+    },
   ];
 
   return (
