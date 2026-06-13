@@ -478,3 +478,98 @@ fn mime_type_for_file(path: &str) -> String {
 fn base64_engine() -> base64::engine::GeneralPurpose {
     base64::engine::general_purpose::STANDARD
 }
+
+#[derive(serde::Serialize)]
+pub struct BinaryFileInfo {
+    pub old_size: Option<u64>,
+    pub new_size: Option<u64>,
+    pub old_hash: Option<String>,
+    pub new_hash: Option<String>,
+}
+
+/// Get sizes and blob hashes for old/new sides of a binary file diff.
+#[tauri::command]
+pub async fn binary_file_info(
+    path: String,
+    file_path: String,
+    source: String,
+    commit_hash: Option<String>,
+) -> Result<BinaryFileInfo, String> {
+    let empty = BinaryFileInfo {
+        old_size: None,
+        new_size: None,
+        old_hash: None,
+        new_hash: None,
+    };
+
+    match source.as_str() {
+        "working" => {
+            // Old = HEAD, new = working tree
+            let old_info = get_blob_info(&path, &format!("HEAD:{}", file_path)).await.ok();
+            let new_size = tokio::fs::metadata(std::path::Path::new(&path).join(&file_path))
+                .await
+                .ok()
+                .map(|m| m.len());
+            Ok(BinaryFileInfo {
+                old_size: old_info.as_ref().map(|(s, _)| *s),
+                new_size,
+                old_hash: old_info.map(|(_, h)| h),
+                new_hash: None,
+            })
+        }
+        "staged" => {
+            // Old = HEAD, new = index (staged)
+            let old_info = get_blob_info(&path, &format!("HEAD:{}", file_path)).await.ok();
+            let new_info = get_blob_info(&path, &format!(":0:{}", file_path)).await.ok();
+            Ok(BinaryFileInfo {
+                old_size: old_info.as_ref().map(|(s, _)| *s),
+                new_size: new_info.as_ref().map(|(s, _)| *s),
+                old_hash: old_info.map(|(_, h)| h),
+                new_hash: new_info.map(|(_, h)| h),
+            })
+        }
+        "commit" => {
+            let hash = commit_hash.as_deref().unwrap_or("HEAD");
+            // Old = parent, new = commit
+            let old_info = get_blob_info(&path, &format!("{}^:{}", hash, file_path)).await.ok();
+            let new_info = get_blob_info(&path, &format!("{}:{}", hash, file_path)).await.ok();
+            Ok(BinaryFileInfo {
+                old_size: old_info.as_ref().map(|(s, _)| *s),
+                new_size: new_info.as_ref().map(|(s, _)| *s),
+                old_hash: old_info.map(|(_, h)| h),
+                new_hash: new_info.map(|(_, h)| h),
+            })
+        }
+        _ => Ok(empty),
+    }
+}
+
+/// Get blob size (bytes) and hash via `git cat-file -s` + `git rev-parse`.
+async fn get_blob_info(path: &str, revspec: &str) -> Result<(u64, String), String> {
+    // Get size
+    let size_output = Command::new("git")
+        .args(["--no-pager", "-C", path, "cat-file", "-s", revspec])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run git cat-file -s: {}", e))?;
+
+    if !size_output.status.success() {
+        // Object doesn't exist (e.g. new file with no parent)
+        return Err("Object not found".into());
+    }
+    let size_str = String::from_utf8_lossy(&size_output.stdout).trim().to_string();
+    let size = size_str.parse::<u64>().unwrap_or(0);
+
+    // Get hash
+    let hash_output = Command::new("git")
+        .args(["--no-pager", "-C", path, "rev-parse", revspec])
+        .output()
+        .await
+        .ok();
+    let hash = hash_output
+        .filter(|o| o.status.success())
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .unwrap_or_else(|| "unknown".into());
+
+    Ok((size, hash))
+}

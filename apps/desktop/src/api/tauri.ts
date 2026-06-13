@@ -377,6 +377,13 @@ export interface ImageContent {
   data: string;
 }
 
+export interface BinaryFileInfo {
+  old_size: number | null;
+  new_size: number | null;
+  old_hash: string | null;
+  new_hash: string | null;
+}
+
 // Typed invoke wrappers
 export const api = {
   repo: {
@@ -522,6 +529,8 @@ export const api = {
       invoke<ImageContent | null>("read_working_file_base64", { path, filePath }),
     readGitObjectBase64: (path: string, rev: string, filePath: string) =>
       invoke<ImageContent | null>("read_git_object_base64", { path, rev, filePath }),
+    binaryFileInfo: (path: string, filePath: string, source: string, commitHash?: string | null) =>
+      invoke<BinaryFileInfo>("binary_file_info", { path, filePath, source, commitHash: commitHash ?? null }),
   },
 
   remote: {

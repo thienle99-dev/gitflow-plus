@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useImageDiff } from "@/queries/useImageDiff";
-import { isImageFile } from "@/lib/image-utils";
+import { isImageFile } from "@/lib/file-utils";
 import { ZoomIn, ZoomOut, Loader2, Info, AlertCircle } from "lucide-react";
 
 interface ImageDiffViewerProps {

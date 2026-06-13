@@ -16,7 +16,7 @@ import FileHistoryPanel from "./FileHistoryPanel";
 import BlameView from "@/components/features/blame/BlameView";
 import { EmptyState } from "@/components/ui/feedback/EmptyState";
 import { Skeleton } from "@/components/ui/feedback/Skeleton";
-import { isImageFile } from "@/lib/image-utils";
+import { isImageFile } from "@/lib/file-utils";
 
 export default function RightPanel() {
   const selectedCommit = useUIStore((s) => s.selectedCommit);

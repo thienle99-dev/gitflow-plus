@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
-import { isImageFile } from "@/lib/image-utils";
+import { isImageFile, isBinaryFile, diffIsBinary } from "@/lib/file-utils";
 import ImageDiffViewer from "./ImageDiffViewer";
+import BinaryFileDiffViewer from "./BinaryFileDiffViewer";
 
 const DiffViewer = lazy(() => import("./DiffViewer"));
 
@@ -38,11 +39,16 @@ function DiffLoadingSkeleton() {
 }
 
 export default function LazyDiffViewer(props: LazyDiffViewerProps) {
-  const { filePath, source, commitHash } = props;
+  const { filePath, source, commitHash, diff } = props;
 
   // Route image files to ImageDiffViewer
   if (isImageFile(filePath)) {
     return <ImageDiffViewer filePath={filePath} source={source || "commit"} commitHash={commitHash} />;
+  }
+
+  // Route binary files to BinaryFileDiffViewer
+  if (isBinaryFile(filePath) || diffIsBinary(diff)) {
+    return <BinaryFileDiffViewer filePath={filePath} source={source || "commit"} commitHash={commitHash} diff={diff} />;
   }
 
   return (
