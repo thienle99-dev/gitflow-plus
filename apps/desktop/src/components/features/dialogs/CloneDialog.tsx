@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRepoStore } from "@/stores/repo";
-import { api } from "@/api/tauri";
-import { X, Download } from "lucide-react";
+import { api, type CloneProgress } from "@/api/tauri";
+import { listen } from "@tauri-apps/api/event";
+import { X, Download, Loader2 } from "lucide-react";
 
 interface CloneDialogProps {
   open: boolean;
@@ -15,6 +16,31 @@ export default function CloneDialog({ open, onClose }: CloneDialogProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [progress, setProgress] = useState<CloneProgress | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    let unlisten: (() => void) | null = null;
+
+    listen<CloneProgress>("clone-progress", (event) => {
+      setProgress(event.payload);
+      if (event.payload.phase === "complete") {
+        setSuccess(event.payload.message);
+        setLoading(false);
+      }
+    }).then((fn) => { unlisten = fn; });
+
+    return () => { unlisten?.(); };
+  }, [open]);
+
+  // Reset state when dialog opens
+  useEffect(() => {
+    if (open) {
+      setProgress(null);
+      setError(null);
+      setSuccess(null);
+    }
+  }, [open]);
 
   if (!open) return null;
 
@@ -27,11 +53,9 @@ export default function CloneDialog({ open, onClose }: CloneDialogProps) {
     setUrl(value);
     setError(null);
     setSuccess(null);
-    // Auto-suggest destination when URL changes
     if (value && !destination) {
       const folder = extractDefaultFolder(value);
       if (folder) {
-        // Try to use parent of current repo or home
         setDestination(`~/Projects/${folder}`);
       }
     }
@@ -47,20 +71,29 @@ export default function CloneDialog({ open, onClose }: CloneDialogProps) {
     setLoading(true);
     setError(null);
     setSuccess(null);
+    setProgress(null);
 
     try {
       await api.repo.clone(url.trim(), destination.trim());
-      setSuccess(`Repository cloned successfully`);
-      // Auto-open the cloned repo after a brief delay
+      // Success is handled by the clone-progress listener
       setTimeout(() => {
         openRepo(destination.trim());
         onClose();
       }, 1500);
     } catch (err) {
       setError(`${err}`);
-    } finally {
       setLoading(false);
     }
+  };
+
+  const handleCancel = async () => {
+    try {
+      await api.repo.cancelClone();
+    } catch {
+      // ignore
+    }
+    setLoading(false);
+    setProgress(null);
   };
 
   const handleSelectDestination = async () => {
@@ -76,6 +109,18 @@ export default function CloneDialog({ open, onClose }: CloneDialogProps) {
     }
   };
 
+  const getPhaseLabel = (phase: string): string => {
+    switch (phase) {
+      case "counting": return "Counting objects";
+      case "receiving": return "Receiving objects";
+      case "resolving": return "Resolving deltas";
+      case "remote": return "Remote";
+      case "done": return "Done";
+      case "complete": return "Complete";
+      default: return phase;
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-[#000000]/65 backdrop-blur-md z-[9998] flex items-center justify-center p-6 anim-overlay-enter">
       <div className="w-full max-w-md bg-surface-0 border border-border rounded-mac shadow-2xl overflow-hidden anim-dialog-enter">
@@ -86,7 +131,7 @@ export default function CloneDialog({ open, onClose }: CloneDialogProps) {
             <span className="text-sm font-semibold text-text-primary">Clone Repository</span>
           </div>
           <button
-            onClick={onClose}
+            onClick={loading ? handleCancel : onClose}
             className="ghost p-1 text-text-muted hover:text-text-primary rounded"
           >
             <X size={14} />
@@ -103,6 +148,7 @@ export default function CloneDialog({ open, onClose }: CloneDialogProps) {
               placeholder="https://github.com/user/repo.git"
               className="w-full text-xs bg-surface-2 border border-border rounded px-2.5 py-1.5 text-text-primary placeholder:text-text-muted outline-none focus:border-accent transition-colors"
               autoFocus
+              disabled={loading}
             />
           </div>
 
@@ -115,16 +161,41 @@ export default function CloneDialog({ open, onClose }: CloneDialogProps) {
                 onChange={(e) => { setDestination(e.target.value); setError(null); }}
                 placeholder="/Users/user/Projects/my-repo"
                 className="flex-1 text-xs bg-surface-2 border border-border rounded px-2.5 py-1.5 text-text-primary placeholder:text-text-muted outline-none focus:border-accent transition-colors"
+                disabled={loading}
               />
               <button
                 type="button"
                 onClick={handleSelectDestination}
-                className="px-2 py-1 text-xs border border-border rounded hover:bg-surface-2 text-text-primary"
+                disabled={loading}
+                className="px-2 py-1 text-xs border border-border rounded hover:bg-surface-2 text-text-primary disabled:opacity-40"
               >
                 Browse
               </button>
             </div>
           </div>
+
+          {/* Progress */}
+          {loading && progress && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">
+                  {getPhaseLabel(progress.phase)}
+                </span>
+                {progress.percent > 0 && (
+                  <span className="text-[10px] font-mono text-accent">{Math.round(progress.percent)}%</span>
+                )}
+              </div>
+              {progress.percent > 0 && (
+                <div className="h-1.5 bg-surface-2 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-accent rounded-full transition-all duration-300"
+                    style={{ width: `${Math.min(progress.percent, 100)}%` }}
+                  />
+                </div>
+              )}
+              <p className="text-[9px] text-text-muted font-mono truncate">{progress.message}</p>
+            </div>
+          )}
 
           {/* Error */}
           {error && (
@@ -142,30 +213,33 @@ export default function CloneDialog({ open, onClose }: CloneDialogProps) {
 
           {/* Actions */}
           <div className="flex gap-2 pt-1">
-            <button
-              type="submit"
-              disabled={loading || !url.trim() || !destination.trim()}
-              className="flex-1 h-8 bg-accent text-accent-fg text-xs font-semibold rounded disabled:opacity-40 hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5"
-            >
-              {loading ? (
-                <>
-                  <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Cloning...
-                </>
-              ) : (
-                <>
-                  <Download size={12} />
-                  Clone
-                </>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 h-8 text-xs text-text-secondary hover:text-text-primary border border-border hover:bg-surface-2 rounded transition-colors"
-            >
-              Cancel
-            </button>
+            {loading ? (
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="flex-1 h-8 bg-[#ff453a]/10 text-[#ff453a] text-xs font-semibold rounded hover:bg-[#ff453a]/20 transition-colors flex items-center justify-center gap-1.5"
+              >
+                Cancel
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={!url.trim() || !destination.trim()}
+                className="flex-1 h-8 bg-accent text-accent-fg text-xs font-semibold rounded disabled:opacity-40 hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5"
+              >
+                <Download size={12} />
+                Clone
+              </button>
+            )}
+            {!loading && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 h-8 text-xs text-text-secondary hover:text-text-primary border border-border hover:bg-surface-2 rounded transition-colors"
+              >
+                Cancel
+              </button>
+            )}
           </div>
         </form>
       </div>
