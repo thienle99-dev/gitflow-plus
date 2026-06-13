@@ -276,6 +276,11 @@ export interface GitFlowConfig {
   versiontag_prefix: string;
 }
 
+export interface GitFlowResult {
+  success: boolean;
+  message: string;
+}
+
 // Typed invoke wrappers
 export const api = {
   repo: {
@@ -617,6 +622,22 @@ export const api = {
           releasePrefix,
           hotfixPrefix,
           versiontagPrefix,
+        }),
+      featureStart: (path: string, name: string) =>
+        invoke<GitFlowResult>("gitflow_feature_start", { path, name }),
+      featureFinish: (path: string, name: string, mergeStrategy: string, deleteBranch: boolean) =>
+        invoke<GitFlowResult>("gitflow_feature_finish", { path, name, mergeStrategy, deleteBranch }),
+      releaseStart: (path: string, version: string) =>
+        invoke<GitFlowResult>("gitflow_release_start", { path, version }),
+      releaseFinish: (path: string, version: string, mergeStrategy: string, createTag: boolean, tagMessage?: string) =>
+        invoke<GitFlowResult>("gitflow_release_finish", {
+          path, version, mergeStrategy, createTag, tagMessage: tagMessage ?? null,
+        }),
+      hotfixStart: (path: string, version: string) =>
+        invoke<GitFlowResult>("gitflow_hotfix_start", { path, version }),
+      hotfixFinish: (path: string, version: string, mergeStrategy: string, createTag: boolean, tagMessage?: string) =>
+        invoke<GitFlowResult>("gitflow_hotfix_finish", {
+          path, version, mergeStrategy, createTag, tagMessage: tagMessage ?? null,
         }),
     },
 
