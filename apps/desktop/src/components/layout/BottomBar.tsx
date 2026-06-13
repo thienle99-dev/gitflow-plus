@@ -3,6 +3,7 @@ import { getVersion } from "@tauri-apps/api/app";
 import { Book, GitBranch, ArrowUp, ArrowDown, Loader2, AlertTriangle, Terminal, Activity, RotateCcw, MessageSquareText, Download, X, Command, Stethoscope, EllipsisVertical } from "lucide-react";
 import { useUIStore } from "@/stores/ui";
 import { useRepoStore } from "@/stores/repo";
+import { api } from "@/api/tauri";
 import { useGitBranches, useGitStatus, useGitSyncStatus } from "@/queries/useGitLog";
 import { useMergeStatus } from "@/queries/useGitMerge";
 import { useRebaseStatus } from "@/queries/useGitRebase";
@@ -169,6 +170,11 @@ export default function BottomBar() {
 
   const aheadCount = syncStatus?.ahead || 0;
   const behindCount = syncStatus?.behind || 0;
+
+  // Update tray tooltip with sync counts
+  useEffect(() => {
+    api.window.setTraySyncStatus(repoPath || "");
+  }, [repoPath, aheadCount, behindCount]);
 
   const hasConflicts = !!mergeStatus?.conflicts?.length;
   const conflictCount = mergeStatus?.conflicts?.length || 0;

@@ -14,6 +14,8 @@ pub struct RepoCache {
     pub status_cache: Mutex<std::collections::HashMap<String, Vec<commands::status::StatusEntry>>>,
 }
 
+pub struct TrayHandle(pub Mutex<Option<tauri::tray::TrayIcon>>);
+
 fn create_menu<R: tauri::Runtime>(app: &tauri::App<R>) -> Result<Menu<R>, tauri::Error> {
     let menu = Menu::new(app)?;
 
@@ -145,6 +147,7 @@ pub fn run() {
         .manage(RepoCache {
             status_cache: Mutex::new(std::collections::HashMap::new()),
         })
+        .manage(TrayHandle(Mutex::new(None)))
         .setup(|app| {
             log::info!("GitFlow Desktop starting");
 
@@ -163,8 +166,9 @@ pub fn run() {
 
             // Try to build a Tray Icon
             let tray_icon = app.default_window_icon().cloned().unwrap();
-            let _tray = TrayIconBuilder::new()
+            let tray_handle = TrayIconBuilder::new()
                 .icon(tray_icon)
+                .tooltip("GitFlow Desktop")
                 .on_tray_icon_event(|tray, event| {
                     if let TrayIconEvent::Click {
                         button: MouseButton::Left,
@@ -205,6 +209,7 @@ pub fn run() {
                     }
                 })
                 .build(app)?;
+            *app.state::<TrayHandle>().0.lock().unwrap() = Some(tray_handle.clone());
 
             // Window blur event to auto-hide tray window
             if let Some(tray_win) = app.get_webview_window("tray") {
@@ -252,6 +257,7 @@ pub fn run() {
             commands::app_window::show_main_window,
             commands::app_window::open_settings_window,
             commands::app_window::open_repo_from_tray,
+            commands::app_window::set_tray_sync_status,
             commands::bisect::bisect_start,
             commands::bisect::bisect_good,
             commands::bisect::bisect_bad,

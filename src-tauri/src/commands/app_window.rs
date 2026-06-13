@@ -37,3 +37,21 @@ pub async fn open_repo_from_tray(app: AppHandle) -> Result<(), String> {
     app.emit_to("main", "menu-action", "open-repo")
         .map_err(|e| format!("Failed to emit open-repo: {}", e))
 }
+
+/// Update tray tooltip with sync status (ahead/behind counts)
+#[tauri::command]
+pub async fn set_tray_sync_status(path: String, app: AppHandle) -> Result<(), String> {
+    let status = super::remote::get_sync_status(path).await?;
+
+    let tooltip = if status.ahead > 0 || status.behind > 0 {
+        format!("GitFlow Desktop · {}↑ {}↓", status.ahead, status.behind)
+    } else {
+        "GitFlow Desktop · Synced".to_string()
+    };
+
+    if let Some(tray) = app.state::<crate::TrayHandle>().0.lock().unwrap().as_ref() {
+        tray.set_tooltip(Some(&tooltip)).map_err(|e| format!("Set tooltip: {}", e))?;
+    }
+
+    Ok(())
+}
