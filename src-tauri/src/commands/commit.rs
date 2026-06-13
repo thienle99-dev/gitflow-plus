@@ -410,3 +410,41 @@ pub async fn revert_commit(
         Err(format!("Revert failed: {}", stderr_str))
     }
 }
+
+#[tauri::command]
+pub async fn open_file_in_editor(path: String, file_path: String) -> Result<String, String> {
+    let full_path = std::path::Path::new(&path).join(&file_path);
+
+    if !full_path.exists() {
+        return Err(format!("File not found: {}", file_path));
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .args([full_path.to_str().unwrap()])
+            .output()
+            .await
+            .map_err(|e| format!("Failed to open file: {}", e))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        Command::new("xdg-open")
+            .args([full_path.to_str().unwrap()])
+            .output()
+            .await
+            .map_err(|e| format!("Failed to open file: {}", e))?;
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("cmd")
+            .args(["/C", "start", "", full_path.to_str().unwrap()])
+            .output()
+            .await
+            .map_err(|e| format!("Failed to open file: {}", e))?;
+    }
+
+    Ok(file_path)
+}

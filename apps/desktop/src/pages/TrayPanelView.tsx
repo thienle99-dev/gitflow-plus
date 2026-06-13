@@ -5,6 +5,7 @@ import { api, type FileChange, type Commit, type RepoInfo } from "@/api/tauri";
 import { useCommitDateFormatter } from "@/lib/date";
 import { useQueryClient, useQuery, useQueries } from "@tanstack/react-query";
 import { useGenerateCommitMessage } from "@/queries/useAI";
+import { useGitFlowDetect } from "@/queries/useGitFlow";
 import { showToast } from "@/lib/toast";
 import { trackRemoteOp } from "@/stores/operations";
 import { useRepoAutoRefresh } from "@/hooks/useRepoAutoRefresh";
@@ -35,6 +36,7 @@ export default function TrayPanelView() {
   const { data: changes, isLoading: isLoadingStatus } = useGitStatus(repoPath);
   const { data: branches } = useGitBranches(repoPath);
   const { data: syncStatus } = useGitSyncStatus(repoPath);
+  const { data: gitflowConfig } = useGitFlowDetect(repoPath);
   const generateCommit = useGenerateCommitMessage(repoPath);
 
   const currentBranch = branches?.find((b) => b.current)?.name || "";
@@ -46,6 +48,9 @@ export default function TrayPanelView() {
   const [committing, setCommitting] = useState(false);
   const [syncLoading, setSyncLoading] = useState<string | null>(null);
   const [fileSearchQuery, setFileSearchQuery] = useState("");
+  const [showStashDiff, setShowStashDiff] = useState(false);
+  const [stashDiff, setStashDiff] = useState("");
+  const [stashDiffLoading, setStashDiffLoading] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -73,6 +78,13 @@ export default function TrayPanelView() {
     queryFn: () => api.log(repoPath!, 0, 10),
     enabled: !!repoPath,
     staleTime: 10_000,
+  });
+
+  const { data: rebaseStatus } = useQuery<[boolean, string[]]>({
+    queryKey: ["git", repoPath, "rebase-status"],
+    queryFn: () => api.rebase.status(repoPath!),
+    enabled: !!repoPath,
+    staleTime: 5_000,
   });
 
   const repoInfoResults = useQueries({
@@ -128,6 +140,21 @@ export default function TrayPanelView() {
     }
   };
 
+  const handleViewStashDiff = async () => {
+    if (!repoPath || !stashes || stashes.length === 0) return;
+    if (showStashDiff) { setShowStashDiff(false); return; }
+    setStashDiffLoading(true);
+    setShowStashDiff(true);
+    try {
+      const diff = await api.stash.diff(repoPath, 0);
+      setStashDiff(diff);
+    } catch (e: any) {
+      setStashDiff("Failed to load stash diff");
+    } finally {
+      setStashDiffLoading(false);
+    }
+  };
+
   const handleToggleStage = async (file: FileChange) => {
     if (!repoPath) return;
     try {
@@ -159,6 +186,26 @@ export default function TrayPanelView() {
       await api.commit.unstageAll(repoPath);
       invalidate();
       showToast("Unstaged all files");
+    } catch (e: any) {
+      showToast(e.message || String(e), "error");
+    }
+  };
+
+  const handleDiscard = async (filePath: string) => {
+    if (!repoPath) return;
+    try {
+      await api.commit.discard(repoPath, filePath);
+      invalidate();
+      showToast(`Discarded ${filePath}`);
+    } catch (e: any) {
+      showToast(e.message || String(e), "error");
+    }
+  };
+
+  const handleOpenInEditor = async (filePath: string) => {
+    if (!repoPath) return;
+    try {
+      await api.commit.openInEditor(repoPath, filePath);
     } catch (e: any) {
       showToast(e.message || String(e), "error");
     }
@@ -407,6 +454,7 @@ export default function TrayPanelView() {
               {viewMode === "commit" && (
                 <>
                   <TrayFileChanges
+                    repoPath={repoPath}
                     staged={staged}
                     unstaged={unstaged}
                     searchQuery={fileSearchQuery}
@@ -421,6 +469,8 @@ export default function TrayPanelView() {
                     }}
                     onStageAll={handleStageAll}
                     onUnstageAll={handleUnstageAll}
+                    onDiscard={handleDiscard}
+                    onOpenInEditor={handleOpenInEditor}
                     isLoading={isLoadingStatus}
                   />
 
@@ -446,21 +496,70 @@ export default function TrayPanelView() {
                       Stash All
                     </button>
                     {stashes && stashes.length > 0 && (
-                      <button
-                        onClick={handleStashPop}
-                        className="flex-1 h-7 text-[9px] font-semibold rounded-md border border-border-40 bg-surface-1 hover:bg-surface-2 text-text-primary transition-all relative flex items-center justify-center"
-                      >
-                        Pop Stash
-                        <span className="absolute -top-1 -right-1 min-w-[13px] rounded-full bg-accent px-0.5 text-[6px] font-bold leading-[10px] text-accent-fg">{stashes.length}</span>
-                      </button>
+                      <>
+                        <button
+                          onClick={handleStashPop}
+                          className="flex-1 h-7 text-[9px] font-semibold rounded-md border border-border-40 bg-surface-1 hover:bg-surface-2 text-text-primary transition-all relative flex items-center justify-center"
+                        >
+                          Pop Stash
+                          <span className="absolute -top-1 -right-1 min-w-[13px] rounded-full bg-accent px-0.5 text-[6px] font-bold leading-[10px] text-accent-fg">{stashes.length}</span>
+                        </button>
+                        <button
+                          onClick={handleViewStashDiff}
+                          className={`h-7 px-2 text-[9px] font-semibold rounded-md border transition-all flex items-center justify-center ${showStashDiff ? "border-accent-30 bg-accent-5 text-accent" : "border-border-40 bg-surface-1 hover:bg-surface-2 text-text-primary"}`}
+                        >
+                          Diff
+                        </button>
+                      </>
                     )}
                   </div>
+
+                  {/* Stash diff preview */}
+                  {showStashDiff && (
+                    <div className="border border-border-40 bg-surface-0 rounded-md overflow-hidden">
+                      <div className="px-2 py-1 border-b border-border-40 flex items-center justify-between">
+                        <span className="text-[8px] font-bold text-text-muted uppercase tracking-wider">Stash Diff</span>
+                        <button onClick={() => setShowStashDiff(false)} className="text-[8px] text-text-muted hover:text-text-primary">Close</button>
+                      </div>
+                      <div className="overflow-y-auto max-h-[120px]">
+                        {stashDiffLoading ? (
+                          <div className="flex items-center justify-center py-3 text-text-muted gap-1">
+                            <Loader2 size={9} className="animate-spin text-accent" />
+                            <span className="text-[8px]">Loading...</span>
+                          </div>
+                        ) : (
+                          <pre className="text-[8px] font-mono text-text-primary px-2 py-1.5 whitespace-pre-wrap break-all leading-relaxed">
+                            {stashDiff || "No changes"}
+                          </pre>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
 
               {/* Recent Tab */}
               {viewMode === "recent" && (
-                <div className="flex flex-col gap-0.5">
+                <div className="flex flex-col gap-1">
+                  {/* Undo last commit */}
+                  {recentCommits && recentCommits.length > 0 && (
+                    <button
+                      onClick={async () => {
+                        if (!repoPath) return;
+                        try {
+                          await api.reflog.undo(repoPath);
+                          invalidate();
+                          showToast("Undid last commit");
+                        } catch (e: any) {
+                          showToast(e.message || "Failed to undo", "error");
+                        }
+                      }}
+                      className="w-full flex items-center justify-center gap-1 py-1.5 text-[9px] font-semibold rounded border border-[#ff453a]/30 bg-[#ff453a]/5 text-[#ff453a] hover:bg-[#ff453a]/10 transition-colors"
+                    >
+                      Undo Last Commit
+                    </button>
+                  )}
+
                   {recentCommits && recentCommits.length > 0 ? (
                     recentCommits.map((commit) => (
                       <button
@@ -501,6 +600,73 @@ export default function TrayPanelView() {
                   onPull={() => handleGitAction("pull")}
                   onPush={() => handleGitAction("push")}
                   onCheckoutBranch={handleCheckoutBranch}
+                  gitflowConfig={gitflowConfig || null}
+                  onGitFlowAction={(action) => {
+                    const mode = action.replace("-start", "").replace("-finish", "") as "feature" | "release" | "hotfix";
+                    const isFinish = action.endsWith("-finish");
+                    window.dispatchEvent(new CustomEvent("open-gitflow", { detail: { mode, isFinish } }));
+                  }}
+                  onCreateBranch={async (name) => {
+                    if (!repoPath) return;
+                    try {
+                      await api.branches.create(repoPath, name);
+                      invalidate();
+                      showToast(`Created branch: ${name}`);
+                    } catch (e: any) {
+                      showToast(e.message || "Failed to create branch", "error");
+                    }
+                  }}
+                  onCreateTag={async (name) => {
+                    if (!repoPath) return;
+                    try {
+                      await api.tag.create(repoPath, name);
+                      invalidate();
+                      showToast(`Created tag: ${name}`);
+                    } catch (e: any) {
+                      showToast(e.message || "Failed to create tag", "error");
+                    }
+                  }}
+                  onCherryPick={async (hash) => {
+                    if (!repoPath) return;
+                    try {
+                      await api.cherryPick.pick(repoPath, hash);
+                      invalidate();
+                      showToast(`Cherry-picked ${hash.slice(0, 7)}`);
+                    } catch (e: any) {
+                      showToast(e.message || "Failed to cherry-pick", "error");
+                    }
+                  }}
+                  rebaseInProgress={rebaseStatus?.[0] ?? false}
+                  onRebaseContinue={async () => {
+                    if (!repoPath) return;
+                    try {
+                      await api.rebase.continue(repoPath);
+                      invalidate();
+                      showToast("Rebase continued");
+                    } catch (e: any) {
+                      showToast(e.message || "Failed to continue rebase", "error");
+                    }
+                  }}
+                  onRebaseSkip={async () => {
+                    if (!repoPath) return;
+                    try {
+                      await api.rebase.skip(repoPath);
+                      invalidate();
+                      showToast("Rebase skipped");
+                    } catch (e: any) {
+                      showToast(e.message || "Failed to skip rebase", "error");
+                    }
+                  }}
+                  onRebaseAbort={async () => {
+                    if (!repoPath) return;
+                    try {
+                      await api.rebase.abort(repoPath);
+                      invalidate();
+                      showToast("Rebase aborted");
+                    } catch (e: any) {
+                      showToast(e.message || "Failed to abort rebase", "error");
+                    }
+                  }}
                 />
               )}
             </>

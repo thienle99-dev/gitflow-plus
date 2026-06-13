@@ -280,6 +280,7 @@ pub fn run() {
             commands::commit::commit_changes,
             commands::commit::commit_file_groups,
             commands::commit::revert_commit,
+            commands::commit::open_file_in_editor,
             commands::lint::run_project_linters,
             commands::diff::file_diff,
             commands::diff::commit_diff,

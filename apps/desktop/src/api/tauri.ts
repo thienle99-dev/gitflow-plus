@@ -401,6 +401,8 @@ export const api = {
       invoke<CommitGroupsResult>("commit_file_groups", { path, groups, noVerify: noVerify ?? false }),
     revert: (path: string, commitHash: string) =>
       invoke<string>("revert_commit", { path, commitHash }),
+    openInEditor: (path: string, filePath: string) =>
+      invoke<string>("open_file_in_editor", { path, filePath }),
   },
 
   lint: {
