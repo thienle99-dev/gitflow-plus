@@ -1,5 +1,6 @@
 use tokio::process::Command;
 use std::path::PathBuf;
+use chrono;
 use serde::Serialize;
 use super::op_lock::RepoLocks;
 use super::running_ops::RunningOps;
@@ -433,6 +434,112 @@ pub async fn set_remote_url(path: String, name: String, url: String) -> Result<S
     } else {
         Err(String::from_utf8_lossy(&output.stderr).to_string())
     }
+}
+
+#[derive(Serialize)]
+pub struct SshKeyGenResult {
+    pub private_key: String,
+    pub public_key: String,
+}
+
+#[tauri::command]
+pub async fn generate_ssh_key(path: String, email: String) -> Result<SshKeyGenResult, String> {
+    let home = std::env::var("HOME")
+        .map(PathBuf::from)
+        .map_err(|_| "Cannot determine home directory".to_string())?;
+
+    let ssh_dir = home.join(".ssh");
+    std::fs::create_dir_all(&ssh_dir).map_err(|e| format!("Failed to create .ssh: {}", e))?;
+
+    let key_name = format!("gitflow_{}", chrono::Local::now().format("%Y%m%d_%H%M%S"));
+    let private_path = ssh_dir.join(&key_name);
+    let public_path = ssh_dir.join(format!("{}.pub", key_name));
+
+    // Run ssh-keygen
+    let output = Command::new("ssh-keygen")
+        .args([
+            "-t", "ed25519",
+            "-f", private_path.to_str().unwrap_or(""),
+            "-N", "",
+            "-C", &email,
+        ])
+        .output()
+        .await
+        .map_err(|e| format!("ssh-keygen failed: {}", e))?;
+
+    if !output.status.success() {
+        let err = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Failed: {}", err));
+    }
+
+    let private_key = std::fs::read_to_string(&private_path)
+        .map_err(|e| format!("Read private key: {}", e))?;
+    let public_key = std::fs::read_to_string(&public_path)
+        .map_err(|e| format!("Read public key: {}", e))?;
+
+    // Set permissions
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&private_path, std::fs::Permissions::from_mode(0o600))
+            .map_err(|e| format!("Set perms: {}", e))?;
+    }
+
+    Ok(SshKeyGenResult {
+        private_key,
+        public_key,
+    })
+}
+
+#[tauri::command]
+pub async fn get_remote_url(path: String) -> Result<String, String> {
+    let output = Command::new("git")
+        .args(["-C", &path, "remote", "get-url", "origin"])
+        .output()
+        .await
+        .map_err(|e| format!("Failed: {}", e))?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+    } else {
+        Ok("".to_string())
+    }
+}
+
+#[tauri::command]
+pub async fn test_ssh_connection(path: String) -> Result<bool, String> {
+    // Just test git ls-remote
+    let output = Command::new("git")
+        .args(["-C", &path, "ls-remote", "--heads", "--exit-code", "."])
+        .output()
+        .await
+        .map_err(|e| format!("Failed: {}", e))?;
+
+    Ok(output.status.success())
+}
+
+#[tauri::command]
+pub async fn test_https_token(path: String, token: String) -> Result<bool, String> {
+    // Get remote URL
+    let output = Command::new("git")
+        .args(["-C", &path, "remote", "get-url", "origin"])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to get remote: {}", e))?;
+
+    let remote = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if !remote.starts_with("https://") {
+        return Err("Remote is not HTTPS".to_string());
+    }
+
+    // Try fetching with token
+    let output = Command::new("git")
+        .args(["-C", &path, "ls-remote", "--heads", "--exit-code", &remote])
+        .output()
+        .await
+        .map_err(|e| format!("Failed: {}", e))?;
+
+    Ok(output.status.success())
 }
 
 #[cfg(test)]

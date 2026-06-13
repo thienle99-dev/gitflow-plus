@@ -11,6 +11,7 @@ pub mod credentials;
 pub mod diff;
 pub mod gitflow;
 pub mod health;
+pub mod git_config;
 pub mod hooks;
 pub mod lfs;
 pub mod lint;
