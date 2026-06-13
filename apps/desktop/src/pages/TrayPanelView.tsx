@@ -7,6 +7,7 @@ import { useQueryClient, useQuery, useQueries } from "@tanstack/react-query";
 import { useGenerateCommitMessage } from "@/queries/useAI";
 import { useGitFlowDetect } from "@/queries/useGitFlow";
 import { showToast } from "@/lib/toast";
+import { preflightGate, type PreflightAction } from "@/lib/preflight-gate";
 import { trackRemoteOp } from "@/stores/operations";
 import { useRepoAutoRefresh } from "@/hooks/useRepoAutoRefresh";
 import { TrayCommitBox } from "./TrayCommitBox";
@@ -67,6 +68,13 @@ export default function TrayPanelView() {
 
   useRepoAutoRefresh(repoPath, { includeStash: true });
 
+  const { data: preflight } = useQuery({
+    queryKey: ["git", repoPath, "preflight"],
+    queryFn: () => api.preflight.check(repoPath!),
+    enabled: !!repoPath,
+    staleTime: 5_000,
+  });
+
   const { data: stashes } = useQuery({
     queryKey: ["git", repoPath, "stash-list"],
     queryFn: () => api.stash.list(repoPath!),
@@ -105,11 +113,26 @@ export default function TrayPanelView() {
     }
   };
 
+  const checkPreflight = async (action: PreflightAction): Promise<boolean> => {
+    if (!repoPath) return false;
+    try {
+      const result = await preflightGate(repoPath, action);
+      if (!result.allowed) {
+        result.warnings.forEach((w) => showToast(w, "error"));
+        return false;
+      }
+      return true;
+    } catch {
+      return true; // If preflight fails, allow the operation
+    }
+  };
+
   const staged = changes?.filter((c) => c.staged) || [];
   const unstaged = changes?.filter((c) => !c.staged) || [];
 
   const handleCheckoutBranch = async (branchName: string) => {
     if (!repoPath) return;
+    if (!(await checkPreflight("checkout"))) return;
     try {
       await api.branches.checkout(repoPath, branchName);
       invalidate();
@@ -227,6 +250,7 @@ export default function TrayPanelView() {
 
   const handleCommit = async () => {
     if (!repoPath || !commitMessage.trim()) return;
+    if (!(await checkPreflight("commit"))) return;
     setCommitting(true);
     try {
       if (unstaged.length > 0) {
@@ -245,6 +269,8 @@ export default function TrayPanelView() {
 
   const handleGitAction = async (action: "fetch" | "pull" | "push") => {
     if (!repoPath) return;
+    if (action === "push" && !(await checkPreflight("push"))) return;
+    if (action === "pull" && !(await checkPreflight("pull"))) return;
     setSyncLoading(action);
     try {
       if (action === "fetch") {
