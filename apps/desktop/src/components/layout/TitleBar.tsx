@@ -91,7 +91,7 @@ export default function TitleBar() {
       { separator: true },
       { label: "Preferences...", shortcut: "⌘,", onClick: () => openDialog("settings") },
       { separator: true },
-      { label: "Check for Updates...", onClick: () => openDialog("settings") },
+      { label: "Check for Updates...", onClick: () => openDialog("update-checker") },
       { separator: true },
       { label: "Hide GitFlow", shortcut: "⌘H", onClick: () => { try { getCurrentWindow().hide(); } catch {} } },
       { label: "Show All", onClick: () => { try { getCurrentWindow().show(); getCurrentWindow().setFocus(); } catch {} } },
