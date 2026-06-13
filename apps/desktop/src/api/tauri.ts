@@ -562,12 +562,12 @@ export const api = {
   },
 
   rebase: {
-    start: (path: string, base: string, todos: { action: string; commit_hash: string; message: string }[]) =>
-      invoke<{ success: boolean; message: string; conflicted_files: string[] }>("rebase_start", { path, base, todos }),
-    continue: (path: string) =>
-      invoke<string>("rebase_continue", { path }),
-    skip: (path: string) =>
-      invoke<string>("rebase_skip", { path }),
+    start: (path: string, base: string, todos: { action: string; commit_hash: string; message: string }[], operationId?: string) =>
+      invoke<{ success: boolean; message: string; conflicted_files: string[] }>("rebase_start", { path, base, todos, operationId: operationId ?? null }),
+    continue: (path: string, operationId?: string) =>
+      invoke<string>("rebase_continue", { path, operationId: operationId ?? null }),
+    skip: (path: string, operationId?: string) =>
+      invoke<string>("rebase_skip", { path, operationId: operationId ?? null }),
     abort: (path: string) =>
       invoke<string>("rebase_abort", { path }),
     status: (path: string) =>
