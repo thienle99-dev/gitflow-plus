@@ -343,12 +343,14 @@ pub async fn apply_diff_hunk(
         &path,
         "apply",
         "--recount",
+        "--ignore-whitespace",
         "--whitespace=nowarn",
     ];
 
     match action.as_str() {
         "stage" => {
             args.push("--cached");
+            args.push("-3"); // 3-way merge fallback when context doesn't match
         }
         "unstage" => {
             args.push("--cached");
