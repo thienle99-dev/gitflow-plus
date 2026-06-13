@@ -14,10 +14,10 @@ import {
   GitPullRequest,
   Plus,
   GitBranchPlus,
-  PanelLeftClose,
   PanelLeftOpen,
-  PanelRightClose,
+  PanelLeftClose,
   PanelRightOpen,
+  PanelRightClose,
   FileDiff,
   ArrowUpFromLine,
   ArrowDownToLine,
@@ -30,12 +30,10 @@ import {
   Settings,
   BarChart3,
   Database,
-  PanelLeft,
-  PanelRight,
-  MoreHorizontal,
   Rocket,
   Tag,
   Zap,
+  MoreHorizontal,
   GitFork,
 } from "lucide-react";
 import CreateBranchDialog from "@/components/features/dialogs/CreateBranchDialog";
@@ -251,12 +249,14 @@ export default function Toolbar() {
             onClick={toggleSidebar}
             aria-label="Toggle Left Sidebar"
             aria-pressed={sidebarOpen}
-            className={`h-8 w-8 flex items-center justify-center rounded-mac border border-border-40 bg-surface-2-40 hover:bg-surface-2 hover:border-border transition-all cursor-pointer shadow-2xs shrink-0 ${
-              sidebarOpen ? "text-[#0a84ff] bg-[#0a84ff]/10" : "text-text-muted hover:text-text-primary"
+            className={`h-8 w-8 flex items-center justify-center rounded-mac border transition-all duration-200 cursor-pointer shadow-2xs shrink-0 ${
+              sidebarOpen
+                ? "text-[#5e5ce6] bg-[#5e5ce6]/10 border-[#5e5ce6]/20"
+                : "text-text-muted hover:text-[#5e5ce6] border-border-40 bg-surface-2-40 hover:bg-[#5e5ce6]/5 hover:border-[#5e5ce6]/20"
             }`}
             title="Toggle Left Sidebar (⌘B)"
           >
-            <PanelLeft size={14} />
+            {sidebarOpen ? <PanelLeftClose size={14} /> : <PanelLeftOpen size={14} />}
           </button>
 
           {changes && changes.length > 0 ? (
@@ -603,12 +603,14 @@ export default function Toolbar() {
             onClick={toggleRightPanel}
             aria-label="Toggle Right Details Panel"
             aria-pressed={rightPanelOpen}
-            className={`h-8 w-8 flex items-center justify-center rounded-mac border border-border-40 bg-surface-2-40 hover:bg-surface-2 hover:border-border transition-all cursor-pointer shadow-2xs shrink-0 ${
-              rightPanelOpen ? "text-[#0a84ff] bg-[#0a84ff]/10" : "text-text-muted hover:text-text-primary"
+            className={`h-8 w-8 flex items-center justify-center rounded-mac border transition-all duration-200 cursor-pointer shadow-2xs shrink-0 ${
+              rightPanelOpen
+                ? "text-[#30b0c0] bg-[#30b0c0]/10 border-[#30b0c0]/20"
+                : "text-text-muted hover:text-[#30b0c0] border-border-40 bg-surface-2-40 hover:bg-[#30b0c0]/5 hover:border-[#30b0c0]/20"
             }`}
             title="Toggle Right Details Panel (⌘I)"
           >
-            <PanelRight size={14} />
+            {rightPanelOpen ? <PanelRightClose size={14} /> : <PanelRightOpen size={14} />}
           </button>
 
           <div className="w-[1px] h-3.5 bg-border-60" />
