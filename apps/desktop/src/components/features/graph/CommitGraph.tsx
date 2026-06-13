@@ -39,6 +39,9 @@ export default memo(function CommitGraph() {
   const [appliedTheme, setAppliedTheme] = useState(theme);
   const selectCommit = useUIStore((s) => s.selectCommit);
   const selectedCommit = useUIStore((s) => s.selectedCommit);
+  const multiCherryPickHashes = useUIStore((s) => s.multiCherryPickHashes);
+  const toggleMultiCherryPick = useUIStore((s) => s.toggleMultiCherryPick);
+  const clearMultiCherryPick = useUIStore((s) => s.clearMultiCherryPick);
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useGitLog(repoPath, selectedRef);
   const queryClient = useQueryClient();
 
@@ -49,6 +52,7 @@ export default memo(function CommitGraph() {
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; hash: string } | null>(null);
   const [confirmCherryPick, setConfirmCherryPick] = useState<string | null>(null);
   const [confirmRevert, setConfirmRevert] = useState<string | null>(null);
+  const [confirmMultiCherryPick, setConfirmMultiCherryPick] = useState(false);
   const [filterScope, setFilterScope] = useState<CommitFilterScope>("all");
 
   useEffect(() => {
@@ -158,6 +162,7 @@ export default memo(function CommitGraph() {
     containerWidth,
     selectedCommit,
     focusedHash,
+    multiCherryPickHashes,
     hoveredLane: hover.lane,
     totalLanes,
     theme: appliedTheme,
@@ -321,6 +326,27 @@ export default memo(function CommitGraph() {
     } catch (e) {
       console.error(e);
       showToast(`Revert failed: ${e}`, "error");
+    }
+  };
+
+  const doMultiCherryPick = async () => {
+    setConfirmMultiCherryPick(false);
+    if (!repoPath || multiCherryPickHashes.length === 0) return;
+    const ok = await cherryPickGate.runPreflight();
+    if (!ok) return;
+    try {
+      const res = await api.cherryPick.pickMulti(repoPath, [...multiCherryPickHashes].reverse());
+      if (res.success) {
+        clearMultiCherryPick();
+        queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
+        showToast(`Cherry-picked ${multiCherryPickHashes.length} commit(s)`, "success");
+      } else {
+        showToast(`Cherry-pick had conflicts:\n${res.conflicted_files.join("\n")}`, "error");
+        queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
+      }
+    } catch (e) {
+      console.error(e);
+      showToast(`Multi cherry-pick failed: ${e}`, "error");
     }
   };
 
@@ -503,10 +529,13 @@ export default memo(function CommitGraph() {
               onMouseLeave={handleMouseLeave}
               onClick={(e) => {
                 handleClick(e, (hash) => {
-                  selectCommit(hash);
-                  // sync keyboard focus to clicked row
-                  const idx = commits.findIndex((c) => c.hash === hash);
-                  if (idx !== -1) setFocusedIndex(idx);
+                  if (e.ctrlKey || e.metaKey) {
+                    toggleMultiCherryPick(hash);
+                  } else {
+                    selectCommit(hash);
+                    const idx = commits.findIndex((c) => c.hash === hash);
+                    if (idx !== -1) setFocusedIndex(idx);
+                  }
                 });
               }}
               onContextMenu={(e) =>
@@ -521,6 +550,33 @@ export default memo(function CommitGraph() {
       {isFetchingNextPage && (
         <div className="h-8 flex items-center justify-center text-xs text-text-muted border-t border-border shrink-0">
           Loading more commits...
+        </div>
+      )}
+
+      {/* Multi-cherry-pick action bar */}
+      {multiCherryPickHashes.length > 0 && (
+        <div className="h-10 flex items-center justify-between px-3 border-t border-border bg-surface-1 shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-text-primary font-medium">
+              {multiCherryPickHashes.length} commit{multiCherryPickHashes.length > 1 ? "s" : ""} selected
+            </span>
+            <button
+              type="button"
+              onClick={clearMultiCherryPick}
+              className="text-2xs text-text-muted hover:text-text-primary transition-colors"
+            >
+              Clear
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => setConfirmMultiCherryPick(true)}
+            disabled={multiCherryPickHashes.length === 0}
+            className="h-7 px-3 bg-accent text-accent-fg text-xs font-semibold rounded disabled:opacity-40 hover:opacity-90 transition-opacity flex items-center gap-1.5"
+          >
+            <CherryPickIcon />
+            Cherry-pick
+          </button>
         </div>
       )}
 
@@ -584,6 +640,25 @@ export default memo(function CommitGraph() {
       variant="destructive"
       onConfirm={() => doRevert(confirmRevert!)}
       onCancel={() => setConfirmRevert(null)}
+    />
+    <ConfirmDialog
+      open={confirmMultiCherryPick}
+      title="Cherry-pick Multiple Commits"
+      message={`Apply ${multiCherryPickHashes.length} commit(s) onto the current branch?`}
+      impactItems={[
+        {
+          label: `${multiCherryPickHashes.length} new commit(s) will be created on the current branch (oldest first)`,
+          severity: "info",
+        },
+        {
+          label: "May cause conflicts if changes overlap with current work",
+          severity: "warning",
+        },
+      ]}
+      confirmLabel={`Cherry-pick ${multiCherryPickHashes.length}`}
+      cancelLabel="Cancel"
+      onConfirm={doMultiCherryPick}
+      onCancel={() => setConfirmMultiCherryPick(false)}
     />
     </>
   );

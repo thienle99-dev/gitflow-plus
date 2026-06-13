@@ -47,6 +47,7 @@ interface RenderParams {
   containerWidth: number;
   selectedCommit: string | null;
   focusedHash: string | null;
+  multiCherryPickHashes: string[];
   hoveredLane: number | null;
   totalLanes: number;
   theme: Theme;
@@ -391,6 +392,7 @@ export function useCanvasRenderer({
   containerWidth,
   selectedCommit,
   focusedHash,
+  multiCherryPickHashes,
   hoveredLane,
   totalLanes,
   theme,
@@ -596,6 +598,20 @@ export function useCanvasRenderer({
       ctx.strokeStyle = commitColor;
       ctx.lineWidth = isSelected ? 2 : 1;
       ctx.stroke();
+
+      // Multi-cherry-pick indicator — small diamond to right of node
+      if (multiCherryPickHashes.includes(commit.hash)) {
+        const dx = x + NODE_RADIUS + 6;
+        const ds = 3;
+        ctx.beginPath();
+        ctx.moveTo(dx, cy - ds);
+        ctx.lineTo(dx + ds, cy);
+        ctx.lineTo(dx, cy + ds);
+        ctx.lineTo(dx - ds, cy);
+        ctx.closePath();
+        ctx.fillStyle = withAlpha(accent, 0.85);
+        ctx.fill();
+      }
     }
 
     ctx.restore();
@@ -693,7 +709,7 @@ export function useCanvasRenderer({
       width,
       height,
     });
-  }, [canvasRef, layout, graphIndex, scrollTop, containerHeight, containerWidth, selectedCommit, focusedHash, hoveredLane, totalLanes, theme, formatCommitDateHook, gitflowConfig]);
+  }, [canvasRef, layout, graphIndex, scrollTop, containerHeight, containerWidth, selectedCommit, focusedHash, multiCherryPickHashes, hoveredLane, totalLanes, theme, formatCommitDateHook, gitflowConfig]);
 }
 
 function getColumns(width: number) {
