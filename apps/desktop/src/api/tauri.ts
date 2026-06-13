@@ -269,6 +269,18 @@ export interface LintResponse {
   linters_run: string[];
 }
 
+export interface GitConfigEntry {
+  key: string;
+  value: string;
+  scope: string;
+}
+
+export interface GitConfigSection {
+  name: string;
+  subsections: string[];
+  variables: GitConfigEntry[];
+}
+
 export interface AppLogEntry {
   timestamp: string;
   level: string;
@@ -490,6 +502,14 @@ export const api = {
       invoke<string>("rename_remote", { path, name, newName }),
     setRemoteUrl: (path: string, name: string, url: string) =>
       invoke<string>("set_remote_url", { path, name, url }),
+    getRemoteUrl: (path: string) =>
+      invoke<string>("get_remote_url", { path }),
+    generateSshKey: (path: string, email: string) =>
+      invoke<{ privateKey: string; publicKey: string }>("generate_ssh_key", { path, email }),
+    testSshConnection: (path: string) =>
+      invoke<boolean>("test_ssh_connection", { path }),
+    testHttpsToken: (path: string, token: string) =>
+      invoke<boolean>("test_https_token", { path, token }),
   },
 
   lfs: {
@@ -718,6 +738,19 @@ export const api = {
       invoke<void>("save_hook", { repo_path: path, hook_name: hookName, content }),
     delete: (path: string, hookName: string) =>
       invoke<void>("delete_hook", { repo_path: path, hook_name: hookName }),
+  },
+
+  gitConfig: {
+    list: (path: string, scope?: string) =>
+      invoke<GitConfigEntry[]>("list_git_config", { path, scope }),
+    get: (path: string, key: string, scope?: string) =>
+      invoke<string>("get_git_config", { path, key, scope }),
+    set: (path: string, key: string, value: string, scope?: string) =>
+      invoke<string>("set_git_config", { path, key, value, scope }),
+    unset: (path: string, key: string, scope?: string) =>
+      invoke<string>("unset_git_config", { path, key, scope }),
+    add: (path: string, key: string, value: string, scope?: string) =>
+      invoke<string>("add_git_config", { path, key, value, scope }),
   },
 
   credentials: {
