@@ -230,6 +230,7 @@ pub async fn commit_changes(
     path: String,
     message: String,
     amend: Option<bool>,
+    no_verify: Option<bool>,
 ) -> Result<String, String> {
     let _guard = locks.acquire(&path).await;
     let mut args = vec![
@@ -243,6 +244,9 @@ pub async fn commit_changes(
 
     if amend.unwrap_or(false) {
         args.push("--amend".to_string());
+    }
+    if no_verify.unwrap_or(false) {
+        args.push("--no-verify".to_string());
     }
 
     let output = Command::new("git")
