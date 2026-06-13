@@ -1,12 +1,10 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useGitStatus, useGitBranches, useGitSyncStatus } from "@/queries/useGitLog";
-import { api, type FileChange, type Commit, type StashEntry, type RepoInfo, type LintDiagnostic } from "@/api/tauri";
+import { api, type FileChange, type Commit, type RepoInfo } from "@/api/tauri";
 import { useCommitDateFormatter } from "@/lib/date";
 import { useQueryClient, useQuery, useQueries } from "@tanstack/react-query";
 import { useGenerateCommitMessage } from "@/queries/useAI";
-import { lintCommitMessage, autoFixCommitMessage, type CommitLintResult } from "@/lib/commit-lint";
-import { LintWarningDialog } from "@/components/features/dialogs";
 import { showToast } from "@/lib/toast";
 import { trackRemoteOp } from "@/stores/operations";
 import { useRepoAutoRefresh } from "@/hooks/useRepoAutoRefresh";
@@ -18,15 +16,14 @@ import {
   FolderOpen,
   Search,
   Loader2,
-  RefreshCw,
   ExternalLink,
   Settings,
-  Copy,
   MessageSquare,
   Plus,
+  GitCommitHorizontal,
 } from "lucide-react";
 
-
+type ViewMode = "status" | "changes" | "actions";
 
 export default function TrayPanelView() {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -42,8 +39,7 @@ export default function TrayPanelView() {
 
   const currentBranch = branches?.find((b) => b.current)?.name || "";
 
-  // States
-  const [activeTab, setActiveTab] = useState<"changes" | "commits">("changes");
+  const [viewMode, setViewMode] = useState<ViewMode>("status");
   const [repoDropdownOpen, setRepoDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [commitMessage, setCommitMessage] = useState("");
@@ -51,54 +47,12 @@ export default function TrayPanelView() {
   const [syncLoading, setSyncLoading] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  // File search and selection state for TrayFileChanges
   const [fileSearchQuery, setFileSearchQuery] = useState("");
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [selectedFileStage, setSelectedFileStage] = useState<"staged" | "unstaged" | null>(null);
 
-  // Commit message linting state
-  const [lintResults, setLintResults] = useState<CommitLintResult[]>([]);
-
-  const runLint = useCallback(() => {
-    const isCommitLintEnabled = localStorage.getItem("gitflowCommitLintEnabled") !== "false";
-    if (isCommitLintEnabled && commitMessage) {
-      setLintResults(lintCommitMessage(commitMessage));
-    } else {
-      setLintResults([]);
-    }
-  }, [commitMessage]);
-
-  useEffect(() => {
-    runLint();
-  }, [commitMessage, runLint]);
-
-  useEffect(() => {
-    window.addEventListener("gitflow-settings-updated", runLint);
-    return () => {
-      window.removeEventListener("gitflow-settings-updated", runLint);
-    };
-  }, [runLint]);
-
-  // Auto-refresh git state on file-watcher events and window focus
-  useRepoAutoRefresh(repoPath, {
-    includeStash: true,
-  });
-
-  // Pre-Commit Gate States
-  const [lintWarningOpen, setLintWarningOpen] = useState(false);
-  const [pendingCommitMessage, setPendingCommitMessage] = useState("");
-  const [gateCommitErrors, setGateCommitErrors] = useState<CommitLintResult[]>([]);
-  const [gateCodeDiagnostics, setGateCodeDiagnostics] = useState<LintDiagnostic[]>([]);
-  const [gateStrictness, setGateStrictness] = useState<"strict" | "warn">("warn");
-  const [lintRunning, setLintRunning] = useState(false);
-
-  // Stash states
-  const [stashLoading, setStashLoading] = useState(false);
-  const [popLoading, setPopLoading] = useState(false);
-
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close repo dropdown on click outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -109,18 +63,18 @@ export default function TrayPanelView() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Fetch stashes
-  const { data: stashes } = useQuery<StashEntry[]>({
+  useRepoAutoRefresh(repoPath, { includeStash: true });
+
+  const { data: stashes } = useQuery({
     queryKey: ["git", repoPath, "stash-list"],
     queryFn: () => api.stash.list(repoPath!),
     enabled: !!repoPath,
     staleTime: 10_000,
   });
 
-  // Fetch recent commits
   const { data: recentCommits, isLoading: isLoadingCommits } = useQuery<Commit[]>({
     queryKey: ["git", repoPath, "recent-commits"],
-    queryFn: () => api.log(repoPath!, 0, 8),
+    queryFn: () => api.log(repoPath!, 0, 3),
     enabled: !!repoPath,
     staleTime: 10_000,
   });
@@ -147,38 +101,23 @@ export default function TrayPanelView() {
 
   const handleStashPush = async () => {
     if (!repoPath) return;
-    setStashLoading(true);
     try {
       await api.stash.push(repoPath, `Stash from Tray - ${new Date().toLocaleTimeString()}`, true);
       invalidate();
-      showToast("Stashed changes successfully");
+      showToast("Stashed changes");
     } catch (e: any) {
       showToast(e.message || String(e), "error");
-    } finally {
-      setStashLoading(false);
     }
   };
 
   const handleStashPop = async () => {
     if (!repoPath || !stashes || stashes.length === 0) return;
-    setPopLoading(true);
     try {
       await api.stash.pop(repoPath, 0);
       invalidate();
-      showToast("Popped stash successfully");
+      showToast("Popped stash");
     } catch (e: any) {
       showToast(e.message || String(e), "error");
-    } finally {
-      setPopLoading(false);
-    }
-  };
-
-  const copyToClipboard = async (text: string, successMessage = "Copied to clipboard") => {
-    try {
-      await navigator.clipboard.writeText(text);
-      showToast(successMessage);
-    } catch (err) {
-      showToast("Failed to copy", "error");
     }
   };
 
@@ -234,9 +173,7 @@ export default function TrayPanelView() {
       showToast("No changes to generate a commit message", "error");
       return;
     }
-
     try {
-      showToast("Generating message for all changes...", "success");
       const msg = await generateCommit.mutateAsync({ files: changes });
       setCommitMessage(msg.message);
     } catch (e: any) {
@@ -244,13 +181,14 @@ export default function TrayPanelView() {
     }
   };
 
-  const performActualCommit = async (msg: string) => {
+  const handleCommit = async () => {
+    if (!repoPath || !commitMessage.trim()) return;
     setCommitting(true);
     try {
       if (unstaged.length > 0) {
-        await api.commit.stageAll(repoPath!);
+        await api.commit.stageAll(repoPath);
       }
-      await api.commit.commit(repoPath!, msg, false);
+      await api.commit.commit(repoPath, commitMessage, false);
       setCommitMessage("");
       invalidate();
       showToast("Committed successfully");
@@ -259,53 +197,6 @@ export default function TrayPanelView() {
     } finally {
       setCommitting(false);
     }
-  };
-
-  const handleCommit = async () => {
-    if (!repoPath || !commitMessage.trim()) return;
-
-    const commitLintEnabled = localStorage.getItem("gitflowCommitLintEnabled") !== "false";
-    const codeLintEnabled = localStorage.getItem("gitflowCodeLintEnabled") === "true";
-    const strictness = (localStorage.getItem("gitflowLintStrictness") || "warn") as "strict" | "warn";
-
-    let msgErrors: CommitLintResult[] = [];
-    let codeIssues: LintDiagnostic[] = [];
-
-    const filesToLintExist = (changes?.length || 0) > 0;
-
-    if (commitLintEnabled) {
-      msgErrors = lintCommitMessage(commitMessage);
-    }
-
-    if (codeLintEnabled && filesToLintExist) {
-      setLintRunning(true);
-      try {
-        if (unstaged.length > 0) {
-          await api.commit.stageAll(repoPath);
-          invalidate();
-        }
-        const res = await api.lint.run(repoPath);
-        codeIssues = res.diagnostics;
-      } catch (err) {
-        console.error("Linter execution failed:", err);
-      } finally {
-        setLintRunning(false);
-      }
-    }
-
-    const hasErrors = msgErrors.some(e => e.severity === "error") || codeIssues.some(d => d.severity === "error");
-    const hasWarnings = msgErrors.some(e => e.severity === "warning") || codeIssues.some(d => d.severity === "warning");
-
-    if (hasErrors || hasWarnings) {
-      setGateCommitErrors(msgErrors);
-      setGateCodeDiagnostics(codeIssues);
-      setGateStrictness(strictness);
-      setPendingCommitMessage(commitMessage);
-      setLintWarningOpen(true);
-      return;
-    }
-
-    await performActualCommit(commitMessage);
   };
 
   const handleGitAction = async (action: "fetch" | "pull" | "push") => {
@@ -330,50 +221,30 @@ export default function TrayPanelView() {
     }
   };
 
-  const handleRefresh = async () => {
-    if (!repoPath || refreshing) return;
-    setRefreshing(true);
-    try {
-      await queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
-      await queryClient.invalidateQueries({ queryKey: ["repo", repoPath] });
-      showToast("Refreshed");
-    } catch (e: any) {
-      showToast(e.message || String(e), "error");
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
   const handleOpenRepo = async () => {
     try {
       await api.window.openRepoFromTray();
     } catch (e) {
-      console.error("[Tray] Error opening repo:", e);
       showToast("Failed to open repo picker", "error");
     }
   };
 
   const handleOpenMainApp = async () => {
-    console.log("[Tray] Open Full App clicked");
     try {
       await api.window.showMain();
-      console.log("[Tray] Main window shown");
     } catch (e) {
       console.error("[Tray] Error opening full app:", e);
     }
   };
 
   const handleOpenSettings = async () => {
-    console.log("[Tray] Open Settings clicked");
     try {
       await api.window.openSettings();
-      console.log("[Tray] Settings opened");
     } catch (e) {
       console.error("[Tray] Error opening settings:", e);
     }
   };
 
-  // Filter repos based on query
   const filteredRepos = recentRepos.filter((path) =>
     path.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -412,378 +283,389 @@ export default function TrayPanelView() {
     invalidate(path);
   };
 
-  const renderRepoItem = (path: string) => {
-    const remote = repoInfoByPath.get(path)?.remote;
-
-    return (
-      <button
-        key={path}
-        onClick={() => selectRepo(path)}
-        className={`w-full text-left px-3 py-1.5 text-[10px] hover:bg-accent hover:text-accent-fg transition-colors flex flex-col gap-0.5 ${repoPath === path ? "bg-surface-2 font-semibold" : "text-text-secondary"
-          }`}
-      >
-        <span className="font-medium truncate">{path.split("/").pop()}</span>
-        <span className="text-[8px] opacity-75 truncate">{remote || path}</span>
-      </button>
-    );
-  };
-
-  const renderRepoGroup = (label: string, paths: string[]) => {
-    if (paths.length === 0) return null;
-
-    return (
-      <div className="py-1">
-        <div className="px-3 py-1 text-[8px] font-bold uppercase tracking-wider text-text-muted-80 flex items-center justify-between">
-          <span>{label}</span>
-          <span>{paths.length}</span>
-        </div>
-        {paths.map(renderRepoItem)}
-      </div>
-    );
-  };
+  const lastCommit = recentCommits?.[0];
 
   return (
-    <div className="h-[584px] w-[384px] bg-transparent p-0 rounded-[20px] overflow-hidden font-sans">
-      <div className="flex h-full w-full flex-col bg-surface-0 border border-border-60 rounded-[18px] overflow-hidden select-none shadow-2xl relative">
-      {/* Header */}
-      <div className="h-11 border-b border-border-60 bg-surface-1 flex items-center justify-between px-3 shrink-0">
-        {/* Repo Selector Dropdown Trigger */}
-        <div className="relative" ref={dropdownRef}>
-          <button
-            onClick={() => setRepoDropdownOpen(!repoDropdownOpen)}
-            className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-surface-2 text-xs font-semibold text-text-primary transition-all max-w-[220px]"
-          >
-            <FolderOpen size={13} className="text-accent shrink-0" />
-            <span className="truncate">{getRepoName(repoPath)}</span>
-            <ChevronDown size={11} className={`text-text-muted transition-transform ${repoDropdownOpen ? "rotate-180" : ""}`} />
-          </button>
+    <div className="h-[420px] w-[340px] bg-transparent p-0 rounded-[16px] overflow-hidden font-sans">
+      <div className="flex h-full w-full flex-col bg-surface-0 border border-border-60 rounded-[14px] overflow-hidden select-none shadow-2xl relative">
 
-          {repoDropdownOpen && (
-            <div className="absolute left-0 mt-1 w-64 bg-surface-1 border border-border-60 rounded-mac shadow-xl z-50 py-1.5 anim-palette-enter">
-              <div className="px-2 pb-1.5 border-b border-border-40 flex items-center gap-1.5">
-                <Search size={11} className="text-text-muted" />
-                <input
-                  type="text"
-                  placeholder="Search recent repos..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-transparent text-[10px] text-text-primary outline-none"
-                  autoFocus
-                />
-              </div>
-              <button
-                onClick={handleOpenRepo}
-                className="w-full flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-semibold text-accent hover:bg-accent-10 transition-colors border-b border-border-40 cursor-pointer"
-              >
-                <Plus size={10} />
-                <span>Open Repo...</span>
-              </button>
-              <div className="max-h-48 overflow-y-auto mt-1">
-                {filteredRepos.length === 0 ? (
-                  <div className="px-3 py-2 text-[10px] text-text-muted italic">
-                    No repositories found
-                  </div>
-                ) : (
-                  <>
-                    {renderRepoGroup("Remote", groupedRepos.remote)}
-                    {renderRepoGroup("Local", groupedRepos.local)}
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex items-center gap-1">
-          {repoPath && (
+        {/* Header */}
+        <div className="h-10 border-b border-border-60 bg-surface-1 flex items-center justify-between px-3 shrink-0">
+          <div className="relative" ref={dropdownRef}>
             <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="p-1.5 rounded hover:bg-surface-2 text-text-muted hover:text-text-primary disabled:opacity-50 transition-all cursor-pointer"
-              title="Refresh"
+              onClick={() => setRepoDropdownOpen(!repoDropdownOpen)}
+              className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-surface-2 text-[11px] font-semibold text-text-primary transition-all max-w-[200px]"
             >
-              {refreshing ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <RefreshCw size={13} />
-              )}
+              <FolderOpen size={12} className="text-accent shrink-0" />
+              <span className="truncate">{getRepoName(repoPath)}</span>
+              <ChevronDown size={10} className={`text-text-muted transition-transform ${repoDropdownOpen ? "rotate-180" : ""}`} />
             </button>
-          )}
-          <button
-            onClick={handleOpenSettings}
-            className="p-1.5 rounded hover:bg-surface-2 text-text-muted hover:text-text-primary transition-all cursor-pointer"
-            title="Settings"
-          >
-            <Settings size={13} />
-          </button>
-          <button
-            onClick={handleOpenMainApp}
-            className="p-1.5 rounded hover:bg-surface-2 text-text-muted hover:text-text-primary transition-all cursor-pointer"
-            title="Open Full App"
-          >
-            <ExternalLink size={13} />
-          </button>
-        </div>
-      </div>
 
-      {/* Segmented Tab Control */}
-      {repoPath && (
-        <div className="px-3 pt-2.5 shrink-0 bg-surface-0">
-          <div className="flex bg-surface-1 p-0.5 rounded border border-border-40">
-            <button
-              onClick={() => setActiveTab("changes")}
-              className={`flex-1 py-1 text-[10px] font-bold rounded transition-all cursor-pointer ${activeTab === "changes" ? "bg-surface-2 text-accent shadow-sm" : "text-text-muted hover:text-text-primary"
-                }`}
-            >
-              Changes ({changes?.length || 0})
-            </button>
-            <button
-              onClick={() => setActiveTab("commits")}
-              className={`flex-1 py-1 text-[10px] font-bold rounded transition-all cursor-pointer ${activeTab === "commits" ? "bg-surface-2 text-accent shadow-sm" : "text-text-muted hover:text-text-primary"
-                }`}
-            >
-              Recent Commits
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
-        {repoPath ? (
-          activeTab === "changes" ? (
-            <>
-              <TrayFileChanges
-                staged={staged}
-                unstaged={unstaged}
-                searchQuery={fileSearchQuery}
-                setSearchQuery={setFileSearchQuery}
-                onStage={(path) => {
-                  const file = changes?.find((c) => c.path === path && !c.staged);
-                  if (file) handleToggleStage(file);
-                }}
-                onUnstage={(path) => {
-                  const file = changes?.find((c) => c.path === path && c.staged);
-                  if (file) handleToggleStage(file);
-                }}
-                onStageAll={handleStageAll}
-                onUnstageAll={handleUnstageAll}
-                selectedFile={selectedFile}
-                selectedFileStage={selectedFileStage}
-                onSelectFile={(path, stage) => {
-                  setSelectedFile(path);
-                  setSelectedFileStage(stage);
-                }}
-                isLoading={isLoadingStatus}
-                stashes={stashes}
-                stashLoading={stashLoading}
-                popLoading={popLoading}
-                onStashPush={handleStashPush}
-                onStashPop={handleStashPop}
-              />
-
-              <TrayCommitBox
-                commitMessage={commitMessage}
-                setCommitMessage={setCommitMessage}
-                lintResults={lintResults}
-                committing={committing}
-                lintRunning={lintRunning}
-                staged={staged}
-                unstaged={unstaged}
-                onCommit={handleCommit}
-                onGenerateCommit={handleAICommitMessage}
-                generateCommitPending={generateCommit.isPending}
-              />
-            </>
-          ) : (
-            <div className="flex-1 flex flex-col border border-border-40 bg-surface-1-40 rounded-mac p-2.5 overflow-hidden">
-              <div className="flex items-center justify-between border-b border-border-40 pb-1.5 shrink-0">
-                <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
-                  Recent Commits
-                </span>
-                <span className="text-[8px] text-text-muted">Click commit to copy hash</span>
-              </div>
-
-              <div className="flex-1 overflow-y-auto mt-2 space-y-1.5 pr-1 anim-overlay-enter">
-                {isLoadingCommits ? (
-                  <div className="h-full flex items-center justify-center py-8 text-text-muted gap-1.5">
-                    <Loader2 size={12} className="animate-spin text-accent" />
-                    <span className="text-[10px]">Loading commits...</span>
-                  </div>
-                ) : recentCommits && recentCommits.length > 0 ? (
-                  recentCommits.map((commit) => (
-                    <div
-                      key={commit.hash}
-                      onClick={() => copyToClipboard(commit.hash, "Commit hash copied")}
-                      className="group min-h-[58px] w-full text-left p-2.5 rounded hover:bg-surface-2 active:bg-surface-3 transition-all flex flex-col justify-center gap-1.5 border border-transparent hover:border-border-40 cursor-pointer"
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          copyToClipboard(commit.hash, "Commit hash copied");
-                        }
-                      }}
-                    >
-                      <div className="flex items-center justify-between gap-1.5 w-full">
-                        <span className="text-[10px] text-text-primary font-semibold truncate flex-1">
-                          {commit.message.split("\n")[0]}
-                        </span>
-                        <span className="text-[8px] font-mono bg-accent-10 border border-accent-20 px-1.5 py-0.5 rounded text-accent shrink-0">
-                          {commit.hash.slice(0, 7)}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-[8px] w-full">
-                        <span className="truncate max-w-[120px] text-text-secondary">{commit.author}</span>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-text-secondary">{formatCommitDate(commit.date)}</span>
-                          <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                            <button
-                              type="button"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                copyToClipboard(commit.hash, "Commit hash copied");
-                              }}
-                              className="p-0.5 rounded hover:bg-surface-3 text-text-muted hover:text-accent transition-colors"
-                              title="Copy hash"
-                            >
-                              <Copy size={9} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                copyToClipboard(commit.message.split("\n")[0], "Commit message copied");
-                              }}
-                              className="p-0.5 rounded hover:bg-surface-3 text-text-muted hover:text-accent transition-colors"
-                              title="Copy message"
-                            >
-                              <MessageSquare size={9} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                handleOpenMainApp();
-                              }}
-                              className="p-0.5 rounded hover:bg-surface-3 text-text-muted hover:text-accent transition-colors"
-                              title="Open full app"
-                            >
-                              <ExternalLink size={9} />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center py-8 text-center text-text-muted">
-                    <span className="text-[10px]">No commits found</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center text-text-muted gap-3 px-5">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full border border-border-40 bg-surface-1">
-              <FolderOpen size={20} className="text-accent" />
-            </div>
-            <div className="space-y-1">
-              <div className="text-xs font-semibold text-text-primary">No repository open</div>
-              <div className="text-[10px] leading-relaxed text-text-muted">
-                Open the main app or pick a recent repository.
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleOpenRepo}
-                className="h-7 px-3 rounded bg-accent text-accent-fg text-[10px] font-bold transition-all hover:opacity-95 cursor-pointer"
-              >
-                Open Repo
-              </button>
-              <button
-                type="button"
-                onClick={handleOpenMainApp}
-                className="h-7 px-3 rounded border border-border-40 bg-surface-1 text-[10px] font-bold text-text-primary transition-all hover:bg-surface-2 cursor-pointer"
-              >
-                Open App
-              </button>
-              {recentRepos.length > 0 && (
+            {repoDropdownOpen && (
+              <div className="absolute left-0 mt-1 w-56 bg-surface-1 border border-border-60 rounded-lg shadow-xl z-50 py-1.5">
+                <div className="px-2 pb-1.5 border-b border-border-40 flex items-center gap-1.5">
+                  <Search size={10} className="text-text-muted" />
+                  <input
+                    type="text"
+                    placeholder="Search repos..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-transparent text-[10px] text-text-primary outline-none"
+                    autoFocus
+                  />
+                </div>
                 <button
-                  type="button"
-                  onClick={() => setRepoDropdownOpen(true)}
-                  className="h-7 px-3 rounded border border-border-40 bg-surface-1 text-[10px] font-bold text-text-primary transition-all hover:bg-surface-2 cursor-pointer"
+                  onClick={handleOpenRepo}
+                  className="w-full flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-semibold text-accent hover:bg-accent-10 transition-colors border-b border-border-40"
                 >
-                  Recent
+                  <Plus size={9} />
+                  <span>Open Repo...</span>
                 </button>
-              )}
-            </div>
-            {recentRepos.length > 0 && (
-              <div className="mt-1 w-full max-w-[250px] overflow-hidden rounded border border-border-40 bg-surface-1-60 text-left">
-                {recentRepos.slice(0, 4).map((path) => (
-                  <button
-                    key={path}
-                    type="button"
-                    onClick={() => selectRepo(path)}
-                    className="flex w-full flex-col gap-0.5 border-b border-border-40 px-2.5 py-1.5 text-left last:border-b-0 hover:bg-surface-2 cursor-pointer"
-                    title={path}
-                  >
-                    <span className="truncate text-[10px] font-semibold text-text-primary">
-                      {path.split("/").pop() || path}
-                    </span>
-                    <span className="truncate text-[8px] text-text-muted">{path}</span>
-                  </button>
-                ))}
+                <div className="max-h-40 overflow-y-auto mt-1">
+                  {filteredRepos.length === 0 ? (
+                    <div className="px-3 py-2 text-[10px] text-text-muted italic">No repositories found</div>
+                  ) : (
+                    <>
+                      {groupedRepos.remote.length > 0 && (
+                        <div className="py-1">
+                          <div className="px-3 py-1 text-[8px] font-bold uppercase tracking-wider text-text-muted flex items-center justify-between">
+                            <span>Remote</span>
+                            <span>{groupedRepos.remote.length}</span>
+                          </div>
+                          {groupedRepos.remote.map((path) => (
+                            <button
+                              key={path}
+                              onClick={() => selectRepo(path)}
+                              className={`w-full text-left px-3 py-1.5 text-[10px] hover:bg-accent hover:text-accent-fg transition-colors flex flex-col gap-0.5 ${repoPath === path ? "bg-surface-2 font-semibold" : "text-text-secondary"}`}
+                            >
+                              <span className="font-medium truncate">{path.split("/").pop()}</span>
+                              <span className="text-[8px] opacity-75 truncate">{repoInfoByPath.get(path)?.remote || path}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {groupedRepos.local.length > 0 && (
+                        <div className="py-1">
+                          <div className="px-3 py-1 text-[8px] font-bold uppercase tracking-wider text-text-muted flex items-center justify-between">
+                            <span>Local</span>
+                            <span>{groupedRepos.local.length}</span>
+                          </div>
+                          {groupedRepos.local.map((path) => (
+                            <button
+                              key={path}
+                              onClick={() => selectRepo(path)}
+                              className={`w-full text-left px-3 py-1.5 text-[10px] hover:bg-accent hover:text-accent-fg transition-colors flex flex-col gap-0.5 ${repoPath === path ? "bg-surface-2 font-semibold" : "text-text-secondary"}`}
+                            >
+                              <span className="font-medium truncate">{path.split("/").pop()}</span>
+                              <span className="text-[8px] opacity-75 truncate">{path}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
             )}
           </div>
-        )}
-      </div>
 
-      {/* Footer Git Actions Bar */}
-      {repoPath ? (
-        <TrayActions
-          currentBranch={currentBranch}
-          branches={branches || []}
-          syncStatus={syncStatus}
-          syncLoading={syncLoading}
-          refreshing={refreshing}
-          onFetch={() => handleGitAction("fetch")}
-          onPull={() => handleGitAction("pull")}
-          onPush={() => handleGitAction("push")}
-          onCheckoutBranch={handleCheckoutBranch}
-        />
-      ) : (
-        <div className="h-12 border-t border-border-60 bg-surface-1 flex items-center justify-between px-3.5 shrink-0">
-          <span className="text-[9px] font-mono text-text-muted">Ready</span>
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={handleOpenSettings}
+              className="p-1.5 rounded hover:bg-surface-2 text-text-muted hover:text-text-primary transition-all"
+              title="Settings"
+            >
+              <Settings size={12} />
+            </button>
+            <button
+              onClick={handleOpenMainApp}
+              className="p-1.5 rounded hover:bg-surface-2 text-text-muted hover:text-text-primary transition-all"
+              title="Open Full App"
+            >
+              <ExternalLink size={12} />
+            </button>
+          </div>
         </div>
-      )}
 
-      <LintWarningDialog
-        open={lintWarningOpen}
-        onClose={() => setLintWarningOpen(false)}
-        commitErrors={gateCommitErrors}
-        codeDiagnostics={gateCodeDiagnostics}
-        strictness={gateStrictness}
-        onCommitAnyway={async () => {
-          setLintWarningOpen(false);
-          await performActualCommit(pendingCommitMessage);
-        }}
-        onAutoFixCommit={() => {
-          const fixed = autoFixCommitMessage(pendingCommitMessage, gateCommitErrors);
-          setPendingCommitMessage(fixed);
-          setCommitMessage(fixed);
-          const reErrors = lintCommitMessage(fixed);
-          setGateCommitErrors(reErrors);
-          if (reErrors.length === 0 && gateCodeDiagnostics.length === 0) {
-            setLintWarningOpen(false);
-            performActualCommit(fixed);
-          }
-        }}
-      />
+        {/* View Mode Tabs */}
+        {repoPath && (
+          <div className="px-3 pt-2 pb-1 shrink-0 bg-surface-0">
+            <div className="flex bg-surface-1 p-0.5 rounded border border-border-40">
+              {(["status", "changes", "actions"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  className={`flex-1 py-1 text-[10px] font-bold rounded transition-all ${viewMode === mode ? "bg-surface-2 text-accent shadow-sm" : "text-text-muted hover:text-text-primary"}`}
+                >
+                  {mode === "status" ? "Status" : mode === "changes" ? `Changes (${changes?.length || 0})` : "Actions"}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-3 py-2 flex flex-col gap-2">
+          {repoPath ? (
+            <>
+              {/* Status Mode */}
+              {viewMode === "status" && (
+                <div className="flex flex-col gap-2.5">
+                  {/* Branch + Sync Status */}
+                  <div className="flex items-center justify-between px-2.5 py-2 bg-surface-1 rounded border border-border-40">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-[11px] font-semibold text-text-primary truncate">{currentBranch || "no branch"}</span>
+                      {syncStatus && (syncStatus.ahead > 0 || syncStatus.behind > 0) && (
+                        <span className="flex items-center gap-1 rounded bg-accent-10 px-1.5 py-0.5 text-[9px] font-bold text-accent">
+                          {syncStatus.ahead > 0 && <span>↑{syncStatus.ahead}</span>}
+                          {syncStatus.behind > 0 && <span>↓{syncStatus.behind}</span>}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[9px] text-text-muted">
+                      {isLoadingStatus ? "..." : `${staged.length} staged · ${unstaged.length} unstaged`}
+                    </span>
+                  </div>
+
+                  {/* Last Commit */}
+                  {lastCommit && (
+                    <div className="px-2.5 py-2 bg-surface-1 rounded border border-border-40">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <GitCommitHorizontal size={10} className="text-text-muted shrink-0" />
+                        <span className="text-[9px] text-text-muted uppercase tracking-wider font-semibold">Last Commit</span>
+                      </div>
+                      <p className="text-[11px] text-text-primary font-medium truncate">{lastCommit.message.split("\n")[0]}</p>
+                      <p className="text-[9px] text-text-muted mt-0.5">
+                        {lastCommit.author} · {formatCommitDate(lastCommit.date)}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Quick Actions */}
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={handleStageAll}
+                      disabled={unstaged.length === 0}
+                      className="flex-1 h-8 px-2 text-[10px] font-semibold rounded border border-border-40 bg-surface-1 hover:bg-surface-2 text-text-primary transition-all disabled:opacity-40"
+                    >
+                      Stage All
+                    </button>
+                    <button
+                      onClick={handleCommit}
+                      disabled={committing || staged.length === 0 || !commitMessage.trim()}
+                      className="flex-1 h-8 px-2 text-[10px] font-semibold rounded bg-accent text-accent-fg hover:opacity-95 transition-all disabled:opacity-40"
+                    >
+                      {committing ? "Committing..." : "Commit"}
+                    </button>
+                    <button
+                      onClick={() => handleGitAction("push")}
+                      disabled={syncLoading !== null || !syncStatus || syncStatus.ahead === 0}
+                      className="flex-1 h-8 px-2 text-[10px] font-semibold rounded border border-border-40 bg-surface-1 hover:bg-surface-2 text-text-primary transition-all disabled:opacity-40"
+                    >
+                      {syncLoading === "push" ? "..." : "Push"}
+                    </button>
+                  </div>
+
+                  {/* AI + Stash Row */}
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={handleAICommitMessage}
+                      disabled={staged.length === 0 || generateCommit.isPending}
+                      className="flex-1 h-8 px-2 text-[10px] font-semibold rounded border border-accent/30 bg-accent/5 text-accent hover:bg-accent/10 transition-all disabled:opacity-40 flex items-center justify-center gap-1"
+                    >
+                      {generateCommit.isPending ? (
+                        <Loader2 size={10} className="animate-spin" />
+                      ) : (
+                        <MessageSquare size={10} />
+                      )}
+                      AI Message
+                    </button>
+                    <button
+                      onClick={handleStashPush}
+                      disabled={stashes !== undefined && stashes.length > 0 ? false : changes?.length === 0}
+                      className="flex-1 h-8 px-2 text-[10px] font-semibold rounded border border-border-40 bg-surface-1 hover:bg-surface-2 text-text-primary transition-all disabled:opacity-40"
+                    >
+                      Stash All
+                    </button>
+                    {stashes && stashes.length > 0 && (
+                      <button
+                        onClick={handleStashPop}
+                        className="flex-1 h-8 px-2 text-[10px] font-semibold rounded border border-border-40 bg-surface-1 hover:bg-surface-2 text-text-primary transition-all relative"
+                      >
+                        Pop Stash
+                        <span className="absolute -top-1 -right-1 min-w-[14px] rounded bg-accent px-1 py-0.5 text-[7px] font-bold leading-none text-accent-fg">
+                          {stashes.length}
+                        </span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Commit box — only show when staged + message started */}
+                  {staged.length > 0 && (
+                    <TrayCommitBox
+                      commitMessage={commitMessage}
+                      setCommitMessage={setCommitMessage}
+                      committing={committing}
+                      lintRunning={false}
+                      staged={staged}
+                      unstaged={unstaged}
+                      onCommit={handleCommit}
+                      onGenerateCommit={handleAICommitMessage}
+                      generateCommitPending={generateCommit.isPending}
+                    />
+                  )}
+
+                  {/* Recent commits */}
+                  {recentCommits && recentCommits.length > 0 && (
+                    <div className="rounded border border-border-40 bg-surface-1 overflow-hidden">
+                      <div className="px-2.5 py-1.5 border-b border-border-40 flex items-center justify-between">
+                        <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider">Recent</span>
+                        <span className="text-[8px] text-text-muted">Click to copy hash</span>
+                      </div>
+                      <div className="divide-y divide-border-40">
+                        {recentCommits.map((commit) => (
+                          <button
+                            key={commit.hash}
+                            onClick={async () => {
+                              await navigator.clipboard.writeText(commit.hash);
+                              showToast("Hash copied");
+                            }}
+                            className="w-full text-left px-2.5 py-1.5 hover:bg-surface-2 transition-colors"
+                          >
+                            <p className="text-[10px] text-text-primary font-medium truncate">{commit.message.split("\n")[0]}</p>
+                            <p className="text-[8px] text-text-muted mt-0.5 flex items-center gap-1.5">
+                              <span>{commit.author}</span>
+                              <span>·</span>
+                              <span>{formatCommitDate(commit.date)}</span>
+                              <span className="font-mono bg-accent-10 border border-accent-20 px-1 rounded text-accent">{commit.hash.slice(0, 7)}</span>
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Changes Mode */}
+              {viewMode === "changes" && (
+                <TrayFileChanges
+                  staged={staged}
+                  unstaged={unstaged}
+                  searchQuery={fileSearchQuery}
+                  setSearchQuery={setFileSearchQuery}
+                  onStage={(path) => {
+                    const file = changes?.find((c) => c.path === path && !c.staged);
+                    if (file) handleToggleStage(file);
+                  }}
+                  onUnstage={(path) => {
+                    const file = changes?.find((c) => c.path === path && c.staged);
+                    if (file) handleToggleStage(file);
+                  }}
+                  onStageAll={handleStageAll}
+                  onUnstageAll={handleUnstageAll}
+                  selectedFile={selectedFile}
+                  selectedFileStage={selectedFileStage}
+                  onSelectFile={(path, stage) => {
+                    setSelectedFile(path);
+                    setSelectedFileStage(stage);
+                  }}
+                  isLoading={isLoadingStatus}
+                />
+              )}
+
+              {/* Actions Mode */}
+              {viewMode === "actions" && (
+                <div className="flex flex-col gap-2">
+                  <TrayActions
+                    currentBranch={currentBranch}
+                    branches={branches || []}
+                    syncStatus={syncStatus}
+                    syncLoading={syncLoading}
+                    refreshing={refreshing}
+                    onFetch={() => handleGitAction("fetch")}
+                    onPull={() => handleGitAction("pull")}
+                    onPush={() => handleGitAction("push")}
+                    onCheckoutBranch={handleCheckoutBranch}
+                  />
+                </div>
+              )}
+            </>
+          ) : (
+            /* No Repo State */
+            <div className="flex-1 flex flex-col items-center justify-center text-center text-text-muted gap-3 px-5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full border border-border-40 bg-surface-1">
+                <FolderOpen size={18} className="text-accent" />
+              </div>
+              <div className="space-y-1">
+                <div className="text-[11px] font-semibold text-text-primary">No repository open</div>
+                <div className="text-[10px] leading-relaxed text-text-muted">
+                  Open the main app or pick a recent repository.
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleOpenRepo}
+                  className="h-7 px-3 rounded bg-accent text-accent-fg text-[10px] font-bold transition-all hover:opacity-95"
+                >
+                  Open Repo
+                </button>
+                <button
+                  onClick={handleOpenMainApp}
+                  className="h-7 px-3 rounded border border-border-40 bg-surface-1 text-[10px] font-bold text-text-primary transition-all hover:bg-surface-2"
+                >
+                  Open App
+                </button>
+              </div>
+              {recentRepos.length > 0 && (
+                <div className="mt-1 w-full max-w-[220px] overflow-hidden rounded border border-border-40 bg-surface-1 text-left">
+                  {recentRepos.slice(0, 4).map((path) => (
+                    <button
+                      key={path}
+                      onClick={() => selectRepo(path)}
+                      className="flex w-full flex-col gap-0.5 border-b border-border-40 px-2.5 py-1.5 text-left last:border-b-0 hover:bg-surface-2"
+                      title={path}
+                    >
+                      <span className="truncate text-[10px] font-semibold text-text-primary">{path.split("/").pop() || path}</span>
+                      <span className="truncate text-[8px] text-text-muted">{path}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        {repoPath && (
+          <div className="h-10 border-t border-border-60 bg-surface-1 flex items-center justify-between px-3 shrink-0">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-[10px] font-semibold text-text-primary truncate max-w-[100px]">{currentBranch}</span>
+              {syncStatus && (syncStatus.ahead > 0 || syncStatus.behind > 0) && (
+                <span className="flex items-center gap-1 text-[8px] text-text-muted">
+                  {syncStatus.ahead > 0 && <span className="text-[#30d158]">↑{syncStatus.ahead}</span>}
+                  {syncStatus.behind > 0 && <span className="text-[#ff453a]">↓{syncStatus.behind}</span>}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => handleGitAction("pull")}
+                disabled={syncLoading !== null}
+                className="h-7 px-2.5 text-[9px] font-semibold rounded border border-border-40 bg-surface-2 hover:bg-surface-3 text-text-primary transition-all disabled:opacity-50 flex items-center gap-1"
+              >
+                {syncLoading === "pull" ? <Loader2 size={10} className="animate-spin" /> : "↓ Pull"}
+              </button>
+              <button
+                onClick={() => handleGitAction("push")}
+                disabled={syncLoading !== null}
+                className="h-7 px-2.5 text-[9px] font-semibold rounded border border-border-40 bg-surface-2 hover:bg-surface-3 text-text-primary transition-all disabled:opacity-50 flex items-center gap-1"
+              >
+                {syncLoading === "push" ? <Loader2 size={10} className="animate-spin" /> : "↑ Push"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

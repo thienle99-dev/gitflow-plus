@@ -246,3 +246,274 @@ pub async fn gitflow_update_config(
     write_gitflow_config(&path, &config).await?;
     Ok(config)
 }
+
+// ---------------------------------------------------------------------------
+// GitFlow workflow commands
+// ---------------------------------------------------------------------------
+
+#[derive(Serialize)]
+pub struct GitFlowResult {
+    pub success: bool,
+    pub message: String,
+}
+
+async fn load_config(path: &str) -> Result<GitFlowConfig, String> {
+    let cfg = gitflow_detect(path.to_string()).await?;
+    if !cfg.initialized {
+        return Err("GitFlow is not initialized for this repository".to_string());
+    }
+    Ok(cfg)
+}
+
+async fn git_run(path: &str, args: &[&str]) -> Result<String, String> {
+    let output = Command::new("git")
+        .args(["--no-pager", "-C", path])
+        .args(args)
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run git {}: {}", args.join(" "), e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("git {} failed: {}", args.join(" "), stderr.trim()));
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+async fn branch_exists(path: &str, name: &str) -> Result<bool, String> {
+    let output = git_run(path, &["branch", "--list", name]).await?;
+    Ok(!output.is_empty())
+}
+
+/// Start a feature branch from develop.
+#[tauri::command]
+pub async fn gitflow_feature_start(path: String, name: String) -> Result<GitFlowResult, String> {
+    let config = load_config(&path).await?;
+
+    let full_name = format!("{}{}", config.feature_prefix, name);
+    if branch_exists(&path, &full_name).await? {
+        return Err(format!("Branch \"{}\" already exists", full_name));
+    }
+
+    git_run(&path, &["checkout", &config.develop]).await?;
+    git_run(&path, &["checkout", "-b", &full_name]).await?;
+
+    Ok(GitFlowResult {
+        success: true,
+        message: format!("Created feature branch \"{}\"", full_name),
+    })
+}
+
+/// Finish a feature branch: merge into develop and optionally delete.
+#[tauri::command]
+pub async fn gitflow_feature_finish(
+    path: String,
+    name: String,
+    merge_strategy: String,
+    delete_branch: bool,
+) -> Result<GitFlowResult, String> {
+    let config = load_config(&path).await?;
+    let full_name = format!("{}{}", config.feature_prefix, name);
+
+    if !branch_exists(&path, &full_name).await? {
+        return Err(format!("Branch \"{}\" does not exist", full_name));
+    }
+
+    git_run(&path, &["checkout", &config.develop]).await?;
+
+    match merge_strategy.as_str() {
+        "squash" => {
+            git_run(&path, &["merge", "--squash", &full_name]).await?;
+            git_run(&path, &["commit", "-m", &format!("Merge branch '{}'", full_name)]).await?;
+        }
+        "rebase" => {
+            git_run(&path, &["checkout", &full_name]).await?;
+            git_run(&path, &["rebase", &config.develop]).await?;
+            git_run(&path, &["checkout", &config.develop]).await?;
+            git_run(&path, &["merge", "--no-ff", &full_name]).await?;
+        }
+        _ => {
+            git_run(&path, &["merge", "--no-ff", &full_name]).await?;
+        }
+    }
+
+    if delete_branch {
+        git_run(&path, &["branch", "-d", &full_name]).await?;
+    }
+
+    Ok(GitFlowResult {
+        success: true,
+        message: format!("Feature \"{}\" merged into {}", name, config.develop),
+    })
+}
+
+/// Start a release branch from develop.
+#[tauri::command]
+pub async fn gitflow_release_start(path: String, version: String) -> Result<GitFlowResult, String> {
+    let config = load_config(&path).await?;
+
+    let full_name = format!("{}{}", config.release_prefix, version);
+    if branch_exists(&path, &full_name).await? {
+        return Err(format!("Branch \"{}\" already exists", full_name));
+    }
+
+    git_run(&path, &["checkout", &config.develop]).await?;
+    git_run(&path, &["checkout", "-b", &full_name]).await?;
+
+    Ok(GitFlowResult {
+        success: true,
+        message: format!("Created release branch \"{}\"", full_name),
+    })
+}
+
+/// Finish a release: merge into main, back-merge into develop, create tag, delete branch.
+#[tauri::command]
+pub async fn gitflow_release_finish(
+    path: String,
+    version: String,
+    merge_strategy: String,
+    create_tag: bool,
+    tag_message: Option<String>,
+) -> Result<GitFlowResult, String> {
+    let config = load_config(&path).await?;
+    let full_name = format!("{}{}", config.release_prefix, version);
+
+    if !branch_exists(&path, &full_name).await? {
+        return Err(format!("Branch \"{}\" does not exist", full_name));
+    }
+
+    // Merge into main
+    git_run(&path, &["checkout", &config.master]).await?;
+    match merge_strategy.as_str() {
+        "squash" => {
+            git_run(&path, &["merge", "--squash", &full_name]).await?;
+            git_run(&path, &["commit", "-m", &format!("Merge release '{}' into {}", full_name, config.master)]).await?;
+        }
+        "rebase" => {
+            git_run(&path, &["checkout", &full_name]).await?;
+            git_run(&path, &["rebase", &config.master]).await?;
+            git_run(&path, &["checkout", &config.master]).await?;
+            git_run(&path, &["merge", "--no-ff", &full_name]).await?;
+        }
+        _ => {
+            git_run(&path, &["merge", "--no-ff", &full_name]).await?;
+        }
+    }
+
+    // Back-merge into develop
+    git_run(&path, &["checkout", &config.develop]).await?;
+    match merge_strategy.as_str() {
+        "squash" => {
+            let _ = git_run(&path, &["merge", "--squash", &full_name]).await;
+            let _ = git_run(&path, &["commit", "-m", &format!("Merge release '{}' into {}", full_name, config.develop)]).await;
+        }
+        "rebase" => {
+            // Already merged into master; develop may not need a rebase here.
+            // Fall back to a regular merge to keep develop in sync.
+            let _ = git_run(&path, &["merge", "--no-ff", &full_name]).await;
+        }
+        _ => {
+            let _ = git_run(&path, &["merge", "--no-ff", &full_name]).await;
+        }
+    }
+
+    // Create annotated tag on main
+    if create_tag {
+        let tag_name = format!("{}{}", config.versiontag_prefix, version);
+        let msg = tag_message.unwrap_or_else(|| format!("Release {}", version));
+        git_run(&path, &["tag", "-a", &tag_name, "-m", &msg, &config.master]).await?;
+    }
+
+    // Delete release branch
+    git_run(&path, &["branch", "-d", &full_name]).await?;
+
+    Ok(GitFlowResult {
+        success: true,
+        message: format!("Release \"{}\" completed", version),
+    })
+}
+
+/// Start a hotfix branch from main.
+#[tauri::command]
+pub async fn gitflow_hotfix_start(path: String, version: String) -> Result<GitFlowResult, String> {
+    let config = load_config(&path).await?;
+
+    let full_name = format!("{}{}", config.hotfix_prefix, version);
+    if branch_exists(&path, &full_name).await? {
+        return Err(format!("Branch \"{}\" already exists", full_name));
+    }
+
+    git_run(&path, &["checkout", &config.master]).await?;
+    git_run(&path, &["checkout", "-b", &full_name]).await?;
+
+    Ok(GitFlowResult {
+        success: true,
+        message: format!("Created hotfix branch \"{}\"", full_name),
+    })
+}
+
+/// Finish a hotfix: merge into main, back-merge into develop, create tag, delete branch.
+#[tauri::command]
+pub async fn gitflow_hotfix_finish(
+    path: String,
+    version: String,
+    merge_strategy: String,
+    create_tag: bool,
+    tag_message: Option<String>,
+) -> Result<GitFlowResult, String> {
+    let config = load_config(&path).await?;
+    let full_name = format!("{}{}", config.hotfix_prefix, version);
+
+    if !branch_exists(&path, &full_name).await? {
+        return Err(format!("Branch \"{}\" does not exist", full_name));
+    }
+
+    // Merge into main
+    git_run(&path, &["checkout", &config.master]).await?;
+    match merge_strategy.as_str() {
+        "squash" => {
+            git_run(&path, &["merge", "--squash", &full_name]).await?;
+            git_run(&path, &["commit", "-m", &format!("Merge hotfix '{}' into {}", full_name, config.master)]).await?;
+        }
+        "rebase" => {
+            git_run(&path, &["checkout", &full_name]).await?;
+            git_run(&path, &["rebase", &config.master]).await?;
+            git_run(&path, &["checkout", &config.master]).await?;
+            git_run(&path, &["merge", "--no-ff", &full_name]).await?;
+        }
+        _ => {
+            git_run(&path, &["merge", "--no-ff", &full_name]).await?;
+        }
+    }
+
+    // Back-merge into develop
+    git_run(&path, &["checkout", &config.develop]).await?;
+    match merge_strategy.as_str() {
+        "squash" => {
+            let _ = git_run(&path, &["merge", "--squash", &full_name]).await;
+            let _ = git_run(&path, &["commit", "-m", &format!("Merge hotfix '{}' into {}", full_name, config.develop)]).await;
+        }
+        "rebase" => {
+            let _ = git_run(&path, &["merge", "--no-ff", &full_name]).await;
+        }
+        _ => {
+            let _ = git_run(&path, &["merge", "--no-ff", &full_name]).await;
+        }
+    }
+
+    // Create annotated tag on main
+    if create_tag {
+        let tag_name = format!("{}{}", config.versiontag_prefix, version);
+        let msg = tag_message.unwrap_or_else(|| format!("Hotfix {}", version));
+        git_run(&path, &["tag", "-a", &tag_name, "-m", &msg, &config.master]).await?;
+    }
+
+    // Delete hotfix branch
+    git_run(&path, &["branch", "-d", &full_name]).await?;
+
+    Ok(GitFlowResult {
+        success: true,
+        message: format!("Hotfix \"{}\" completed", version),
+    })
+}
