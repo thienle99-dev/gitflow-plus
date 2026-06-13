@@ -745,6 +745,19 @@ export default function TrayPanelView() {
                   {syncStatus.behind > 0 && <span className="text-[#ff453a]">↓{syncStatus.behind}</span>}
                 </span>
               )}
+              {preflight && (preflight.merge_in_progress || preflight.rebase_in_progress || preflight.cherry_pick_in_progress || preflight.has_conflicts) && (
+                <span className="text-[8px] text-[#ff9f0a] font-semibold" title={
+                  preflight.has_conflicts ? "Conflicts" :
+                  preflight.merge_in_progress ? "Merge in progress" :
+                  preflight.rebase_in_progress ? "Rebase in progress" :
+                  "Cherry-pick in progress"
+                }>
+                  {preflight.has_conflicts ? "⚠ conflicts" :
+                   preflight.merge_in_progress ? "⚠ merge" :
+                   preflight.rebase_in_progress ? "⚠ rebase" :
+                   "⚠ cherry-pick"}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-1">
               <button
