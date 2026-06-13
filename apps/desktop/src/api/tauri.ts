@@ -343,6 +343,13 @@ export interface SigningKeyInfo {
   email: string;
 }
 
+export interface SigningConfig {
+  signingKey: string;
+  commitGpgsign: boolean;
+  gpgFormat: string;
+  allowedSignersFile: string;
+}
+
 // Typed invoke wrappers
 export const api = {
   repo: {
@@ -795,6 +802,8 @@ export const api = {
       invoke<boolean>("has_signature", { repoPath, commitHash }),
     listKeys: () =>
       invoke<SigningKeyInfo[]>("list_signing_keys"),
+    getConfig: (repoPath: string) =>
+      invoke<SigningConfig>("get_signing_config", { repoPath }),
   },
 
   worktrees: {

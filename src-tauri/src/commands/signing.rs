@@ -1,5 +1,80 @@
 use std::process::Command;
 
+/// Get signing configuration for a repo
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct SigningConfig {
+    #[serde(rename = "signingKey")]
+    pub signing_key: String,
+    #[serde(rename = "commitGpgsign")]
+    pub commit_gpgsign: bool,
+    #[serde(rename = "gpgFormat")]
+    pub gpg_format: String,
+    #[serde(rename = "allowedSignersFile")]
+    pub allowed_signers_file: String,
+}
+
+#[tauri::command]
+pub async fn get_signing_config(repo_path: String) -> SigningConfig {
+    let signing_key = Command::new("git")
+        .args(["-C", &repo_path, "config", "user.signingkey"])
+        .output()
+        .ok()
+        .and_then(|o| {
+            if o.status.success() {
+                String::from_utf8_lossy(&o.stdout).trim().to_string().into()
+            } else {
+                None
+            }
+        })
+        .unwrap_or_default();
+
+    let commit_gpgsign = Command::new("git")
+        .args(["-C", &repo_path, "config", "--bool", "commit.gpgsign"])
+        .output()
+        .ok()
+        .and_then(|o| {
+            if o.status.success() {
+                Some(String::from_utf8_lossy(&o.stdout).trim() == "true")
+            } else {
+                Some(false)
+            }
+        })
+        .unwrap_or(false);
+
+    let gpg_format = Command::new("git")
+        .args(["-C", &repo_path, "config", "gpg.format"])
+        .output()
+        .ok()
+        .and_then(|o| {
+            if o.status.success() {
+                String::from_utf8_lossy(&o.stdout).trim().to_string().into()
+            } else {
+                None
+            }
+        })
+        .unwrap_or_else(|| "openpgp".to_string());
+
+    let allowed_signers_file = Command::new("git")
+        .args(["-C", &repo_path, "config", "gpg.ssh.allowedSignersFile"])
+        .output()
+        .ok()
+        .and_then(|o| {
+            if o.status.success() {
+                String::from_utf8_lossy(&o.stdout).trim().to_string().into()
+            } else {
+                None
+            }
+        })
+        .unwrap_or_default();
+
+    SigningConfig {
+        signing_key,
+        commit_gpgsign,
+        gpg_format,
+        allowed_signers_file,
+    }
+}
+
 /// Verify GPG/SSH commit signature
 #[tauri::command]
 pub async fn verify_signature(repo_path: String, commit_hash: String) -> Result<SignatureVerification, String> {
