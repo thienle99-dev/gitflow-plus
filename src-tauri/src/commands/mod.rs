@@ -29,3 +29,4 @@ pub mod status;
 pub mod submodule;
 pub mod tag;
 pub mod watcher;
+pub mod worktree;

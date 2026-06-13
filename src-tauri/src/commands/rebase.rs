@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::io::Write;
 use tokio::process::Command;
 use super::op_lock::RepoLocks;
+use super::running_ops::RunningOps;
 
 #[derive(Serialize, Clone, Debug)]
 pub struct RebaseResult {
@@ -15,126 +16,6 @@ pub struct RebaseTodo {
     pub action: String,
     pub commit_hash: String,
     pub message: String,
-}
-
-/// Start interactive rebase using GIT_SEQUENCE_EDITOR
-/// Writes a shell script that copies the todo list into the rebase todo file
-pub async fn git_rebase_interactive(
-    path: &str,
-    base: &str,
-    todos: &[RebaseTodo],
-) -> Result<RebaseResult, String> {
-    if todos.is_empty() {
-        return Err("No rebase todo items provided".to_string());
-    }
-
-    // Generate the todo file content that our fake editor will write
-    let todo_content = todos
-        .iter()
-        .map(|t| format!("{} {} {}", t.action, t.commit_hash, t.message))
-        .collect::<Vec<_>>()
-        .join("\n");
-
-    // Write a temp script that copies our content to the rebase todo file
-    let script_dir = std::env::temp_dir().join("gitflow-rebase");
-    std::fs::create_dir_all(&script_dir).ok();
-    let script_path = script_dir.join("sequencer.sh");
-
-    let script = format!(
-        "#!/bin/sh\necho '{}' > \"$1\"\n",
-        todo_content.replace('\'', "'\\''")
-    );
-
-    {
-        let mut f = std::fs::File::create(&script_path)
-            .map_err(|e| format!("Failed to create sequencer script: {}", e))?;
-        f.write_all(script.as_bytes())
-            .map_err(|e| format!("Failed to write sequencer script: {}", e))?;
-    }
-
-    // Make executable
-    use std::os::unix::fs::PermissionsExt;
-    std::fs::set_permissions(&script_path, std::fs::Permissions::from_mode(0o755)).ok();
-
-    let output = Command::new("git")
-        .args(["--no-pager", "-C", path, "rebase", "-i", base, "--no-edit"])
-        .env(
-            "GIT_SEQUENCE_EDITOR",
-            script_path.to_str().unwrap_or("/bin/true"),
-        )
-        .output()
-        .await
-        .map_err(|e| format!("Failed to run rebase: {}", e))?;
-
-    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-
-    if output.status.success() {
-        Ok(RebaseResult {
-            success: true,
-            message: "Rebase completed successfully".to_string(),
-            conflicted_files: vec![],
-        })
-    } else {
-        let conflicted = parse_rebase_conflicts(&stderr);
-        Ok(RebaseResult {
-            success: !conflicted.is_empty(),
-            message: if conflicted.is_empty() {
-                stderr.trim().to_string()
-            } else {
-                "Rebase paused due to conflicts".to_string()
-            },
-            conflicted_files: conflicted,
-        })
-    }
-}
-
-pub async fn git_rebase_continue(path: &str) -> Result<String, String> {
-    let output = Command::new("git")
-        .args([
-            "--no-pager",
-            "-C",
-            path,
-            "rebase",
-            "--continue",
-            "--no-edit",
-        ])
-        .output()
-        .await
-        .map_err(|e| format!("Failed to continue rebase: {}", e))?;
-
-    if output.status.success() {
-        Ok("Rebase continued".to_string())
-    } else {
-        Err(String::from_utf8_lossy(&output.stderr).to_string())
-    }
-}
-
-pub async fn git_rebase_skip(path: &str) -> Result<String, String> {
-    let output = Command::new("git")
-        .args(["--no-pager", "-C", path, "rebase", "--skip"])
-        .output()
-        .await
-        .map_err(|e| format!("Failed to skip rebase: {}", e))?;
-
-    if output.status.success() {
-        Ok("Rebase skipped".to_string())
-    } else {
-        Err(String::from_utf8_lossy(&output.stderr).to_string())
-    }
-}
-
-pub async fn git_rebase_abort(path: &str) -> Result<String, String> {
-    let output = Command::new("git")
-        .args(["--no-pager", "-C", path, "rebase", "--abort"])
-        .output()
-        .await
-        .map_err(|e| format!("Failed to abort rebase: {}", e))?;
-
-    if output.status.success() {
-        Ok("Rebase aborted".to_string())
-    } else {
-        Err(String::from_utf8_lossy(&output.stderr).to_string())
-    }
 }
 
 pub async fn git_rebase_status(path: &str) -> Result<(bool, Vec<String>), String> {
@@ -237,30 +118,141 @@ fn parse_rebase_conflicts(stderr: &str) -> Vec<String> {
 #[tauri::command]
 pub async fn rebase_start(
     locks: tauri::State<'_, RepoLocks>,
+    running_ops: tauri::State<'_, RunningOps>,
     path: String,
     base: String,
     todos: Vec<RebaseTodo>,
+    operation_id: Option<String>,
 ) -> Result<RebaseResult, String> {
     let _guard = locks.acquire(&path).await;
-    git_rebase_interactive(&path, &base, &todos).await
+
+    if todos.is_empty() {
+        return Err("No rebase todo items provided".to_string());
+    }
+
+    let todo_content = todos
+        .iter()
+        .map(|t| format!("{} {} {}", t.action, t.commit_hash, t.message))
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    let script_dir = std::env::temp_dir().join("gitflow-rebase");
+    std::fs::create_dir_all(&script_dir).ok();
+    let script_path = script_dir.join("sequencer.sh");
+
+    let script = format!(
+        "#!/bin/sh\necho '{}' > \"$1\"\n",
+        todo_content.replace('\'', "'\\''")
+    );
+
+    {
+        let mut f = std::fs::File::create(&script_path)
+            .map_err(|e| format!("Failed to create sequencer script: {}", e))?;
+        f.write_all(script.as_bytes())
+            .map_err(|e| format!("Failed to write sequencer script: {}", e))?;
+    }
+
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::set_permissions(&script_path, std::fs::Permissions::from_mode(0o755)).ok();
+
+    let mut cmd = tokio::process::Command::new("git");
+    cmd.args(["--no-pager", "-C", &path, "rebase", "-i", &base, "--no-edit"])
+        .env("GIT_SEQUENCE_EDITOR", script_path.to_str().unwrap_or("/bin/true"));
+
+    let stderr_output = match operation_id {
+        Some(op_id) => {
+            let rx = running_ops.spawn(op_id, cmd)?;
+            match rx.await.unwrap_or_else(|_| Err("Operation cancelled".into())) {
+                Ok(_) => return Ok(RebaseResult {
+                    success: true,
+                    message: "Rebase completed successfully".to_string(),
+                    conflicted_files: vec![],
+                }),
+                Err(e) => e,
+            }
+        }
+        None => {
+            let output = cmd.output().await
+                .map_err(|e| format!("Failed to run rebase: {}", e))?;
+            if output.status.success() {
+                return Ok(RebaseResult {
+                    success: true,
+                    message: "Rebase completed successfully".to_string(),
+                    conflicted_files: vec![],
+                });
+            }
+            String::from_utf8_lossy(&output.stderr).to_string()
+        }
+    };
+
+    let conflicted = parse_rebase_conflicts(&stderr_output);
+    Ok(RebaseResult {
+        success: !conflicted.is_empty(),
+        message: if conflicted.is_empty() {
+            stderr_output.trim().to_string()
+        } else {
+            "Rebase paused due to conflicts".to_string()
+        },
+        conflicted_files: conflicted,
+    })
 }
 
 #[tauri::command]
 pub async fn rebase_continue(
     locks: tauri::State<'_, RepoLocks>,
+    running_ops: tauri::State<'_, RunningOps>,
     path: String,
+    operation_id: Option<String>,
 ) -> Result<String, String> {
     let _guard = locks.acquire(&path).await;
-    git_rebase_continue(&path).await
+
+    let mut cmd = tokio::process::Command::new("git");
+    cmd.args(["--no-pager", "-C", &path, "rebase", "--continue", "--no-edit"]);
+
+    match operation_id {
+        Some(op_id) => {
+            let rx = running_ops.spawn(op_id, cmd)?;
+            rx.await.unwrap_or_else(|_| Err("Operation cancelled".into()))
+        }
+        None => {
+            let output = cmd.output().await
+                .map_err(|e| format!("Failed to continue rebase: {}", e))?;
+            if output.status.success() {
+                Ok("Rebase continued".to_string())
+            } else {
+                Err(String::from_utf8_lossy(&output.stderr).to_string())
+            }
+        }
+    }
 }
 
 #[tauri::command]
 pub async fn rebase_skip(
     locks: tauri::State<'_, RepoLocks>,
+    running_ops: tauri::State<'_, RunningOps>,
     path: String,
+    operation_id: Option<String>,
 ) -> Result<String, String> {
     let _guard = locks.acquire(&path).await;
-    git_rebase_skip(&path).await
+
+    let mut cmd = tokio::process::Command::new("git");
+    cmd.args(["--no-pager", "-C", &path, "rebase", "--skip"]);
+
+    match operation_id {
+        Some(op_id) => {
+            let rx = running_ops.spawn(op_id, cmd)?;
+            rx.await.unwrap_or_else(|_| Err("Operation cancelled".into()))
+        }
+        None => {
+            let output = cmd.output().await
+                .map_err(|e| format!("Failed to skip rebase: {}", e))?;
+            if output.status.success() {
+                Ok("Rebase skipped".to_string())
+            } else {
+                Err(String::from_utf8_lossy(&output.stderr).to_string())
+            }
+        }
+    }
 }
 
 #[tauri::command]
@@ -268,8 +260,19 @@ pub async fn rebase_abort(
     locks: tauri::State<'_, RepoLocks>,
     path: String,
 ) -> Result<String, String> {
+    use tokio::process::Command;
     let _guard = locks.acquire(&path).await;
-    git_rebase_abort(&path).await
+    let output = Command::new("git")
+        .args(["--no-pager", "-C", &path, "rebase", "--abort"])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to abort rebase: {}", e))?;
+
+    if output.status.success() {
+        Ok("Rebase aborted".to_string())
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).to_string())
+    }
 }
 
 #[tauri::command]

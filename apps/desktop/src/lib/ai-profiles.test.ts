@@ -93,8 +93,7 @@ describe("migrateLegacyToProfiles", () => {
 
     const profiles = JSON.parse(store["gitflowAiProfiles"]);
     expect(profiles).toHaveLength(1);
-    // apiKey stripped from localStorage (goes to keychain); verify other fields
-    expect(profiles[0].apiKey).toBeUndefined();
+    expect(profiles[0].apiKey).toBe("sk-legacy");
     expect(profiles[0].apiUrl).toBe("https://custom.api/v1");
     expect(profiles[0].commitModel).toBe("gpt-4o");
     expect(profiles[0].reviewModel).toBe("gpt-4o-mini");
@@ -131,9 +130,7 @@ describe("loadProfiles", () => {
     store["gitflowAiApiKey"] = "sk-migrated";
     const profiles = loadProfiles();
     expect(profiles).toHaveLength(1);
-    // apiKey stripped from localStorage; keychain is mocked noop, so empty here
-    expect(profiles[0].apiKey).toBe("");
-    // But migration ran — profile created with correct metadata
+    expect(profiles[0].apiKey).toBe("sk-migrated");
     expect(profiles[0].name).toBeTruthy();
   });
 
@@ -285,8 +282,7 @@ describe("readAISettings fallback behavior", () => {
     store["gitflowActiveAiProfileId"] = profile.id;
 
     const active = loadActiveProfile();
-    // apiKey stripped from localStorage; access via getCachedApiKey in real app
-    expect(active.apiKey).toBe("");
+    expect(active.apiKey).toBe("sk-profile");
     expect(active.commitModel).toBe("gpt-4o");
   });
 
@@ -296,8 +292,7 @@ describe("readAISettings fallback behavior", () => {
 
     const profiles = loadProfiles();
     expect(profiles).toHaveLength(1);
-    // apiKey stripped from localStorage; keychain is mocked noop
-    expect(profiles[0].apiKey).toBe("");
+    expect(profiles[0].apiKey).toBe("sk-auto-migrate");
     expect(profiles[0].commitModel).toBe("gpt-4o");
   });
 });

@@ -4,6 +4,12 @@ import { api } from "@/api/tauri";
 export type OperationStatus = "running" | "completed" | "failed" | "cancelled";
 export type OperationType = "git" | "ai";
 
+export interface OperationProgress {
+  phase: string;
+  percent: number;
+  message: string;
+}
+
 export interface Operation {
   id: string;
   type: OperationType;
@@ -15,6 +21,8 @@ export interface Operation {
   error?: string;
   /** If set, this operation can be cancelled via the backend */
   cancelable?: boolean;
+  /** Real-time progress from git stderr */
+  progress?: OperationProgress;
 }
 
 interface OperationsState {
@@ -25,6 +33,7 @@ interface OperationsState {
   // Actions
   addOperation: (op: Omit<Operation, "status" | "startedAt"> & { status?: OperationStatus; startedAt?: number }) => void;
   updateOperation: (id: string, updates: Partial<Pick<Operation, "status" | "detail" | "error" | "endedAt">>) => void;
+  updateProgress: (id: string, progress: OperationProgress) => void;
   removeOperation: (id: string) => void;
   cancelOperation: (id: string) => Promise<void>;
   clearCompleted: () => void;
@@ -54,6 +63,13 @@ export const useOperationsStore = create<OperationsState>((set, get) => ({
     set((state) => ({
       operations: state.operations.map((op) =>
         op.id === id ? { ...op, ...updates } : op,
+      ),
+    })),
+
+  updateProgress: (id, progress) =>
+    set((state) => ({
+      operations: state.operations.map((op) =>
+        op.id === id ? { ...op, progress, detail: progress.message } : op,
       ),
     })),
 
@@ -91,6 +107,7 @@ export const useOperationsStore = create<OperationsState>((set, get) => ({
 /**
  * Track a direct (non-React-Query) async operation in the operations store.
  * If `apiMethod` is provided, passes an operationId to the backend for cancellation.
+ * Listens for `git-progress` events when the operation is cancellable.
  */
 export function trackRemoteOp(
   label: string,
@@ -104,12 +121,34 @@ export function trackRemoteOp(
     label,
     cancelable: options?.cancelable ?? true,
   });
+
+  // Listen for progress events from the backend
+  let unlisten: (() => void) | undefined;
+  if (options?.cancelable !== false) {
+    import("@tauri-apps/api/event").then(({ listen }) => {
+      listen<{ operation_id: string; phase: string; percent: number; message: string }>(
+        "git-progress",
+        (event) => {
+          if (event.payload.operation_id === id) {
+            useOperationsStore.getState().updateProgress(id, {
+              phase: event.payload.phase,
+              percent: event.payload.percent,
+              message: event.payload.message,
+            });
+          }
+        },
+      ).then((fn) => { unlisten = fn; });
+    });
+  }
+
   return fn(id).then(
     (result) => {
+      unlisten?.();
       useOperationsStore.getState().updateOperation(id, { status: "completed", endedAt: Date.now() });
       return result;
     },
     (error) => {
+      unlisten?.();
       const state = useOperationsStore.getState().operations.find((o) => o.id === id);
       // Don't mark as failed if already cancelled by user
       if (state?.status !== "cancelled") {

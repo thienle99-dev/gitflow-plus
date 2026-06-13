@@ -296,6 +296,16 @@ export interface CloneProgress {
   message: string;
 }
 
+export interface WorktreeInfo {
+  path: string;
+  head: string;
+  branch: string | null;
+  is_locked: boolean;
+  is_bare: boolean;
+  is_prunable: boolean;
+  is_current: boolean;
+}
+
 // Typed invoke wrappers
 export const api = {
   repo: {
@@ -699,5 +709,20 @@ export const api = {
       invoke<string>("credential_get", { key }),
     delete: (key: string) =>
       invoke<void>("credential_delete", { key }),
+  },
+
+  worktrees: {
+    list: (path: string) =>
+      invoke<WorktreeInfo[]>("worktree_list", { path }),
+    add: (path: string, targetPath: string, branch?: string, newBranch?: string) =>
+      invoke<string>("worktree_add", { path, targetPath, branch: branch ?? null, newBranch: newBranch ?? null }),
+    remove: (path: string, worktreePath: string, force?: boolean) =>
+      invoke<string>("worktree_remove", { path, worktreePath, force: force ?? false }),
+    lock: (path: string, worktreePath: string) =>
+      invoke<string>("worktree_lock", { path, worktreePath }),
+    unlock: (path: string, worktreePath: string) =>
+      invoke<string>("worktree_unlock", { path, worktreePath }),
+    prune: (path: string) =>
+      invoke<string>("worktree_prune", { path }),
   },
 };

@@ -50,6 +50,7 @@ const BisectDialog = lazy(() => import("@/components/features/dialogs/BisectDial
 const CreateReleaseDialog = lazy(() => import("@/components/features/dialogs/CreateReleaseDialog"));
 const GitHooksManager = lazy(() => import("@/components/features/dialogs/GitHooksManager"));
 const GitCommandAssistant = lazy(() => import("@/components/features/dialogs/GitCommandAssistant"));
+const AddWorktreeDialog = lazy(() => import("@/components/features/dialogs/AddWorktreeDialog"));
 
 export default function MainLayout() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
@@ -364,6 +365,7 @@ export default function MainLayout() {
     "create-release": <CreateReleaseDialog open={true} onClose={closeDialog} />,
     "git-hooks": <GitHooksManager open={true} onClose={closeDialog} />,
     "git-command-assistant": <GitCommandAssistant open={true} onClose={closeDialog} />,
+    "add-worktree": <AddWorktreeDialog open={true} onClose={closeDialog} />,
   }), [closeDialog, selectedCommit, mergeTargetBranch, compareBranchTarget, selectedRef, rebaseTargetCommit]);
 
   const dialogOverlay = overlayDialog ? (

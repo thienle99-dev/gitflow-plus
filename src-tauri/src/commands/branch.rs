@@ -43,14 +43,17 @@ fn parse_branch_output(stdout: &str) -> Vec<BranchInfo> {
             name.to_string()
         };
 
+        // Extract actual remote name from "remote/branch" path
+        let remote_name = if is_remote {
+            clean_name.split('/').next().map(|s| s.to_string())
+        } else {
+            None
+        };
+
         branches.push(BranchInfo {
             name: clean_name,
             current,
-            remote: if is_remote {
-                Some("origin".to_string())
-            } else {
-                None
-            },
+            remote: remote_name,
         });
     }
 
@@ -108,6 +111,19 @@ mod tests {
         assert!(branches[1].current);
         assert_eq!(branches[2].name, "origin/main");
         assert_eq!(branches[2].remote.as_deref(), Some("origin"));
+    }
+
+    #[test]
+    fn parses_multiple_remotes() {
+        let branches = parse_branch_output(
+            "* main\n  remotes/origin/main\n  remotes/origin/develop\n  remotes/upstream/main\n  remotes/fork/feature\n",
+        );
+
+        assert_eq!(branches.len(), 5);
+        assert_eq!(branches[1].remote.as_deref(), Some("origin"));
+        assert_eq!(branches[2].remote.as_deref(), Some("origin"));
+        assert_eq!(branches[3].remote.as_deref(), Some("upstream"));
+        assert_eq!(branches[4].remote.as_deref(), Some("fork"));
     }
 
     #[test]

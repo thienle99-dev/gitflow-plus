@@ -92,6 +92,7 @@ pub async fn detect_remote_protocol(path: String) -> Result<String, String> {
 
 #[tauri::command]
 pub async fn git_pull(
+    app: tauri::AppHandle,
     locks: tauri::State<'_, RepoLocks>,
     running_ops: tauri::State<'_, RunningOps>,
     path: String,
@@ -105,6 +106,7 @@ pub async fn git_pull(
         "-C".to_string(),
         path.clone(),
         "pull".to_string(),
+        "--progress".to_string(),
     ];
 
     if let Some(r) = remote {
@@ -119,7 +121,7 @@ pub async fn git_pull(
 
     match operation_id {
         Some(op_id) => {
-            let rx = running_ops.spawn(op_id, cmd)?;
+            let rx = running_ops.spawn_with_progress(op_id, cmd, app, "git-progress".into())?;
             rx.await.unwrap_or_else(|_| Err("Operation cancelled".into()))
         }
         None => {
@@ -136,6 +138,7 @@ pub async fn git_pull(
 
 #[tauri::command]
 pub async fn git_push(
+    app: tauri::AppHandle,
     locks: tauri::State<'_, RepoLocks>,
     running_ops: tauri::State<'_, RunningOps>,
     path: String,
@@ -149,6 +152,7 @@ pub async fn git_push(
         "-C".to_string(),
         path.clone(),
         "push".to_string(),
+        "--progress".to_string(),
     ];
 
     if let Some(r) = remote {
@@ -163,7 +167,7 @@ pub async fn git_push(
 
     match operation_id {
         Some(op_id) => {
-            let rx = running_ops.spawn(op_id, cmd)?;
+            let rx = running_ops.spawn_with_progress(op_id, cmd, app, "git-progress".into())?;
             rx.await.unwrap_or_else(|_| Err("Operation cancelled".into()))
         }
         None => {
@@ -180,6 +184,7 @@ pub async fn git_push(
 
 #[tauri::command]
 pub async fn git_fetch(
+    app: tauri::AppHandle,
     locks: tauri::State<'_, RepoLocks>,
     running_ops: tauri::State<'_, RunningOps>,
     path: String,
@@ -193,6 +198,7 @@ pub async fn git_fetch(
         path.clone(),
         "fetch".to_string(),
         "--all".to_string(),
+        "--progress".to_string(),
     ];
 
     if let Some(r) = remote {
@@ -204,7 +210,7 @@ pub async fn git_fetch(
 
     match operation_id {
         Some(op_id) => {
-            let rx = running_ops.spawn(op_id, cmd)?;
+            let rx = running_ops.spawn_with_progress(op_id, cmd, app, "git-progress".into())?;
             rx.await.unwrap_or_else(|_| Err("Operation cancelled".into()))
         }
         None => {

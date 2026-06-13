@@ -1,10 +1,11 @@
 import { useState, useRef, useMemo, lazy, Suspense } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
-import { useGitBranches, useGitSyncStatus } from "@/queries/useGitLog";
+import { useGitBranches, useGitSyncStatus, useGitRemotes } from "@/queries/useGitLog";
 import { useTagList } from "@/queries/useGitTag";
 import { useSubmoduleList } from "@/queries/useSubmoduleList";
 import { useGitFlowDetect } from "@/queries/useGitFlow";
+import { useWorktrees, useWorktreeRemove, useWorktreeLock, useWorktreeUnlock, useWorktreePrune } from "@/queries/useWorktrees";
 import { classifyBranch, gitflowBranchColor } from "@/lib/gitflow-helpers";
 import type { GitFlowConfig } from "@/api/tauri";
 import SubmoduleEntry from "./SubmoduleEntry";
@@ -33,6 +34,12 @@ import {
   ArrowUp,
   ArrowDown,
   Activity,
+  Lock,
+  Unlock,
+  FolderTree,
+  Sparkles,
+  Cloud,
+  Settings,
 } from "lucide-react";
 
 const LazyActivityHeatmap = lazy(() => import("@/components/features/activity/ActivityHeatmap"));
@@ -50,10 +57,18 @@ export default function Sidebar() {
   const { data: submodules } = useSubmoduleList(repoPath);
   const { data: gitflowConfig } = useGitFlowDetect(repoPath);
   const { data: syncStatus } = useGitSyncStatus(repoPath);
+  const { data: remotes } = useGitRemotes(repoPath);
+  const { data: worktrees } = useWorktrees(repoPath);
+  const worktreeRemove = useWorktreeRemove(repoPath);
+  const worktreeLockMut = useWorktreeLock(repoPath);
+  const worktreeUnlockMut = useWorktreeUnlock(repoPath);
+  const worktreePruneMut = useWorktreePrune(repoPath);
   const [branchesOpen, setBranchesOpen] = useState(true);
   const [remotesOpen, setRemotesOpen] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
+  const [worktreesOpen, setWorktreesOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(true);
+  const [confirmRemoveWorktree, setConfirmRemoveWorktree] = useState<string | null>(null);
   const [repoMenuOpen, setRepoMenuOpen] = useState(false);
   const [repoSearchQuery, setRepoSearchQuery] = useState("");
   const [branchCtxMenu, setBranchCtxMenu] = useState<{ branch: string; x: number; y: number } | null>(null);
@@ -86,6 +101,17 @@ export default function Sidebar() {
 
   const localBranches = useMemo(() => branches?.filter((b) => !b.remote) || [], [branches]);
   const remoteBranches = useMemo(() => branches?.filter((b) => b.remote) || [], [branches]);
+
+  // Group remote branches by remote name
+  const branchesByRemote = useMemo(() => {
+    const map = new Map<string, typeof remoteBranches>();
+    for (const b of remoteBranches) {
+      const key = b.remote || "unknown";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(b);
+    }
+    return map;
+  }, [remoteBranches]);
 
   const [collapsedBranchFolders, setCollapsedBranchFolders] = useState<Set<string>>(new Set());
 
@@ -383,20 +409,74 @@ export default function Sidebar() {
         title="Remotes"
         open={remotesOpen}
         onToggle={() => setRemotesOpen(!remotesOpen)}
-        count={remoteBranches.length}
+        count={remotes?.length || 0}
+        action={
+          <button
+            className="ghost p-0.5 hover:bg-surface-3 rounded"
+            onClick={() => openDialogState("remote-manager")}
+            title="Manage Remotes"
+          >
+            <Settings size={12} className="text-text-secondary hover:text-text-primary" />
+          </button>
+        }
       />
       {remotesOpen && (
-        <div className="space-y-[1px]" role="tree" aria-label="Remote branches">
-          <BranchTreeRenderer
-            node={remoteBranchTree}
-            depth={0}
-            selectedRef={selectedRef}
-            selectRef={selectRef}
-            handleCheckout={handleCheckout}
-            setBranchCtxMenu={() => {}}
-            collapsedFolders={collapsedBranchFolders}
-            onToggleFolder={handleToggleBranchFolder}
-          />
+        <div className="space-y-1" role="tree" aria-label="Remotes">
+          {remotes && remotes.length > 0 ? (
+            remotes.map((remote) => {
+              const remoteName = remote.name;
+              const remoteBranchList = branchesByRemote.get(remoteName) || [];
+              const isCollapsed = collapsedBranchFolders.has(`remote:${remoteName}`);
+              const remoteTree = buildBranchTree(remoteBranchList);
+
+              return (
+                <div key={remoteName} role="treeitem" aria-expanded={!isCollapsed}>
+                  {/* Remote header */}
+                  <div
+                    className="tree-item group flex items-center gap-1.5 px-3 py-[5px] mx-1 rounded-md cursor-pointer hover:bg-surface-2-60 select-none"
+                    onClick={() => handleToggleBranchFolder(`remote:${remoteName}`)}
+                  >
+                    <ChevronDown
+                      size={12}
+                      className={`text-text-muted transition-transform duration-150 shrink-0 ${isCollapsed ? "-rotate-90" : ""}`}
+                    />
+                    <Cloud size={12} className="text-accent shrink-0" />
+                    <span className="text-xs font-semibold text-text-primary truncate flex-1">
+                      {remoteName}
+                    </span>
+                    <span className="inline-flex h-4 min-w-5 shrink-0 items-center justify-center rounded-full border border-border-30 bg-surface-2-40 px-1.5 text-[9px] font-semibold leading-none text-text-secondary tabular-nums">
+                      {remoteBranchList.length}
+                    </span>
+                  </div>
+                  {/* Remote URL */}
+                  {!isCollapsed && (
+                    <div className="px-6 pb-0.5">
+                      <span className="text-[10px] text-text-muted font-mono truncate block" title={remote.url}>
+                        {remote.url}
+                      </span>
+                    </div>
+                  )}
+                  {/* Branches under this remote */}
+                  {!isCollapsed && remoteBranchList.length > 0 && (
+                    <div className="ml-2">
+                      <BranchTreeRenderer
+                        node={remoteTree}
+                        depth={0}
+                        selectedRef={selectedRef}
+                        selectRef={selectRef}
+                        handleCheckout={handleCheckout}
+                        setBranchCtxMenu={() => {}}
+                        collapsedFolders={collapsedBranchFolders}
+                        onToggleFolder={handleToggleBranchFolder}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          ) : (
+            <EmptyStateInline variant="repo" title="No remotes configured" />
+          )}
         </div>
       )}
 
@@ -433,6 +513,103 @@ export default function Sidebar() {
             ))
           ) : (
             <EmptyStateInline variant="tags" title="No tags" />
+          )}
+        </div>
+      )}
+
+      {/* Worktrees */}
+      <div className="my-2 mx-4 border-t border-border-50" />
+      <SectionHeader
+        title="Worktrees"
+        open={worktreesOpen}
+        onToggle={() => setWorktreesOpen(!worktreesOpen)}
+        count={worktrees?.length || 0}
+        action={
+          <div className="flex items-center gap-0.5">
+            <button
+              className="ghost p-0.5 hover:bg-surface-3 rounded"
+              onClick={() => openDialogState("add-worktree")}
+              title="Add Worktree"
+            >
+              <Plus size={12} className="text-text-secondary hover:text-text-primary" />
+            </button>
+            {worktrees && worktrees.some((w) => w.is_prunable) && (
+              <button
+                className="ghost p-0.5 hover:bg-surface-3 rounded"
+                onClick={() => worktreePruneMut.mutate()}
+                title="Prune stale worktrees"
+              >
+                <Sparkles size={12} className="text-text-secondary hover:text-text-primary" />
+              </button>
+            )}
+          </div>
+        }
+      />
+      {worktreesOpen && (
+        <div className="space-y-[1px]" role="list" aria-label="Worktrees">
+          {worktrees && worktrees.length > 0 ? (
+            worktrees.map((wt) => {
+              const name = wt.path.split(/[/\\]/).filter(Boolean).pop() || wt.path;
+              return (
+                <div
+                  key={wt.path}
+                  role="listitem"
+                  className={`tree-item group flex items-center gap-2 px-3 py-[3px] mx-1 rounded-md ${wt.is_current ? "selected" : ""}`}
+                >
+                  <FolderTree size={12} className={wt.is_current ? "text-accent" : wt.is_locked ? "text-[#ff9f0a]" : "text-text-secondary"} />
+                  <div className="min-w-0 flex-1 truncate">
+                    <span className={`text-xs ${wt.is_current ? "font-semibold text-text-primary" : "text-text-secondary"}`}>
+                      {name}
+                    </span>
+                    {wt.branch && (
+                      <span className="ml-1.5 text-[10px] text-text-muted">
+                        ({wt.branch})
+                      </span>
+                    )}
+                  </div>
+                  {wt.is_locked && (
+                    <Lock size={10} className="text-[#ff9f0a] shrink-0" />
+                  )}
+                  {wt.is_prunable && (
+                    <span className="shrink-0 rounded bg-[#ff9f0a]/15 px-1 py-0.5 text-[9px] font-bold text-[#ff9f0a]">
+                      stale
+                    </span>
+                  )}
+                  {wt.is_current && (
+                    <span className="shrink-0 rounded bg-[#30d158]/10 px-1 py-0.5 text-[9px] font-bold text-[#30d158] border border-[#30d158]/20">
+                      current
+                    </span>
+                  )}
+                  {/* Actions (visible on hover, not for current) */}
+                  {!wt.is_current && (
+                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                      <button
+                        className="h-5 w-5 flex items-center justify-center rounded hover:bg-surface-3 text-text-muted hover:text-text-primary cursor-pointer"
+                        title={wt.is_locked ? "Unlock" : "Lock"}
+                        onClick={() => {
+                          if (wt.is_locked) {
+                            worktreeUnlockMut.mutate(wt.path);
+                          } else {
+                            worktreeLockMut.mutate(wt.path);
+                          }
+                        }}
+                      >
+                        {wt.is_locked ? <Unlock size={10} /> : <Lock size={10} />}
+                      </button>
+                      <button
+                        className="h-5 w-5 flex items-center justify-center rounded hover:bg-[#ff453a]/15 text-text-muted hover:text-[#ff453a] cursor-pointer"
+                        title="Remove worktree"
+                        onClick={() => setConfirmRemoveWorktree(wt.path)}
+                      >
+                        <Trash2 size={10} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          ) : (
+            <EmptyStateInline variant="repo" title="No worktrees" />
           )}
         </div>
       )}
@@ -545,6 +722,36 @@ export default function Sidebar() {
       variant="destructive"
       onConfirm={doDeleteBranch}
       onCancel={() => setConfirmDeleteBranch(null)}
+    />
+    <ConfirmDialog
+      open={!!confirmRemoveWorktree}
+      title="Remove Worktree"
+      message={`Remove the worktree at "${confirmRemoveWorktree?.split(/[/\\]/).filter(Boolean).pop()}"? The directory will be deleted.`}
+      impactItems={[
+        {
+          label: "The worktree directory and its contents will be deleted",
+          severity: "irreversible",
+          details: confirmRemoveWorktree ? [confirmRemoveWorktree] : undefined,
+        },
+        {
+          label: "Uncommitted changes in the worktree will be lost",
+          severity: "warning",
+        },
+        {
+          label: "The branch is not affected — only the working copy is removed",
+          severity: "info",
+        },
+      ]}
+      confirmLabel="Remove"
+      cancelLabel="Cancel"
+      variant="destructive"
+      onConfirm={() => {
+        if (confirmRemoveWorktree) {
+          worktreeRemove.mutate({ worktreePath: confirmRemoveWorktree });
+        }
+        setConfirmRemoveWorktree(null);
+      }}
+      onCancel={() => setConfirmRemoveWorktree(null)}
     />
     </>
   );

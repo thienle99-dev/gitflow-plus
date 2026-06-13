@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/tauri";
+import { trackRemoteOp } from "@/stores/operations";
 
 export interface RebaseTodo {
   action: string;
@@ -29,7 +30,8 @@ export function useRebaseStart(repoPath: string | null) {
 
   return useMutation<RebaseResult, Error, { base: string; todos: RebaseTodo[] }>({
     mutationKey: ["git.rebase-start"],
-    mutationFn: ({ base, todos }) => api.rebase.start(repoPath!, base, todos),
+    mutationFn: ({ base, todos }) =>
+      trackRemoteOp("Rebase", (opId) => api.rebase.start(repoPath!, base, todos, opId)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
     },
@@ -42,7 +44,8 @@ export function useRebaseContinue(repoPath: string | null) {
 
   return useMutation<string, Error, void>({
     mutationKey: ["git.rebase-continue"],
-    mutationFn: () => api.rebase.continue(repoPath!),
+    mutationFn: () =>
+      trackRemoteOp("Rebase: Continue", (opId) => api.rebase.continue(repoPath!, opId)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
     },
@@ -55,7 +58,8 @@ export function useRebaseSkip(repoPath: string | null) {
 
   return useMutation<string, Error, void>({
     mutationKey: ["git.rebase-skip"],
-    mutationFn: () => api.rebase.skip(repoPath!),
+    mutationFn: () =>
+      trackRemoteOp("Rebase: Skip", (opId) => api.rebase.skip(repoPath!, opId)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
     },

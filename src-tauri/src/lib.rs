@@ -366,6 +366,12 @@ pub fn run() {
             commands::hooks::save_hook,
             commands::hooks::delete_hook,
             commands::running_ops::cancel_git_op,
+            commands::worktree::worktree_list,
+            commands::worktree::worktree_add,
+            commands::worktree::worktree_remove,
+            commands::worktree::worktree_lock,
+            commands::worktree::worktree_unlock,
+            commands::worktree::worktree_prune,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

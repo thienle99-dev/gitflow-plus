@@ -1,5 +1,5 @@
 import { useQuery, useInfiniteQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
-import { api, type Commit, type CommitFileChange, type FileChange, type Branch, type RepoInfo, type SyncStatus } from "@/api/tauri";
+import { api, type Commit, type CommitFileChange, type FileChange, type Branch, type RepoInfo, type SyncStatus, type RemoteInfo } from "@/api/tauri";
 import { markRepoOpenMilestone, measureAsync, repoName } from "@/lib/performance";
 
 const PAGE_SIZE = 200;
@@ -100,6 +100,15 @@ export function useGitBranches(repoPath: string | null) {
     },
     enabled: !!repoPath,
     staleTime: 15_000,
+  });
+}
+
+export function useGitRemotes(repoPath: string | null) {
+  return useQuery<RemoteInfo[]>({
+    queryKey: ["git", repoPath, "remotes"],
+    queryFn: () => api.remote.listRemotes(repoPath!),
+    enabled: !!repoPath,
+    staleTime: 30_000,
   });
 }
 
