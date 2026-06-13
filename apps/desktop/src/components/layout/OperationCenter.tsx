@@ -13,6 +13,7 @@ import {
   ChevronDown,
   AlertCircle,
   RefreshCw,
+  Ban,
 } from "lucide-react";
 
 function useLiveElapsed(startMs: number, endMs?: number): string {
@@ -46,12 +47,14 @@ function TypeIcon({ type }: { type: Operation["type"] }) {
 
 function OperationRow({ op }: { op: Operation }) {
   const removeOperation = useOperationsStore((s) => s.removeOperation);
+  const cancelOperation = useOperationsStore((s) => s.cancelOperation);
   const [expanded, setExpanded] = useState(false);
   const duration = useLiveElapsed(op.startedAt, op.endedAt);
   const hasDetails = op.error || op.detail;
+  const isRunning = op.status === "running";
 
   return (
-    <div className={`border-b border-border-20 last:border-b-0 ${op.status === "running" ? "bg-accent/5" : ""}`}>
+    <div className={`border-b border-border-20 last:border-b-0 ${isRunning ? "bg-accent/5" : ""}`}>
       <div className="flex items-center gap-2 px-3 py-1.5 hover:bg-surface-2-40 group text-2xs">
         <StatusIcon status={op.status} />
         <TypeIcon type={op.type} />
@@ -59,11 +62,29 @@ function OperationRow({ op }: { op: Operation }) {
           {op.label}
         </span>
 
+        {/* Progress phase */}
+        {isRunning && op.progress && op.progress.phase !== "info" && (
+          <span className="text-[10px] text-accent/70 shrink-0 capitalize">
+            {op.progress.phase}
+          </span>
+        )}
+
         {/* Duration */}
-        <span className={`flex items-center gap-0.5 shrink-0 ${op.status === "running" ? "text-accent font-medium" : "text-text-muted-60"}`}>
+        <span className={`flex items-center gap-0.5 shrink-0 ${isRunning ? "text-accent font-medium" : "text-text-muted-60"}`}>
           <Clock size={9} />
           {duration}
         </span>
+
+        {/* Cancel button for running cancellable operations */}
+        {isRunning && op.cancelable && (
+          <button
+            onClick={() => cancelOperation(op.id)}
+            className="shrink-0 h-5 w-5 inline-flex items-center justify-center rounded text-[#ff453a]/70 hover:text-[#ff453a] hover:bg-[#ff453a]/10 transition-all cursor-pointer"
+            title="Cancel"
+          >
+            <Ban size={10} />
+          </button>
+        )}
 
         {/* Expand toggle (when error/detail exists) */}
         {hasDetails && (
@@ -83,6 +104,18 @@ function OperationRow({ op }: { op: Operation }) {
           <X size={10} />
         </button>
       </div>
+
+      {/* Progress bar */}
+      {isRunning && op.progress && op.progress.percent > 0 && (
+        <div className="px-3 pb-1">
+          <div className="h-1 rounded-full bg-surface-3 overflow-hidden">
+            <div
+              className="h-full bg-accent/60 rounded-full transition-all duration-300"
+              style={{ width: `${Math.min(op.progress.percent, 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Expandable detail section */}
       {hasDetails && expanded && (
@@ -130,6 +163,9 @@ export default function OperationCenter() {
             <span className="flex items-center gap-1 text-2xs text-accent truncate">
               <Loader2 size={10} className="animate-spin shrink-0" />
               <span className="truncate">{running[0].label}</span>
+              {running[0].progress && running[0].progress.percent > 0 && (
+                <span className="text-text-muted-60 shrink-0">· {Math.round(running[0].progress.percent)}%</span>
+              )}
               <span className="text-text-muted-60 shrink-0">· running</span>
             </span>
           )}
