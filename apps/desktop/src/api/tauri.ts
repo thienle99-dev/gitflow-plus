@@ -381,8 +381,8 @@ export const api = {
       invoke<RepoInfo>("get_repo_info", { path }),
     init: (path: string) =>
       invoke<RepoInfo>("git_init", { path }),
-    clone: (url: string, destination: string) =>
-      invoke<string>("git_clone", { url, destination }),
+    clone: (url: string, destination: string, opts?: { depth?: number; filter?: string }) =>
+      invoke<string>("git_clone", { url, destination, depth: opts?.depth ?? null, filter: opts?.filter ?? null }),
     cancelClone: () =>
       invoke<string>("cancel_clone"),
   },

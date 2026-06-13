@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useRepoStore } from "@/stores/repo";
 import { api, type CloneProgress } from "@/api/tauri";
 import { listen } from "@tauri-apps/api/event";
-import { X, Download, Loader2 } from "lucide-react";
+import { X, Download, Loader2, ChevronDown, ChevronRight } from "lucide-react";
 
 interface CloneDialogProps {
   open: boolean;
@@ -17,6 +17,12 @@ export default function CloneDialog({ open, onClose }: CloneDialogProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [progress, setProgress] = useState<CloneProgress | null>(null);
+
+  // Clone options
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [shallow, setShallow] = useState(false);
+  const [shallowDepth, setShallowDepth] = useState(1);
+  const [blobless, setBlobless] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -74,7 +80,11 @@ export default function CloneDialog({ open, onClose }: CloneDialogProps) {
     setProgress(null);
 
     try {
-      await api.repo.clone(url.trim(), destination.trim());
+      const opts: { depth?: number; filter?: string } = {};
+      if (shallow && shallowDepth > 0) opts.depth = shallowDepth;
+      if (blobless) opts.filter = "blob:none";
+
+      await api.repo.clone(url.trim(), destination.trim(), opts);
       // Success is handled by the clone-progress listener
       setTimeout(() => {
         openRepo(destination.trim());
@@ -173,6 +183,72 @@ export default function CloneDialog({ open, onClose }: CloneDialogProps) {
               </button>
             </div>
           </div>
+
+          {/* Advanced options */}
+          {!loading && (
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="flex items-center gap-1 text-2xs text-text-muted hover:text-text-primary transition-colors"
+              >
+                {showAdvanced ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+                Advanced
+              </button>
+
+              {showAdvanced && (
+                <div className="space-y-2.5 pl-3 border-l border-border-40">
+                  {/* Shallow */}
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={shallow}
+                      onChange={(e) => setShallow(e.target.checked)}
+                      className="accent-accent"
+                    />
+                    <span className="text-xs text-text-primary">Shallow clone</span>
+                    <span className="text-2xs text-text-muted">(--depth)</span>
+                  </label>
+                  {shallow && (
+                    <div className="flex items-center gap-2 pl-5">
+                      <span className="text-2xs text-text-muted">Depth:</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={1000}
+                        value={shallowDepth}
+                        onChange={(e) => setShallowDepth(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-16 text-xs bg-surface-2 border border-border rounded px-2 py-0.5 text-text-primary outline-none focus:border-accent transition-colors"
+                      />
+                    </div>
+                  )}
+
+                  {/* Blobless */}
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={blobless}
+                      onChange={(e) => setBlobless(e.target.checked)}
+                      className="accent-accent"
+                    />
+                    <span className="text-xs text-text-primary">Blobless clone</span>
+                    <span className="text-2xs text-text-muted">(--filter=blob:none)</span>
+                  </label>
+
+                  {/* Hint */}
+                  {(shallow || blobless) && (
+                    <div className="text-2xs text-text-muted bg-surface-1-30 border border-border-40 rounded px-2 py-1 leading-relaxed">
+                      {shallow && blobless
+                        ? "Shallow + blobless: fastest clone, no full history or file contents."
+                        : shallow
+                          ? "Shallow clone: truncates history to N commits. Good for CI or quick lookups."
+                          : "Blobless clone: full history but file contents fetched on demand. Good for large repos."}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Progress */}
           {loading && progress && (
