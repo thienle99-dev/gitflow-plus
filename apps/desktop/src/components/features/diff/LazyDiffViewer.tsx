@@ -1,4 +1,6 @@
 import { lazy, Suspense } from "react";
+import { isImageFile } from "@/lib/image-utils";
+import ImageDiffViewer from "./ImageDiffViewer";
 
 const DiffViewer = lazy(() => import("./DiffViewer"));
 
@@ -8,6 +10,7 @@ interface LazyDiffViewerProps {
   source?: "working" | "staged" | "commit";
   onPatchApplied?: () => void;
   autoInlineReview?: boolean;
+  commitHash?: string | null;
 }
 
 function DiffLoadingSkeleton() {
@@ -35,6 +38,13 @@ function DiffLoadingSkeleton() {
 }
 
 export default function LazyDiffViewer(props: LazyDiffViewerProps) {
+  const { filePath, source, commitHash } = props;
+
+  // Route image files to ImageDiffViewer
+  if (isImageFile(filePath)) {
+    return <ImageDiffViewer filePath={filePath} source={source || "commit"} commitHash={commitHash} />;
+  }
+
   return (
     <Suspense fallback={<DiffLoadingSkeleton />}>
       <DiffViewer {...props} />

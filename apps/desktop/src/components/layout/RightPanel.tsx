@@ -16,6 +16,7 @@ import FileHistoryPanel from "./FileHistoryPanel";
 import BlameView from "@/components/features/blame/BlameView";
 import { EmptyState } from "@/components/ui/feedback/EmptyState";
 import { Skeleton } from "@/components/ui/feedback/Skeleton";
+import { isImageFile } from "@/lib/image-utils";
 
 export default function RightPanel() {
   const selectedCommit = useUIStore((s) => s.selectedCommit);
@@ -175,6 +176,14 @@ function DiffViewerPanel() {
         <BlameView filePath={selectedFile} onClose={() => setShowBlame(false)} />
       ) : showFileHistory && !selectedCommit ? (
         <FileHistoryPanel />
+      ) : selectedFile && isImageFile(selectedFile) ? (
+        <LazyDiffViewer
+          diff={diff || ""}
+          filePath={selectedFile}
+          source={diffSource as "working" | "staged" | "commit"}
+          onPatchApplied={refreshDiff}
+          commitHash={selectedCommit}
+        />
       ) : isLoading ? (
         <div className="flex-1 flex flex-col p-4 gap-2">
           <Skeleton className="h-8 w-full" />
