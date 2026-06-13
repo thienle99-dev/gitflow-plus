@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rg -n \"not.ready\\\\|WIP\\\\|\\\\[WIP\\\\]\\\\|experimental\\\\|alpha\\\\|beta\" --include=\"*.tsx\" --include=\"*.ts\" --include=\"*.rs\" apps/desktop/src/ src-tauri/src/)"
+    ]
+  }
+}
