@@ -434,12 +434,14 @@ export const api = {
   },
 
   remote: {
-    pull: (path: string, remote?: string, branch?: string) =>
-      invoke<string>("git_pull", { path, remote: remote ?? null, branch: branch ?? null }),
-    push: (path: string, remote?: string, branch?: string) =>
-      invoke<string>("git_push", { path, remote: remote ?? null, branch: branch ?? null }),
-    fetch: (path: string, remote?: string) =>
-      invoke<string>("git_fetch", { path, remote: remote ?? null }),
+    pull: (path: string, remote?: string, branch?: string, operationId?: string) =>
+      invoke<string>("git_pull", { path, remote: remote ?? null, branch: branch ?? null, operationId: operationId ?? null }),
+    push: (path: string, remote?: string, branch?: string, operationId?: string) =>
+      invoke<string>("git_push", { path, remote: remote ?? null, branch: branch ?? null, operationId: operationId ?? null }),
+    fetch: (path: string, remote?: string, operationId?: string) =>
+      invoke<string>("git_fetch", { path, remote: remote ?? null, operationId: operationId ?? null }),
+    cancelOp: (operationId: string) =>
+      invoke<boolean>("cancel_git_op", { operationId }),
     getSyncStatus: (path: string) =>
       invoke<SyncStatus>("get_sync_status", { path }),
     detectSshKeys: () =>

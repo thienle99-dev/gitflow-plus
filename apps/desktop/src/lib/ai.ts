@@ -2,7 +2,7 @@ import { api, type FileChange, type Branch, type Commit, type ConventionFile, ty
 import type { MergeRequest, MergeRequestFileChange } from "@/api/gitHost";
 import type { CommitLintResult } from "@/lib/commit-lint";
 import { scanForRisks, type RiskReport } from "./risk-scanner";
-import { loadActiveProfile, type AIProviderProfile, type AIProviderType } from "./ai-profiles";
+import { loadActiveProfile, getCachedApiKey, type AIProviderProfile, type AIProviderType } from "./ai-profiles";
 import { recordAIError, clearAIError } from "./ai-status-store";
 
 const DEFAULT_MODEL = "claude-sonnet-4-20250514";
@@ -1095,12 +1095,13 @@ function generateLocalTagDescription(tagName: string, commits: Commit[], previou
 }
 
 export function readAISettings(): AISettings {
-  // Read from active profile first; fall back to legacy keys if no profile exists
+  // Read from active profile; use in-memory cache for API key (populated from keychain at startup)
   const profile = loadActiveProfile();
+  const apiKey = getCachedApiKey(profile.id, profile.apiKey) || localStorage.getItem("gitflowAiApiKey") || "";
   return {
     profileId: profile.id,
     provider: profile.provider || "openai-compatible",
-    apiKey: profile.apiKey || localStorage.getItem("gitflowAiApiKey") || "",
+    apiKey,
     model: profile.commitModel || localStorage.getItem("gitflowAiModel") || DEFAULT_MODEL,
     reviewModel: profile.reviewModel
       || localStorage.getItem("gitflowAiReviewModel")

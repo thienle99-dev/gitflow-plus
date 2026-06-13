@@ -141,6 +141,7 @@ pub fn run() {
             watcher::fs_watcher::RepoWatcher::new(),
         ))))
         .manage(commands::op_lock::RepoLocks::new())
+        .manage(commands::running_ops::RunningOps::new())
         .manage(RepoCache {
             status_cache: Mutex::new(std::collections::HashMap::new()),
         })
@@ -364,6 +365,7 @@ pub fn run() {
             commands::hooks::disable_hook,
             commands::hooks::save_hook,
             commands::hooks::delete_hook,
+            commands::running_ops::cancel_git_op,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

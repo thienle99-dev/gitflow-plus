@@ -8,6 +8,7 @@ import { useGenerateCommitMessage } from "@/queries/useAI";
 import { useGitFlowDetect } from "@/queries/useGitFlow";
 import { showToast } from "@/lib/toast";
 import { preflightGate, type PreflightAction } from "@/lib/preflight-gate";
+import { logger } from "@/lib/logger";
 import { trackRemoteOp } from "@/stores/operations";
 import { useRepoAutoRefresh } from "@/hooks/useRepoAutoRefresh";
 import { TrayCommitBox } from "./TrayCommitBox";
@@ -303,7 +304,7 @@ export default function TrayPanelView() {
     try {
       await api.window.showMain();
     } catch (e) {
-      console.error("[Tray] Error:", e);
+      logger.error("Failed to open main app", e);
     }
   };
 
@@ -311,7 +312,7 @@ export default function TrayPanelView() {
     try {
       await api.window.openSettings();
     } catch (e) {
-      console.error("[Tray] Error:", e);
+      logger.error("Failed to open settings", e);
     }
   };
 

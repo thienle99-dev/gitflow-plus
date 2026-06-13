@@ -112,7 +112,7 @@ export default function Toolbar() {
 
   if (!repoPath) return null;
 
-  const doAction = async (action: string, fn: () => Promise<any>) => {
+  const doAction = async (action: string, fn: (operationId?: string) => Promise<any>) => {
     setLoading(action);
     try {
       await trackRemoteOp(action, fn);

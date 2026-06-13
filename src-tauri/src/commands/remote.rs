@@ -2,6 +2,7 @@ use tokio::process::Command;
 use std::path::PathBuf;
 use serde::Serialize;
 use super::op_lock::RepoLocks;
+use super::running_ops::RunningOps;
 
 #[derive(Serialize)]
 pub struct RemoteInfo {
@@ -92,15 +93,17 @@ pub async fn detect_remote_protocol(path: String) -> Result<String, String> {
 #[tauri::command]
 pub async fn git_pull(
     locks: tauri::State<'_, RepoLocks>,
+    running_ops: tauri::State<'_, RunningOps>,
     path: String,
     remote: Option<String>,
     branch: Option<String>,
+    operation_id: Option<String>,
 ) -> Result<String, String> {
     let _guard = locks.acquire(&path).await;
     let mut args = vec![
         "--no-pager".to_string(),
         "-C".to_string(),
-        path,
+        path.clone(),
         "pull".to_string(),
     ];
 
@@ -111,33 +114,40 @@ pub async fn git_pull(
         args.push(b);
     }
 
-    let output = Command::new("git")
-        .args(&args)
-        .output()
-        .await
-        .map_err(|e| format!("Failed to run git: {}", e))?;
+    let mut cmd = tokio::process::Command::new("git");
+    cmd.args(&args);
 
-    if output.status.success() {
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        Ok(stdout.trim().to_string())
-    } else {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        Err(format!("Pull failed: {}", stderr.trim()))
+    match operation_id {
+        Some(op_id) => {
+            let rx = running_ops.spawn(op_id, cmd)?;
+            rx.await.unwrap_or_else(|_| Err("Operation cancelled".into()))
+        }
+        None => {
+            let output = cmd.output().await
+                .map_err(|e| format!("Failed to run git: {}", e))?;
+            if output.status.success() {
+                Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+            } else {
+                Err(format!("Pull failed: {}", String::from_utf8_lossy(&output.stderr).trim()))
+            }
+        }
     }
 }
 
 #[tauri::command]
 pub async fn git_push(
     locks: tauri::State<'_, RepoLocks>,
+    running_ops: tauri::State<'_, RunningOps>,
     path: String,
     remote: Option<String>,
     branch: Option<String>,
+    operation_id: Option<String>,
 ) -> Result<String, String> {
     let _guard = locks.acquire(&path).await;
     let mut args = vec![
         "--no-pager".to_string(),
         "-C".to_string(),
-        path,
+        path.clone(),
         "push".to_string(),
     ];
 
@@ -148,32 +158,39 @@ pub async fn git_push(
         args.push(b);
     }
 
-    let output = Command::new("git")
-        .args(&args)
-        .output()
-        .await
-        .map_err(|e| format!("Failed to run git: {}", e))?;
+    let mut cmd = tokio::process::Command::new("git");
+    cmd.args(&args);
 
-    if output.status.success() {
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        Ok(stdout.trim().to_string())
-    } else {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        Err(format!("Push failed: {}", stderr.trim()))
+    match operation_id {
+        Some(op_id) => {
+            let rx = running_ops.spawn(op_id, cmd)?;
+            rx.await.unwrap_or_else(|_| Err("Operation cancelled".into()))
+        }
+        None => {
+            let output = cmd.output().await
+                .map_err(|e| format!("Failed to run git: {}", e))?;
+            if output.status.success() {
+                Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+            } else {
+                Err(format!("Push failed: {}", String::from_utf8_lossy(&output.stderr).trim()))
+            }
+        }
     }
 }
 
 #[tauri::command]
 pub async fn git_fetch(
     locks: tauri::State<'_, RepoLocks>,
+    running_ops: tauri::State<'_, RunningOps>,
     path: String,
     remote: Option<String>,
+    operation_id: Option<String>,
 ) -> Result<String, String> {
     let _guard = locks.acquire(&path).await;
     let mut args = vec![
         "--no-pager".to_string(),
         "-C".to_string(),
-        path,
+        path.clone(),
         "fetch".to_string(),
         "--all".to_string(),
     ];
@@ -182,18 +199,23 @@ pub async fn git_fetch(
         args.push(r);
     }
 
-    let output = Command::new("git")
-        .args(&args)
-        .output()
-        .await
-        .map_err(|e| format!("Failed to run git: {}", e))?;
+    let mut cmd = tokio::process::Command::new("git");
+    cmd.args(&args);
 
-    if output.status.success() {
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        Ok(stdout.trim().to_string())
-    } else {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        Err(format!("Fetch failed: {}", stderr.trim()))
+    match operation_id {
+        Some(op_id) => {
+            let rx = running_ops.spawn(op_id, cmd)?;
+            rx.await.unwrap_or_else(|_| Err("Operation cancelled".into()))
+        }
+        None => {
+            let output = cmd.output().await
+                .map_err(|e| format!("Failed to run git: {}", e))?;
+            if output.status.success() {
+                Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+            } else {
+                Err(format!("Fetch failed: {}", String::from_utf8_lossy(&output.stderr).trim()))
+            }
+        }
     }
 }
 

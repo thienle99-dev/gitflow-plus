@@ -1,54 +1,64 @@
-import {
-  debug as logDebug,
-  error as logError,
-  info as logInfo,
-  warn as logWarn,
-} from "@tauri-apps/plugin-log";
+/**
+ * Centralized logger — routes all console output through a single module.
+ * In production, only errors and warnings are logged.
+ * In development, all levels are logged.
+ */
 
-type ConsoleLevel = "log" | "debug" | "info" | "warn" | "error";
-type PluginLogger = (message: string) => Promise<void>;
+const isDev = import.meta.env.DEV;
 
-let initialized = false;
+/**
+ * Initialize file-backed console logger.
+ * This hooks console.error/warn to also write to the Tauri log file.
+ */
+export function initFileBackedConsoleLogger() {
+  if (typeof window === "undefined") return;
 
-function serializeLogArg(arg: unknown): string {
-  if (arg instanceof Error) {
-    return [arg.name, arg.message, arg.stack].filter(Boolean).join("\n");
-  }
-  if (typeof arg === "string") return arg;
-  if (typeof arg === "number" || typeof arg === "boolean" || arg == null) {
-    return String(arg);
-  }
-  try {
-    return JSON.stringify(arg, null, 2);
-  } catch {
-    return Object.prototype.toString.call(arg);
-  }
-}
+  const originalError = console.error.bind(console);
+  const originalWarn = console.warn.bind(console);
 
-function serializeLogArgs(args: unknown[]) {
-  return args.map(serializeLogArg).join(" ");
-}
+  console.error = (...args: unknown[]) => {
+    originalError(...args);
+    try {
+      const msg = args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ");
+      const log = (window as any).__TAURI__?.log;
+      if (log?.error) log.error(msg);
+    } catch { /* ignore */ }
+  };
 
-function forwardConsole(level: ConsoleLevel, logger: PluginLogger) {
-  const original = console[level].bind(console);
-  console[level] = (...args: unknown[]) => {
-    original(...args);
-    const message = serializeLogArgs(args);
-    logger(message).catch(() => {
-      // Avoid recursive logging if the logging plugin is unavailable.
-    });
+  console.warn = (...args: unknown[]) => {
+    originalWarn(...args);
+    try {
+      const msg = args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ");
+      const log = (window as any).__TAURI__?.log;
+      if (log?.warn) log.warn(msg);
+    } catch { /* ignore */ }
   };
 }
 
-export function initFileBackedConsoleLogger() {
-  if (initialized) return;
-  initialized = true;
+export const logger = {
+  error(message: string, ...args: unknown[]) {
+    console.error(`[GitFlow] ${message}`, ...args);
+  },
 
-  forwardConsole("log", logInfo);
-  forwardConsole("debug", logDebug);
-  forwardConsole("info", logInfo);
-  forwardConsole("warn", logWarn);
-  forwardConsole("error", logError);
+  warn(message: string, ...args: unknown[]) {
+    console.warn(`[GitFlow] ${message}`, ...args);
+  },
 
-  logInfo("Frontend console logger initialized").catch(() => {});
-}
+  info(message: string, ...args: unknown[]) {
+    if (isDev) {
+      console.info(`[GitFlow] ${message}`, ...args);
+    }
+  },
+
+  debug(message: string, ...args: unknown[]) {
+    if (isDev) {
+      console.debug(`[GitFlow] ${message}`, ...args);
+    }
+  },
+
+  log(message: string, ...args: unknown[]) {
+    if (isDev) {
+      console.log(`[GitFlow] ${message}`, ...args);
+    }
+  },
+};

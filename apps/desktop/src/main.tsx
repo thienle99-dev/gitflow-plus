@@ -3,9 +3,11 @@ import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App";
 import { initFileBackedConsoleLogger } from "@/lib/logger";
+import { initApiKeyCache } from "@/lib/ai-profiles";
 import "./index.css";
 
 initFileBackedConsoleLogger();
+initApiKeyCache();
 
 if (import.meta.env.PROD) {
   window.addEventListener("contextmenu", (event) => {
