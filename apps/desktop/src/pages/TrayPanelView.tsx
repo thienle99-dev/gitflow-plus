@@ -10,6 +10,7 @@ import { showToast } from "@/lib/toast";
 import { trackRemoteOp } from "@/stores/operations";
 import { useRepoAutoRefresh } from "@/hooks/useRepoAutoRefresh";
 import { TrayCommitBox } from "./TrayCommitBox";
+import { TrayCommitSplit } from "./TrayCommitSplit";
 import { TrayFileChanges } from "./TrayFileChanges";
 import { TrayActions } from "./TrayActions";
 import {
@@ -485,6 +486,16 @@ export default function TrayPanelView() {
                     onGenerateCommit={handleAICommitMessage}
                     generateCommitPending={generateCommit.isPending}
                   />
+
+                  {/* AI Commit Split */}
+                  {staged.length > 2 && (
+                    <TrayCommitSplit
+                      repoPath={repoPath}
+                      staged={staged}
+                      unstaged={unstaged}
+                      onCommitted={invalidate}
+                    />
+                  )}
 
                   {/* Stash — inline with stash row */}
                   <div className="flex gap-1">
