@@ -17,7 +17,7 @@ import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
 import { formatCommitDate } from "@/lib/date";
 import { usePreflightGate } from "@/hooks/usePreflightGate";
 import { useGitFlowDetect } from "@/queries/useGitFlow";
-import { ChevronDown, Search, X } from "lucide-react";
+import { ChevronDown, Search, X, Download } from "lucide-react";
 
 const ROW_HEIGHT = 38;
 const EDGE_BLOCK_SIZE = 128;
@@ -333,6 +333,11 @@ export default memo(function CommitGraph() {
             useUIStore.getState().setRebaseTargetCommit(ctxMenu.hash);
             useUIStore.getState().openDialog("interactive-rebase");
           },
+        },
+        {
+          label: "Export graph as PNG",
+          icon: <Download size={14} />,
+          action: () => exportGraphAsPng(canvasRef),
         },
       ]
     : [];
