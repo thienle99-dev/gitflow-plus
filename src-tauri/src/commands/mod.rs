@@ -24,6 +24,7 @@ pub mod remote;
 pub mod repo;
 pub mod running_ops;
 pub mod search;
+pub mod signing;
 pub mod stash;
 pub mod status;
 pub mod submodule;
