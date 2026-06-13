@@ -1326,6 +1326,7 @@ version = "1.2.3"
 dependencies = [
  "chrono",
  "keyring",
+ "libc",
  "log",
  "notify",
  "regex-lite",
