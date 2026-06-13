@@ -7,6 +7,7 @@ pub mod branch;
 pub mod cherry_pick;
 pub mod clone;
 pub mod commit;
+pub mod credentials;
 pub mod diff;
 pub mod gitflow;
 pub mod health;

@@ -1,16 +1,17 @@
 /**
- * AI Provider Profiles — manage multiple AI API keys/profiles in localStorage.
+ * AI Provider Profiles — manage multiple AI API keys/profiles.
  *
- * Storage keys:
- *   gitflowAiProfiles       — JSON array of AIProviderProfile
- *   gitflowActiveAiProfileId — id of the currently active profile
+ * Storage:
+ *   - Profile metadata: localStorage (gitflowAiProfiles)
+ *   - API keys: OS keychain via Tauri credential commands
+ *   - Active profile id: localStorage (gitflowActiveAiProfileId)
  *
  * Legacy keys that get migrated (not deleted):
  *   gitflowAiApiKey, gitflowAiApiUrl, gitflowAiModel,
  *   gitflowAiReviewModel, gitflowAiTokenLimit, gitflowAiFetchedModels
  */
 
-// No external uuid dependency — use crypto.randomUUID (available in modern browsers & Electron)
+import { secureSetKey, secureGetKey, secureDeleteKey, migrateApiKeysToKeychain } from "./ai-secure";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -177,10 +178,34 @@ export function migrateLegacyToProfiles(): boolean {
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 /**
- * Load all profiles. Runs migration once if needed.
- * Always returns at least one profile.
+ * Load all profiles (sync, without API keys).
+ * For full profiles with keys, use loadProfilesSecure().
  */
 export function loadProfiles(): AIProviderProfile[] {
+  let profiles = readProfilesRaw() as AIProviderProfile[];
+
+  // Run migration if no profiles exist but legacy keys do
+  if (profiles.length === 0) {
+    migrateLegacyToProfiles();
+    profiles = readProfilesRaw() as AIProviderProfile[];
+  }
+
+  // Ensure at least one profile exists
+  if (profiles.length === 0) {
+    const def = createDefaultProfile();
+    writeProfilesRaw([def]);
+    writeActiveProfileId(def.id);
+    return [def];
+  }
+
+  return profiles;
+}
+
+/**
+ * Load all profiles with API keys restored from keychain.
+ * Also runs keychain migration on first call.
+ */
+export async function loadProfilesSecure(): Promise<AIProviderProfile[]> {
   let profiles = readProfilesRaw();
 
   // Run migration if no profiles exist but legacy keys do
@@ -197,14 +222,32 @@ export function loadProfiles(): AIProviderProfile[] {
     return [def];
   }
 
-  return profiles;
+  // Run keychain migration if needed
+  await migrateApiKeysToKeychain(profiles);
+
+  // Restore API keys from keychain (override any localStorage values)
+  const restored: AIProviderProfile[] = [];
+  for (const profile of profiles) {
+    const key = await secureGetKey(profile.id);
+    restored.push({ ...profile, apiKey: key || profile.apiKey || "" });
+  }
+  return restored;
 }
 
 /**
- * Load the active profile. Falls back to the first profile.
+ * Load the active profile (sync, without API key).
  */
 export function loadActiveProfile(): AIProviderProfile {
   const profiles = loadProfiles();
+  const activeId = readActiveProfileId();
+  return profiles.find((p) => p.id === activeId) || profiles[0];
+}
+
+/**
+ * Load the active profile with API key from keychain.
+ */
+export async function loadActiveProfileSecure(): Promise<AIProviderProfile> {
+  const profiles = await loadProfilesSecure();
   const activeId = readActiveProfileId();
   return profiles.find((p) => p.id === activeId) || profiles[0];
 }
@@ -227,9 +270,34 @@ export function setActiveProfileId(id: string): void {
 }
 
 /**
- * Save all profiles and the active profile id.
+ * Save all profiles and the active profile id (sync).
+ * API keys in profiles are saved to keychain, metadata to localStorage.
  */
 export function saveProfiles(profiles: AIProviderProfile[], activeId: string): void {
+  // Save API keys to keychain (fire and forget for sync version)
+  for (const profile of profiles) {
+    if (profile.apiKey !== undefined) {
+      secureSetKey(profile.id, profile.apiKey).catch(console.warn);
+    }
+  }
+  writeProfilesRaw(profiles);
+  writeActiveProfileId(activeId);
+}
+
+/**
+ * Save all profiles and the active profile id (async, secure).
+ * API keys are saved to OS keychain AND localStorage (for backward compat).
+ */
+export async function saveProfilesSecure(profiles: AIProviderProfile[], activeId: string): Promise<void> {
+  // Save API keys to keychain
+  const keyPromises = profiles.map((profile) =>
+    profile.apiKey
+      ? secureSetKey(profile.id, profile.apiKey)
+      : secureDeleteKey(profile.id)
+  );
+  await Promise.allSettled(keyPromises);
+
+  // Save to localStorage (including API keys for backward compat)
   writeProfilesRaw(profiles);
   writeActiveProfileId(activeId);
 }
@@ -268,8 +336,6 @@ export function duplicateProfile(
 
 /**
  * Delete a profile. Returns the updated array and the next active profile id.
- * If the deleted profile was the active one, picks the next remaining profile
- * or creates a new empty default if none remain.
  */
 export function deleteProfile(
   profiles: AIProviderProfile[],
@@ -289,6 +355,20 @@ export function deleteProfile(
 }
 
 /**
+ * Delete a profile and remove its API key from keychain.
+ */
+export async function deleteProfileSecure(
+  profiles: AIProviderProfile[],
+  deleteId: string,
+  currentActiveId: string,
+): Promise<{ profiles: AIProviderProfile[]; activeId: string }> {
+  // Delete API key from keychain
+  await secureDeleteKey(deleteId).catch(console.warn);
+
+  return deleteProfile(profiles, deleteId, currentActiveId);
+}
+
+/**
  * Update a single profile in the array. Returns the updated array.
  */
 export function updateProfile(
@@ -300,6 +380,27 @@ export function updateProfile(
       ? { ...updatedProfile, updatedAt: now() }
       : p,
   );
+}
+
+/**
+ * Update a single profile and save API key to keychain.
+ */
+export async function updateProfileSecure(
+  profiles: AIProviderProfile[],
+  updatedProfile: AIProviderProfile,
+): Promise<AIProviderProfile[]> {
+  const updated = profiles.map((p) =>
+    p.id === updatedProfile.id
+      ? { ...updatedProfile, updatedAt: now() }
+      : p,
+  );
+
+  // Save API key to keychain
+  if (updatedProfile.apiKey !== undefined) {
+    await secureSetKey(updatedProfile.id, updatedProfile.apiKey).catch(console.warn);
+  }
+
+  return updated;
 }
 
 /**

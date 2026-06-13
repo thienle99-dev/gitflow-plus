@@ -681,4 +681,13 @@ export const api = {
     delete: (path: string, hookName: string) =>
       invoke<void>("delete_hook", { repo_path: path, hook_name: hookName }),
   },
+
+  credentials: {
+    set: (key: string, value: string) =>
+      invoke<void>("credential_set", { key, value }),
+    get: (key: string) =>
+      invoke<string>("credential_get", { key }),
+    delete: (key: string) =>
+      invoke<void>("credential_delete", { key }),
+  },
 };

@@ -25,3 +25,4 @@ notify = { version = "7", features = ["macos_kqueue"] }
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.13", features = ["json"] }
 regex-lite = "0.1"
+keyring = { version = "3", features = ["apple-native", "sync-secret-service", "windows-native"] }
