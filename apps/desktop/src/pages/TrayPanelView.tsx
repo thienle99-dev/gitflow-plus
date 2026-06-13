@@ -373,7 +373,7 @@ export default function TrayPanelView() {
             </button>
 
             {repoDropdownOpen && (
-              <div className="absolute left-0 mt-0.5 w-60 bg-surface-1 border border-border-60 rounded-xl shadow-xl z-50 py-1">
+              <div className="absolute left-0 mt-0.5 w-60 bg-surface-1 border border-border-60 rounded-mac shadow-xl z-50 py-1">
                 <div className="px-2.5 pb-1 border-b border-border-40 flex items-center gap-1.5">
                   <Search size={10} className="text-text-muted" />
                   <input
