@@ -20,6 +20,7 @@ import {
 import { GravatarImg } from "@/components/ui/shared";
 import { useAICommitExplain, useAICommitReview } from "@/queries/useAI";
 import { AI_REVIEW_MODE_OPTIONS, readLastAIReviewMode, saveLastAIReviewMode, type AIReviewMode } from "@/lib/ai";
+import { getCachedApiKey, loadActiveProfile } from "@/lib/ai-profiles";
 import { showToast } from "@/lib/toast";
 import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
 import AIMarkdown from "@/components/ui/feedback/AIMarkdown";
@@ -226,7 +227,7 @@ export default function CommitDetail() {
           <RotateCcw size={11} className={reverting ? "animate-spin" : ""} />
           {reverting ? "Reverting..." : "Revert commit"}
         </button>
-        {localStorage.getItem("gitflowAiApiKey") && (
+        {getCachedApiKey(loadActiveProfile().id, loadActiveProfile().apiKey) && (
           <div className="flex items-center gap-1.5 mt-1">
             <button
               onClick={handleExplain}

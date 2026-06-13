@@ -7,6 +7,7 @@ import { api } from "@/api/tauri";
 import { Search, X, GitCommit, Calendar, User, FileText, GitBranch, Sparkles, RefreshCw, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/form";
 import { useCommitDateFormatter } from "@/lib/date";
+import { readAISettings } from "@/lib/ai";
 
 interface SearchDialogProps {
   open: boolean;
@@ -84,10 +85,11 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
     setSemanticResults([]);
 
     try {
-      const apiKey = localStorage.getItem("gitflowAiApiKey") || "";
-      const model = localStorage.getItem("gitflowAiModel") || "claude-sonnet-4-20250514";
-      const customUrl = localStorage.getItem("gitflowAiApiUrl") || "";
-      const limit = Number(localStorage.getItem("gitflowAiTokenLimit") || "4096");
+      const s = readAISettings();
+      const apiKey = s.apiKey;
+      const model = s.model;
+      const customUrl = s.customUrl;
+      const limit = s.tokenLimit;
 
       // Fetch latest 150 commits to analyze
       const commits = await api.log(repoPath, 0, 150);
