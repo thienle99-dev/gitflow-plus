@@ -12,7 +12,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { usePreflightGate } from "@/hooks/usePreflightGate";
 import {
   GitPullRequest,
+  Plus,
   GitBranchPlus,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
   FileDiff,
   ArrowUpFromLine,
   ArrowDownToLine,
@@ -570,6 +575,17 @@ export default function Toolbar() {
 
         {/* Right Side: Integrations */}
         <div className="flex items-center gap-2 shrink-0">
+          {/* Create PR Trigger */}
+          <button
+            onClick={() => openDialog("create-pr")}
+            aria-label="Create Pull Request"
+            className="ghost h-8 w-8 flex items-center justify-center relative text-text-muted hover:text-[#30d158] rounded-mac hover:bg-surface-2 transition-all cursor-pointer"
+            title="Create Pull Request / Merge Request"
+          >
+            <GitPullRequest size={14} />
+            <Plus size={8} className="absolute top-0.5 right-0.5 text-current" />
+          </button>
+
           {/* PR Trigger */}
           <button
             onClick={() => openDialog("merge-request")}

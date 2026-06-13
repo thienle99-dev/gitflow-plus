@@ -339,6 +339,96 @@ export async function fetchGitHubCheckRuns(remoteUrl: string, sha: string): Prom
   return [];
 }
 
+export async function createPullRequest(
+  remoteUrl: string,
+  title: string,
+  body: string,
+  head: string,
+  base: string,
+): Promise<MergeRequest> {
+  const { provider, owner, repo } = parseRemoteUrl(remoteUrl);
+  if (provider !== "github") throw new Error("Not a GitHub repository");
+
+  const url = `https://api.github.com/repos/${owner}/${repo}/pulls`;
+  const headers = mergeRequestAuthHeaders("github");
+  headers["Content-Type"] = "application/json";
+  const reqBody = JSON.stringify({ title, body, head, base });
+
+  const response = await api.ai.request(url, "POST", headers, reqBody);
+  if (response.status !== 201) {
+    let errDetail = "";
+    try { errDetail = JSON.parse(response.body).message; } catch { errDetail = response.body; }
+    throw new Error(`GitHub API Error (${response.status}): ${errDetail}`);
+  }
+
+  const pr = JSON.parse(response.body);
+  let state: "open" | "merged" | "closed" = "open";
+  if (pr.state === "closed") state = pr.merged_at ? "merged" : "closed";
+
+  return {
+    id: pr.id,
+    iid: pr.number,
+    title: pr.title,
+    description: pr.body || "",
+    author: pr.user?.login || "unknown",
+    authorAvatar: pr.user?.avatar_url,
+    sourceBranch: pr.head?.ref || "",
+    targetBranch: pr.base?.ref || "",
+    state,
+    webUrl: pr.html_url,
+    sha: pr.head?.sha,
+  };
+}
+
+export async function createMergeRequest(
+  remoteUrl: string,
+  title: string,
+  description: string,
+  sourceBranch: string,
+  targetBranch: string,
+): Promise<MergeRequest> {
+  const { provider, owner, repo, host } = parseRemoteUrl(remoteUrl);
+  if (provider !== "gitlab") throw new Error("Not a GitLab repository");
+
+  const gitlabHost = host || localStorage.getItem("gitflowGitlabHost") || "https://gitlab.com";
+  const projectId = encodeURIComponent(`${owner}/${repo}`);
+  const url = `${gitlabHost}/api/v4/projects/${projectId}/merge_requests`;
+  const headers = mergeRequestAuthHeaders("gitlab");
+  headers["Content-Type"] = "application/json";
+  const reqBody = JSON.stringify({
+    source_branch: sourceBranch,
+    target_branch: targetBranch,
+    title,
+    description,
+  });
+
+  const response = await api.ai.request(url, "POST", headers, reqBody);
+  if (response.status !== 201) {
+    let errDetail = "";
+    try { errDetail = JSON.parse(response.body).message || JSON.parse(response.body).error; } catch { errDetail = response.body; }
+    throw new Error(`GitLab API Error (${response.status}): ${errDetail}`);
+  }
+
+  const mr = JSON.parse(response.body);
+  let state: "open" | "merged" | "closed" = "open";
+  if (mr.state === "merged") state = "merged";
+  else if (mr.state === "closed") state = "closed";
+
+  return {
+    id: mr.id,
+    iid: mr.iid,
+    title: mr.title,
+    description: mr.description || "",
+    author: mr.author?.username || "unknown",
+    authorAvatar: mr.author?.avatar_url,
+    sourceBranch: mr.source_branch || "",
+    targetBranch: mr.target_branch || "",
+    state,
+    webUrl: mr.web_url,
+    sha: mr.sha,
+  };
+}
+
 export async function approveMergeRequest(remoteUrl: string, mr: MergeRequest): Promise<string> {
   const { provider, owner, repo, host } = parseRemoteUrl(remoteUrl);
   if (!provider) throw new Error("Unable to identify provider from remote URL.");

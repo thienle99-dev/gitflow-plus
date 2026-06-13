@@ -32,6 +32,7 @@ const SettingsDialog = lazy(() => import("@/components/features/dialogs/Settings
 const AnalyticsDialog = lazy(() => import("@/components/features/dialogs/AnalyticsDialog"));
 const CreateBranchDialog = lazy(() => import("@/components/features/dialogs/CreateBranchDialog"));
 const MergeRequestDialog = lazy(() => import("@/components/features/dialogs/MergeRequestDialog"));
+const CreatePRDialog = lazy(() => import("@/components/features/dialogs/CreatePRDialog"));
 const MergePreviewDialog = lazy(() => import("@/components/features/dialogs/MergePreviewDialog"));
 const CloneDialog = lazy(() => import("@/components/features/dialogs/CloneDialog"));
 const InitRepoDialog = lazy(() => import("@/components/features/dialogs/InitRepoDialog"));
@@ -340,6 +341,7 @@ export default function MainLayout() {
     "create-branch": <CreateBranchDialog open={true} onClose={closeDialog} />,
     analytics: <AnalyticsDialog open={true} onClose={closeDialog} />,
     "merge-request": <MergeRequestDialog onClose={closeDialog} />,
+    "create-pr": <CreatePRDialog open={true} onClose={closeDialog} />,
     merge: <MergePreviewDialog initialBranch={mergeTargetBranch ?? undefined} onClose={closeDialog} />,
     "branch-compare": compareBranchTarget ? (
       <BranchCompareDialog
