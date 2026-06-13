@@ -308,6 +308,22 @@ export interface WorktreeInfo {
   is_current: boolean;
 }
 
+export interface SignatureVerification {
+  commitHash: string;
+  signatureType: string;
+  status: string;
+  signerName: string;
+  signerEmail: string;
+  keyFingerprint: string;
+}
+
+export interface SigningKeyInfo {
+  keyType: string;
+  keyId: string;
+  name: string;
+  email: string;
+}
+
 // Typed invoke wrappers
 export const api = {
   repo: {
@@ -711,6 +727,15 @@ export const api = {
       invoke<string>("credential_get", { key }),
     delete: (key: string) =>
       invoke<void>("credential_delete", { key }),
+  },
+
+  signing: {
+    verify: (repoPath: string, commitHash: string) =>
+      invoke<SignatureVerification>("verify_signature", { repoPath, commitHash }),
+    hasSignature: (repoPath: string, commitHash: string) =>
+      invoke<boolean>("has_signature", { repoPath, commitHash }),
+    listKeys: () =>
+      invoke<SigningKeyInfo[]>("list_signing_keys"),
   },
 
   worktrees: {
