@@ -1324,6 +1324,7 @@ dependencies = [
 name = "gitflow-desktop"
 version = "1.2.3"
 dependencies = [
+ "base64 0.22.1",
  "chrono",
  "keyring",
  "libc",

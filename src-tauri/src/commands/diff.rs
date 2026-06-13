@@ -1,6 +1,7 @@
 use std::process::Stdio;
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
+use base64::Engine;
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct CommitFileChange {
@@ -398,4 +399,80 @@ pub async fn write_file_content(
         .await
         .map_err(|e| format!("Failed to write file: {}", e))?;
     Ok(format!("Wrote {} bytes to {}", content.len(), file_path))
+}
+
+/// Read a file from the working tree as base64. Returns MIME type + base64 content.
+#[tauri::command]
+pub async fn read_working_file_base64(
+    path: String,
+    file_path: String,
+) -> Result<Option<ImageContent>, String> {
+    let full_path = std::path::Path::new(&path).join(&file_path);
+    if !full_path.exists() {
+        return Ok(None);
+    }
+    let bytes = tokio::fs::read(&full_path)
+        .await
+        .map_err(|e| format!("Failed to read file: {}", e))?;
+    let mime = mime_type_for_file(&file_path);
+    Ok(Some(ImageContent {
+        mime_type: mime,
+        data: base64_engine().encode(&bytes),
+    }))
+}
+
+/// Read a file from a git revision (e.g. "HEAD", ":path", "abc123") as base64.
+#[tauri::command]
+pub async fn read_git_object_base64(
+    path: String,
+    rev: String,
+    file_path: String,
+) -> Result<Option<ImageContent>, String> {
+    let output = Command::new("git")
+        .args([
+            "--no-pager",
+            "-C",
+            &path,
+            "show",
+            &format!("{}:{}", rev, file_path),
+        ])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run git show: {}", e))?;
+
+    if !output.status.success() {
+        return Ok(None);
+    }
+
+    let mime = mime_type_for_file(&file_path);
+    Ok(Some(ImageContent {
+        mime_type: mime,
+        data: base64_engine().encode(&output.stdout),
+    }))
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct ImageContent {
+    pub mime_type: String,
+    pub data: String,
+}
+
+fn mime_type_for_file(path: &str) -> String {
+    let ext = path.rsplit('.').next().unwrap_or("").to_lowercase();
+    match ext.as_str() {
+        "png" => "image/png".to_string(),
+        "jpg" | "jpeg" => "image/jpeg".to_string(),
+        "gif" => "image/gif".to_string(),
+        "webp" => "image/webp".to_string(),
+        "svg" => "image/svg+xml".to_string(),
+        "bmp" => "image/bmp".to_string(),
+        "ico" => "image/x-icon".to_string(),
+        "avif" => "image/avif".to_string(),
+        "tiff" | "tif" => "image/tiff".to_string(),
+        _ => "application/octet-stream".to_string(),
+    }
+}
+
+fn base64_engine() -> base64::engine::GeneralPurpose {
+    base64::engine::general_purpose::STANDARD
 }

@@ -372,6 +372,11 @@ export interface PausedCommitInfo {
   staged_files: CommitFileEntry[];
 }
 
+export interface ImageContent {
+  mime_type: string;
+  data: string;
+}
+
 // Typed invoke wrappers
 export const api = {
   repo: {
@@ -513,6 +518,10 @@ export const api = {
       invoke<string>("apply_diff_hunk", { path, patch, action }),
     writeContent: (path: string, filePath: string, content: string) =>
       invoke<string>("write_file_content", { path, filePath, content }),
+    readWorkingFileBase64: (path: string, filePath: string) =>
+      invoke<ImageContent | null>("read_working_file_base64", { path, filePath }),
+    readGitObjectBase64: (path: string, rev: string, filePath: string) =>
+      invoke<ImageContent | null>("read_git_object_base64", { path, rev, filePath }),
   },
 
   remote: {

@@ -302,6 +302,8 @@ pub fn run() {
             commands::diff::commit_changed_files,
             commands::diff::apply_diff_hunk,
             commands::diff::write_file_content,
+            commands::diff::read_working_file_base64,
+            commands::diff::read_git_object_base64,
             commands::lfs::lfs_status,
             commands::lfs::lfs_pull,
             commands::lfs::lfs_push,
