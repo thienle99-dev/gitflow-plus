@@ -142,8 +142,7 @@ describe("loadProfiles", () => {
     const profiles = loadProfiles();
     expect(profiles).toHaveLength(1);
     expect(profiles[0].name).toBe("My Profile");
-    // apiKey stripped from localStorage storage; use getCachedApiKey for key access
-    expect(profiles[0].apiKey).toBe("");
+    expect(profiles[0].apiKey).toBe("sk-saved");
   });
 });
 
