@@ -19,7 +19,7 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
   const { data: branches } = useGitBranches(repoPath);
 
   // Mode select state
-  const [searchMode, setSearchMode] = useState<"standard" | "semantic">("standard");
+  const [searchMode, setSearchMode] = useState<"standard" | "semantic" | "grep">("standard");
 
   // Standard Search filter state
   const [query, setQuery] = useState("");
@@ -35,6 +35,15 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
   const [semanticResults, setSemanticResults] = useState<any[]>([]);
   const [loadingSemantic, setLoadingSemantic] = useState(false);
   const [semanticError, setSemanticError] = useState<string | null>(null);
+
+  // Grep search state
+  const [grepQuery, setGrepQuery] = useState("");
+  const [grepResults, setGrepResults] = useState<import("@/api/tauri").GrepMatch[]>([]);
+  const [grepLoading, setGrepLoading] = useState(false);
+  const [grepError, setGrepError] = useState<string | null>(null);
+  const [grepCaseSensitive, setGrepCaseSensitive] = useState(false);
+  const [grepFixed, setGrepFixed] = useState(false);
+  const [grepFileGlob, setGrepFileGlob] = useState("");
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -248,6 +257,30 @@ CRITICAL INSTRUCTIONS:
     }
   };
 
+  const handleGrepSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!grepQuery.trim() || !repoPath) return;
+
+    setGrepLoading(true);
+    setGrepError(null);
+    setGrepResults([]);
+
+    try {
+      const results = await api.searchContent(repoPath, {
+        pattern: grepQuery,
+        caseInsensitive: !grepCaseSensitive,
+        fixed: grepFixed,
+        fileGlob: grepFileGlob || undefined,
+        maxResults: 200,
+      });
+      setGrepResults(results);
+    } catch (err: any) {
+      setGrepError(err.message || String(err));
+    } finally {
+      setGrepLoading(false);
+    }
+  };
+
   if (!open) return null;
 
   const formatCommitDate = useCommitDateFormatter();
@@ -273,7 +306,7 @@ CRITICAL INSTRUCTIONS:
           </div>
           
           {/* Segmented Control */}
-          <div className="grid grid-cols-2 p-0.5 rounded-mac bg-surface-2-60 border border-border-40 w-[240px]">
+          <div className="grid grid-cols-3 p-0.5 rounded-mac bg-surface-2-60 border border-border-40 w-[320px]">
             <button
               onClick={() => setSearchMode("standard")}
               className={`h-6 text-3xs font-semibold rounded transition-all flex items-center justify-center border border-transparent outline-none ${
@@ -282,7 +315,7 @@ CRITICAL INSTRUCTIONS:
                   : "text-text-muted hover:text-text-primary"
               }`}
             >
-              Standard Search
+              Standard
             </button>
             <button
               onClick={() => setSearchMode("semantic")}
@@ -294,6 +327,17 @@ CRITICAL INSTRUCTIONS:
             >
               <Sparkles size={10} className="text-accent" />
               Semantic AI
+            </button>
+            <button
+              onClick={() => setSearchMode("grep")}
+              className={`h-6 text-3xs font-semibold rounded transition-all flex items-center justify-center gap-1 border border-transparent outline-none ${
+                searchMode === "grep"
+                  ? "bg-surface-0 text-text-primary shadow-sm"
+                  : "text-text-muted hover:text-text-primary"
+              }`}
+            >
+              <Search size={10} />
+              File Content
             </button>
           </div>
           
@@ -331,6 +375,56 @@ CRITICAL INSTRUCTIONS:
               {semanticError && (
                 <div className="text-2xs text-[#ff453a] bg-[#ff453a]/5 p-2.5 border border-[#ff453a]/15 rounded-mac">
                   Error: {semanticError}
+                </div>
+              )}
+            </form>
+          </div>
+        ) : searchMode === "grep" ? (
+          <div className="p-4 pb-3 space-y-3 bg-surface-0 border-b border-border-60">
+            <form onSubmit={handleGrepSearch} className="space-y-2.5">
+              <div className="relative">
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
+                <Input
+                  variant="surface-1"
+                  value={grepQuery}
+                  onChange={(e) => setGrepQuery(e.target.value)}
+                  placeholder="Search file contents (regex or fixed string)..."
+                  className="h-8 pl-8 pr-20 text-xs rounded-mac placeholder:text-text-muted-60"
+                />
+                <button
+                  type="submit"
+                  disabled={grepLoading || !grepQuery.trim()}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-6 px-3 bg-accent text-accent-fg text-3xs font-semibold rounded hover:opacity-95 disabled:opacity-40 transition-all flex items-center gap-1 border border-transparent outline-none"
+                >
+                  {grepLoading ? (
+                    <RefreshCw size={10} className="animate-spin" />
+                  ) : (
+                    <Search size={10} />
+                  )}
+                  <span>Grep</span>
+                </button>
+              </div>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-1.5 text-2xs text-text-muted cursor-pointer">
+                  <input type="checkbox" checked={grepCaseSensitive} onChange={(e) => setGrepCaseSensitive(e.target.checked)} className="accent-accent" />
+                  Case sensitive
+                </label>
+                <label className="flex items-center gap-1.5 text-2xs text-text-muted cursor-pointer">
+                  <input type="checkbox" checked={grepFixed} onChange={(e) => setGrepFixed(e.target.checked)} className="accent-accent" />
+                  Fixed string
+                </label>
+                <div className="flex-1" />
+                <Input
+                  variant="surface-1"
+                  value={grepFileGlob}
+                  onChange={(e) => setGrepFileGlob(e.target.value)}
+                  placeholder="*.tsx, *.rs, src/**"
+                  className="h-6 w-40 text-2xs rounded"
+                />
+              </div>
+              {grepError && (
+                <div className="text-2xs text-[#ff453a] bg-[#ff453a]/5 p-2.5 border border-[#ff453a]/15 rounded-mac">
+                  Error: {grepError}
                 </div>
               )}
             </form>
@@ -477,6 +571,40 @@ CRITICAL INSTRUCTIONS:
                 </div>
               ))}
             </>
+          ) : searchMode === "grep" ? (
+            <>
+              {grepLoading && (
+                <div className="flex flex-col items-center justify-center py-10 space-y-2 text-text-muted">
+                  <RefreshCw size={18} className="animate-spin text-accent" />
+                  <span className="text-2xs">Searching file contents...</span>
+                </div>
+              )}
+              {!grepLoading && grepResults.length === 0 && !grepError && (
+                <div className="text-xs text-text-muted text-center py-12 flex flex-col items-center justify-center space-y-1">
+                  <Search size={16} className="text-text-muted-40 mb-1" />
+                  <span className="font-semibold text-text-primary">No Matches</span>
+                  <span className="text-3xs opacity-60">Try a different pattern or file glob</span>
+                </div>
+              )}
+              {!grepLoading && grepResults.map((match, i) => (
+                <div key={`${match.file}:${match.line_number}:${i}`} className="flex items-start gap-3 px-3 py-2 rounded-mac hover:bg-surface-1-50 transition-colors group cursor-pointer">
+                  <FileText size={14} className="mt-0.5 shrink-0 text-text-muted group-hover:text-accent transition-colors" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono text-accent font-semibold truncate">{match.file}</span>
+                      <span className="text-2xs text-text-muted shrink-0">L{match.line_number}</span>
+                    </div>
+                    <pre className="text-2xs font-mono text-text-secondary mt-0.5 truncate leading-relaxed">
+                      {match.match_column > 0 ? (
+                        <>{match.line_content.slice(0, match.match_column)}<mark className="bg-accent/20 text-accent rounded-sm px-0.5">{match.line_content.slice(match.match_column, match.match_column + grepQuery.length)}</mark>{match.line_content.slice(match.match_column + grepQuery.length)}</>
+                      ) : (
+                        match.line_content
+                      )}
+                    </pre>
+                  </div>
+                </div>
+              ))}
+            </>
           ) : (
             <>
               {isLoading && (
@@ -520,6 +648,8 @@ CRITICAL INSTRUCTIONS:
           <span className="text-2xs text-text-muted font-medium">
             {searchMode === "semantic"
               ? `${semanticResults.length} semantic result(s)`
+              : searchMode === "grep"
+              ? `${grepResults.length} match(es) found`
               : results?.length ? `${results.length} result(s) found` : "Enter criteria to begin search"
             }
           </span>

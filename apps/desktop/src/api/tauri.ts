@@ -281,6 +281,13 @@ export interface GitConfigSection {
   variables: GitConfigEntry[];
 }
 
+export interface GrepMatch {
+  file: string;
+  line_number: number;
+  line_content: string;
+  match_column: number;
+}
+
 export interface AppLogEntry {
   timestamp: string;
   level: string;
@@ -600,6 +607,21 @@ export const api = {
       until: opts.until ?? null,
       maxCount: opts.maxCount ?? null,
       branch: opts.branch ?? null,
+    }),
+  searchContent: (path: string, opts: {
+    pattern: string;
+    caseInsensitive?: boolean;
+    fixed?: boolean;
+    fileGlob?: string;
+    maxResults?: number;
+  }) =>
+    invoke<GrepMatch[]>("search_content", {
+      path,
+      pattern: opts.pattern,
+      caseInsensitive: opts.caseInsensitive ?? null,
+      fixed: opts.fixed ?? null,
+      fileGlob: opts.fileGlob ?? null,
+      maxResults: opts.maxResults ?? null,
     }),
 
   reflog: {
