@@ -350,6 +350,28 @@ export interface SigningConfig {
   allowedSignersFile: string;
 }
 
+export interface RebaseResult {
+  success: boolean;
+  message: string;
+  conflicted_files: string[];
+}
+
+export interface RebaseTodo {
+  action: string;
+  commit_hash: string;
+  message: string;
+}
+
+export interface CommitFileEntry {
+  status: string;
+  path: string;
+}
+
+export interface PausedCommitInfo {
+  message: string;
+  staged_files: CommitFileEntry[];
+}
+
 // Typed invoke wrappers
 export const api = {
   repo: {
@@ -357,6 +379,8 @@ export const api = {
       invoke<RepoInfo>("open_repo", { path }),
     info: (path: string) =>
       invoke<RepoInfo>("get_repo_info", { path }),
+    init: (path: string) =>
+      invoke<RepoInfo>("git_init", { path }),
     clone: (url: string, destination: string) =>
       invoke<string>("git_clone", { url, destination }),
     cancelClone: () =>
@@ -643,8 +667,8 @@ export const api = {
   },
 
   rebase: {
-    start: (path: string, base: string, todos: { action: string; commit_hash: string; message: string }[], operationId?: string) =>
-      invoke<{ success: boolean; message: string; conflicted_files: string[] }>("rebase_start", { path, base, todos, operationId: operationId ?? null }),
+    start: (path: string, base: string, todos: RebaseTodo[], operationId?: string) =>
+      invoke<RebaseResult>("rebase_start", { path, base, todos, operationId: operationId ?? null }),
     continue: (path: string, operationId?: string) =>
       invoke<string>("rebase_continue", { path, operationId: operationId ?? null }),
     skip: (path: string, operationId?: string) =>
@@ -654,7 +678,11 @@ export const api = {
     status: (path: string) =>
       invoke<[boolean, string[]]>("rebase_status", { path }),
     todoList: (path: string, base: string) =>
-      invoke<{ action: string; commit_hash: string; message: string }[]>("rebase_todo_list", { path, base }),
+      invoke<RebaseTodo[]>("rebase_todo_list", { path, base }),
+    getPausedCommitInfo: (path: string) =>
+      invoke<PausedCommitInfo>("get_paused_commit_info", { path }),
+    amendAndContinue: (path: string, message?: string, operationId?: string) =>
+      invoke<RebaseResult>("amend_and_continue_rebase", { path, message: message ?? null, operationId: operationId ?? null }),
   },
   ai: {
     request: (url: string, method: string, headers: Record<string, string>, body?: string) =>

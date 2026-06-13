@@ -13,10 +13,8 @@ import {
   XCircle,
   ArrowRight,
   ArrowLeft,
-  Copy,
   RefreshCw,
   Loader2,
-  Terminal,
   Key,
 } from "lucide-react";
 
@@ -596,7 +594,7 @@ export default function SigningSetupWizard() {
                 ) : (
                   <ArrowRight size={12} />
                 )}
-                Apply &amp; Test
+                Apply & Test
               </button>
             )}
 

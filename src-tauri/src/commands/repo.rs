@@ -12,6 +12,31 @@ pub struct RepoInfo {
     pub signing_key: Option<String>,
 }
 
+/// Initialize a new git repository at the given path.
+/// If the directory doesn't exist, it will be created.
+#[tauri::command]
+pub async fn git_init(path: String) -> Result<RepoInfo, String> {
+    let dir = std::path::Path::new(&path);
+
+    // Create directory if it doesn't exist
+    if !dir.exists() {
+        std::fs::create_dir_all(dir)
+            .map_err(|e| format!("Failed to create directory: {}", e))?;
+    }
+
+    let output = tokio::process::Command::new("git")
+        .args(["init", &path])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run git init: {}", e))?;
+
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+    }
+
+    get_repo_info_inner(&path).await
+}
+
 #[tauri::command]
 pub async fn open_repo(path: String) -> Result<RepoInfo, String> {
     let git_dir = Path::new(&path).join(".git");

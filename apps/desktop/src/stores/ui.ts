@@ -19,6 +19,7 @@ interface UIState {
   compareBranchTarget: string | null;
   rebaseTargetCommit: string | null;
   prefilledRebaseTodos: RebaseTodoItem[] | null;
+  amendTargetHash: string | null;
   squashNState: { open: boolean; commitHash: string | null };
   pendingUpdateVersion: string | null;
   setPendingUpdateVersion: (version: string | null) => void;
@@ -36,6 +37,7 @@ interface UIState {
   setCompareBranchTarget: (branch: string | null) => void;
   setRebaseTargetCommit: (hash: string | null) => void;
   setPrefilledRebaseTodos: (todos: RebaseTodoItem[] | null) => void;
+  setAmendTargetHash: (hash: string | null) => void;
   openSquashDialog: (commitHash: string) => void;
   closeSquashDialog: () => void;
 }
@@ -53,6 +55,7 @@ export const useUIStore = create<UIState>((set) => ({
   compareBranchTarget: null,
   rebaseTargetCommit: null,
   prefilledRebaseTodos: null,
+  amendTargetHash: null,
   squashNState: { open: false, commitHash: null },
   pendingUpdateVersion: null,
   setPendingUpdateVersion: (version) => set({ pendingUpdateVersion: version }),
@@ -75,11 +78,12 @@ export const useUIStore = create<UIState>((set) => ({
   setSelectedStashIndex: (index) => set({ selectedStashIndex: index }),
   setDiffViewMode: (mode) => set({ diffViewMode: mode }),
   openDialog: (name) => set({ activeDialog: name }),
-  closeDialog: () => set({ activeDialog: null, mergeTargetBranch: null, compareBranchTarget: null, rebaseTargetCommit: null, prefilledRebaseTodos: null }),
+  closeDialog: () => set({ activeDialog: null, mergeTargetBranch: null, compareBranchTarget: null, rebaseTargetCommit: null, prefilledRebaseTodos: null, amendTargetHash: null }),
   setMergeTargetBranch: (branch) => set({ mergeTargetBranch: branch }),
   setCompareBranchTarget: (branch) => set({ compareBranchTarget: branch }),
   setRebaseTargetCommit: (hash) => set({ rebaseTargetCommit: hash }),
   setPrefilledRebaseTodos: (todos) => set({ prefilledRebaseTodos: todos }),
+  setAmendTargetHash: (hash) => set({ amendTargetHash: hash }),
   openSquashDialog: (commitHash) => set({ squashNState: { open: true, commitHash } }),
   closeSquashDialog: () => set({ squashNState: { open: false, commitHash: null } }),
 }));

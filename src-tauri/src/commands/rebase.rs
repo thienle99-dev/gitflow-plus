@@ -11,6 +11,18 @@ pub struct RebaseResult {
     pub conflicted_files: Vec<String>,
 }
 
+#[derive(Serialize, Clone, Debug)]
+pub struct PausedCommitInfo {
+    pub message: String,
+    pub staged_files: Vec<CommitFileEntry>,
+}
+
+#[derive(Serialize, Clone, Debug)]
+pub struct CommitFileEntry {
+    pub status: String,
+    pub path: String,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RebaseTodo {
     pub action: String,
@@ -283,4 +295,131 @@ pub async fn rebase_status(path: String) -> Result<(bool, Vec<String>), String> 
 #[tauri::command]
 pub async fn rebase_todo_list(path: String, base: String) -> Result<Vec<RebaseTodo>, String> {
     git_rebase_todo_range(&path, &base).await
+}
+
+/// Get info about the current commit during a rebase edit pause
+#[tauri::command]
+pub async fn get_paused_commit_info(path: String) -> Result<PausedCommitInfo, String> {
+    use tokio::process::Command;
+
+    // Get HEAD commit message
+    let msg_output = Command::new("git")
+        .args(["--no-pager", "-C", &path, "log", "-1", "--format=%B", "HEAD"])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to get commit message: {}", e))?;
+
+    let message = String::from_utf8_lossy(&msg_output.stdout).trim().to_string();
+
+    // Get files in the staged commit (what would be committed)
+    let files_output = Command::new("git")
+        .args(["--no-pager", "-C", &path, "diff", "--cached", "--name-status"])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to get commit files: {}", e))?;
+
+    let staged_files: Vec<CommitFileEntry> = String::from_utf8_lossy(&files_output.stdout)
+        .lines()
+        .filter(|l| !l.is_empty())
+        .filter_map(|line| {
+            let parts: Vec<&str> = line.splitn(2, '\t').collect();
+            if parts.len() == 2 {
+                Some(CommitFileEntry {
+                    status: parts[0].to_string(),
+                    path: parts[1].to_string(),
+                })
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    Ok(PausedCommitInfo {
+        message,
+        staged_files,
+    })
+}
+
+/// Amend the paused commit during a rebase edit, then continue rebase
+#[tauri::command]
+pub async fn amend_and_continue_rebase(
+    locks: tauri::State<'_, RepoLocks>,
+    running_ops: tauri::State<'_, RunningOps>,
+    path: String,
+    message: Option<String>,
+    operation_id: Option<String>,
+) -> Result<RebaseResult, String> {
+    let _guard = locks.acquire(&path).await;
+
+    // Step 1: Amend the commit
+    let mut amend_cmd = tokio::process::Command::new("git");
+    if let Some(msg) = &message {
+        amend_cmd.args(["--no-pager", "-C", &path, "commit", "--amend", "-m", msg]);
+    } else {
+        amend_cmd.args(["--no-pager", "-C", &path, "commit", "--amend", "--no-edit"]);
+    }
+
+    let amend_output = amend_cmd
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run git commit --amend: {}", e))?;
+
+    if !amend_output.status.success() {
+        return Err(String::from_utf8_lossy(&amend_output.stderr).to_string());
+    }
+
+    // Step 2: Continue rebase
+    let mut continue_cmd = tokio::process::Command::new("git");
+    continue_cmd.args(["--no-pager", "-C", &path, "rebase", "--continue", "--no-edit"]);
+
+    match operation_id {
+        Some(op_id) => {
+            let rx = running_ops.spawn(op_id, continue_cmd)?;
+            match rx.await.unwrap_or_else(|_| Err("Operation cancelled".into())) {
+                Ok(_) => Ok(RebaseResult {
+                    success: true,
+                    message: "Rebase completed after amend".to_string(),
+                    conflicted_files: vec![],
+                }),
+                Err(stderr) => {
+                    let conflicted = parse_rebase_conflicts(&stderr);
+                    Ok(RebaseResult {
+                        success: conflicted.is_empty(),
+                        message: if conflicted.is_empty() {
+                            stderr.trim().to_string()
+                        } else {
+                            "Rebase paused due to conflicts".to_string()
+                        },
+                        conflicted_files: conflicted,
+                    })
+                }
+            }
+        }
+        None => {
+            let output = continue_cmd
+                .output()
+                .await
+                .map_err(|e| format!("Failed to continue rebase: {}", e))?;
+
+            if output.status.success() {
+                Ok(RebaseResult {
+                    success: true,
+                    message: "Rebase completed after amend".to_string(),
+                    conflicted_files: vec![],
+                })
+            } else {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                let conflicted = parse_rebase_conflicts(&stderr);
+                Ok(RebaseResult {
+                    success: conflicted.is_empty(),
+                    message: if conflicted.is_empty() {
+                        stderr.trim().to_string()
+                    } else {
+                        "Rebase paused due to conflicts".to_string()
+                    },
+                    conflicted_files: conflicted,
+                })
+            }
+        }
+    }
 }

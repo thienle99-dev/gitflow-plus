@@ -17,7 +17,7 @@ import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
 import { formatCommitDate } from "@/lib/date";
 import { usePreflightGate } from "@/hooks/usePreflightGate";
 import { useGitFlowDetect } from "@/queries/useGitFlow";
-import { ChevronDown, Search, X, Download } from "lucide-react";
+import { ChevronDown, Search, X, Download, GitCommit } from "lucide-react";
 
 const ROW_HEIGHT = 38;
 const EDGE_BLOCK_SIZE = 128;
@@ -308,6 +308,15 @@ export default memo(function CommitGraph() {
           label: "Create tag here...",
           icon: <TagIcon />,
           action: () => createTagFromCommit(ctxMenu.hash),
+        },
+        {
+          label: "Amend this commit...",
+          icon: <GitCommit size={14} />,
+          action: () => {
+            useUIStore.getState().setAmendTargetHash(ctxMenu.hash);
+            useUIStore.getState().setRebaseTargetCommit(ctxMenu.hash + "~1");
+            useUIStore.getState().openDialog("interactive-rebase");
+          },
         },
         {
           label: "Cherry-pick commit...",

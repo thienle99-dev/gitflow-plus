@@ -250,6 +250,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::repo::open_repo,
             commands::repo::get_repo_info,
+            commands::repo::git_init,
             commands::app_logs::app_log_path,
             commands::app_logs::app_log_list,
             commands::app_logs::app_log_export_text,
@@ -357,6 +358,8 @@ pub fn run() {
             commands::rebase::rebase_abort,
             commands::rebase::rebase_status,
             commands::rebase::rebase_todo_list,
+            commands::rebase::get_paused_commit_info,
+            commands::rebase::amend_and_continue_rebase,
             commands::ai::ai_http_request,
             commands::ai::read_convention_files,
             commands::clone::git_clone,

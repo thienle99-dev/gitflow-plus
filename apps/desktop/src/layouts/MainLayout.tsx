@@ -20,7 +20,7 @@ import { useOperationObserver } from "@/hooks/useOperationObserver";
 import { useRepoAutoRefresh } from "@/hooks/useRepoAutoRefresh";
 import { isOnboardingComplete } from "@/components/features/dialogs";
 import ErrorBoundary from "@/components/ui/feedback/ErrorBoundary";
-import { AlertOctagon, RefreshCw, Trash2, FolderOpen, GitBranch, Clock } from "lucide-react";
+import { AlertOctagon, RefreshCw, Trash2, FolderOpen, GitBranch, Clock, FolderPlus, Download } from "lucide-react";
 import { trackRepoOpen } from "@/lib/analytics";
 import { logger } from "@/lib/logger";
 
@@ -34,6 +34,7 @@ const CreateBranchDialog = lazy(() => import("@/components/features/dialogs/Crea
 const MergeRequestDialog = lazy(() => import("@/components/features/dialogs/MergeRequestDialog"));
 const MergePreviewDialog = lazy(() => import("@/components/features/dialogs/MergePreviewDialog"));
 const CloneDialog = lazy(() => import("@/components/features/dialogs/CloneDialog"));
+const InitRepoDialog = lazy(() => import("@/components/features/dialogs/InitRepoDialog"));
 const FeatureGuideDialog = lazy(() => import("@/components/features/dialogs/FeatureGuideDialog"));
 const OnboardingWizard = lazy(() => import("@/components/features/dialogs/OnboardingWizard"));
 const BranchCompareDialog = lazy(() => import("@/components/features/dialogs/BranchCompareDialog"));
@@ -348,6 +349,7 @@ export default function MainLayout() {
       />
     ) : null,
     "clone": <CloneDialog open={true} onClose={closeDialog} />,
+    "init-repo": <InitRepoDialog open={true} onClose={closeDialog} />,
     "feature-guide": <FeatureGuideDialog open={true} onClose={closeDialog} />,
     "health-check": <HealthCheckDialog onClose={closeDialog} />,
     "diagnostics": <DiagnosticDialog onClose={closeDialog} />,
@@ -535,6 +537,7 @@ function WelcomeScreen({ onOpen }: { onOpen: () => void }) {
   const openRepo = useRepoStore((s) => s.openRepo);
   const recentRepos = useRepoStore((s) => s.recentRepos);
   const removeRecentRepo = useRepoStore((s) => s.removeRecentRepo);
+  const openDialog = useUIStore((s) => s.openDialog);
 
   return (
     <div className="h-full flex items-center justify-center bg-surface-0">
@@ -548,14 +551,32 @@ function WelcomeScreen({ onOpen }: { onOpen: () => void }) {
           </div>
         </div>
 
-        {/* Primary Action */}
-        <button
-          onClick={onOpen}
-          className="flex items-center gap-2 px-5 py-2 bg-accent text-accent-fg rounded-mac text-sm font-medium hover:opacity-90 active:scale-[0.98] transition-all shadow-sm mb-8"
-        >
-          <FolderOpen size={15} />
-          Open Repository
-        </button>
+        {/* Primary Actions */}
+        <div className="flex flex-col gap-2 w-full max-w-xs mb-8">
+          <button
+            onClick={onOpen}
+            className="flex items-center justify-center gap-2 px-5 py-2 bg-accent text-accent-fg rounded-mac text-sm font-medium hover:opacity-90 active:scale-[0.98] transition-all shadow-sm"
+          >
+            <FolderOpen size={15} />
+            Open Repository
+          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => openDialog("init-repo")}
+              className="flex items-center justify-center gap-2 px-4 py-2 border border-border rounded-mac text-xs font-medium text-text-secondary hover:text-text-primary hover:bg-surface-1-40 transition-all flex-1"
+            >
+              <FolderPlus size={13} />
+              New Repository
+            </button>
+            <button
+              onClick={() => openDialog("clone")}
+              className="flex items-center justify-center gap-2 px-4 py-2 border border-border rounded-mac text-xs font-medium text-text-secondary hover:text-text-primary hover:bg-surface-1-40 transition-all flex-1"
+            >
+              <Download size={13} />
+              Clone
+            </button>
+          </div>
+        </div>
 
         {/* Recent Repos */}
         {recentRepos.length > 0 && (

@@ -3,7 +3,7 @@ import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { api } from "@/api/tauri";
 import { showToast } from "@/lib/toast";
-import type { RebaseTodo } from "@/queries/useGitRebase";
+import type { RebaseTodo } from "@/api/tauri";
 import { GitCommit, X } from "lucide-react";
 
 interface SquashDialogProps {

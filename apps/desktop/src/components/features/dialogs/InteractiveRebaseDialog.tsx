@@ -8,8 +8,10 @@ import {
   useRebaseSkip,
   useRebaseAbort,
   useRebaseStatus,
-  type RebaseTodo,
+  usePausedCommitInfo,
+  useAmendAndContinue,
 } from "@/queries/useGitRebase";
+import type { RebaseTodo } from "@/api/tauri";
 import { showToast } from "@/lib/toast";
 import {
   GitCommit,
@@ -19,6 +21,9 @@ import {
   ChevronDown,
   ChevronRight,
   RotateCcw,
+  Pencil,
+  CheckCircle2,
+  Loader2,
 } from "lucide-react";
 
 interface InteractiveRebaseDialogProps {
@@ -56,6 +61,8 @@ export default function InteractiveRebaseDialog({
 }: InteractiveRebaseDialogProps) {
   const repoPath = useRepoStore((s) => s.repoPath);
   const prefilledFromStore = useUIStore((s) => s.prefilledRebaseTodos);
+  const amendTargetHash = useUIStore((s) => s.amendTargetHash);
+  const setAmendTargetHash = useUIStore((s) => s.setAmendTargetHash);
   const { data: apiTodos, isLoading: isLoadingTodos, error: todoError } =
     useRebaseTodoList(repoPath, baseCommit);
   const rebaseStart = useRebaseStart(repoPath);
@@ -71,21 +78,56 @@ export default function InteractiveRebaseDialog({
   const [showLegend, setShowLegend] = useState(false);
   const [conflictMode, setConflictMode] = useState(false);
   const [conflictedFiles, setConflictedFiles] = useState<string[]>([]);
+  const [editPauseMode, setEditPauseMode] = useState(false);
+  const [amendMessage, setAmendMessage] = useState("");
   const messageInputRef = useRef<HTMLInputElement>(null);
+
+  const {
+    data: pausedInfo,
+    isLoading: isLoadingPausedInfo,
+  } = usePausedCommitInfo(editPauseMode ? repoPath : null);
+  const amendAndContinue = useAmendAndContinue(repoPath);
+
+  // When paused info loads, pre-fill the amend message
+  useEffect(() => {
+    if (pausedInfo) {
+      setAmendMessage(pausedInfo.message);
+    }
+  }, [pausedInfo]);
 
   // Sync initial todos — prefer prefilledTodos prop, then store, then API
   useEffect(() => {
     const source = prefilledTodos || prefilledFromStore || apiTodos;
     if (source) {
-      setTodos(source.map((t) => ({ ...t })));
+      const next = source.map((t) => ({ ...t }));
+      // If amending a specific commit, auto-mark it as "edit"
+      if (amendTargetHash) {
+        const idx = next.findIndex(
+          (t) => t.commit_hash === amendTargetHash
+        );
+        if (idx !== -1) {
+          next[idx] = { ...next[idx], action: "edit" };
+        }
+        setAmendTargetHash(null);
+      }
+      setTodos(next);
     }
-  }, [prefilledTodos, prefilledFromStore, apiTodos]);
+  }, [prefilledTodos, prefilledFromStore, apiTodos, amendTargetHash, setAmendTargetHash]);
 
-  // Detect conflicts from rebase status
+  // Detect state from rebase status: conflict vs edit-pause
   useEffect(() => {
     if (rebaseStatus && rebaseStatus[0]) {
-      setConflictMode(true);
-      setConflictedFiles(rebaseStatus[1]);
+      const files = rebaseStatus[1];
+      if (files.length > 0) {
+        setConflictMode(true);
+        setConflictedFiles(files);
+        setEditPauseMode(false);
+      } else {
+        // Rebase in progress but no conflicts → edit-pause
+        setEditPauseMode(true);
+        setConflictMode(false);
+        setConflictedFiles([]);
+      }
     }
   }, [rebaseStatus]);
 
@@ -182,6 +224,9 @@ export default function InteractiveRebaseDialog({
         if (result.conflicted_files?.length > 0) {
           setConflictMode(true);
           setConflictedFiles(result.conflicted_files);
+        } else if (result.message?.includes("Stopped at")) {
+          // Rebase paused at an "edit" commit — enter edit-pause mode
+          setEditPauseMode(true);
         } else {
           showToast(result.message || "Rebase failed", "error");
         }
@@ -229,10 +274,34 @@ export default function InteractiveRebaseDialog({
       showToast("Rebase aborted");
       setConflictMode(false);
       setConflictedFiles([]);
+      setEditPauseMode(false);
       onClose();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       showToast(`Abort failed: ${msg}`, "error");
+    }
+  };
+
+  const handleAmendAndContinue = async () => {
+    try {
+      const result = await amendAndContinue.mutateAsync({
+        message: amendMessage || undefined,
+      });
+      if (result.success) {
+        showToast("Commit amended, rebase continued");
+        setEditPauseMode(false);
+        onClose();
+      } else if (result.conflicted_files?.length > 0) {
+        // Subsequent commits hit conflicts
+        setEditPauseMode(false);
+        setConflictMode(true);
+        setConflictedFiles(result.conflicted_files);
+      } else {
+        showToast(result.message || "Amend failed", "error");
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      showToast(`Amend failed: ${msg}`, "error");
     }
   };
 
@@ -242,7 +311,8 @@ export default function InteractiveRebaseDialog({
     rebaseStart.isPending ||
     rebaseContinue.isPending ||
     rebaseSkip.isPending ||
-    rebaseAbort.isPending;
+    rebaseAbort.isPending ||
+    amendAndContinue.isPending;
 
   const allDropped = todos.every((t) => t.action === "drop");
 
@@ -259,13 +329,17 @@ export default function InteractiveRebaseDialog({
         <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-surface-1-40 shrink-0">
           {conflictMode ? (
             <AlertTriangle size={15} className="text-[#ff9500] shrink-0" />
+          ) : editPauseMode ? (
+            <Pencil size={15} className="text-[#ff9f0a] shrink-0" />
           ) : (
             <RotateCcw size={15} className="text-accent shrink-0" />
           )}
           <span className="text-xs font-semibold text-text-primary flex-1">
             {conflictMode
               ? "Rebase — Conflicts Detected"
-              : "Interactive Rebase"}
+              : editPauseMode
+                ? "Amend Commit"
+                : "Interactive Rebase"}
           </span>
           <button
             onClick={onClose}
@@ -304,6 +378,73 @@ export default function InteractiveRebaseDialog({
                 then click <strong>Continue</strong>. Or skip this commit / abort
                 the rebase entirely.
               </p>
+            </div>
+          ) : editPauseMode ? (
+            /* Edit Pause / Amend UI */
+            <div className="p-4 space-y-4">
+              {isLoadingPausedInfo ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-xs text-text-muted animate-pulse flex items-center gap-2">
+                    <Loader2 size={12} className="animate-spin" />
+                    Loading commit info...
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Commit message editor */}
+                  <div className="space-y-2">
+                    <label className="text-2xs font-medium text-text-muted flex items-center gap-1.5">
+                      <Pencil size={10} />
+                      Commit Message
+                    </label>
+                    <textarea
+                      value={amendMessage}
+                      onChange={(e) => setAmendMessage(e.target.value)}
+                      className="w-full h-32 px-3 py-2 text-sm bg-surface-1 border border-border rounded-mac outline-none focus:border-[#ff9f0a] resize-none text-text-primary font-mono leading-relaxed placeholder:text-text-muted"
+                      placeholder="Edit commit message..."
+                    />
+                  </div>
+
+                  {/* Files in current commit */}
+                  {pausedInfo?.staged_files && pausedInfo.staged_files.length > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="text-2xs font-medium text-text-muted flex items-center gap-1.5">
+                        <GitCommit size={10} />
+                        Files in Commit ({pausedInfo.staged_files.length})
+                      </div>
+                      <div className="space-y-0.5 max-h-32 overflow-y-auto pr-1">
+                        {pausedInfo.staged_files.map((f) => (
+                          <div
+                            key={f.path}
+                            className="flex items-center gap-2 text-2xs font-mono text-text-muted bg-surface-1-30 border border-border-40 rounded px-2 py-1 truncate"
+                          >
+                            <span className={`shrink-0 w-[24px] px-1 py-0.5 rounded-sm text-center font-bold ${
+                              f.status === "A" ? "text-[#30d158] bg-[#30d158]/10" :
+                              f.status === "D" ? "text-[#ff453a] bg-[#ff453a]/10" :
+                              f.status === "M" ? "text-[#ff9f0a] bg-[#ff9f0a]/10" :
+                              "text-text-muted bg-surface-2"
+                            }`}>
+                              {f.status}
+                            </span>
+                            <span className="truncate">{f.path}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Hint */}
+                  <div className="p-3 rounded-mac bg-yellow-500/5 border border-yellow-500/20 text-2xs text-text-muted leading-normal">
+                    <p>
+                      Edit the commit message above. You can also stage additional
+                      files from the working tree panel, then click <strong>Continue Amend</strong>.
+                    </p>
+                    <p className="mt-1">
+                      Click <strong>Abort</strong> to cancel the rebase entirely.
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           ) : isLoadingTodos ? (
             /* Loading State */
@@ -514,6 +655,31 @@ export default function InteractiveRebaseDialog({
                 className="h-8 px-4 bg-accent text-accent-fg text-xs font-semibold rounded-mac disabled:opacity-40 hover:opacity-90 transition-opacity min-w-[64px] flex items-center justify-center"
               >
                 {rebaseContinue.isPending ? "Continuing..." : "Continue"}
+              </button>
+            </>
+          ) : editPauseMode ? (
+            <>
+              <span className="text-2xs text-text-muted flex-1 leading-normal">
+                Amend commit, then continue rebase.
+              </span>
+              <button
+                onClick={handleAbort}
+                disabled={isPending}
+                className="h-8 px-4 text-xs text-text-secondary hover:text-text-primary border border-border hover:bg-surface-2 rounded-mac transition-colors min-w-[64px]"
+              >
+                {rebaseAbort.isPending ? "Aborting..." : "Abort"}
+              </button>
+              <button
+                onClick={handleAmendAndContinue}
+                disabled={isPending || isLoadingPausedInfo}
+                className="h-8 px-4 bg-[#ff9f0a] text-black text-xs font-semibold rounded-mac disabled:opacity-40 hover:opacity-90 transition-opacity min-w-[64px] flex items-center justify-center gap-1.5"
+              >
+                {amendAndContinue.isPending ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  <CheckCircle2 size={12} />
+                )}
+                Continue Amend
               </button>
             </>
           ) : (
