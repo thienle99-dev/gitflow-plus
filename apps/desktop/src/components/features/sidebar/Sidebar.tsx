@@ -689,6 +689,18 @@ export default function Sidebar() {
                 setConfirmDeleteBranch(branchCtxMenu.branch);
               },
             },
+            {
+              label: "Delete remote branch…",
+              icon: <Trash2 size={12} />,
+              action: async () => {
+                try {
+                  await api.branches.deleteRemote(repoPath, branchCtxMenu.branch);
+                  showToast(`Remote branch "${branchCtxMenu.branch}" deleted`);
+                } catch (e) {
+                  showToast(`Failed: ${e}`, "error");
+                }
+              },
+            },
           ]}
           onClose={() => setBranchCtxMenu(null)}
         />
