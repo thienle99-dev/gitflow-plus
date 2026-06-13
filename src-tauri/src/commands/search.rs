@@ -134,3 +134,105 @@ pub async fn search_commits(
     };
     git_log_search(&path, &opts).await
 }
+
+#[derive(Serialize)]
+pub struct GrepMatch {
+    pub file: String,
+    pub line_number: u32,
+    pub line_content: String,
+    pub match_column: u32,
+}
+
+/// Search file content using `git grep`
+#[tauri::command]
+pub async fn search_content(
+    path: String,
+    pattern: String,
+    case_insensitive: Option<bool>,
+    fixed: Option<bool>,
+    file_glob: Option<String>,
+    max_results: Option<u32>,
+) -> Result<Vec<GrepMatch>, String> {
+    let max_str = max_results.map(|m| m.to_string());
+    let mut args: Vec<String> = vec![
+        "--no-pager".into(),
+        "-C".into(),
+        path,
+        "grep".into(),
+        "--line-number".into(),
+        "--heading".into(),
+        "-I".into(),
+    ];
+
+    if case_insensitive.unwrap_or(true) {
+        args.push("-i".into());
+    }
+    if fixed.unwrap_or(false) {
+        args.push("-F".into());
+    }
+    if let Some(ref max) = max_str {
+        args.push("--max-count".into());
+        args.push(max.clone());
+    }
+
+    let pattern_lower = pattern.to_lowercase();
+    args.push(pattern);
+
+    if let Some(glob) = &file_glob {
+        if !glob.is_empty() {
+            args.push("--".into());
+            args.push(glob.clone());
+        }
+    }
+
+    let output = Command::new("git")
+        .args(&args)
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run git grep: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        // git grep returns exit code 1 for no matches — not an error
+        if output.status.code() == Some(1) {
+            return Ok(Vec::new());
+        }
+        return Err(format!("git grep failed: {}", stderr.trim()));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut results = Vec::new();
+    let mut current_file = String::new();
+
+    for line in stdout.lines() {
+        if line.is_empty() {
+            continue;
+        }
+        // Check if this is a file header (ends with colon+number, or just a path line)
+        // git grep --heading prints file:line:content or file:line:content
+        if let Some(pos) = line.find(':') {
+            let rest = &line[pos + 1..];
+            if let Some(second_colon) = rest.find(':') {
+                let line_num_str = &rest[..second_colon];
+                if let Ok(line_number) = line_num_str.parse::<u32>() {
+                    let line_content = &rest[second_colon + 1..];
+                    // Find match column in original (lowercased) for highlight
+                    let match_col = line_content.to_lowercase().find(&pattern_lower)
+                        .map(|c| c as u32)
+                        .unwrap_or(0);
+                    results.push(GrepMatch {
+                        file: line[..pos].to_string(),
+                        line_number,
+                        line_content: line_content.to_string(),
+                        match_column: match_col,
+                    });
+                    continue;
+                }
+            }
+        }
+        // Fallback: treat as current file header when no pattern matched
+        current_file = line.to_string();
+    }
+
+    Ok(results)
+}
