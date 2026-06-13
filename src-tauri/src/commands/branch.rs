@@ -215,6 +215,38 @@ pub async fn delete_branch(
     }
 }
 
+/// Delete a remote branch via git push --delete
+#[tauri::command]
+pub async fn delete_remote_branch(
+    locks: tauri::State<'_, RepoLocks>,
+    path: String,
+    name: String,
+) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
+    // Get default remote
+    let remote_output = Command::new("git")
+        .args(["--no-pager", "-C", &path, "remote", "show"])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to get remote: {}", e))?;
+
+    let stdout = String::from_utf8_lossy(&remote_output.stdout);
+    let remote = stdout.lines().next().unwrap_or("origin");
+
+    let output = Command::new("git")
+        .args(["--no-pager", "-C", &path, "push", remote, "--delete", &name])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run git push --delete: {}", e))?;
+
+    if output.status.success() {
+        Ok(format!("Deleted remote branch '{}/{}'", remote, name))
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Failed to delete remote branch: {}", stderr.trim()))
+    }
+}
+
 #[derive(serde::Serialize, Clone, Debug)]
 pub struct BranchComparison {
     pub ahead: usize,

@@ -424,6 +424,8 @@ export const api = {
       invoke<string>("checkout_branch", { path, name }),
     delete: (path: string, name: string, force?: boolean) =>
       invoke<string>("delete_branch", { path, name, force: force ?? false }),
+    deleteRemote: (path: string, name: string) =>
+      invoke<string>("delete_remote_branch", { path, name }),
     compare: (path: string, base: string, target: string) =>
       invoke<BranchComparison>("compare_branches", { path, base, target }),
     fileDiff: (path: string, base: string, target: string, filePath: string, context?: number) =>
