@@ -686,3 +686,32 @@ function RevertIcon() {
     </svg>
   );
 }
+
+async function exportGraphAsPng(canvasRef: React.RefObject<HTMLCanvasElement>) {
+  const canvas = canvasRef.current;
+  if (!canvas) {
+    showToast("No graph to export", "error");
+    return;
+  }
+
+  try {
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, "image/png");
+    });
+
+    if (!blob) {
+      showToast("Failed to create image", "error");
+      return;
+    }
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `git-graph-${Date.now()}.png`;
+    link.click();
+    URL.revokeObjectURL(url);
+    showToast("Graph exported as PNG");
+  } catch (err) {
+    showToast(`Export failed: ${err}`, "error");
+  }
+}
