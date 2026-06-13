@@ -338,6 +338,7 @@ pub fn run() {
             commands::ai::ai_http_request,
             commands::ai::read_convention_files,
             commands::clone::git_clone,
+            commands::clone::cancel_clone,
             commands::submodule::submodule_list,
             commands::submodule::submodule_init,
             commands::submodule::submodule_update,
