@@ -512,6 +512,8 @@ export interface FileChangeListProps {
   onSetConfirmDiscardAll: (v: boolean) => void;
   onBatchStage: () => void;
   onBatchUnstage: () => void;
+  onBatchClean: () => void;
+  selectedUntrackedCount: number;
   onClearSelected: () => void;
 }
 
@@ -542,6 +544,8 @@ export default function FileChangeList({
   onSetConfirmDiscardAll,
   onBatchStage,
   onBatchUnstage,
+  onBatchClean,
+  selectedUntrackedCount,
   onClearSelected,
 }: FileChangeListProps) {
   const totalChanges = staged.length + unstaged.length;
@@ -653,6 +657,15 @@ export default function FileChangeList({
             <button onClick={onBatchUnstage} className="text-2xs font-medium text-text-muted hover:text-text-primary hover:underline">
               Unstage selected
             </button>
+            {selectedUntrackedCount > 0 && (
+              <button
+                onClick={onBatchClean}
+                className="text-2xs font-medium text-[#ff453a] hover:underline"
+                title={`Delete ${selectedUntrackedCount} untracked file(s)`}
+              >
+                Delete {selectedUntrackedCount} untracked
+              </button>
+            )}
             <button onClick={onClearSelected} className="text-2xs text-text-muted hover:text-text-primary ml-auto">
               Clear
             </button>
