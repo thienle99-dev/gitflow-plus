@@ -396,7 +396,11 @@ export default function WorkingTree() {
   const performActualCommit = async (msg: string, isAmend: boolean) => {
     setCommitting(true);
     try {
-      if (staged.length === 0 && unstaged.length > 0) {
+      // For amend, never auto-stage — let the user explicitly stage the files
+      // they want rolled in. Skipping auto-stage preserves the "amend message
+      // only" path: with no staged files, `git commit --amend -m <msg>` only
+      // rewrites the previous commit's message.
+      if (!isAmend && staged.length === 0 && unstaged.length > 0) {
         await api.commit.stageAll(repoPath!);
       }
       const result = await api.commit.commit(repoPath!, msg, isAmend, skipHooks);
@@ -434,7 +438,7 @@ export default function WorkingTree() {
       msgErrors = lintCommitMessage(commitMessage);
     }
 
-    if (codeLintEnabled && filesToLintExist) {
+    if (codeLintEnabled && filesToLintExist && !amend) {
       setLintRunning(true);
       try {
         if (staged.length === 0 && unstaged.length > 0) {
