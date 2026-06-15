@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, useCallback, useLayoutEffect } from "react";
+import { useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 
 export interface ContextMenuItem {
   label: string;
@@ -16,28 +17,8 @@ interface ContextMenuProps {
   onClose: () => void;
 }
 
-const VIEWPORT_MARGIN = 8; // keep the menu this many px away from the viewport edge
-
 export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState<{ left: number; top: number }>({ left: x, top: y });
-
-  // After mount, measure the menu and clamp it inside the viewport so it
-  // never opens partially off-screen (which is the OS-native expectation).
-  // We do this in useLayoutEffect to avoid a visible jump on the first frame.
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const maxLeft = Math.max(VIEWPORT_MARGIN, vw - rect.width - VIEWPORT_MARGIN);
-    const maxTop = Math.max(VIEWPORT_MARGIN, vh - rect.height - VIEWPORT_MARGIN);
-    setPosition({
-      left: Math.min(Math.max(x, VIEWPORT_MARGIN), maxLeft),
-      top: Math.min(Math.max(y, VIEWPORT_MARGIN), maxTop),
-    });
-  }, [x, y]);
 
   // Focus the first non-disabled, non-separator item on open
   useEffect(() => {
@@ -118,13 +99,18 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
 
   let itemIndex = 0;
 
-  return (
+  // Render via a portal to document.body so the menu escapes any ancestor
+  // that creates a new containing block for fixed-positioned descendants
+  // (e.g. the sidebar's `.vibrancy` uses `backdrop-filter`, which would
+  // otherwise make `position: fixed` relative to the sidebar instead of
+  // the viewport — causing the menu to appear offset from the click point).
+  return createPortal(
     <div
       ref={ref}
       role="menu"
       aria-label="Context menu"
       className="fixed z-50 min-w-[160px] py-1 bg-surface-1 border border-border rounded-mac shadow-lg"
-      style={{ left: position.left, top: position.top }}
+      style={{ left: x, top: y }}
     >
       {items.map((item, i) => (
         item.separator ? (
@@ -148,6 +134,7 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
           </button>
         )
       ))}
-    </div>
+    </div>,
+    document.body
   );
 }
