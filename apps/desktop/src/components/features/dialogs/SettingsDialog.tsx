@@ -70,6 +70,7 @@ const LS_KEY_AI_REVIEW_CHECKLIST = "gitflowAiReviewChecklist";
 const LS_KEY_FETCH_INTERVAL = "gitflowFetchIntervalMinutes";
 const LS_KEY_AUTO_PRUNE = "gitflowAutoPruneOnFetch";
 const LS_KEY_CONFIRM_DANGEROUS = "gitflowConfirmDangerousActions";
+const LS_KEY_ALLOW_PLAIN_FORCE = "gitflowAllowPlainForcePush";
 const LS_KEY_REOPEN_LAST_REPO = "gitflowReopenLastRepo";
 const LS_KEY_RECENT_REPO_LIMIT = "gitflowRecentRepoLimit";
 const LS_KEY_GRAPH_DENSITY = "gitflowGraphDensity";
@@ -105,6 +106,7 @@ const SETTINGS_KEYS = [
   LS_KEY_FETCH_INTERVAL,
   LS_KEY_AUTO_PRUNE,
   LS_KEY_CONFIRM_DANGEROUS,
+  LS_KEY_ALLOW_PLAIN_FORCE,
   LS_KEY_REOPEN_LAST_REPO,
   LS_KEY_RECENT_REPO_LIMIT,
   LS_KEY_GRAPH_DENSITY,
@@ -298,6 +300,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
   const [fetchInterval, setFetchInterval] = useState(10);
   const [autoPrune, setAutoPrune] = useState(false);
   const [confirmDangerous, setConfirmDangerous] = useState(true);
+  const [allowPlainForce, setAllowPlainForce] = useState(false);
   const [reopenLastRepo, setReopenLastRepo] = useState(false);
   const [recentRepoLimit, setRecentRepoLimit] = useState(10);
   const [commitLintEnabled, setCommitLintEnabled] = useState(true);
@@ -381,6 +384,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       const savedFetchInterval = localStorage.getItem(LS_KEY_FETCH_INTERVAL);
       const savedAutoPrune = localStorage.getItem(LS_KEY_AUTO_PRUNE);
       const savedConfirmDangerous = localStorage.getItem(LS_KEY_CONFIRM_DANGEROUS);
+      const savedAllowPlainForce = localStorage.getItem(LS_KEY_ALLOW_PLAIN_FORCE);
       const savedReopenLastRepo = localStorage.getItem(LS_KEY_REOPEN_LAST_REPO);
       const savedRecentRepoLimit = localStorage.getItem(LS_KEY_RECENT_REPO_LIMIT);
       const savedCommitLint = localStorage.getItem(LS_KEY_COMMIT_LINT_ENABLED);
@@ -407,6 +411,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       if (savedFetchInterval) setFetchInterval(Number(savedFetchInterval));
       if (savedAutoPrune !== null) setAutoPrune(savedAutoPrune === "true");
       if (savedConfirmDangerous !== null) setConfirmDangerous(savedConfirmDangerous === "true");
+      if (savedAllowPlainForce !== null) setAllowPlainForce(savedAllowPlainForce === "true");
       if (savedReopenLastRepo !== null) setReopenLastRepo(savedReopenLastRepo === "true");
       if (savedRecentRepoLimit) setRecentRepoLimit(Number(savedRecentRepoLimit));
       if (savedCommitLint !== null) setCommitLintEnabled(savedCommitLint === "true");
@@ -497,6 +502,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       fetchInterval,
       autoPrune,
       confirmDangerous,
+      allowPlainForce,
       reopenLastRepo,
       recentRepoLimit,
       commitLintEnabled,
@@ -536,7 +542,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
     });
   }, [
     theme, defaultDiffMode, autoFetch, fetchInterval, autoPrune,
-    confirmDangerous, reopenLastRepo, recentRepoLimit,
+    confirmDangerous, allowPlainForce, reopenLastRepo, recentRepoLimit,
     commitLintEnabled, codeLintEnabled, commitCoachEnabled, lintStrictness,
     graphDensity, graphShowHash, graphShowAuthor, graphShowDate,
     diffContext, diffLineWrap, largeDiffMode, reducedMotion, petEnabled, petType,
@@ -735,6 +741,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
       localStorage.setItem(LS_KEY_FETCH_INTERVAL, String(fetchInterval));
       localStorage.setItem(LS_KEY_AUTO_PRUNE, String(autoPrune));
       localStorage.setItem(LS_KEY_CONFIRM_DANGEROUS, String(confirmDangerous));
+      localStorage.setItem(LS_KEY_ALLOW_PLAIN_FORCE, String(allowPlainForce));
       localStorage.setItem(LS_KEY_REOPEN_LAST_REPO, String(reopenLastRepo));
       localStorage.setItem(LS_KEY_RECENT_REPO_LIMIT, String(recentRepoLimit));
       localStorage.setItem(LS_KEY_COMMIT_LINT_ENABLED, String(commitLintEnabled));
@@ -837,6 +844,7 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
     setFetchInterval(10);
     setAutoPrune(false);
     setConfirmDangerous(true);
+    setAllowPlainForce(false);
     setReopenLastRepo(false);
     setRecentRepoLimit(10);
     setCommitLintEnabled(true);
@@ -1126,6 +1134,8 @@ export default function SettingsDialog({ onClose, initialTab = "general" }: Sett
               setAutoPrune={setAutoPrune}
               confirmDangerous={confirmDangerous}
               setConfirmDangerous={setConfirmDangerous}
+              allowPlainForce={allowPlainForce}
+              setAllowPlainForce={setAllowPlainForce}
             />
           )}
 

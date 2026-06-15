@@ -542,8 +542,8 @@ export const api = {
   remote: {
     pull: (path: string, remote?: string, branch?: string, operationId?: string) =>
       invoke<string>("git_pull", { path, remote: remote ?? null, branch: branch ?? null, operationId: operationId ?? null }),
-    push: (path: string, remote?: string, branch?: string, operationId?: string) =>
-      invoke<string>("git_push", { path, remote: remote ?? null, branch: branch ?? null, operationId: operationId ?? null }),
+    push: (path: string, remote?: string, branch?: string, forceMode?: "none" | "forceWithLease" | "force", operationId?: string) =>
+      invoke<string>("git_push", { path, remote: remote ?? null, branch: branch ?? null, force: forceMode ?? "none", operationId: operationId ?? null }),
     fetch: (path: string, remote?: string, operationId?: string) =>
       invoke<string>("git_fetch", { path, remote: remote ?? null, operationId: operationId ?? null }),
     cancelOp: (operationId: string) =>

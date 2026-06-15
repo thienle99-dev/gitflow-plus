@@ -21,6 +21,13 @@ interface RiskSummaryDialogProps {
   action: string; // "push" | "merge" etc.
   onProceed: () => void;
   onCancel: () => void;
+  /** When provided, the footer shows a "Force Push (lease)" button (and optionally
+   *  a "Force Push (overwrite)" button when `allowPlainForce` is true).
+   *  The buttons ignore `canProceed` — force-push is its own confirmation. */
+  onForceProceed?: (mode: "forceWithLease" | "force") => void;
+  /** Gates the plain `--force` (overwrite) button. Should reflect the
+   *  `gitflowAllowPlainForcePush` localStorage setting. */
+  allowPlainForce?: boolean;
 }
 
 const SEVERITY_META: Record<RiskSeverity, { color: string; bg: string; border: string; icon: typeof ShieldAlert }> = {
@@ -38,7 +45,7 @@ const OVERALL_META: Record<RiskReport["overall"], { label: string; color: string
   safe:     { label: "No Risks Detected", color: "text-[#30d158]", bg: "bg-[#30d158]/10", border: "border-[#30d158]/25", icon: ShieldCheck },
 };
 
-export default function RiskSummaryDialog({ open, report, loading, action, onProceed, onCancel }: RiskSummaryDialogProps) {
+export default function RiskSummaryDialog({ open, report, loading, action, onProceed, onCancel, onForceProceed, allowPlainForce }: RiskSummaryDialogProps) {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<"findings" | "copilot">("findings");
 
@@ -272,26 +279,49 @@ export default function RiskSummaryDialog({ open, report, loading, action, onPro
             >
               Cancel
             </button>
-            <button
-              onClick={onProceed}
-              disabled={loading}
-              className={`px-3.5 py-1.5 text-[11px] font-semibold rounded transition-all cursor-pointer disabled:opacity-40 shadow-xs ${
-                canProceed
-                  ? "text-white bg-accent hover:bg-accent-90"
-                  : "text-white bg-[#ff375f] hover:bg-[#ff375f]/90"
-              }`}
-            >
-              {loading ? (
-                <span className="flex items-center gap-1.5">
-                  <Loader2 size={11} className="animate-spin" />
-                  Running Scan...
-                </span>
-              ) : canProceed ? (
-                `Proceed with ${action}`
-              ) : (
-                `${action} anyway`
-              )}
-            </button>
+            {action !== "force push" && (
+              <button
+                onClick={onProceed}
+                disabled={loading}
+                className={`px-3.5 py-1.5 text-[11px] font-semibold rounded transition-all cursor-pointer disabled:opacity-40 shadow-xs ${
+                  canProceed
+                    ? "text-white bg-accent hover:bg-accent-90"
+                    : "text-white bg-[#ff375f] hover:bg-[#ff375f]/90"
+                }`}
+              >
+                {loading ? (
+                  <span className="flex items-center gap-1.5">
+                    <Loader2 size={11} className="animate-spin" />
+                    Running Scan...
+                  </span>
+                ) : canProceed ? (
+                  `Proceed with ${action}`
+                ) : (
+                  `${action} anyway`
+                )}
+              </button>
+            )}
+            {onForceProceed && (
+              <>
+                <div className="w-px h-4 bg-border-30" />
+                <button
+                  onClick={() => onForceProceed("forceWithLease")}
+                  disabled={loading}
+                  className="px-3.5 py-1.5 text-[11px] font-semibold rounded text-white bg-[#ff9f0a] hover:bg-[#ff9f0a]/90 transition-all cursor-pointer disabled:opacity-40 shadow-xs"
+                >
+                  Force Push (lease)
+                </button>
+                {allowPlainForce && (
+                  <button
+                    onClick={() => onForceProceed("force")}
+                    disabled={loading}
+                    className="px-3.5 py-1.5 text-[11px] font-semibold rounded text-white bg-[#ff375f] hover:bg-[#ff375f]/90 transition-all cursor-pointer disabled:opacity-40 shadow-xs"
+                  >
+                    Force Push (overwrite)
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>

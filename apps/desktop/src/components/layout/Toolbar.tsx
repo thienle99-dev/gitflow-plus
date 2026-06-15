@@ -33,6 +33,7 @@ import {
   Rocket,
   Tag,
   Zap,
+  AlertOctagon,
   MoreHorizontal,
   GitFork,
   FileCode,
@@ -44,6 +45,15 @@ import type { RiskReport } from "@/lib/risk-scanner";
 import { useErrorReporter } from "@/lib/ErrorContext";
 
 const COLLAPSE_BREAKPOINT = 900;
+
+const FORCE_MODE_KEY = "gitflowAllowPlainForcePush";
+function readAllowPlainForce(): boolean {
+  try {
+    return localStorage.getItem(FORCE_MODE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
 
 export default function Toolbar() {
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -79,7 +89,8 @@ export default function Toolbar() {
     open: boolean;
     report: (RiskReport & { aiSummary?: string }) | null;
     loading: boolean;
-  }>({ open: false, report: null, loading: false });
+    action: "push" | "force push";
+  }>({ open: false, report: null, loading: false, action: "push" });
 
   // Responsive: detect when toolbar needs to collapse
   useEffect(() => {
@@ -120,7 +131,7 @@ export default function Toolbar() {
     setLoading(action);
     try {
       await trackRemoteOp(action, fn);
-      if (action === "pull" || action === "push" || action === "fetch") {
+      if (action === "pull" || action === "push" || action === "fetch" || action === "force-push" || action === "force-push-lease") {
         queryClient.invalidateQueries({ queryKey: ["git", repoPath, "sync-status"] });
       }
       if (action.startsWith("lfs-")) {
@@ -147,32 +158,55 @@ export default function Toolbar() {
   const handlePush = async () => {
     const ok = await pushGate.runPreflight();
     if (!ok) return;
-    setRiskDialog({ open: true, report: null, loading: true });
+    setRiskDialog({ open: true, report: null, loading: true, action: "push" });
     try {
       const staged = (changes || []).filter((c) => c.staged);
       const diff = staged.length > 0 ? await api.diff.staged(repoPath!).catch(() => "") : "";
       const report = await generateRiskSummary(repoPath!, staged, diff);
-      setRiskDialog({ open: true, report, loading: false });
+      setRiskDialog({ open: true, report, loading: false, action: "push" });
     } catch {
-      setRiskDialog({ open: false, report: null, loading: false });
+      setRiskDialog({ open: false, report: null, loading: false, action: "push" });
       doAction("push", () => api.remote.push(repoPath!, pushTarget?.remote, pushTarget?.branch));
     }
   };
 
   const proceedPush = () => {
-    setRiskDialog({ open: false, report: null, loading: false });
+    setRiskDialog({ open: false, report: null, loading: false, action: "push" });
     doAction("push", () => api.remote.push(repoPath!, pushTarget?.remote, pushTarget?.branch));
   };
 
   const cancelPush = () => {
-    setRiskDialog({ open: false, report: null, loading: false });
+    setRiskDialog({ open: false, report: null, loading: false, action: "push" });
+  };
+
+  const handleForcePush = async () => {
+    const ok = await pushGate.runPreflight();
+    if (!ok) return;
+    setRiskDialog({ open: true, report: null, loading: true, action: "force push" });
+    try {
+      const staged = (changes || []).filter((c) => c.staged);
+      const diff = staged.length > 0 ? await api.diff.staged(repoPath!).catch(() => "") : "";
+      const report = await generateRiskSummary(repoPath!, staged, diff);
+      setRiskDialog({ open: true, report, loading: false, action: "force push" });
+    } catch {
+      // AI failed — still let the user force, dialog opens with no report.
+      setRiskDialog({ open: true, report: null, loading: false, action: "force push" });
+    }
+  };
+
+  const proceedForcePush = (mode: "forceWithLease" | "force") => {
+    setRiskDialog({ open: false, report: null, loading: false, action: "force push" });
+    doAction(
+      mode === "force" ? "force-push" : "force-push-lease",
+      () => api.remote.push(repoPath!, pushTarget?.remote, pushTarget?.branch, mode),
+    );
   };
 
   const inMerge = mergeStatus?.merging;
   const hasLfsFiles = !!lfsStatus?.installed && lfsStatus.tracked_files.length > 0;
   const lfsDirtyCount = lfsStatus?.dirty_files.length ?? 0;
   const isMac = typeof window !== "undefined" && navigator.userAgent.includes("Mac");
-  const syncButtonClass = (action: "pull" | "fetch" | "push") =>
+  const syncButtonClass = (action: "pull" | "fetch" | "push" | "force-push") =>
     `h-7 px-4 flex items-center gap-2 text-2xs font-semibold rounded transition-all cursor-pointer disabled:cursor-not-allowed ${
       loading === action
         ? "bg-accent-10 text-accent"
@@ -367,6 +401,21 @@ export default function Toolbar() {
                   {syncStatus.ahead}
                 </span>
               )}
+            </button>
+            <div className="w-[1px] h-3.5 bg-border-50" />
+            <button
+              className={syncButtonClass("force-push")}
+              onClick={handleForcePush}
+              disabled={!!loading}
+              aria-label="Force push (with lease)"
+              title={loading === "force-push" ? "Force pushing…" : "Force push current branch (--force-with-lease)"}
+            >
+              {loading === "force-push" ? (
+                <RefreshCw size={13} className={`${syncIconClass} animate-spin`} />
+              ) : (
+                <AlertOctagon size={13} className={`${syncIconClass} text-[#ff9f0a]`} />
+              )}
+              <span>{loading === "force-push" ? "Forcing…" : "Force"}</span>
             </button>
           </div>
 
@@ -649,9 +698,11 @@ export default function Toolbar() {
         open={riskDialog.open}
         report={riskDialog.report}
         loading={riskDialog.loading}
-        action="push"
+        action={riskDialog.action}
         onProceed={proceedPush}
         onCancel={cancelPush}
+        onForceProceed={riskDialog.action === "force push" ? proceedForcePush : undefined}
+        allowPlainForce={readAllowPlainForce()}
       />
       {pushGate.preflightDialog}
       {pullGate.preflightDialog}

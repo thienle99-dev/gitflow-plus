@@ -14,6 +14,8 @@ interface GitTabProps {
   setAutoPrune: (v: boolean) => void;
   confirmDangerous: boolean;
   setConfirmDangerous: (v: boolean) => void;
+  allowPlainForce: boolean;
+  setAllowPlainForce: (v: boolean) => void;
 }
 
 export function GitTab({
@@ -25,6 +27,8 @@ export function GitTab({
   setAutoPrune,
   confirmDangerous,
   setConfirmDangerous,
+  allowPlainForce,
+  setAllowPlainForce,
 }: GitTabProps) {
   const repoPath = useRepoStore((s) => s.repoPath);
   const [remoteProtocol, setRemoteProtocol] = useState<string | undefined>(undefined);
@@ -94,6 +98,16 @@ export function GitTab({
             onChange={setConfirmDangerous}
             label="Confirm destructive actions"
             description="Show confirmation modals before carrying out dangerous Git tasks (force push, discard shifts)."
+          />
+        </div>
+
+        <div className="border-t border-border-40 pt-2.5">
+          <Switch
+            checked={allowPlainForce}
+            onChange={setAllowPlainForce}
+            label="Allow plain --force (overwrites remote history)"
+            description="When off, the Force button uses --force-with-lease. Plain --force can clobber unseen remote commits."
+            disabled={!confirmDangerous}
           />
         </div>
       </div>

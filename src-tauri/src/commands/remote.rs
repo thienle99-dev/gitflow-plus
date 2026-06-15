@@ -1,7 +1,7 @@
 use tokio::process::Command;
 use std::path::PathBuf;
 use chrono;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use super::op_lock::RepoLocks;
 use super::running_ops::RunningOps;
 
@@ -9,6 +9,51 @@ use super::running_ops::RunningOps;
 pub struct RemoteInfo {
     pub name: String,
     pub url: String,
+}
+
+/// Force-push mode for `git_push`. Wire format is snake_case strings
+/// (e.g. `"force_with_lease"`) thanks to `#[serde(rename_all = "snake_case")]` —
+/// Tauri's arg casing is already snake_case, so the JS wrapper passes
+/// `forceWithLease` and Tauri sends `force_with_lease` over the wire.
+#[derive(Deserialize, Debug, Clone, Copy)]
+#[serde(rename_all = "snake_case")]
+pub enum ForceMode {
+    /// Plain `git push` — no force flag. Default.
+    None,
+    /// `git push --force-with-lease` — safe variant, refuses if upstream moved.
+    ForceWithLease,
+    /// `git push --force` — destructive, blocked on protected branches.
+    Force,
+}
+
+fn is_protected_branch(branch: &str) -> bool {
+    matches!(branch, "main" | "master" | "develop")
+        || branch.starts_with("release/")
+        || branch.starts_with("hotfix/")
+}
+
+/// Resolve the upstream tracking branch for HEAD (e.g. `origin/main`).
+/// Returns the short branch name (e.g. `main`).
+async fn resolve_upstream_branch(path: &str) -> Result<String, String> {
+    let output = Command::new("git")
+        .args([
+            "--no-pager",
+            "-C",
+            path,
+            "rev-parse",
+            "--abbrev-ref",
+            "--symbolic-full-name",
+            "@{u}",
+        ])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run git: {}", e))?;
+    if !output.status.success() {
+        return Err("No upstream branch configured for current HEAD".to_string());
+    }
+    let upstream = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    // `origin/main` -> `main`
+    Ok(upstream.rsplit('/').next().unwrap_or(&upstream).to_string())
 }
 
 #[derive(Serialize)]
@@ -145,6 +190,7 @@ pub async fn git_push(
     path: String,
     remote: Option<String>,
     branch: Option<String>,
+    force: Option<ForceMode>,
     operation_id: Option<String>,
 ) -> Result<String, String> {
     let _guard = locks.acquire(&path).await;
@@ -155,6 +201,27 @@ pub async fn git_push(
         "push".to_string(),
         "--progress".to_string(),
     ];
+
+    // Force flag (if any) goes between `push` and the optional `<remote> <branch>`.
+    match force.unwrap_or(ForceMode::None) {
+        ForceMode::None => {}
+        ForceMode::ForceWithLease => args.push("--force-with-lease".to_string()),
+        ForceMode::Force => {
+            // Resolve target branch for the protected-branch check.
+            // Prefer the explicit `branch` arg, otherwise the upstream of HEAD.
+            let target = match branch.as_deref() {
+                Some(b) => b.to_string(),
+                None => resolve_upstream_branch(&path).await?,
+            };
+            if is_protected_branch(&target) {
+                return Err(format!(
+                    "Force push to protected branch '{}' is blocked. Use --force-with-lease or re-target.",
+                    target
+                ));
+            }
+            args.push("--force".to_string());
+        }
+    }
 
     if let Some(r) = remote {
         args.push(r);
