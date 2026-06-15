@@ -262,6 +262,7 @@ pub async fn git_fetch(
     running_ops: tauri::State<'_, RunningOps>,
     path: String,
     remote: Option<String>,
+    prune: Option<bool>,
     operation_id: Option<String>,
 ) -> Result<String, String> {
     let _guard = locks.acquire(&path).await;
@@ -273,6 +274,10 @@ pub async fn git_fetch(
         "--all".to_string(),
         "--progress".to_string(),
     ];
+
+    if prune.unwrap_or(false) {
+        args.push("--prune".to_string());
+    }
 
     if let Some(r) = remote {
         args.push(r);

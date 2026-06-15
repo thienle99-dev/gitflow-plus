@@ -55,6 +55,15 @@ function readAllowPlainForce(): boolean {
   }
 }
 
+const AUTO_PRUNE_KEY = "gitflowAutoPruneOnFetch";
+function readAutoPrune(): boolean {
+  try {
+    return localStorage.getItem(AUTO_PRUNE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
 export default function Toolbar() {
   const repoPath = useRepoStore((s) => s.repoPath);
   const closeRepo = useRepoStore((s) => s.closeRepo);
@@ -388,7 +397,7 @@ export default function Toolbar() {
             <div className="w-[1px] h-3.5 bg-border-50" />
             <button
               className={syncButtonClass("fetch")}
-              onClick={() => doAction("fetch", () => api.remote.fetch(repoPath!))}
+              onClick={() => doAction("fetch", () => api.remote.fetch(repoPath!, undefined, readAutoPrune()))}
               disabled={!!loading}
               aria-label="Fetch remote changes"
               title={loading === "fetch" ? "Fetching…" : "Fetch remote changes"}

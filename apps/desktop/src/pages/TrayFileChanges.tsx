@@ -155,8 +155,24 @@ function TreeItem({ node, depth, expanded, toggleExpand, onToggle, onDiscard, on
   return (
     <>
       <div className={`flex items-center justify-between py-0.5 px-1 hover:bg-surface-2 transition-colors rounded group ${isSelected ? "bg-accent-5" : ""}`} style={{ paddingLeft: `${depth * 12 + 4}px` }}>
-        <button onClick={() => onSelectFile(file.path)} className="flex items-center gap-1 min-w-0 flex-1 text-left">
-          {file.staged ? <CheckSquare size={9} className="text-accent shrink-0" /> : <Square size={9} className="text-text-muted shrink-0" />}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle(file);
+            onSelectFile(file.path);
+          }}
+          title={file.staged ? "Unstage file" : "Stage file"}
+          className="p-0.5 rounded hover:bg-surface-3 transition-colors shrink-0"
+        >
+          {file.staged ? <CheckSquare size={9} className="text-accent" /> : <Square size={9} className="text-text-muted" />}
+        </button>
+        <button
+          onClick={() => {
+            onToggle(file);
+            onSelectFile(file.path);
+          }}
+          className="flex items-center gap-1 min-w-0 flex-1 text-left"
+        >
           <File size={8} className="text-text-secondary shrink-0" />
           <span className="text-[9px] text-text-primary truncate">{node.name}</span>
         </button>
@@ -257,8 +273,26 @@ export function TrayFileChanges({
             filteredChanges.map((file) => (
               <div key={`${file.staged ? "S" : "U"}:${file.path}`}>
                 <div className={`flex items-center justify-between py-0.5 px-2 hover:bg-surface-2 transition-colors border-b border-border-20 last:border-b-0 group ${selectedFile === file.path ? "bg-accent-5" : ""}`}>
-                  <button onClick={() => setSelectedFile(selectedFile === file.path ? null : file.path)} className="flex items-center gap-1 min-w-0 flex-1 text-left">
-                    {file.staged ? <CheckSquare size={9} className="text-accent shrink-0" /> : <Square size={9} className="text-text-muted shrink-0" />}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (file.staged) onUnstage(file.path);
+                      else onStage(file.path);
+                      setSelectedFile(selectedFile === file.path ? null : file.path);
+                    }}
+                    title={file.staged ? "Unstage file" : "Stage file"}
+                    className="p-0.5 rounded hover:bg-surface-3 transition-colors shrink-0"
+                  >
+                    {file.staged ? <CheckSquare size={9} className="text-accent" /> : <Square size={9} className="text-text-muted" />}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (file.staged) onUnstage(file.path);
+                      else onStage(file.path);
+                      setSelectedFile(selectedFile === file.path ? null : file.path);
+                    }}
+                    className="flex items-center gap-1 min-w-0 flex-1 text-left pl-1"
+                  >
                     <File size={8} className="text-text-secondary shrink-0" />
                     <span className="text-[9px] text-text-primary truncate">{file.path}</span>
                   </button>
