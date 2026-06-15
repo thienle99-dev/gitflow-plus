@@ -282,6 +282,7 @@ pub fn run() {
             commands::branch::checkout_branch,
             commands::branch::delete_branch,
             commands::branch::delete_remote_branch,
+            commands::branch::rename_branch,
             commands::branch::compare_branches,
             commands::branch::branch_file_diff,
             commands::commit::stage_file,

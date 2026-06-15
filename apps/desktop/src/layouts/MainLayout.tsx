@@ -31,6 +31,7 @@ const CherryPickDialog = lazy(() => import("@/components/features/dialogs/Cherry
 const SettingsDialog = lazy(() => import("@/components/features/dialogs/SettingsDialog"));
 const AnalyticsDialog = lazy(() => import("@/components/features/dialogs/AnalyticsDialog"));
 const CreateBranchDialog = lazy(() => import("@/components/features/dialogs/CreateBranchDialog"));
+const RenameBranchDialog = lazy(() => import("@/components/features/dialogs/RenameBranchDialog"));
 const MergeRequestDialog = lazy(() => import("@/components/features/dialogs/MergeRequestDialog"));
 const CreatePRDialog = lazy(() => import("@/components/features/dialogs/CreatePRDialog"));
 const MergePreviewDialog = lazy(() => import("@/components/features/dialogs/MergePreviewDialog"));
@@ -68,6 +69,7 @@ export default function MainLayout() {
   const selectedCommit = useUIStore((s) => s.selectedCommit);
   const mergeTargetBranch = useUIStore((s) => s.mergeTargetBranch);
   const compareBranchTarget = useUIStore((s) => s.compareBranchTarget);
+  const branchToRename = useUIStore((s) => s.branchToRename);
   const rebaseTargetCommit = useUIStore((s) => s.rebaseTargetCommit);
   const squashNState = useUIStore((s) => s.squashNState);
   const repoPath = useRepoStore((s) => s.repoPath);
@@ -211,6 +213,7 @@ export default function MainLayout() {
           selectedFile: null,
           selectedFileStage: null,
           activeDialog: null,
+          branchToRename: null,
         });
       } else if (action === "toggle-sidebar") {
         toggleSidebar();
@@ -339,6 +342,7 @@ export default function MainLayout() {
       />
     ),
     "create-branch": <CreateBranchDialog open={true} onClose={closeDialog} />,
+    "rename-branch": <RenameBranchDialog open={true} branchName={branchToRename ?? ""} onClose={closeDialog} />,
     analytics: <AnalyticsDialog open={true} onClose={closeDialog} />,
     "merge-request": <MergeRequestDialog onClose={closeDialog} />,
     "create-pr": <CreatePRDialog open={true} onClose={closeDialog} />,
@@ -378,7 +382,7 @@ export default function MainLayout() {
     "add-worktree": <AddWorktreeDialog open={true} onClose={closeDialog} />,
     "update-checker": <UpdateChecker onClose={closeDialog} />,
     "signing-setup": <SigningSetupWizard />,
-  }), [closeDialog, selectedCommit, mergeTargetBranch, compareBranchTarget, selectedRef, rebaseTargetCommit]);
+  }), [closeDialog, selectedCommit, mergeTargetBranch, compareBranchTarget, branchToRename, selectedRef, rebaseTargetCommit]);
 
   const dialogOverlay = overlayDialog ? (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">

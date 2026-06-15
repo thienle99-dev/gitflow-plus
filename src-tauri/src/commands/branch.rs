@@ -247,6 +247,55 @@ pub async fn delete_remote_branch(
     }
 }
 
+/// Rename a local branch via `git branch -m`. When `old_name` is the
+/// currently-checked-out branch, git's two-arg form refuses the rename —
+/// detect that and use the one-arg form instead.
+#[tauri::command]
+pub async fn rename_branch(
+    locks: tauri::State<'_, RepoLocks>,
+    path: String,
+    old_name: String,
+    new_name: String,
+) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
+
+    let head_output = Command::new("git")
+        .args(["--no-pager", "-C", &path, "symbolic-ref", "--short", "HEAD"])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to read HEAD: {}", e))?;
+    let current = String::from_utf8_lossy(&head_output.stdout).trim().to_string();
+    let is_current = !current.is_empty() && current == old_name;
+
+    let mut args = vec![
+        "--no-pager".to_string(),
+        "-C".to_string(),
+        path,
+        "branch".to_string(),
+        "-m".to_string(),
+    ];
+    if is_current {
+        args.push(new_name.clone());
+    } else {
+        args.push(old_name.clone());
+        args.push(new_name.clone());
+    }
+
+    let output = Command::new("git")
+        .args(&args)
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run git: {}", e))?;
+
+    if output.status.success() {
+        let from = if is_current { current } else { old_name };
+        Ok(format!("Renamed branch '{}' -> '{}'", from, new_name))
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Failed to rename branch: {}", stderr.trim()))
+    }
+}
+
 #[derive(serde::Serialize, Clone, Debug)]
 pub struct BranchComparison {
     pub ahead: usize,

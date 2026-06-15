@@ -33,6 +33,7 @@ import {
   ArrowLeftRight,
   ArrowUp,
   ArrowDown,
+  Edit3,
   Activity,
   Lock,
   Unlock,
@@ -52,6 +53,7 @@ export default function Sidebar() {
   const openDialogState = useUIStore((s) => s.openDialog);
   const setMergeTargetBranch = useUIStore((s) => s.setMergeTargetBranch);
   const setCompareBranchTarget = useUIStore((s) => s.setCompareBranchTarget);
+  const setBranchToRename = useUIStore((s) => s.setBranchToRename);
   const { data: branches } = useGitBranches(repoPath);
   const { data: tags } = useTagList(repoPath);
   const { data: submodules } = useSubmoduleList(repoPath);
@@ -163,6 +165,11 @@ export default function Sidebar() {
 
   const aheadCount = syncStatus?.ahead || 0;
   const behindCount = syncStatus?.behind || 0;
+
+  const handleRename = (branch: string) => {
+    setBranchToRename(branch);
+    openDialogState("rename-branch");
+  };
 
   return (
     <>
@@ -680,6 +687,11 @@ export default function Sidebar() {
                 setCompareBranchTarget(branchCtxMenu.branch);
                 openDialogState("branch-compare");
               },
+            },
+            {
+              label: "Rename…",
+              icon: <Edit3 size={12} />,
+              action: () => handleRename(branchCtxMenu.branch),
             },
             { separator: true, label: "", action: () => {} },
             {

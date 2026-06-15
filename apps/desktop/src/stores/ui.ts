@@ -18,6 +18,7 @@ interface UIState {
   mergeTargetBranch: string | null;
   compareBranchTarget: string | null;
   rebaseTargetCommit: string | null;
+  branchToRename: string | null;
   prefilledRebaseTodos: RebaseTodoItem[] | null;
   amendTargetHash: string | null;
   multiCherryPickHashes: string[];
@@ -36,6 +37,7 @@ interface UIState {
   closeDialog: () => void;
   setMergeTargetBranch: (branch: string | null) => void;
   setCompareBranchTarget: (branch: string | null) => void;
+  setBranchToRename: (branch: string | null) => void;
   setRebaseTargetCommit: (hash: string | null) => void;
   setPrefilledRebaseTodos: (todos: RebaseTodoItem[] | null) => void;
   setAmendTargetHash: (hash: string | null) => void;
@@ -56,6 +58,7 @@ export const useUIStore = create<UIState>((set) => ({
   activeDialog: null,
   mergeTargetBranch: null,
   compareBranchTarget: null,
+  branchToRename: null,
   rebaseTargetCommit: null,
   prefilledRebaseTodos: null,
   amendTargetHash: null,
@@ -82,9 +85,10 @@ export const useUIStore = create<UIState>((set) => ({
   setSelectedStashIndex: (index) => set({ selectedStashIndex: index }),
   setDiffViewMode: (mode) => set({ diffViewMode: mode }),
   openDialog: (name) => set({ activeDialog: name }),
-  closeDialog: () => set({ activeDialog: null, mergeTargetBranch: null, compareBranchTarget: null, rebaseTargetCommit: null, prefilledRebaseTodos: null, amendTargetHash: null }),
+  closeDialog: () => set({ activeDialog: null, mergeTargetBranch: null, compareBranchTarget: null, rebaseTargetCommit: null, prefilledRebaseTodos: null, amendTargetHash: null, branchToRename: null }),
   setMergeTargetBranch: (branch) => set({ mergeTargetBranch: branch }),
   setCompareBranchTarget: (branch) => set({ compareBranchTarget: branch }),
+  setBranchToRename: (branch) => set({ branchToRename: branch }),
   setRebaseTargetCommit: (hash) => set({ rebaseTargetCommit: hash }),
   setPrefilledRebaseTodos: (todos) => set({ prefilledRebaseTodos: todos }),
   setAmendTargetHash: (hash) => set({ amendTargetHash: hash }),
