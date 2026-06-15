@@ -501,6 +501,8 @@ export const api = {
       invoke<string>("discard_file", { path, filePath }),
     discardAll: (path: string) =>
       invoke<string>("discard_all", { path }),
+    cleanUntracked: (path: string, paths: string[]) =>
+      invoke<string>("clean_untracked", { path, paths }),
     commit: (path: string, message: string, amend?: boolean, noVerify?: boolean) =>
       invoke<string>("commit_changes", { path, message, amend: amend ?? false, noVerify: noVerify ?? false }),
     commitGroups: (path: string, groups: CommitFileGroupInput[], noVerify?: boolean) =>

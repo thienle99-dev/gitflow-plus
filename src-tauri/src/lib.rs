@@ -292,6 +292,7 @@ pub fn run() {
             commands::commit::unstage_all,
             commands::commit::discard_file,
             commands::commit::discard_all,
+            commands::commit::clean_untracked,
             commands::commit::commit_changes,
             commands::commit::commit_file_groups,
             commands::commit::revert_commit,

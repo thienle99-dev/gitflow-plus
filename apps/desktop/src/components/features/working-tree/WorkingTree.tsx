@@ -119,6 +119,7 @@ export default function WorkingTree() {
   const [splitDialogOpen, setSplitDialogOpen] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState<string | null>(null);
   const [confirmDiscardAll, setConfirmDiscardAll] = useState(false);
+  const [confirmBatchClean, setConfirmBatchClean] = useState(false);
   const [stagedOpen, setStagedOpen] = useState(true);
   const [unstagedOpen, setUnstagedOpen] = useState(true);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; file: FileChange; stage: "staged" | "unstaged" } | null>(null);
@@ -316,6 +317,31 @@ export default function WorkingTree() {
     try {
       await api.commit.discardAll(repoPath!);
       selectFile(null);
+      invalidate();
+    } catch (e: any) {
+      showToast(`Error: ${e}`, "error");
+    }
+  };
+
+  // Selective untracked clean: only paths whose status === "untracked" among
+  // the current multi-selection get passed to `git clean -fd -- <paths>`.
+  const selectedUntrackedPaths = useMemo(() => {
+    return Array.from(selectedFiles).filter((p) => {
+      const f = changes?.find((c) => c.path === p);
+      return f?.status === "untracked";
+    });
+  }, [selectedFiles, changes]);
+
+  const handleBatchClean = () => {
+    if (selectedUntrackedPaths.length === 0) return;
+    setConfirmBatchClean(true);
+  };
+
+  const doBatchClean = async () => {
+    setConfirmBatchClean(false);
+    try {
+      await api.commit.cleanUntracked(repoPath!, selectedUntrackedPaths);
+      setSelectedFiles(new Set());
       invalidate();
     } catch (e: any) {
       showToast(`Error: ${e}`, "error");
@@ -931,6 +957,8 @@ export default function WorkingTree() {
           onToggleUnstagedOpen={() => setUnstagedOpen((open) => !open)}
           onSetConfirmDiscardAll={setConfirmDiscardAll}
           onBatchStage={handleBatchStage}
+          onBatchClean={handleBatchClean}
+          selectedUntrackedCount={selectedUntrackedPaths.length}
           onBatchUnstage={handleBatchUnstage}
           onClearSelected={() => setSelectedFiles(new Set())}
         />
@@ -1245,6 +1273,26 @@ export default function WorkingTree() {
         confirmLabel="Discard All"
         onConfirm={doDiscardAll}
         onCancel={() => setConfirmDiscardAll(false)}
+      />
+      <ConfirmDialog
+        open={confirmBatchClean}
+        title="Delete Untracked Files"
+        message={`Permanently delete ${selectedUntrackedPaths.length} untracked file(s) or directory(ies)? This cannot be undone.`}
+        impactItems={[
+          {
+            label: `${selectedUntrackedPaths.length} untracked path(s) will be permanently deleted`,
+            severity: "irreversible",
+            details: selectedUntrackedPaths,
+          },
+          {
+            label: "Tracked files and .gitignore'd files are not affected",
+            severity: "info",
+          },
+        ]}
+        variant="destructive"
+        confirmLabel="Delete"
+        onConfirm={doBatchClean}
+        onCancel={() => setConfirmBatchClean(false)}
       />
       <LintWarningDialog
         open={lintWarningOpen}

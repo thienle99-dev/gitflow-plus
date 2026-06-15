@@ -223,6 +223,48 @@ pub async fn discard_all(
     }
 }
 
+/// Selectively remove untracked files / directories from the working tree.
+///
+/// Runs `git clean -fd -- <paths...>` (force + directories, never ignored files).
+/// This is the user-driven counterpart to the implicit `clean -fd` in
+/// `discard_file` / `discard_all` — useful when you want to nuke a specific
+/// set of untracked files without touching tracked-but-modified ones.
+#[tauri::command]
+pub async fn clean_untracked(
+    cache_state: tauri::State<'_, crate::RepoCache>,
+    locks: tauri::State<'_, RepoLocks>,
+    path: String,
+    paths: Vec<String>,
+) -> Result<String, String> {
+    if paths.is_empty() {
+        return Ok("No paths to clean".to_string());
+    }
+    let _guard = locks.acquire(&path).await;
+    let mut args: Vec<String> = vec![
+        "--no-pager".to_string(),
+        "-C".to_string(),
+        path.clone(),
+        "clean".to_string(),
+        "-fd".to_string(),
+        "--".to_string(),
+    ];
+    for p in &paths {
+        args.push(p.clone());
+    }
+    let output = Command::new("git")
+        .args(&args)
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run git clean: {}", e))?;
+    if output.status.success() {
+        clear_status_cache(&cache_state, &path);
+        Ok(format!("Cleaned {} untracked path(s)", paths.len()))
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Clean failed: {}", stderr.trim()))
+    }
+}
+
 #[tauri::command]
 pub async fn commit_changes(
     locks: tauri::State<'_, RepoLocks>,
