@@ -6,13 +6,16 @@ import { api } from "@/api/tauri";
 import { useTagList, useTagCreate, useTagDelete, useTagPush } from "@/queries/useGitTag";
 import { useGenerateTagDescription } from "@/queries/useAI";
 import { showToast } from "@/lib/toast";
-import { Tag, Plus, Trash2, Upload, GitCommit, User, Calendar, Sparkles, Rocket } from "lucide-react";
+import { trackRemoteOp } from "@/stores/operations";
+import { useQueryClient } from "@tanstack/react-query";
+import { Tag, Plus, Trash2, Upload, UploadCloud, GitCommit, User, Calendar, Sparkles, Rocket } from "lucide-react";
 import { Input } from "@/components/ui/form";
 import { EmptyStateInline, EmptyState, CreateTagAction } from "@/components/ui/feedback/EmptyState";
 import { SkeletonTagRow } from "@/components/ui/feedback/Skeleton";
 
 export default function TagPanel({ onClose }: { onClose?: () => void }) {
   const repoPath = useRepoStore((s) => s.repoPath);
+  const queryClient = useQueryClient();
   const { data: tags, isLoading } = useTagList(repoPath);
   const tagCreate = useTagCreate(repoPath);
   const tagDelete = useTagDelete(repoPath);
@@ -24,6 +27,7 @@ export default function TagPanel({ onClose }: { onClose?: () => void }) {
   const [target, setTarget] = useState("");
   const [message, setMessage] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [pushingAll, setPushingAll] = useState(false);
 
   const loadCommitsForTagDescription = async () => {
     if (!repoPath) throw new Error("No repository selected");
@@ -94,6 +98,22 @@ export default function TagPanel({ onClose }: { onClose?: () => void }) {
     }
   };
 
+  const handlePushAll = async () => {
+    if (!tags || tags.length === 0 || pushingAll) return;
+    setPushingAll(true);
+    try {
+      await trackRemoteOp("git.tag-push-all", (operationId) =>
+        api.tag.pushAll(repoPath!, undefined, operationId)
+      );
+      queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
+      showToast(`Pushed ${tags.length} tag${tags.length === 1 ? "" : "s"} to origin`);
+    } catch (e: any) {
+      showToast(`Error: ${e?.message || e}`, "error");
+    } finally {
+      setPushingAll(false);
+    }
+  };
+
   const formatCommitDate = useCommitDateFormatter();
   const formatDate = (dateStr: string) => {
     return formatCommitDate(dateStr);
@@ -113,6 +133,18 @@ export default function TagPanel({ onClose }: { onClose?: () => void }) {
           title="New Release"
         >
           <Rocket size={14} />
+        </button>
+        <button
+          onClick={handlePushAll}
+          disabled={!tags || tags.length === 0 || pushingAll}
+          className="ghost p-1 text-text-muted hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed"
+          title={`Push all ${tags?.length ?? 0} tag(s) to origin`}
+        >
+          {pushingAll ? (
+            <span className="h-3.5 w-3.5 rounded-full border-2 border-text-muted/30 border-t-text-muted animate-spin inline-block" />
+          ) : (
+            <UploadCloud size={14} />
+          )}
         </button>
         <button
           onClick={() => setShowCreate(!showCreate)}

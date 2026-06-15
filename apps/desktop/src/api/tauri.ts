@@ -634,6 +634,8 @@ export const api = {
       invoke<string>("tag_delete", { path, name }),
     push: (path: string, name: string, remote?: string) =>
       invoke<string>("tag_push", { path, name, remote: remote ?? null }),
+    pushAll: (path: string, remote?: string, operationId?: string) =>
+      invoke<string>("tag_push_all", { path, remote: remote ?? null, operationId: operationId ?? null }),
   },
 
   cherryPick: {

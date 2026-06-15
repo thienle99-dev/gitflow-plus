@@ -345,6 +345,7 @@ pub fn run() {
             commands::tag::tag_create,
             commands::tag::tag_delete,
             commands::tag::tag_push,
+            commands::tag::tag_push_all,
             commands::cherry_pick::cherry_pick,
             commands::cherry_pick::cherry_pick_multi,
             commands::cherry_pick::cherry_pick_abort,

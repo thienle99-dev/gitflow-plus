@@ -1,6 +1,7 @@
 use serde::Serialize;
 use tokio::process::Command;
 use super::op_lock::RepoLocks;
+use super::running_ops::RunningOps;
 
 #[derive(Serialize)]
 pub struct Tag {
@@ -179,4 +180,61 @@ pub async fn tag_push(
 ) -> Result<String, String> {
     let _guard = locks.acquire(&path).await;
     git_tag_push(&path, &name, remote.as_deref()).await
+}
+
+/// Push all local tags to the given remote (`git push <remote> --tags`).
+///
+/// Distinct from the per-row `tag_push` because a single `git push --tags`
+/// invocation is one network round-trip — much faster than iterating one
+/// tag at a time, and the user gets a single progress stream in
+/// OperationCenter plus a single cancel handle.
+#[tauri::command]
+pub async fn tag_push_all(
+    app: tauri::AppHandle,
+    locks: tauri::State<'_, RepoLocks>,
+    running_ops: tauri::State<'_, RunningOps>,
+    path: String,
+    remote: Option<String>,
+    operation_id: Option<String>,
+) -> Result<String, String> {
+    let _guard = locks.acquire(&path).await;
+    let remote_name = remote.unwrap_or_else(|| "origin".to_string());
+    let args = vec![
+        "--no-pager".to_string(),
+        "-C".to_string(),
+        path,
+        "push".to_string(),
+        remote_name.clone(),
+        "--tags".to_string(),
+        "--progress".to_string(),
+    ];
+
+    let mut cmd = tokio::process::Command::new("git");
+    cmd.args(&args);
+
+    match operation_id {
+        Some(op_id) => {
+            let rx = running_ops.spawn_with_progress(op_id, cmd, app, "git-progress".into())?;
+            rx.await.unwrap_or_else(|_| Err("Operation cancelled".into()))
+        }
+        None => {
+            let output = cmd
+                .output()
+                .await
+                .map_err(|e| format!("Failed to run git: {}", e))?;
+            if output.status.success() {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                Ok(format!(
+                    "{}\nPushed all tags to {}",
+                    stdout.trim(),
+                    remote_name
+                ))
+            } else {
+                Err(format!(
+                    "Push all tags failed: {}",
+                    String::from_utf8_lossy(&output.stderr).trim()
+                ))
+            }
+        }
+    }
 }
