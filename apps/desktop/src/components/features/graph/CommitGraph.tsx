@@ -17,6 +17,7 @@ import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
 import { formatCommitDate } from "@/lib/date";
 import { usePreflightGate } from "@/hooks/usePreflightGate";
 import { useGitFlowDetect } from "@/queries/useGitFlow";
+import { useDropTarget, type DragPayload } from "@/hooks/useDragAndDrop";
 import { ChevronDown, Search, X, Download, GitCommit } from "lucide-react";
 
 const ROW_HEIGHT = 38;
@@ -54,6 +55,9 @@ export default memo(function CommitGraph() {
   const [confirmRevert, setConfirmRevert] = useState<string | null>(null);
   const [confirmMultiCherryPick, setConfirmMultiCherryPick] = useState(false);
   const [filterScope, setFilterScope] = useState<CommitFilterScope>("all");
+  const [dragOverHash, setDragOverHash] = useState<string | null>(null);
+
+  const rebaseGate = usePreflightGate("rebase");
 
   useEffect(() => {
     setAppliedTheme(theme);
@@ -151,6 +155,69 @@ export default memo(function CommitGraph() {
   const { hover, handleMouseMove, handleMouseLeave, handleClick, handleContextMenu, commitAtRow } =
     useHitTest(visibleLayout, scrollTop);
 
+  /**
+   * Drop a commit or branch onto a commit row in the graph.
+   * Resolves `offsetY` → row index → commit hash (same math as the
+   * click handler) and opens the InteractiveRebaseDialog pre-filled
+   * with the dropped commit as the new base. Equivalent to the
+   * "Interactive rebase from here..." context menu item.
+   */
+  const handleCommitDrop = useCallback(
+    async (payload: DragPayload) => {
+      // Compute row from payload (caller computed already) — actually we
+      // resolve row inside `handleDragOver` to track the active target,
+      // then re-derive the commit here from dragOverHash.
+      if (!dragOverHash) return;
+      const ok = await rebaseGate.runPreflight();
+      if (!ok) return;
+      useUIStore.getState().setRebaseTargetCommit(dragOverHash);
+      useUIStore.getState().openDialog("interactive-rebase");
+      // payload is unused for now — both branch and commit drops land in
+      // the same rebase dialog. Future: branch drops can short-circuit
+      // to a different dialog (e.g. merge). For now they're equivalent.
+      void payload;
+    },
+    [dragOverHash, rebaseGate],
+  );
+
+  const { dropProps: canvasDropProps } = useDropTarget(handleCommitDrop);
+
+  // Track which commit row the cursor is hovering during a drag, so the
+  // canvas renderer can paint a highlight band there.
+  const onCanvasDragOver = useCallback(
+    (e: React.DragEvent<HTMLCanvasElement>) => {
+      canvasDropProps.onDragOver(e);
+      if (!visibleLayout) return;
+      const row = Math.floor((e.nativeEvent.offsetY + scrollTop) / ROW_HEIGHT);
+      const commit = visibleLayout.commits[row];
+      const next = commit?.hash ?? null;
+      if (next !== dragOverHash) setDragOverHash(next);
+    },
+    [canvasDropProps, visibleLayout, scrollTop, dragOverHash],
+  );
+
+  const onCanvasDragLeave = useCallback(
+    (e: React.DragEvent<HTMLCanvasElement>) => {
+      canvasDropProps.onDragLeave(e);
+      if (dragOverHash !== null) setDragOverHash(null);
+    },
+    [canvasDropProps, dragOverHash],
+  );
+
+  const onCanvasDrop = useCallback(
+    (e: React.DragEvent<HTMLCanvasElement>) => {
+      // Resolve final drop position BEFORE clearing dragOverHash, because
+      // `handleCommitDrop` reads it.
+      if (!visibleLayout) return;
+      const row = Math.floor((e.nativeEvent.offsetY + scrollTop) / ROW_HEIGHT);
+      const commit = visibleLayout.commits[row];
+      if (commit) setDragOverHash(commit.hash);
+      canvasDropProps.onDrop(e);
+      setDragOverHash(null);
+    },
+    [canvasDropProps, visibleLayout, scrollTop],
+  );
+
   // Canvas renderer — redraws whenever deps change
   const focusedHash = focusedIndex !== null ? commits[focusedIndex]?.hash ?? null : null;
   useCanvasRenderer({
@@ -167,6 +234,7 @@ export default memo(function CommitGraph() {
     totalLanes,
     theme: appliedTheme,
     gitflowConfig,
+    dragOverHash,
   });
 
   // Infinite loading — triggered when the last virtual item becomes visible
@@ -541,6 +609,9 @@ export default memo(function CommitGraph() {
               onContextMenu={(e) =>
                 handleContextMenu(e, (x, y, hash) => setCtxMenu({ x, y, hash }))
               }
+              onDragOver={onCanvasDragOver}
+              onDragLeave={onCanvasDragLeave}
+              onDrop={onCanvasDrop}
             />
           </div>
         )}
@@ -617,6 +688,7 @@ export default memo(function CommitGraph() {
     />
     {cherryPickGate.preflightDialog}
     {revertGate.preflightDialog}
+    {rebaseGate.preflightDialog}
     <ConfirmDialog
       open={!!confirmRevert}
       title="Revert Commit"

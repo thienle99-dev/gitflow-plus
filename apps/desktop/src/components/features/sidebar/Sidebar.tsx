@@ -16,6 +16,7 @@ import ConfirmDialog from "@/components/ui/overlay/ConfirmDialog";
 import { EmptyStateInline } from "@/components/ui/feedback/EmptyState";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { usePreflightGate } from "@/hooks/usePreflightGate";
+import { getDragSourceProps, useDropTarget, type DragPayload } from "@/hooks/useDragAndDrop";
 import {
   ChevronRight,
   GitBranch,
@@ -54,6 +55,7 @@ export default function Sidebar() {
   const setMergeTargetBranch = useUIStore((s) => s.setMergeTargetBranch);
   const setCompareBranchTarget = useUIStore((s) => s.setCompareBranchTarget);
   const setBranchToRename = useUIStore((s) => s.setBranchToRename);
+  const setRebaseTargetCommit = useUIStore((s) => s.setRebaseTargetCommit);
   const { data: branches } = useGitBranches(repoPath);
   const { data: tags } = useTagList(repoPath);
   const { data: submodules } = useSubmoduleList(repoPath);
@@ -79,6 +81,7 @@ export default function Sidebar() {
   // Preflight gates for risky operations
   const checkoutGate = usePreflightGate("checkout branch");
   const deleteBranchGate = usePreflightGate("delete branch");
+  const mergeGate = usePreflightGate("merge branch");
 
   const openRepo = useRepoStore((s) => s.openRepo);
   const closeRepo = useRepoStore((s) => s.closeRepo);
@@ -160,6 +163,37 @@ export default function Sidebar() {
     } catch (e) {
       console.error(e);
       showToast(`Failed to delete branch: ${e}`, "error");
+    }
+  };
+
+  /**
+   * Drop a branch or commit onto a branch row. Two paths:
+   * - branch → branch: opens MergePreviewDialog with the dragged branch as
+   *   the source (equivalent to the context menu "Merge into current branch…").
+   * - commit → branch: opens InteractiveRebaseDialog with the branch as the
+   *   new base (rebase current branch's commits onto this branch).
+   * Both go through `mergeGate.runPreflight()` to honor
+   * "this git op might lose work" semantics.
+   */
+  const handleBranchDrop = async (
+    targetBranch: string,
+    payload: DragPayload,
+  ) => {
+    if (payload.kind === "branch") {
+      if (payload.current) {
+        showToast("Cannot merge a branch into itself", "error");
+        return;
+      }
+      const ok = await mergeGate.runPreflight();
+      if (!ok) return;
+      setMergeTargetBranch(payload.name);
+      openDialogState("merge");
+    } else {
+      // commit → branch: rebase current onto this branch.
+      const ok = await mergeGate.runPreflight();
+      if (!ok) return;
+      setRebaseTargetCommit(targetBranch);
+      openDialogState("interactive-rebase");
     }
   };
 
@@ -368,6 +402,7 @@ export default function Sidebar() {
             aheadCount={aheadCount}
             behindCount={behindCount}
             gitflowConfig={gitflowConfig ?? null}
+            handleBranchDrop={handleBranchDrop}
           />
         </div>
       )}
@@ -475,6 +510,7 @@ export default function Sidebar() {
                         setBranchCtxMenu={() => {}}
                         collapsedFolders={collapsedBranchFolders}
                         onToggleFolder={handleToggleBranchFolder}
+                        handleBranchDrop={handleBranchDrop}
                       />
                     </div>
                   )}
@@ -722,6 +758,7 @@ export default function Sidebar() {
 
     {checkoutGate.preflightDialog}
     {deleteBranchGate.preflightDialog}
+    {mergeGate.preflightDialog}
     <ConfirmDialog
       open={!!confirmDeleteBranch}
       title="Delete Branch"
@@ -863,6 +900,7 @@ interface BranchTreeRendererProps {
   aheadCount?: number;
   behindCount?: number;
   gitflowConfig?: GitFlowConfig | null;
+  handleBranchDrop?: (targetBranch: string, payload: DragPayload) => void;
 }
 
 function BranchTreeRenderer({
@@ -877,6 +915,7 @@ function BranchTreeRenderer({
   aheadCount = 0,
   behindCount = 0,
   gitflowConfig,
+  handleBranchDrop,
 }: BranchTreeRendererProps) {
   const sortedKeys = Object.keys(node.children).sort((a, b) => {
     const childA = node.children[a];
@@ -934,6 +973,7 @@ function BranchTreeRenderer({
                   aheadCount={aheadCount}
                   behindCount={behindCount}
                   gitflowConfig={gitflowConfig}
+                  handleBranchDrop={handleBranchDrop}
                 />
               )}
             </div>
@@ -941,25 +981,24 @@ function BranchTreeRenderer({
         } else {
           const isSelected = selectedRef === child.fullName;
           return (
-            <div
+            <BranchLeaf
               key={child.fullName}
-              role="treeitem"
-              aria-selected={isSelected}
-              style={{ paddingLeft: `${depth * 16}px` }}
-            >
-              <div
-                className={`tree-item flex items-center gap-2 px-3 py-[3px] mx-1 rounded-md ${isSelected ? "selected" : ""}`}
-                tabIndex={0}
-                onClick={() => selectRef(child.fullName)}
-                onDoubleClick={() => handleCheckout(child.fullName)}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectRef(child.fullName); } }}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  if (!child.remote) {
-                    setBranchCtxMenu({ branch: child.fullName, x: e.clientX, y: e.clientY });
-                  }
-                }}
-              >
+              fullName={child.fullName}
+              name={child.name}
+              current={child.current}
+              remote={child.remote}
+              isSelected={isSelected}
+              depth={depth}
+              aheadCount={aheadCount}
+              behindCount={behindCount}
+              gitflowConfig={gitflowConfig}
+              selectRef={selectRef}
+              handleCheckout={handleCheckout}
+              setBranchCtxMenu={setBranchCtxMenu}
+              handleBranchDrop={handleBranchDrop}
+            />
+          );
+        }
                 <GitBranch size={12} className={isSelected ? "text-accent" : child.current ? "text-[#30d158]" : "text-text-secondary"} />
                 {gitflowConfig && (() => {
                   const branchType = classifyBranch(child.fullName, gitflowConfig);
@@ -1001,6 +1040,105 @@ function BranchTreeRenderer({
           );
         }
       })}
+    </div>
+  );
+}
+
+function BranchLeaf({
+  fullName,
+  name,
+  current,
+  remote,
+  isSelected,
+  depth,
+  aheadCount,
+  behindCount,
+  gitflowConfig,
+  selectRef,
+  handleCheckout,
+  setBranchCtxMenu,
+  handleBranchDrop,
+}: {
+  fullName: string;
+  name: string;
+  current: boolean;
+  remote: boolean;
+  isSelected: boolean;
+  depth: number;
+  aheadCount: number;
+  behindCount: number;
+  gitflowConfig: GitFlowConfig | null | undefined;
+  selectRef: (ref: string | null) => void;
+  handleCheckout: (name: string) => void;
+  setBranchCtxMenu: (menu: { branch: string; x: number; y: number } | null) => void;
+  handleBranchDrop?: (targetBranch: string, payload: DragPayload) => void;
+}) {
+  const onDrop = (payload: DragPayload) => {
+    if (!handleBranchDrop) return;
+    handleBranchDrop(fullName, payload);
+  };
+  const { isOver, dropProps } = useDropTarget(onDrop);
+  const dragProps = remote
+    ? {}
+    : getDragSourceProps({ kind: "branch", name: fullName, current });
+
+  return (
+    <div
+      role="treeitem"
+      aria-selected={isSelected}
+      style={{ paddingLeft: `${depth * 16}px` }}
+    >
+      <div
+        className={`tree-item flex items-center gap-2 px-3 py-[3px] mx-1 rounded-md ${isSelected ? "selected" : ""} ${isOver ? "drag-over" : ""}`}
+        tabIndex={0}
+        onClick={() => selectRef(fullName)}
+        onDoubleClick={() => handleCheckout(fullName)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectRef(fullName); } }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          if (!remote) {
+            setBranchCtxMenu({ branch: fullName, x: e.clientX, y: e.clientY });
+          }
+        }}
+        {...dragProps}
+        {...dropProps}
+      >
+        <GitBranch size={12} className={isSelected ? "text-accent" : current ? "text-[#30d158]" : "text-text-secondary"} />
+        {gitflowConfig && (() => {
+          const branchType = classifyBranch(fullName, gitflowConfig);
+          const color = gitflowBranchColor(branchType);
+          if (branchType === "feature" || branchType === "release" || branchType === "hotfix") {
+            return (
+              <span
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ backgroundColor: color }}
+                title={`${branchType} branch`}
+              />
+            );
+          }
+          return null;
+        })()}
+        <span className={`min-w-0 flex-1 truncate text-xs ${current ? "font-semibold text-text-primary" : "text-text-secondary"}`}>
+          {name}
+        </span>
+        {current && aheadCount > 0 && (
+          <span className="shrink-0 flex items-center gap-0.5 rounded bg-accent-10 px-1 py-0.5 text-[9px] font-bold text-accent" title={`${aheadCount} ahead`}>
+            <ArrowUp size={8} />
+            {aheadCount}
+          </span>
+        )}
+        {current && behindCount > 0 && (
+          <span className="shrink-0 flex items-center gap-0.5 rounded bg-[#ff9f0a]/15 px-1 py-0.5 text-[9px] font-bold text-[#ff9f0a]" title={`${behindCount} behind`}>
+            <ArrowDown size={8} />
+            {behindCount}
+          </span>
+        )}
+        {current && (
+          <span className="shrink-0 rounded bg-[#30d158]/10 px-1 py-0.5 text-[9px] font-bold text-[#30d158] border border-[#30d158]/20">
+            HEAD
+          </span>
+        )}
+      </div>
     </div>
   );
 }

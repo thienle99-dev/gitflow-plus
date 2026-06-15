@@ -53,6 +53,8 @@ interface RenderParams {
   totalLanes: number;
   theme: Theme;
   gitflowConfig?: GitFlowConfig | null;
+  /** Hash of the commit row currently under a drag — paints an accent band. */
+  dragOverHash?: string | null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -398,6 +400,7 @@ export function useCanvasRenderer({
   totalLanes,
   theme,
   gitflowConfig,
+  dragOverHash = null,
 }: RenderParams) {
   const formatCommitDateHook = useCommitDateFormatter();
   // Track which rows are hovered via mouse position
@@ -547,6 +550,21 @@ export function useCanvasRenderer({
       ctx.lineWidth = 1;
       ctx.setLineDash([4, 4]);
       ctx.strokeRect(0, cy - ROW_HEIGHT / 2, width, ROW_HEIGHT);
+      ctx.restore();
+    }
+
+    // Drag-over band — paints a bright accent strip on the row currently
+    // under a drag, so the user can see where their drop will land.
+    const dragOver = dragOverHash
+      ? visible.find((commit) => commit.hash === dragOverHash)
+      : null;
+    if (dragOver) {
+      const cy = dragOver.y + offsetY;
+      ctx.save();
+      ctx.fillStyle = withAlpha(accent, 0.16);
+      ctx.fillRect(0, cy - ROW_HEIGHT / 2, width, ROW_HEIGHT);
+      ctx.fillStyle = withAlpha(accent, 0.85);
+      ctx.fillRect(0, cy - ROW_HEIGHT / 2 + 2, 3, ROW_HEIGHT - 4);
       ctx.restore();
     }
 
@@ -729,7 +747,7 @@ export function useCanvasRenderer({
       width,
       height,
     });
-  }, [canvasRef, layout, graphIndex, scrollTop, containerHeight, containerWidth, selectedCommit, focusedHash, multiCherryPickHashes, hoveredLane, totalLanes, theme, formatCommitDateHook, gitflowConfig]);
+  }, [canvasRef, layout, graphIndex, scrollTop, containerHeight, containerWidth, selectedCommit, focusedHash, multiCherryPickHashes, hoveredLane, totalLanes, theme, formatCommitDateHook, gitflowConfig, dragOverHash]);
 }
 
 function getColumns(width: number) {
