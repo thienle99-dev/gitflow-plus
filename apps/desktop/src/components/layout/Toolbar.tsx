@@ -35,6 +35,7 @@ import {
   Zap,
   MoreHorizontal,
   GitFork,
+  FileCode,
 } from "lucide-react";
 import CreateBranchDialog from "@/components/features/dialogs/CreateBranchDialog";
 import { RiskSummaryDialog } from "@/components/features/dialogs";
@@ -222,6 +223,11 @@ export default function Toolbar() {
       label: "Git Hooks Manager",
       icon: <Zap size={12} />,
       action: () => openDialog("git-hooks"),
+    },
+    {
+      label: ".gitignore",
+      icon: <FileCode size={12} />,
+      action: () => openDialog("gitignore"),
     },
     {
       label: "AI Command Assistant",

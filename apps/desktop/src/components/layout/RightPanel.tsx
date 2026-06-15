@@ -17,6 +17,7 @@ import BlameView from "@/components/features/blame/BlameView";
 import { EmptyState } from "@/components/ui/feedback/EmptyState";
 import { Skeleton } from "@/components/ui/feedback/Skeleton";
 import { isImageFile } from "@/lib/file-utils";
+import GitignoreEditor from "@/components/features/gitignore/GitignoreEditor";
 
 export default function RightPanel() {
   const selectedCommit = useUIStore((s) => s.selectedCommit);
@@ -35,6 +36,10 @@ export default function RightPanel() {
 
   if (activeDialog === "reflog") {
     return <ReflogBrowser />;
+  }
+
+  if (activeDialog === "gitignore") {
+    return <GitignoreEditor />;
   }
 
   // Check if selected file is a submodule

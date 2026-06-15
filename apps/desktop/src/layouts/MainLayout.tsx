@@ -320,7 +320,7 @@ export default function MainLayout() {
     }
   }, [rightPanelOpen]);
 
-  const overlayDialog = activeDialog && activeDialog !== "stash" && activeDialog !== "tag" && activeDialog !== "command-palette" && activeDialog !== "create-release"
+  const overlayDialog = activeDialog && activeDialog !== "stash" && activeDialog !== "tag" && activeDialog !== "command-palette" && activeDialog !== "create-release" && activeDialog !== "gitignore"
     ? activeDialog
     : null;
 

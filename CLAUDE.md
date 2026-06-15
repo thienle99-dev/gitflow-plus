@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-GitFlow Desktop — a desktop Git client built with Tauri 2 (Rust backend) and React 18 (frontend). pnpm-workspace monorepo: `apps/desktop` is the React/Vite frontend, `src-tauri` is the Rust/Tauri shell.
+GitFlow Desktop — a desktop Git client built with Tauri 2 (Rust backend) and React 18 (frontend). pnpm-workspace monorepo: `apps/desktop` is the React/Vite frontend, `src-tauri` is the Rust/Tauri shell, `apps/landing` is a separate React/Vite marketing site (no Tauri). The frontend package name is `@gitflow-desktop/desktop`.
 
 ## Commands
 
@@ -30,9 +30,9 @@ The `@` import alias maps to `apps/desktop/src` (configured in both `vite.config
 
 ### Git operations are git-CLI subprocesses, not a library
 
-Every backend command in `src-tauri/src/commands/*.rs` shells out to the system `git` binary via `Command::new("git").args(["--no-pager", "-C", path, ...])`, then parses stdout. Failures are detected with `output.status.success()` and surfaced as `Err(stderr)`. There is no libgit2 / git2 crate. Consequence: the user's installed `git` and its behavior is the source of truth, and parsing is line/delimiter-based.
+Every backend command in `src-tauri/src/commands/*.rs` shells out to the system `git` binary via `Command::new("git").args(["--no-pager", "-C", path, ...])` (Tokio async), then parses stdout. Failures are detected with `output.status.success()` and surfaced as `Err(stderr)`. There is no libgit2 / git2 crate. Consequence: the user's installed `git` and its behavior is the source of truth, and parsing is line/delimiter-based.
 
-`git_log` (`commands/log.rs`) is the most format-sensitive: it uses `--all --pretty=format:%H|%P|%an|%ae|%ai|%D|%s` and `splitn(7, '|')`. `%D` carries ref decorations, parsed into typed `Ref { name, ref_type }` (head/tag/remote/branch). If you change the pretty-format string, update the split count and the matching `Commit`/`Ref` TypeScript interfaces in `api/tauri.ts` together.
+`git_log` (`commands/log.rs`) is the most format-sensitive: pretty-format is `%H|%P|%an|%ae|%ai|%D|%s|%G?` (8 pipe-delimited fields — the trailing `%G?` is the GPG signature status; `splitn(8, '|')`). `%D` carries ref decorations, parsed into typed `Ref { name, ref_type }` (head/tag/remote/branch). Pagination uses `--skip` + `--max-count` with default `per_page=200` (clamped 1–500). If you change the pretty-format string, update the split count and the matching `Commit`/`Ref` TypeScript interfaces in `api/tauri.ts` together.
 
 ### Two-layer state: TanStack Query (server) + Zustand (client)
 
@@ -52,8 +52,8 @@ Components live under `apps/desktop/src/components/` in three subdirectories:
 
 This is the core reactivity mechanism and is split across two files:
 
-1. `src-tauri/src/watcher/fs_watcher.rs` — a `notify` recursive watcher on the repo root. `classify_event` filters noise (`.git/objects`, `.git/logs`, `node_modules`, `target`, `index.lock`) and tags the rest as `worktree` / `refs` / `head`. Emits a single debounced (300ms) `repo:changed` Tauri event carrying `event_type`.
-2. `apps/desktop/src/layouts/MainLayout.tsx` — starts/stops the watcher on repoPath change and listens for `repo:changed`, invalidating specific query keys per `event_type` (`worktree`→status, `refs`→branches+log, `head`→everything under the repo).
+1. `src-tauri/src/watcher/fs_watcher.rs` — a `notify` watcher on the repo root. macOS uses `PollWatcher` (kqueue events for FSEvents proved unreliable for `.git/`), other OSes use `RecommendedWatcher`. `classify_event` filters noise (`.git/objects`, `.git/logs`, `node_modules`, `target`, `index.lock`) and tags the rest as `worktree` / `refs` / `head`. Emits a single debounced (300ms) `repo:changed` Tauri event carrying `event_type`, and also invalidates the Rust-side status cache (`RepoCache`) directly on each qualifying event.
+2. `apps/desktop/src/layouts/MainLayout.tsx` — starts/stops the watcher on repoPath change and listens for `repo:changed`, invalidating specific query keys per `event_type` (`worktree`→status, `refs`→branches+log, `head`→everything under the repo). The same layout also kicks off a parallel `prefetchQuery` warmup of log/status/branches/info/sync-status on repo open, and an interval-based background `git fetch` (configurable via `gitflowAutoFetch` and `gitflowFetchIntervalMinutes` in localStorage, defaults 10 min, clamped 5–60).
 
 If git data isn't refreshing live, the bug is almost always in one of these two halves (event misclassification, or wrong query key in the invalidation switch).
 
@@ -77,6 +77,12 @@ All AI HTTP requests go through Tauri's `ai_http_request` command (`commands/ai.
 
 AI provider configuration is managed as named profiles in `lib/ai-profiles.ts`. The active profile is loaded via `loadActiveProfile()`. Legacy single-provider `localStorage` keys (`gitflowAiApiKey`, `gitflowAiModel`, etc.) still exist for backwards compatibility but profiles are the current system. Supported providers: Claude (Anthropic), OpenAI-compatible APIs, Ollama (`http://localhost:11434`), llama.cpp (`http://localhost:8080`).
 
+AI features (commit summarization, risk scanner, lint summary, command assistant, etc.) are gated by the **`usePreflightGate`** hook + `preflight_check` Tauri command. Preflight returns conditions like `dirty_worktree`, `merge_in_progress`, `rebase_in_progress`, `cherry_pick_in_progress`, `has_conflicts`, `detached_head`, `unpushed_commits` — the hook blocks risky actions with a `ConfirmDialog` listing `ImpactItem[]` (severity: `warning` / `irreversible`) before invoking the underlying command. Treat preflight as the single chokepoint for "this git op might lose work" UX, not as a per-feature check.
+
+### Credentials & secrets
+
+The Rust backend uses the `keyring` crate (with `apple-native`, `sync-secret-service`, `windows-native` features) for OS-level secret storage. HTTP token testing, temporary credential injection, and SSH key detection live in `commands/remote.rs`; HTTPS tokens can be stashed via `commands/credentials.rs` and reused by later `git` invocations. AI provider API keys are stored in the OS keychain (not `localStorage`) when a named profile is saved — see `lib/ai-secure.ts`.
+
 ### Dialog system
 
 Dialogs are rendered as overlays in `MainLayout.tsx` via a string-keyed `dialogComponents` map. To add a new dialog: (1) create the component in `components/features/dialogs/`, (2) import it with `React.lazy()` (all dialogs are lazy-loaded to keep the initial bundle small), (3) add it to the `dialogComponents` map in `MainLayout.tsx`, (4) trigger it from anywhere with `useUIStore.openDialog("key")`. The `activeDialog` field in `useUIStore` is the single source of truth. Exception: `"stash"` and `"tag"` are treated as inline sidebar panels, not overlays — they're excluded from the overlay render path.
@@ -92,7 +98,13 @@ The Rust backend initializes these plugins (see `lib.rs`):
 - `tauri-plugin-log` — file logging with rotation (5MB max, kept all)
 - `tauri-plugin-process` — process exit control
 - `tauri-plugin-updater` — auto-update on new releases
-- `tauri-plugin-window-state` — remembers window geometry across sessions
+- `tauri-plugin-window-state` — remembers window geometry across sessions (the `tray` window is excluded via `with_filter` so the floating mini-window doesn't restore its last position)
+
+Tauri permissions are declared in `src-tauri/capabilities/default.json` — when adding a new `invoke()` call, both the JS wrapper and any new permission scope (e.g. for a new plugin) need to land in the same change.
+
+### In-flight operations and locking
+
+Long-running git operations (rebase, merge, bisect, interactive rebase, clone) are tracked in `commands::running_ops::RunningOps` (a `Mutex<HashMap>` managed in `lib.rs`) so they can be cancelled via `cancel_git_op`. A separate `commands::op_lock::RepoLocks` enforces per-repo serialization — do not assume a `git` command will see a clean worktree just because it returned a successful Tauri invoke. The frontend mirrors this in `stores/operations.ts`, populated automatically by `useOperationObserver` watching TanStack mutations.
 
 ### Tray window
 
