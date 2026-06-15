@@ -131,7 +131,7 @@ export default function Toolbar() {
     setLoading(action);
     try {
       await trackRemoteOp(action, fn);
-      if (action === "pull" || action === "push" || action === "fetch" || action === "force-push" || action === "force-push-lease") {
+      if (action === "pull" || action === "pull-rebase" || action === "push" || action === "fetch" || action === "force-push" || action === "force-push-lease") {
         queryClient.invalidateQueries({ queryKey: ["git", repoPath, "sync-status"] });
       }
       if (action.startsWith("lfs-")) {
@@ -206,7 +206,7 @@ export default function Toolbar() {
   const hasLfsFiles = !!lfsStatus?.installed && lfsStatus.tracked_files.length > 0;
   const lfsDirtyCount = lfsStatus?.dirty_files.length ?? 0;
   const isMac = typeof window !== "undefined" && navigator.userAgent.includes("Mac");
-  const syncButtonClass = (action: "pull" | "fetch" | "push" | "force-push") =>
+  const syncButtonClass = (action: "pull" | "pull-rebase" | "fetch" | "push" | "force-push") =>
     `h-7 px-4 flex items-center gap-2 text-2xs font-semibold rounded transition-all cursor-pointer disabled:cursor-not-allowed ${
       loading === action
         ? "bg-accent-10 text-accent"
@@ -366,6 +366,24 @@ export default function Toolbar() {
                   {syncStatus.behind}
                 </span>
               )}
+            </button>
+            <div className="w-[1px] h-3.5 bg-border-50" />
+            <button
+              className={syncButtonClass("pull-rebase")}
+              onClick={async () => {
+                const ok = await pullGate.runPreflight();
+                if (ok) doAction("pull-rebase", () => api.remote.pull(repoPath!, undefined, undefined, true));
+              }}
+              disabled={!!loading}
+              aria-label="Pull with rebase"
+              title={loading === "pull-rebase" ? "Pulling (rebase)…" : "Pull remote changes with --rebase"}
+            >
+              {loading === "pull-rebase" ? (
+                <RefreshCw size={13} className={`${syncIconClass} animate-spin`} />
+              ) : (
+                <History size={13} className={`${syncIconClass} text-accent`} />
+              )}
+              <span>{loading === "pull-rebase" ? "Rebasing…" : "Rebase"}</span>
             </button>
             <div className="w-[1px] h-3.5 bg-border-50" />
             <button

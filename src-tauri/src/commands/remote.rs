@@ -144,6 +144,7 @@ pub async fn git_pull(
     path: String,
     remote: Option<String>,
     branch: Option<String>,
+    use_rebase: Option<bool>,
     operation_id: Option<String>,
 ) -> Result<String, String> {
     let _guard = locks.acquire(&path).await;
@@ -154,6 +155,10 @@ pub async fn git_pull(
         "pull".to_string(),
         "--progress".to_string(),
     ];
+
+    if use_rebase.unwrap_or(false) {
+        args.push("--rebase".to_string());
+    }
 
     if let Some(r) = remote {
         args.push(r);
