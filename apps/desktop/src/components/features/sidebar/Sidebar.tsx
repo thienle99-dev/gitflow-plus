@@ -688,12 +688,12 @@ export default function Sidebar() {
                 openDialogState("branch-compare");
               },
             },
+            { separator: true, label: "", action: () => {} },
             {
               label: "Rename…",
               icon: <Edit3 size={12} />,
               action: () => handleRename(branchCtxMenu.branch),
             },
-            { separator: true, label: "", action: () => {} },
             {
               label: "Delete branch…",
               icon: <Trash2 size={12} />,
