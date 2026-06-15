@@ -139,6 +139,11 @@ export default function Toolbar() {
     selectFile(null);
   };
 
+  const currentBranch = branches?.find((b) => b.current);
+  const pushTarget = currentBranch
+    ? { remote: currentBranch.remote ?? "origin", branch: currentBranch.name }
+    : null;
+
   const handlePush = async () => {
     const ok = await pushGate.runPreflight();
     if (!ok) return;
@@ -150,13 +155,13 @@ export default function Toolbar() {
       setRiskDialog({ open: true, report, loading: false });
     } catch {
       setRiskDialog({ open: false, report: null, loading: false });
-      doAction("push", () => api.remote.push(repoPath!));
+      doAction("push", () => api.remote.push(repoPath!, pushTarget?.remote, pushTarget?.branch));
     }
   };
 
   const proceedPush = () => {
     setRiskDialog({ open: false, report: null, loading: false });
-    doAction("push", () => api.remote.push(repoPath!));
+    doAction("push", () => api.remote.push(repoPath!, pushTarget?.remote, pushTarget?.branch));
   };
 
   const cancelPush = () => {
