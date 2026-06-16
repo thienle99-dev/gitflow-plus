@@ -1,4 +1,5 @@
-import { useState, useRef, useMemo, lazy, Suspense } from "react";
+import { useState, useRef, useMemo, useEffect, lazy, Suspense } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRepoStore } from "@/stores/repo";
 import { useUIStore } from "@/stores/ui";
 import { useGitBranches, useGitSyncStatus, useGitRemotes } from "@/queries/useGitLog";
@@ -77,6 +78,11 @@ export default function Sidebar() {
   const [repoSearchQuery, setRepoSearchQuery] = useState("");
   const [branchCtxMenu, setBranchCtxMenu] = useState<{ branch: string; x: number; y: number } | null>(null);
   const [confirmDeleteBranch, setConfirmDeleteBranch] = useState<string | null>(null);
+  /** Inline-rename state — keyed by `fullName` so only one row edits at a time. */
+  const [editingBranch, setEditingBranch] = useState<string | null>(null);
+  const [editingDraft, setEditingDraft] = useState("");
+  const [editingError, setEditingError] = useState<string | null>(null);
+  const [editingLoading, setEditingLoading] = useState(false);
 
   // Preflight gates for risky operations
   const checkoutGate = usePreflightGate("checkout branch");
@@ -87,6 +93,7 @@ export default function Sidebar() {
   const closeRepo = useRepoStore((s) => s.closeRepo);
   const removeRecentRepo = useRepoStore((s) => s.removeRecentRepo);
   const recentRepos = useRepoStore((s) => s.recentRepos);
+  const queryClient = useQueryClient();
 
   if (!repoPath) return null;
 
@@ -194,6 +201,61 @@ export default function Sidebar() {
       if (!ok) return;
       setRebaseTargetCommit(targetBranch);
       openDialogState("interactive-rebase");
+    }
+  };
+
+  /**
+   * Inline rename handlers. `editingBranch` is the full branch name; only
+   * one row can be in edit mode at a time, which means we don't have to
+   * worry about two inputs fighting for focus. The branch is pre-filled
+   * with `fullName` (NOT the visible leaf name) so users can rename
+   * `feature/auth` → `feature/login-page` and keep the prefix.
+   */
+  const startBranchEdit = (fullName: string) => {
+    if (editingLoading) return;
+    setEditingBranch(fullName);
+    setEditingDraft(fullName);
+    setEditingError(null);
+  };
+
+  const cancelBranchEdit = () => {
+    if (editingLoading) return;
+    setEditingBranch(null);
+    setEditingDraft("");
+    setEditingError(null);
+  };
+
+  const commitBranchRename = async () => {
+    if (!editingBranch || !repoPath) return;
+    const trimmed = editingDraft.trim();
+    if (!trimmed) {
+      setEditingError("Branch name cannot be empty");
+      return;
+    }
+    if (/\s/.test(trimmed)) {
+      setEditingError("Branch name cannot contain spaces");
+      return;
+    }
+    if (trimmed === editingBranch) {
+      setEditingError("New name is the same as the current name");
+      return;
+    }
+
+    setEditingLoading(true);
+    setEditingError(null);
+    try {
+      await api.branches.rename(repoPath, editingBranch, trimmed);
+      if (selectedRef === editingBranch) {
+        selectRef(trimmed);
+      }
+      queryClient.invalidateQueries({ queryKey: ["git", repoPath] });
+      showToast(`Renamed branch "${editingBranch}" to "${trimmed}"`);
+      setEditingBranch(null);
+      setEditingDraft("");
+    } catch (err: any) {
+      setEditingError(String(err?.message || err));
+    } finally {
+      setEditingLoading(false);
     }
   };
 
@@ -996,47 +1058,15 @@ function BranchTreeRenderer({
               handleCheckout={handleCheckout}
               setBranchCtxMenu={setBranchCtxMenu}
               handleBranchDrop={handleBranchDrop}
+              isEditing={editingBranch === child.fullName}
+              editingDraft={editingDraft}
+              editingError={editingError}
+              editingLoading={editingLoading}
+              onEditDraftChange={setEditingDraft}
+              onStartEdit={startBranchEdit}
+              onCommitEdit={commitBranchRename}
+              onCancelEdit={cancelBranchEdit}
             />
-          );
-        }
-                <GitBranch size={12} className={isSelected ? "text-accent" : child.current ? "text-[#30d158]" : "text-text-secondary"} />
-                {gitflowConfig && (() => {
-                  const branchType = classifyBranch(child.fullName, gitflowConfig);
-                  const color = gitflowBranchColor(branchType);
-                  if (branchType === "feature" || branchType === "release" || branchType === "hotfix") {
-                    return (
-                      <span
-                        className="w-2 h-2 rounded-full shrink-0"
-                        style={{ backgroundColor: color }}
-                        title={`${branchType} branch`}
-                      />
-                    );
-                  }
-                  return null;
-                })()}
-                <span className={`min-w-0 flex-1 truncate text-xs ${child.current ? "font-semibold text-text-primary" : "text-text-secondary"}`}>
-                  {child.name}
-                </span>
-                {/* Ahead/behind indicators on current branch */}
-                {child.current && aheadCount > 0 && (
-                  <span className="shrink-0 flex items-center gap-0.5 rounded bg-accent-10 px-1 py-0.5 text-[9px] font-bold text-accent" title={`${aheadCount} ahead`}>
-                    <ArrowUp size={8} />
-                    {aheadCount}
-                  </span>
-                )}
-                {child.current && behindCount > 0 && (
-                  <span className="shrink-0 flex items-center gap-0.5 rounded bg-[#ff9f0a]/15 px-1 py-0.5 text-[9px] font-bold text-[#ff9f0a]" title={`${behindCount} behind`}>
-                    <ArrowDown size={8} />
-                    {behindCount}
-                  </span>
-                )}
-                {child.current && (
-                  <span className="shrink-0 rounded bg-[#30d158]/10 px-1 py-0.5 text-[9px] font-bold text-[#30d158] border border-[#30d158]/20">
-                    HEAD
-                  </span>
-                )}
-              </div>
-            </div>
           );
         }
       })}
@@ -1050,6 +1080,14 @@ function BranchLeaf({
   current,
   remote,
   isSelected,
+  isEditing,
+  editingDraft,
+  editingError,
+  editingLoading,
+  onEditDraftChange,
+  onStartEdit,
+  onCommitEdit,
+  onCancelEdit,
   depth,
   aheadCount,
   behindCount,
@@ -1064,6 +1102,14 @@ function BranchLeaf({
   current: boolean;
   remote: boolean;
   isSelected: boolean;
+  isEditing: boolean;
+  editingDraft: string;
+  editingError: string | null;
+  editingLoading: boolean;
+  onEditDraftChange: (v: string) => void;
+  onStartEdit: (fullName: string) => void;
+  onCommitEdit: () => void;
+  onCancelEdit: () => void;
   depth: number;
   aheadCount: number;
   behindCount: number;
@@ -1078,9 +1124,23 @@ function BranchLeaf({
     handleBranchDrop(fullName, payload);
   };
   const { isOver, dropProps } = useDropTarget(onDrop);
-  const dragProps = remote
+  const dragProps = remote || isEditing
     ? {}
     : getDragSourceProps({ kind: "branch", name: fullName, current });
+  const inputRef = useRef<HTMLInputElement>(null);
+  const cancelledRef = useRef(false);
+
+  // When the row enters edit mode, focus + select the input so the user
+  // can immediately type the new name.
+  useEffect(() => {
+    if (isEditing) {
+      cancelledRef.current = false;
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      });
+    }
+  }, [isEditing]);
 
   return (
     <div
@@ -1090,13 +1150,13 @@ function BranchLeaf({
     >
       <div
         className={`tree-item flex items-center gap-2 px-3 py-[3px] mx-1 rounded-md ${isSelected ? "selected" : ""} ${isOver ? "drag-over" : ""}`}
-        tabIndex={0}
-        onClick={() => selectRef(fullName)}
-        onDoubleClick={() => handleCheckout(fullName)}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectRef(fullName); } }}
+        tabIndex={isEditing ? -1 : 0}
+        onClick={() => { if (!isEditing) selectRef(fullName); }}
+        onDoubleClick={() => { if (!isEditing && !remote) onStartEdit(fullName); }}
+        onKeyDown={(e) => { if (!isEditing && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); selectRef(fullName); } }}
         onContextMenu={(e) => {
           e.preventDefault();
-          if (!remote) {
+          if (!remote && !isEditing) {
             setBranchCtxMenu({ branch: fullName, x: e.clientX, y: e.clientY });
           }
         }}
@@ -1118,27 +1178,73 @@ function BranchLeaf({
           }
           return null;
         })()}
-        <span className={`min-w-0 flex-1 truncate text-xs ${current ? "font-semibold text-text-primary" : "text-text-secondary"}`}>
-          {name}
-        </span>
-        {current && aheadCount > 0 && (
+        {isEditing ? (
+          <input
+            ref={inputRef}
+            type="text"
+            value={editingDraft}
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="off"
+            disabled={editingLoading}
+            onChange={(e) => onEditDraftChange(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === "Enter") {
+                e.preventDefault();
+                onCommitEdit();
+              } else if (e.key === "Escape") {
+                e.preventDefault();
+                cancelledRef.current = true;
+                onCancelEdit();
+              }
+            }}
+            onBlur={() => {
+              // Enter / Escape handle their own paths. Blur (clicking
+              // elsewhere) commits — but we honor an explicit cancel flag
+              // so an Escape-then-blur doesn't double-fire.
+              if (cancelledRef.current) return;
+              if (editingDraft.trim() && editingDraft.trim() !== fullName) {
+                onCommitEdit();
+              } else {
+                onCancelEdit();
+              }
+            }}
+            className="min-w-0 flex-1 h-6 px-2 text-xs font-mono bg-surface-1 border border-accent rounded-mac text-text-primary outline-none"
+          />
+        ) : (
+          <span className={`min-w-0 flex-1 truncate text-xs ${current ? "font-semibold text-text-primary" : "text-text-secondary"}`}>
+            {name}
+          </span>
+        )}
+        {!isEditing && current && aheadCount > 0 && (
           <span className="shrink-0 flex items-center gap-0.5 rounded bg-accent-10 px-1 py-0.5 text-[9px] font-bold text-accent" title={`${aheadCount} ahead`}>
             <ArrowUp size={8} />
             {aheadCount}
           </span>
         )}
-        {current && behindCount > 0 && (
+        {!isEditing && current && behindCount > 0 && (
           <span className="shrink-0 flex items-center gap-0.5 rounded bg-[#ff9f0a]/15 px-1 py-0.5 text-[9px] font-bold text-[#ff9f0a]" title={`${behindCount} behind`}>
             <ArrowDown size={8} />
             {behindCount}
           </span>
         )}
-        {current && (
+        {!isEditing && current && (
           <span className="shrink-0 rounded bg-[#30d158]/10 px-1 py-0.5 text-[9px] font-bold text-[#30d158] border border-[#30d158]/20">
             HEAD
           </span>
         )}
       </div>
+      {isEditing && editingError && (
+        <div
+          className="mx-2 mt-0.5 px-2 py-1 text-2xs text-[#ff453a] bg-red-500/10 border border-red-500/20 rounded select-text"
+          role="alert"
+        >
+          {editingError}
+        </div>
+      )}
     </div>
   );
 }
