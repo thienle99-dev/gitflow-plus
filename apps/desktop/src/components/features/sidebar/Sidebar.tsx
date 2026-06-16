@@ -465,6 +465,14 @@ export default function Sidebar() {
             behindCount={behindCount}
             gitflowConfig={gitflowConfig ?? null}
             handleBranchDrop={handleBranchDrop}
+            editingBranch={editingBranch}
+            editingDraft={editingDraft}
+            editingError={editingError}
+            editingLoading={editingLoading}
+            onEditDraftChange={setEditingDraft}
+            onStartEdit={startBranchEdit}
+            onCommitEdit={commitBranchRename}
+            onCancelEdit={cancelBranchEdit}
           />
         </div>
       )}
@@ -573,6 +581,14 @@ export default function Sidebar() {
                         collapsedFolders={collapsedBranchFolders}
                         onToggleFolder={handleToggleBranchFolder}
                         handleBranchDrop={handleBranchDrop}
+                        editingBranch={editingBranch}
+                        editingDraft={editingDraft}
+                        editingError={editingError}
+                        editingLoading={editingLoading}
+                        onEditDraftChange={setEditingDraft}
+                        onStartEdit={startBranchEdit}
+                        onCommitEdit={commitBranchRename}
+                        onCancelEdit={cancelBranchEdit}
                       />
                     </div>
                   )}
@@ -963,6 +979,14 @@ interface BranchTreeRendererProps {
   behindCount?: number;
   gitflowConfig?: GitFlowConfig | null;
   handleBranchDrop?: (targetBranch: string, payload: DragPayload) => void;
+  editingBranch: string | null;
+  editingDraft: string;
+  editingError: string | null;
+  editingLoading: boolean;
+  onEditDraftChange: (draft: string) => void;
+  onStartEdit: (name: string) => void;
+  onCommitEdit: () => void;
+  onCancelEdit: () => void;
 }
 
 function BranchTreeRenderer({
@@ -978,6 +1002,14 @@ function BranchTreeRenderer({
   behindCount = 0,
   gitflowConfig,
   handleBranchDrop,
+  editingBranch,
+  editingDraft,
+  editingError,
+  editingLoading,
+  onEditDraftChange,
+  onStartEdit,
+  onCommitEdit,
+  onCancelEdit,
 }: BranchTreeRendererProps) {
   const sortedKeys = Object.keys(node.children).sort((a, b) => {
     const childA = node.children[a];
@@ -1036,6 +1068,14 @@ function BranchTreeRenderer({
                   behindCount={behindCount}
                   gitflowConfig={gitflowConfig}
                   handleBranchDrop={handleBranchDrop}
+                  editingBranch={editingBranch}
+                  editingDraft={editingDraft}
+                  editingError={editingError}
+                  editingLoading={editingLoading}
+                  onEditDraftChange={onEditDraftChange}
+                  onStartEdit={onStartEdit}
+                  onCommitEdit={onCommitEdit}
+                  onCancelEdit={onCancelEdit}
                 />
               )}
             </div>
@@ -1048,7 +1088,7 @@ function BranchTreeRenderer({
               fullName={child.fullName}
               name={child.name}
               current={child.current}
-              remote={child.remote}
+              remote={child.remote !== null}
               isSelected={isSelected}
               depth={depth}
               aheadCount={aheadCount}
@@ -1062,10 +1102,10 @@ function BranchTreeRenderer({
               editingDraft={editingDraft}
               editingError={editingError}
               editingLoading={editingLoading}
-              onEditDraftChange={setEditingDraft}
-              onStartEdit={startBranchEdit}
-              onCommitEdit={commitBranchRename}
-              onCancelEdit={cancelBranchEdit}
+              onEditDraftChange={onEditDraftChange}
+              onStartEdit={onStartEdit}
+              onCommitEdit={onCommitEdit}
+              onCancelEdit={onCancelEdit}
             />
           );
         }

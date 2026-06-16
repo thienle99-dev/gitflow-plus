@@ -6,7 +6,8 @@
       "Bash(pnpm tsc *)",
       "Bash(tsc --noEmit)",
       "Bash(grep -v '^--$')",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(pnpm build *)"
     ]
   }
 }
