@@ -240,13 +240,12 @@ export interface ReflogEntry {
 }
 
 export interface BisectStatus {
-  status: string;
-  current?: string;
-  bad?: string;
-  good?: string;
-  skip?: string;
-  steps_left?: number;
-  diff?: string;
+  running: boolean;
+  current_commit: string | null;
+  remaining: number | null;
+  step: number | null;
+  log: string[];
+  first_bad: string | null;
 }
 
 export interface GitHook {

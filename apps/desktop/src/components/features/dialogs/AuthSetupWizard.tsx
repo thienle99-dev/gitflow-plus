@@ -31,9 +31,9 @@ interface SshKeyInfo {
 
 export default function AuthSetupWizard() {
   const repoPath = useRepoStore((s) => s.repoPath);
-  const { open } = useUIStore((s) => s.dialogs["auth-setup"] || { open: false, onClose: () => {} });
+  const activeDialog = useUIStore((s) => s.activeDialog);
   const closeDialog = useUIStore((s) => s.closeDialog);
-  const onClose = useUIStore((s) => s.closeDialog) as () => void;
+  const open = activeDialog === "auth-setup";
   const [step, setStep] = useState<Step>("detect");
   const [method, setMethod] = useState<AuthMethod | null>(null);
   const [loading, setLoading] = useState(false);
@@ -116,7 +116,7 @@ export default function AuthSetupWizard() {
     setTestResult(null);
     setGeneratedKey(null);
     setToken("");
-    closeDialog("auth-setup");
+    closeDialog();
   };
 
   if (!open) return null;
